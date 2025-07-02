@@ -1,0 +1,127 @@
+---
+description: Git Flow branching strategy with naming conventions and workflow guidelines
+globs: .git/**, *.md
+alwaysApply: false
+---
+
+---
+description: "Git Flow branching strategy with naming conventions and workflow guidelines"
+globs: [".git/**/*", "*.md"]
+alwaysApply: false
+---
+
+# Git Branching Strategy
+
+Следуйте этой стратегии ветвления для поддержания чистой истории проекта.
+
+## Branch Naming Convention
+
+### Основные ветки:
+- `main` - основная продакшн ветка
+- `develop` - ветка разработки (если используется Git Flow)
+
+### Feature branches:
+- `feature/краткое-описание`
+- `feature/ISSUE-123-user-authentication`
+- `feature/add-payment-processing`
+
+### Hotfix branches:
+- `hotfix/критическое-исправление`
+- `hotfix/fix-payment-bug`
+- `hotfix/security-patch`
+
+### Release branches:
+- `release/v1.2.0`
+- `release/2024.01`
+
+### Bugfix branches:
+- `bugfix/описание-бага`
+- `bugfix/fix-login-error`
+
+## Workflow Guidelines
+
+### Создание новой ветки:
+```bash
+# Переключиться на main/develop
+git checkout main
+git pull origin main
+
+# Создать новую feature ветку
+git checkout -b feature/описание-задачи
+```
+
+### Работа с веткой:
+```bash
+# Регулярно синхронизировать с main
+git fetch origin
+git rebase origin/main
+
+# Или через merge (если rebase не подходит)
+git merge origin/main
+```
+
+### Завершение работы:
+```bash
+# Убедиться что все коммиты готовы
+git log --oneline
+
+# Запушить ветку
+git push origin feature/описание-задачи
+
+# Создать Pull Request
+```
+
+## Branch Protection Rules
+
+Для важных веток (main, develop) настройте:
+- [ ] Require pull request reviews
+- [ ] Require status checks to pass
+- [ ] Require branches to be up to date
+- [ ] Include administrators
+- [ ] Restrict pushes that create files
+- [ ] Allow force pushes (только для feature веток)
+
+## Code Review Process
+
+### Перед созданием PR:
+- [ ] Ветка актуальна с main
+- [ ] Все тесты проходят
+- [ ] Линтинг проходит
+- [ ] Commit messages соответствуют стандартам
+- [ ] Нет merge conflicts
+
+### В описании PR указать:
+- Что изменено и почему
+- Связанные issues (Closes #123)
+- Screenshots (для UI changes)
+- Breaking changes (если есть)
+- Инструкции для тестирования
+
+## Merge Strategies
+
+### Feature → Main:
+- **Squash and merge** - для feature веток
+- Создает один clean commit в main
+- Сохраняет историю в PR
+
+### Hotfix → Main:
+- **Merge commit** - для hotfix
+- Сохраняет контекст экстренного исправления
+
+### Release → Main:
+- **Merge commit** - для release веток
+- Помечать тегами версий
+
+## Clean Up
+
+После успешного merge:
+```bash
+# Удалить локальную ветку
+git branch -d feature/описание-задачи
+
+# Удалить remote ветку
+git push origin --delete feature/описание-задачи
+
+# Обновить список веток
+git remote prune origin
+```

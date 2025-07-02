@@ -1,0 +1,194 @@
+---
+description: Comprehensive git conflict resolution and history management procedures
+globs: **/*.py, **/*.js, **/*.ts, **/*.tsx, **/*.md
+alwaysApply: false
+---
+
+# Git Conflict Resolution & History Management
+
+Руководство по решению конфликтов и управлению историей в git.
+
+## Merge Conflicts Resolution
+
+### Подготовка к merge/rebase:
+```bash
+# Сохранить текущую работу
+git stash push -m "WIP: текущие изменения"
+
+# Обновить информацию о remote
+git fetch origin
+
+# Проверить статус
+git status
+```
+
+### Решение конфликтов:
+
+1. **Анализ конфликта:**
+```bash
+# Посмотреть конфликтующие файлы
+git status
+
+# Детали конфликта
+git diff
+```
+
+2. **Типы маркеров конфликтов:**
+```
+<<<<<<< HEAD (текущая ветка)
+ваши изменения
+=======
+входящие изменения
+>>>>>>> branch-name
+```
+
+3. **Стратегии решения:**
+   - **Принять incoming**: удалить HEAD часть, оставить incoming
+   - **Принять current**: удалить incoming часть, оставить HEAD
+   - **Объединить**: создать комбинацию обеих версий
+   - **Переписать**: создать новое решение
+
+4. **После решения:**
+```bash
+# Добавить решенные файлы
+git add resolved-file.js
+
+# Продолжить merge/rebase
+git rebase --continue
+# или
+git merge --continue
+```
+
+## Interactive Rebase
+
+### Использование для cleanup:
+```bash
+# Последние N коммитов
+git rebase -i HEAD~3
+
+# До определенного коммита
+git rebase -i commit-hash
+```
+
+### Команды rebase:
+- `pick` - оставить коммит как есть
+- `reword` - изменить commit message
+- `edit` - остановиться для изменений
+- `squash` - объединить с предыдущим коммитом
+- `fixup` - как squash, но удалить commit message
+- `drop` - удалить коммит
+
+### Пример cleanup:
+```
+pick a1b2c3d feat: добавить новую функцию
+squash e4f5g6h fix: исправить опечатку
+fixup h7i8j9k fix: еще одно исправление
+reword k0l1m2n docs: обновить документацию
+```
+
+## Git History Best Practices
+
+### Чистая история:
+1. **Логические коммиты** - один коммит = одна логическая единица
+2. **Понятные сообщения** - ясно описывают изменения  
+3. **Без debug commits** - удалять временные/отладочные коммиты
+4. **Линейная история** - избегать ненужных merge commits
+
+### Амендинг коммитов:
+```bash
+# Изменить последний коммит
+git commit --amend
+
+# Добавить файлы к последнему коммиту
+git add forgotten-file.js
+git commit --amend --no-edit
+
+# Изменить автора последнего коммита
+git commit --amend --author="Name <email@example.com>"
+```
+
+### Cherry-picking:
+```bash
+# Применить коммит из другой ветки
+git cherry-pick commit-hash
+
+# Несколько коммитов
+git cherry-pick commit1 commit2 commit3
+
+# Range коммитов (не включая start)
+git cherry-pick start-commit..end-commit
+```
+
+## Undo Operations
+
+### Отменить изменения:
+```bash
+# Отменить изменения в файле (не staged)
+git checkout -- filename
+
+# Отменить все unstaged изменения
+git checkout .
+
+# Убрать файл из stage
+git reset HEAD filename
+
+# Отменить последний коммит (сохранить изменения)
+git reset --soft HEAD~1
+
+# Отменить последний коммит (удалить изменения)
+git reset --hard HEAD~1
+```
+
+### Revert коммитов:
+```bash
+# Создать коммит отменяющий изменения
+git revert commit-hash
+
+# Revert merge коммита
+git revert -m 1 merge-commit-hash
+```
+
+## Advanced Conflict Prevention
+
+### Pre-merge проверки:
+```bash
+# Проверить что merge возможен
+git merge-tree $(git merge-base HEAD other-branch) HEAD other-branch
+
+# Посмотреть изменения которые будут смержены
+git diff HEAD...other-branch
+
+# Сравнить ветки
+git log --oneline --graph --left-right HEAD...other-branch
+```
+
+### Автоматизация:
+- Используйте merge tools (vimdiff, meld, vscode)
+- Настройте git hooks для проверок
+- Используйте .gitattributes для merge strategies
+
+### Конфигурация merge tool:
+```bash
+# Настроить VS Code как merge tool
+git config --global merge.tool vscode
+git config --global mergetool.vscode.cmd 'code --wait $MERGED'
+
+# Использовать
+git mergetool
+```
+
+## Troubleshooting
+
+### Экстренные ситуации:
+```bash
+# Восстановить удаленную ветку
+git reflog
+git checkout -b recovered-branch commit-hash
+
+# Найти потерянные коммиты
+git fsck --lost-found
+
+# Сбросить состояние к remote
+git fetch origin
+git reset --hard origin/main
+```

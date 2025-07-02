@@ -1,0 +1,743 @@
+---
+description: "GitHub workflow and pull request automation patterns"
+globs: .github/**/*.yml, .github/**/*.yaml, .github/workflows/*, .github/dependabot.yml]
+alwaysApply: false
+---
+
+# GitHub Workflow & Daily Operations
+
+Современные практики работы с GitHub, включая workflow automation, daily commands и collaboration patterns на основе [официальной документации GitHub Actions](mdc:https:/docs.github.com/en/actions/reference/workflow-syntax-for-github-actions).
+
+## ⚡ Daily GitHub Commands
+
+### Основные операции
+```bash
+# Статус и общая информация
+git status                              # Текущий статус репозитория
+git branch -v                          # Все ветки с последними коммитами
+git log --oneline -10                   # Последние 10 коммитов
+git remote -v                          # Удаленные репозитории
+
+# Синхронизация с GitHub
+git fetch --all --prune                # Обновить все ветки и удалить устаревшие
+git pull --rebase origin main          # Обновить с rebase
+git push origin feature-branch         # Отправить ветку
+
+# Работа с ветками
+git checkout -b feature/new-feature     # Создать и переключиться на новую ветку
+git checkout main && git pull origin main  # Переключиться на main и обновить
+git branch -d feature-branch           # Удалить локальную ветку
+git push origin --delete feature-branch # Удалить удаленную ветку
+```
+
+### Advanced Git Commands
+```bash
+# Интерактивный rebase для истории коммитов
+git rebase -i HEAD~3                   # Редактировать последние 3 коммита
+
+# Работа с stash
+git stash push -m "WIP: feature implementation"  # Сохранить изменения
+git stash list                         # Список сохраненных изменений
+git stash pop                          # Восстановить последние изменения
+
+# Cherry-pick коммитов
+git cherry-pick <commit-hash>          # Применить коммит из другой ветки
+
+# Работа с тегами
+git tag -a v1.0.0 -m "Release version 1.0.0"
+git push origin v1.0.0                # Отправить тег
+```
+
+## 🔄 GitHub Actions Workflow Patterns
+
+### Modern CI/CD Pipeline Template
+```yaml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  # Параллельные проверки качества кода
+  code-quality:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        check: [lint, type-check, security, format-check]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/dev.txt
+
+      - name: Run linting
+        if: matrix.check == 'lint'
+        run: |
+          flake8 app tests
+          ruff check app tests
+
+      - name: Run type checking
+        if: matrix.check == 'type-check'
+        run: mypy app
+
+      - name: Run security scan
+        if: matrix.check == 'security'
+        run: |
+          bandit -r app/
+          safety check
+
+      - name: Check code formatting
+        if: matrix.check == 'format-check'
+        run: |
+          black --check app tests
+          isort --check-only app tests
+
+  # Тестирование
+  test:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+        test-type: [unit, integration]
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements/dev.txt
+
+      - name: Run unit tests
+        if: matrix.test-type == 'unit'
+        run: |
+          pytest tests/unit/ -v --cov=app --cov-report=xml
+
+      - name: Run integration tests
+        if: matrix.test-type == 'integration'
+        run: |
+          pytest tests/integration/ -v
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Upload coverage to Codecov
+        if: matrix.test-type == 'unit' && matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: true
+
+  # Сборка Docker образа
+  build:
+    runs-on: ubuntu-latest
+    needs: [test]
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+
+  # Deployment (только для main ветки)
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: [build]
+    environment: 
+      name: production
+      url: https://your-app.com
+    
+    steps:
+      - name: Deploy to production
+        run: |
+          echo "Deploying image: ${{ needs.build.outputs.image-tag }}"
+          # Здесь код для деплоя
+```
+
+### Advanced Workflow Patterns
+
+#### Reusable Workflow для CI
+```yaml
+# .github/workflows/reusable-ci.yml
+name: Reusable CI Workflow
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        required: false
+        type: string
+        default: '3.11'
+      run-integration-tests:
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      DATABASE_URL:
+        required: true
+    outputs:
+      coverage-percentage:
+        description: "Test coverage percentage"
+        value: ${{ jobs.test.outputs.coverage }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    outputs:
+      coverage: ${{ steps.coverage.outputs.percentage }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: pip install -r requirements/dev.txt
+      
+      - name: Run tests
+        run: pytest --cov=app --cov-report=json
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      
+      - name: Extract coverage
+        id: coverage
+        run: |
+          COVERAGE=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+          echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+```
+
+#### Matrix Strategy для Multi-Environment Testing
+```yaml
+jobs:
+  test-matrix:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.11', '3.12', '3.13']
+        database: [postgresql, mysql]
+        exclude:
+          - os: windows-latest
+            database: mysql
+          - python-version: '3.13'
+            database: mysql
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Run tests with ${{ matrix.database }}
+        run: pytest tests/
+        env:
+          DATABASE_TYPE: ${{ matrix.database }}
+```
+
+## 📋 Pull Request Workflow
+
+### PR Template с современными практиками
+```markdown
+<!-- .github/pull_request_template.md -->
+## 📝 Description
+Brief description of changes made in this PR.
+
+## 🔄 Type of Change
+- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
+- [ ] ✨ New feature (non-breaking change which adds functionality)
+- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] 📚 Documentation update (changes to documentation only)
+- [ ] 🔧 Refactoring (code changes that neither fix a bug nor add a feature)
+- [ ] ⚡ Performance improvement
+- [ ] 🧪 Test improvements
+
+## ✅ Testing Checklist
+- [ ] Unit tests pass locally
+- [ ] Integration tests pass locally
+- [ ] Manual testing completed
+- [ ] Code coverage maintained/improved
+- [ ] Performance impact assessed
+
+## 🚀 Deployment Notes
+- [ ] Database migrations required
+- [ ] Environment variables updated
+- [ ] Third-party service changes needed
+- [ ] Documentation updated
+
+## 📸 Screenshots (if applicable)
+<!-- Add screenshots here if UI changes -->
+
+## 🔗 Related Issues
+Closes #(issue number)
+Related to #(issue number)
+
+## 📝 Additional Context
+Add any other context about the PR here.
+
+## 🏷️ Labels
+<!-- Maintainers will add appropriate labels -->
+
+---
+**Reviewer Guidelines:**
+- [ ] Code follows style guidelines
+- [ ] Self-review completed
+- [ ] Comments added for complex logic
+- [ ] Security implications considered
+- [ ] Performance impact reviewed
+```
+
+### Advanced PR Automation
+```yaml
+# .github/workflows/pr-automation.yml
+name: PR Automation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  auto-label:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Auto-label PR
+        uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml
+      
+      - name: Add size label
+        uses: pascalgn/size-label-action@v0.5.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          sizes: |
+            {
+              "0": "XS",
+              "20": "S", 
+              "100": "M",
+              "500": "L",
+              "1000": "XL"
+            }
+
+  require-conventional-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check conventional commits
+        uses: wagoid/commitlint-github-action@v6
+        with:
+          configFile: .commitlintrc.json
+
+  auto-assign-reviewers:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    steps:
+      - name: Auto-assign reviewers
+        uses: kentaro-m/auto-assign-action@v2.0.0
+        with:
+          configuration-path: .github/auto-assign.yml
+```
+
+## 🔐 Security Best Practices
+
+### Dependabot Configuration
+```yaml
+# .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "security-team"
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "docker"
+      - "dependencies"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "github-actions"
+      - "dependencies"
+```
+
+### Security Scanning Workflow
+```yaml
+# .github/workflows/security.yml
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly on Monday
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+          queries: security-extended,security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run secrets scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+```
+
+## 🏷️ Release Management
+
+### Automated Release Workflow
+```yaml
+# .github/workflows/release.yml
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v4
+        with:
+          configuration: ".github/changelog-config.json"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          generate_release_notes: true
+          files: |
+            dist/*
+            CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Semantic Release Configuration
+```json
+// .releaserc.json
+{
+  "branches": [
+    "main",
+    {
+      "name": "develop",
+      "prerelease": "beta"
+    }
+  ],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    "@semantic-release/changelog",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "python -m build"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "dist/*.whl",
+            "label": "Python Wheel"
+          },
+          {
+            "path": "dist/*.tar.gz", 
+            "label": "Source Distribution"
+          }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["CHANGELOG.md", "pyproject.toml"],
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      }
+    ]
+  ]
+}
+```
+
+## 🛠️ Development Environment Setup
+
+### GitHub Codespaces Configuration
+```json
+// .devcontainer/devcontainer.json
+{
+  "name": "VK Comments Monitor Dev Environment",
+  "image": "mcr.microsoft.com/vscode/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.flake8",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-python.mypy-type-checker",
+        "GitHub.copilot",
+        "GitHub.vscode-pull-request-github"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.formatting.provider": "black",
+        "python.linting.enabled": true,
+        "python.linting.flake8Enabled": true,
+        "editor.formatOnSave": true
+      }
+    }
+  },
+  "forwardPorts": [8000, 5432, 6379],
+  "postCreateCommand": "pip install -r requirements/dev.txt && pre-commit install",
+  "remoteUser": "vscode"
+}
+```
+
+## 🎯 Best Practices Checklist
+
+### Repository Setup
+- [ ] Branch protection настроен для main
+- [ ] Required status checks включены
+- [ ] Merge queue включен для production репозиториев
+- [ ] Dependabot alerts включены
+- [ ] Code scanning (CodeQL) настроен
+- [ ] Secret scanning включен
+- [ ] Vulnerability reporting настроен
+
+### Workflow Optimization
+- [ ] Используются кэшированные dependencies
+- [ ] Параллельное выполнение jobs где возможно
+- [ ] Условное выполнение с path/branch filters
+- [ ] Reusable workflows для повторяющихся задач
+- [ ] Matrix strategy для multi-environment testing
+- [ ] Artifact management настроен
+
+### Security & Compliance
+- [ ] Least privilege permissions для jobs
+- [ ] Secrets правильно управляются
+- [ ] Security scanning интегрирован в CI/CD
+- [ ] Dependency updates автоматизированы
+- [ ] Conventional commits проверяются
+- [ ] License compliance проверяется
+
+---
+
+📚 **Документация**: [GitHub Actions Reference](mdc:https:/docs.github.com/en/actions/reference/workflow-syntax-for-github-actions)  
+🔗 **Marketplace**: [GitHub Actions Marketplace](mdc:https:/github.com/marketplace?type=actions)

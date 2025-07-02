@@ -74,11 +74,11 @@ services:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
+      - /app/.bun
     depends_on:
       - backend
     networks:
       - app-network
-    command: npm run dev
 
 networks:
   app-network:
