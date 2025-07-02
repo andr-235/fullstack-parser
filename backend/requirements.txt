@@ -7,7 +7,7 @@ pydantic-settings==2.1.0
 # Database
 sqlalchemy==2.0.23
 alembic==1.12.1
-asyncpg==0.29.0
+asyncpg==0.30.0
 
 # VK API
 vk-api==11.9.9
