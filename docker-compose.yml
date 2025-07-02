@@ -12,7 +12,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - app-network
 
@@ -79,7 +78,7 @@ services:
       - backend
     networks:
       - app-network
-    command: pnpm dev
+    command: npm run dev
 
 networks:
   app-network:
@@ -89,4 +88,4 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
-    driver: local 
+    driver: local

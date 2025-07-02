@@ -27,7 +27,7 @@ COPY . .
 EXPOSE 3000
 
 # Start development server with correct host binding for Docker
-CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "3000"]
+CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
 
 # Rebuild the source code only when needed
 FROM base AS builder
