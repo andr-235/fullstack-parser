@@ -14,7 +14,7 @@ vk-api==11.9.9
 requests==2.31.0
 
 # Redis для кэширования и задач
-redis==5.0.1
+redis==6.2.0
 celery==5.3.4
 
 # Authentication и Security
