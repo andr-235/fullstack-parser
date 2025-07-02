@@ -57,6 +57,9 @@ jobs:
         working-directory: ./backend
         run: |
           python -m pip install --upgrade pip
+          # Принудительная очистка кэша для устранения конфликтов драйверов
+          pip cache purge
+          pip uninstall -y psycopg2-binary psycopg2 || true
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
@@ -83,7 +86,7 @@ jobs:
       - name: 🧪 Запуск тестов
         working-directory: ./backend
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379/0
           SECRET_KEY: test-secret-key
           JWT_SECRET_KEY: test-jwt-secret
