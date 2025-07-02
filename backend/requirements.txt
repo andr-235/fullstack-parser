@@ -27,13 +27,5 @@ python-multipart==0.0.6
 python-dateutil==2.8.2
 pytz==2023.3
 
-# Тестирование
-pytest==7.4.3
-pytest-asyncio==0.21.1
-httpx==0.25.2
-pytest-mock==3.12.0
-
-# Development
-black==23.11.0
-isort==5.12.0
-ruff==0.1.6 
+# Production логирование
+structlog==23.2.0 
