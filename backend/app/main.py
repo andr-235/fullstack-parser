@@ -3,6 +3,7 @@ VK Comments Parser - FastAPI Backend
 """
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,12 +16,28 @@ from app.core.database import init_db
 logging.basicConfig(level=getattr(logging, settings.log_level))
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager для startup/shutdown событий"""
+    # Startup
+    logger.info("🚀 Запуск VK Comments Parser...")
+    await init_db()
+    logger.info("📊 База данных инициализирована")
+
+    yield
+
+    # Shutdown
+    logger.info("🛑 Остановка VK Comments Parser...")
+
+
 # Создание FastAPI приложения
 app = FastAPI(
     title=settings.app_name,
     description="Парсер комментариев из групп ВКонтакте с фильтрацией по ключевым словам",
     version="1.0.0",
     debug=settings.debug,
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -31,20 +48,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Инициализация при запуске"""
-    logger.info("🚀 Запуск VK Comments Parser...")
-    await init_db()
-    logger.info("📊 База данных инициализирована")
-
-
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    """Очистка при остановке"""
-    logger.info("🛑 Остановка VK Comments Parser...")
 
 
 @app.get("/")
