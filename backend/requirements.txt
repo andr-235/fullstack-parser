@@ -1,6 +1,6 @@
 # FastAPI и основные зависимости
 fastapi==0.115.14
-uvicorn[standard]==0.27.0
+uvicorn[standard]==0.35.0
 pydantic[email]>=2.5.0,<3.0.0
 pydantic-settings==2.1.0
 
