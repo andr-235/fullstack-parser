@@ -111,17 +111,17 @@ jobs:
       - name: 📥 Checkout код
         uses: actions/checkout@v4
 
+      - name: 📦 Установка pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
       - name: 📦 Настройка Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
           cache-dependency-path: "./frontend/pnpm-lock.yaml"
-
-      - name: 📦 Установка pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
 
       - name: 📦 Установка зависимостей
         working-directory: ./frontend
