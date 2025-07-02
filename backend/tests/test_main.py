@@ -24,4 +24,4 @@ def test_api_docs():
     """Тест доступности API документации"""
     response = client.get("/docs")
     assert response.status_code == 200
-    assert "text/html" in response.headers["content-type"] 
+    assert "text/html" in response.headers["content-type"]

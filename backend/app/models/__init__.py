@@ -9,9 +9,9 @@ from .comment_keyword_match import CommentKeywordMatch
 
 __all__ = [
     "BaseModel",
-    "VKGroup", 
+    "VKGroup",
     "VKPost",
     "VKComment",
     "Keyword",
-    "CommentKeywordMatch"
-] 
+    "CommentKeywordMatch",
+]

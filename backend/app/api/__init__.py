@@ -1,1 +1,1 @@
-# API endpoints для VK Comments Parser 
+# API endpoints для VK Comments Parser

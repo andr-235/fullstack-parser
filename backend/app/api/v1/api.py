@@ -1,6 +1,7 @@
 """
 Главный роутер API v1 для VK Comments Parser
 """
+
 from fastapi import APIRouter
 
 from app.api.v1 import groups, keywords, parser
@@ -21,7 +22,7 @@ async def api_info():
         "version": "1.0.0",
         "endpoints": {
             "groups": "/groups - Управление VK группами",
-            "keywords": "/keywords - Управление ключевыми словами", 
-            "parser": "/parser - Парсинг и поиск комментариев"
-        }
-    } 
+            "keywords": "/keywords - Управление ключевыми словами",
+            "parser": "/parser - Парсинг и поиск комментариев",
+        },
+    }

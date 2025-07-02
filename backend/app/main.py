@@ -1,6 +1,7 @@
 """
 VK Comments Parser - FastAPI Backend
 """
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
@@ -18,7 +19,7 @@ app = FastAPI(
     title=settings.app_name,
     description="Парсер комментариев из групп ВКонтакте с фильтрацией по ключевым словам",
     version="1.0.0",
-    debug=settings.debug
+    debug=settings.debug,
 )
 
 # CORS middleware
@@ -53,19 +54,15 @@ async def root():
         "version": "1.0.0",
         "status": "running",
         "docs": "/docs",
-        "api": "/api/v1"
+        "api": "/api/v1",
     }
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "service": "vk-comments-parser",
-        "version": "1.0.0"
-    }
+    return {"status": "healthy", "service": "vk-comments-parser", "version": "1.0.0"}
 
 
 # Подключение API роутов
-app.include_router(api_router, prefix=settings.api_v1_str) 
+app.include_router(api_router, prefix=settings.api_v1_str)

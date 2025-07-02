@@ -19,4 +19,4 @@ describe('Home', () => {
 
     expect(description).toBeInTheDocument()
   })
-}) 
+})

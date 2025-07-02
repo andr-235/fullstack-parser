@@ -1,6 +1,7 @@
 """
 Database configuration для VK Comments Parser
 """
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -10,16 +11,12 @@ from app.core.config import settings
 
 # Async SQLAlchemy engine
 async_engine = create_async_engine(
-    str(settings.database_url),
-    echo=settings.debug,
-    future=True
+    str(settings.database_url), echo=settings.debug, future=True
 )
 
 # Async session factory
 AsyncSessionLocal = sessionmaker(
-    async_engine,
-    class_=AsyncSession,
-    expire_on_commit=False
+    async_engine, class_=AsyncSession, expire_on_commit=False
 )
 
 # Base class для моделей
@@ -42,4 +39,4 @@ async def init_db():
     """Инициализация базы данных"""
     async with async_engine.begin() as conn:
         # Создаем все таблицы
-        await conn.run_sync(Base.metadata.create_all) 
+        await conn.run_sync(Base.metadata.create_all)
