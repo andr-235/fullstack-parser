@@ -47,7 +47,13 @@ class ParserService:
 
         if not group or not group.is_active:
             logger.warning(f"Группа {group_id} не найдена или неактивна")
-            return {"error": "Группа не найдена или неактивна"}
+            return {
+                "posts_processed": 0,
+                "comments_found": 0,
+                "comments_with_keywords": 0,
+                "new_comments": 0,
+                "keyword_matches": 0,
+            }
 
         logger.info(f"Начинаем парсинг группы {group.name} (VK ID: {group.vk_id})")
 
@@ -63,14 +69,20 @@ class ParserService:
         keywords = await self._get_active_keywords()
         if not keywords:
             logger.warning("Нет активных ключевых слов для поиска")
-            return {"error": "Нет активных ключевых слов"}
+            return {
+                "posts_processed": 0,
+                "comments_found": 0,
+                "comments_with_keywords": 0,
+                "new_comments": 0,
+                "keyword_matches": 0,
+            }
 
         logger.info(f"Используем {len(keywords)} ключевых слов для поиска")
 
         # Получаем посты группы
-        posts_limit = max_posts or group.max_posts_to_check
+        posts_limit = max_posts or int(group.max_posts_to_check)
         posts = await self.vk_api.get_group_posts(
-            group.vk_id, count=min(posts_limit, 100)
+            int(group.vk_id), count=min(posts_limit, 100)
         )
 
         for post_data in posts:
@@ -98,8 +110,12 @@ class ParserService:
 
         # Обновляем статистику группы
         group.last_parsed_at = datetime.utcnow()
-        group.total_posts_parsed += stats["posts_processed"]
-        group.total_comments_found += stats["comments_with_keywords"]
+        group.total_posts_parsed = (
+            int(group.total_posts_parsed) + stats["posts_processed"]
+        )
+        group.total_comments_found = (
+            int(group.total_comments_found) + stats["comments_with_keywords"]
+        )
 
         await self.db.commit()
 
@@ -114,7 +130,7 @@ class ParserService:
 
         # Получаем комментарии через VK API
         comments = await self.vk_api.get_post_comments(
-            owner_id=post.vk_owner_id, post_id=post.vk_id, count=100
+            owner_id=int(post.vk_owner_id), post_id=int(post.vk_id), count=100
         )
 
         stats["total"] = len(comments)
@@ -271,11 +287,11 @@ class ParserService:
             self.db.add(match)
 
             # Обновляем статистику ключевого слова
-            keyword.total_matches += 1
+            keyword.total_matches = int(keyword.total_matches) + 1
 
         return comment
 
     async def _get_active_keywords(self) -> list[Keyword]:
         """Получение списка активных ключевых слов"""
         result = await self.db.execute(select(Keyword).where(Keyword.is_active))
-        return result.scalars().all()
+        return list(result.scalars().all())

@@ -72,6 +72,7 @@ class VKAPIService:
                         "photo_200", group.get("photo_100", group.get("photo_50", ""))
                     ),
                 }
+            return None
         except Exception as e:
             logger.error(f"Ошибка получения информации о группе {group_id}: {e}")
             return None
@@ -200,16 +201,17 @@ class VKAPIService:
 
     def _parse_attachments(self, attachments: list[dict]) -> dict[str, Any]:
         """Парсинг вложений"""
+        types_list: list[str] = []
         result = {
             "has_attachments": len(attachments) > 0,
-            "types": [],
+            "types": types_list,
             "count": len(attachments),
         }
 
         for attachment in attachments:
             att_type = attachment.get("type")
-            if att_type and att_type not in result["types"]:
-                result["types"].append(att_type)
+            if att_type and att_type not in types_list:
+                types_list.append(att_type)
 
         return result
 

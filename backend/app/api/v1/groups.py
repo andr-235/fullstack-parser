@@ -177,10 +177,12 @@ async def get_group_stats(
 
     # TODO: Добавить получение детальной статистики из связанных таблиц
     return VKGroupStats(
-        group_id=group.id,
-        total_posts=group.total_posts_parsed,
-        total_comments=group.total_comments_found,
-        comments_with_keywords=group.total_comments_found,  # TODO: точная статистика
+        group_id=int(group.id),
+        total_posts=int(group.total_posts_parsed),
+        total_comments=int(group.total_comments_found),
+        comments_with_keywords=int(
+            group.total_comments_found
+        ),  # TODO: точная статистика
         last_activity=group.last_parsed_at,
         top_keywords=[],  # TODO: получить из БД
     )
