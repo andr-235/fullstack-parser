@@ -2,7 +2,7 @@
 Модель ключевых слов для фильтрации комментариев
 """
 
-from sqlalchemy import Column, String, Boolean, Text, Integer
+from sqlalchemy import Boolean, Column, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel

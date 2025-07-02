@@ -2,20 +2,20 @@
 Parser Service для обработки комментариев и поиска ключевых слов
 """
 
-import re
 import asyncio
-from typing import List, Dict, Set, Optional, Tuple
-from datetime import datetime
 import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
 
+from app.models.comment_keyword_match import CommentKeywordMatch
+from app.models.keyword import Keyword
+from app.models.vk_comment import VKComment
 from app.models.vk_group import VKGroup
 from app.models.vk_post import VKPost
-from app.models.vk_comment import VKComment
-from app.models.keyword import Keyword
-from app.models.comment_keyword_match import CommentKeywordMatch
 from app.services.vk_api_service import VKAPIService
 
 logger = logging.getLogger(__name__)
@@ -141,7 +141,7 @@ class ParserService:
 
                 if matches:
                     # Сохраняем комментарий с найденными ключевыми словами
-                    comment = await self._save_comment(post, comment_data, matches)
+                    await self._save_comment(post, comment_data, matches)
                     stats["with_keywords"] += 1
                     stats["matches"] += len(matches)
 
@@ -277,5 +277,5 @@ class ParserService:
 
     async def _get_active_keywords(self) -> List[Keyword]:
         """Получение списка активных ключевых слов"""
-        result = await self.db.execute(select(Keyword).where(Keyword.is_active == True))
+        result = await self.db.execute(select(Keyword).where(Keyword.is_active))
         return result.scalars().all()

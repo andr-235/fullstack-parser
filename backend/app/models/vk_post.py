@@ -2,9 +2,8 @@
 Модель VK поста
 """
 
-from sqlalchemy import Column, String, Text, Integer, DateTime, Boolean, ForeignKey
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
 
 from app.models.base import BaseModel
 

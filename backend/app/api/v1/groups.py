@@ -2,20 +2,19 @@
 API endpoints для управления VK группами
 """
 
-from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
 
 from app.core.database import get_async_session
 from app.models.vk_group import VKGroup
+from app.schemas.base import PaginatedResponse, PaginationParams, StatusResponse
 from app.schemas.vk_group import (
     VKGroupCreate,
-    VKGroupUpdate,
     VKGroupResponse,
     VKGroupStats,
+    VKGroupUpdate,
 )
-from app.schemas.base import PaginationParams, PaginatedResponse, StatusResponse
 from app.services.vk_api_service import VKAPIService
 
 router = APIRouter(prefix="/groups", tags=["VK Groups"])
@@ -77,7 +76,7 @@ async def get_groups(
 
     query = select(VKGroup)
     if active_only:
-        query = query.where(VKGroup.is_active == True)
+        query = query.where(VKGroup.is_active)
 
     # Подсчёт общего количества
     total_result = await db.execute(query)

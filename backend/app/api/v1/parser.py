@@ -2,31 +2,29 @@
 API endpoints для парсинга комментариев VK
 """
 
-import asyncio
 from datetime import datetime
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from typing import Optional
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func, desc
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_async_session
-from app.models.vk_group import VKGroup
-from app.models.vk_comment import VKComment
 from app.models.keyword import Keyword
+from app.models.vk_comment import VKComment
+from app.models.vk_group import VKGroup
+from app.schemas.base import PaginatedResponse, PaginationParams
 from app.schemas.parser import (
+    GlobalStats,
     ParseTaskCreate,
     ParseTaskResponse,
-    ParseStats,
-    GlobalStats,
-    DashboardStats,
 )
 from app.schemas.vk_comment import (
-    VKCommentResponse,
-    CommentWithKeywords,
     CommentSearchParams,
+    CommentWithKeywords,
+    VKCommentResponse,
 )
-from app.schemas.base import PaginationParams, PaginatedResponse, StatusResponse
 from app.services.parser_service import ParserService
 
 router = APIRouter(prefix="/parser", tags=["Parser"])
@@ -121,7 +119,7 @@ async def get_comments(
 
     # Только обработанные комментарии с найденными ключевыми словами
     query = query.where(
-        and_(VKComment.is_processed == True, VKComment.matched_keywords_count > 0)
+        and_(VKComment.is_processed, VKComment.matched_keywords_count > 0)
     )
 
     # Сортировка по дате
@@ -197,7 +195,7 @@ async def get_global_stats(
     total_groups = groups_result.scalar()
 
     active_groups_result = await db.execute(
-        select(func.count(VKGroup.id)).where(VKGroup.is_active == True)
+        select(func.count(VKGroup.id)).where(VKGroup.is_active)
     )
     active_groups = active_groups_result.scalar()
 
@@ -206,7 +204,7 @@ async def get_global_stats(
     total_keywords = keywords_result.scalar()
 
     active_keywords_result = await db.execute(
-        select(func.count(Keyword.id)).where(Keyword.is_active == True)
+        select(func.count(Keyword.id)).where(Keyword.is_active)
     )
     active_keywords = active_keywords_result.scalar()
 

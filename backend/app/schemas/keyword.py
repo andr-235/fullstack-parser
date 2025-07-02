@@ -3,9 +3,10 @@ Pydantic схемы для ключевых слов
 """
 
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
-from app.schemas.base import BaseSchema, TimestampMixin, IDMixin
+from app.schemas.base import BaseSchema, IDMixin, TimestampMixin
 
 
 class KeywordBase(BaseModel):

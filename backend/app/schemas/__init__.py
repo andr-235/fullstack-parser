@@ -2,38 +2,38 @@
 
 from .base import (
     BaseSchema,
-    TimestampMixin,
     IDMixin,
-    PaginationParams,
     PaginatedResponse,
+    PaginationParams,
     StatusResponse,
-)
-from .vk_group import (
-    VKGroupBase,
-    VKGroupCreate,
-    VKGroupUpdate,
-    VKGroupResponse,
-    VKGroupStats,
+    TimestampMixin,
 )
 from .keyword import (
     KeywordBase,
     KeywordCreate,
-    KeywordUpdate,
     KeywordResponse,
     KeywordStats,
-)
-from .vk_comment import (
-    VKCommentBase,
-    VKCommentResponse,
-    CommentWithKeywords,
-    CommentSearchParams,
+    KeywordUpdate,
 )
 from .parser import (
+    DashboardStats,
+    GlobalStats,
+    ParseStats,
     ParseTaskCreate,
     ParseTaskResponse,
-    ParseStats,
-    GlobalStats,
-    DashboardStats,
+)
+from .vk_comment import (
+    CommentSearchParams,
+    CommentWithKeywords,
+    VKCommentBase,
+    VKCommentResponse,
+)
+from .vk_group import (
+    VKGroupBase,
+    VKGroupCreate,
+    VKGroupResponse,
+    VKGroupStats,
+    VKGroupUpdate,
 )
 
 __all__ = [

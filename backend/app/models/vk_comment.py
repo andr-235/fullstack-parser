@@ -3,17 +3,15 @@
 """
 
 from sqlalchemy import (
+    Boolean,
     Column,
+    DateTime,
+    ForeignKey,
+    Integer,
     String,
     Text,
-    Integer,
-    DateTime,
-    Boolean,
-    ForeignKey,
-    JSON,
 )
 from sqlalchemy.orm import relationship
-from datetime import datetime
 
 from app.models.base import BaseModel
 

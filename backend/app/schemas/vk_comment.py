@@ -3,10 +3,11 @@ Pydantic схемы для VK комментариев
 """
 
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
-from app.schemas.base import BaseSchema, TimestampMixin, IDMixin
+from app.schemas.base import BaseSchema, IDMixin, TimestampMixin
 
 
 class VKCommentBase(BaseModel):

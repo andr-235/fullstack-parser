@@ -3,7 +3,8 @@ Pydantic схемы для парсинга и статистики
 """
 
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from pydantic import BaseModel, Field
 
 

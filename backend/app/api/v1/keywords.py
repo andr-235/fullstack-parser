@@ -3,19 +3,19 @@ API endpoints для управления ключевыми словами
 """
 
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 
 from app.core.database import get_async_session
 from app.models.keyword import Keyword
+from app.schemas.base import PaginatedResponse, PaginationParams, StatusResponse
 from app.schemas.keyword import (
     KeywordCreate,
-    KeywordUpdate,
     KeywordResponse,
-    KeywordStats,
+    KeywordUpdate,
 )
-from app.schemas.base import PaginationParams, PaginatedResponse, StatusResponse
 
 router = APIRouter(prefix="/keywords", tags=["Keywords"])
 
@@ -57,7 +57,7 @@ async def get_keywords(
     query = select(Keyword)
 
     if active_only:
-        query = query.where(Keyword.is_active == True)
+        query = query.where(Keyword.is_active)
 
     if category:
         query = query.where(Keyword.category == category)

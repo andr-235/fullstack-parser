@@ -3,11 +3,12 @@ VK API Service для получения данных из ВКонтакте
 """
 
 import asyncio
-import time
-from typing import List, Dict, Optional, Any
-from datetime import datetime, timezone
-import vk_api
 import logging
+import time
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
+import vk_api
 
 from app.core.config import settings
 

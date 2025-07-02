@@ -2,9 +2,8 @@
 Модель VK группы для мониторинга
 """
 
-from sqlalchemy import Column, String, Boolean, Integer, Text, DateTime
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
 
 from app.models.base import BaseModel
 

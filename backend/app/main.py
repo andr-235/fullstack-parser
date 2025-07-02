@@ -2,13 +2,14 @@
 VK Comments Parser - FastAPI Backend
 """
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 import logging
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.database import init_db
-from app.api.v1.api import api_router
 
 # Логирование
 logging.basicConfig(level=getattr(logging, settings.log_level))
