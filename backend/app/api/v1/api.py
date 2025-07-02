@@ -4,7 +4,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import groups, keywords, parser
+from app.api.v1 import groups, keywords, parser, stats
 
 api_router = APIRouter()
 
@@ -12,6 +12,7 @@ api_router = APIRouter()
 api_router.include_router(groups.router)
 api_router.include_router(keywords.router)
 api_router.include_router(parser.router)
+api_router.include_router(stats.router)
 
 
 @api_router.get("/")
@@ -24,5 +25,6 @@ async def api_info() -> dict[str, str | dict[str, str]]:
             "groups": "/groups - Управление VK группами",
             "keywords": "/keywords - Управление ключевыми словами",
             "parser": "/parser - Парсинг и поиск комментариев",
+            "stats": "/stats - Статистика системы",
         },
     }
