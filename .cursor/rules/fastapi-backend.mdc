@@ -1,0 +1,76 @@
+---
+description: FastAPI backend development patterns and best practices
+globs: backend/**/*.py, **/*api*.py, **/main.py, **/models/*.py, **/schemas/*.py
+alwaysApply: false
+---
+
+# 🐍 BACKEND (FastAPI) ПРАВИЛА
+
+## Стиль кода:
+- Используйте **async/await** для всех I/O операций
+- Применяйте **type hints** для всех функций и переменных
+- Следуйте **PEP 8** с длиной строки 88 символов (Black)
+- Используйте **Pydantic v2** для валидации данных
+- Применяйте **dependency injection** через FastAPI Depends
+
+## Структура FastAPI:
+```python
+# Пример структуры app/
+app/
+├── __init__.py
+├── main.py              # FastAPI app
+├── core/
+│   ├── config.py        # Settings через pydantic-settings
+│   ├── security.py      # JWT auth, CORS
+│   └── database.py      # SQLAlchemy setup
+├── api/
+│   └── v1/
+│       ├── __init__.py
+│       ├── endpoints/   # API endpoints
+│       └── dependencies.py
+├── models/              # SQLAlchemy models
+├── schemas/             # Pydantic schemas
+├── services/            # Business logic
+└── tests/              # Pytest tests
+```
+
+## Безопасность:
+- Всегда используйте **HTTPBearer** для JWT токенов
+- Применяйте **rate limiting** для всех endpoints
+- Используйте **CORS middleware** с explicit origins
+- Валидируйте **все входные данные** через Pydantic
+- Логируйте **security events** без раскрытия чувствительных данных
+
+## База данных:
+- Используйте **SQLAlchemy 2.0** syntax с async
+- Применяйте **connection pooling**
+- Создавайте **indexes** для часто используемых запросов
+- Используйте **Alembic** для всех миграций
+- Применяйте **transactions** для связанных операций
+
+## Пример кода:
+```python
+from fastapi import FastAPI, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import get_db
+from app.models.user import User
+from app.schemas.user import UserCreate, UserResponse
+
+@app.post("/users/", response_model=UserResponse)
+async def create_user(
+    user_data: UserCreate,
+    db: AsyncSession = Depends(get_db)
+) -> UserResponse:
+    # Business logic here
+    pass
+```
+
+## ⚡ Backend Performance:
+- Используйте **async/await** для I/O операций
+- Применяйте **connection pooling** для database
+- Используйте **Redis caching** для часто запрашиваемых данных
+- Применяйте **database indexes** для оптимизации запросов
+- Используйте **background tasks** для тяжелых операций
+
+
+

@@ -1,0 +1,79 @@
+---
+description: Testing standards and best practices for backend and frontend
+globs: **/test_*.py, **/*_test.py, **/tests/**/*.py, **/*.test.{ts,tsx,js,jsx}, **/*.spec.{ts,tsx,js,jsx}, **/tests/**/*.{ts,tsx,js,jsx}
+alwaysApply: false
+---
+
+# 🧪 ТЕСТИРОВАНИЕ
+
+## Backend Testing:
+- Используйте **pytest** с async support
+- Применяйте **test fixtures** для database setup
+- Создавайте **integration tests** для API endpoints
+- Используйте **pytest-mock** для mocking
+- Стремитесь к **80%+ coverage**
+
+### Пример pytest fixture:
+```python
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import get_db
+from app.main import app
+
+@pytest.fixture
+async def db_session():
+    async with AsyncSession() as session:
+        yield session
+        await session.rollback()
+
+@pytest.fixture
+def client():
+    return TestClient(app)
+
+@pytest.mark.asyncio
+async def test_create_user(client, db_session):
+    response = client.post("/users/", json={"email": "test@example.com"})
+    assert response.status_code == 201
+```
+
+## Frontend Testing:
+- Используйте **Jest + React Testing Library**
+- Применяйте **user-centric** testing approach
+- Создавайте **component tests** и **integration tests**
+- Используйте **MSW** для API mocking
+- Применяйте **accessibility testing**
+
+### Пример React component test:
+```typescript
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import UsersList from '../UsersList';
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } }
+});
+
+test('displays users list', async () => {
+  render(
+    <QueryClientProvider client={queryClient}>
+      <UsersList />
+    </QueryClientProvider>
+  );
+  
+  await waitFor(() => {
+    expect(screen.getByText('Users')).toBeInTheDocument();
+  });
+});
+```
+
+## Best Practices:
+- **Arrange-Act-Assert** pattern для test structure
+- **One assertion per test** когда возможно
+- **Descriptive test names** на русском языке
+- **Mock external dependencies** (API, database, third-party services)
+- **Test edge cases** и error scenarios
+
+
+
+

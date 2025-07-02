@@ -1,0 +1,262 @@
+name: 🧪 Tests & Quality Checks
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # =============================================================================
+  # BACKEND TESTS & QUALITY
+  # =============================================================================
+  backend-tests:
+    name: 🐍 Backend Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: 📥 Checkout код
+        uses: actions/checkout@v4
+
+      - name: 🐍 Настройка Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 📦 Установка зависимостей
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: 🎨 Проверка форматирования (Black)
+        working-directory: ./backend
+        run: black --check .
+
+      - name: 📊 Проверка импортов (isort)
+        working-directory: ./backend
+        run: isort --check-only .
+
+      - name: 🔍 Линтинг (Ruff)
+        working-directory: ./backend
+        run: ruff check .
+
+      - name: 🔒 Типизация (mypy)
+        working-directory: ./backend
+        run: mypy .
+
+      - name: 🛡️ Безопасность (Bandit)
+        working-directory: ./backend
+        run: bandit -r app/
+
+      - name: 🧪 Запуск тестов
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key
+          JWT_SECRET_KEY: test-jwt-secret
+        run: |
+          pytest tests/ -v \
+            --cov=app \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=80
+
+      - name: 📊 Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./backend/coverage.xml
+          flags: backend
+
+  # =============================================================================
+  # FRONTEND TESTS & QUALITY
+  # =============================================================================
+  frontend-tests:
+    name: ⚛️ Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout код
+        uses: actions/checkout@v4
+
+      - name: 📦 Настройка Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+
+      - name: 📦 Установка зависимостей
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: 🎨 Проверка форматирования (Prettier)
+        working-directory: ./frontend
+        run: npm run format:check
+
+      - name: 🔍 Линтинг (ESLint)
+        working-directory: ./frontend
+        run: npm run lint
+
+      - name: 🔒 Типизация (TypeScript)
+        working-directory: ./frontend
+        run: npm run type-check
+
+      - name: 🔒 Аудит безопасности
+        working-directory: ./frontend
+        run: npm audit --production
+
+      - name: 🧪 Unit тесты
+        working-directory: ./frontend
+        run: npm test -- --coverage --watchAll=false
+
+      - name: 🏗️ Тест сборки
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: 📊 Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./frontend/coverage/lcov.info
+          flags: frontend
+
+  # =============================================================================
+  # INTEGRATION TESTS
+  # =============================================================================
+  integration-tests:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    
+    steps:
+      - name: 📥 Checkout код
+        uses: actions/checkout@v4
+
+      - name: 🐳 Настройка Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🏗️ Сборка тестового окружения
+        run: |
+          cp env.example .env
+          docker-compose up -d --build
+          
+      - name: ⏳ Ожидание готовности сервисов
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:8000/health; do sleep 2; done'
+          timeout 60 bash -c 'until curl -f http://localhost:3000; do sleep 2; done'
+
+      - name: 🧪 Integration тесты
+        run: |
+          # API integration tests
+          curl -f http://localhost:8000/docs
+          curl -f http://localhost:8000/api/v1/health
+          
+          # Frontend integration tests
+          curl -f http://localhost:3000
+          
+      - name: 📊 Логи при ошибке
+        if: failure()
+        run: |
+          docker-compose logs backend
+          docker-compose logs frontend
+          
+      - name: 🧹 Очистка
+        if: always()
+        run: docker-compose down -v
+
+  # =============================================================================
+  # SECURITY SCANNING
+  # =============================================================================
+  security-scan:
+    name: 🛡️ Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout код
+        uses: actions/checkout@v4
+
+      - name: 🔍 CodeQL Analysis
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python, javascript
+
+      - name: 🏗️ Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: 📊 CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+      - name: 🐳 Docker Security Scan
+        run: |
+          # Install trivy
+          sudo apt-get update
+          sudo apt-get install wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy
+          
+          # Scan Dockerfiles
+          trivy fs --format table ./backend/Dockerfile
+          trivy fs --format table ./frontend/Dockerfile
+
+  # =============================================================================
+  # SUMMARY JOB
+  # =============================================================================
+  tests-summary:
+    name: 📋 Tests Summary
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, integration-tests, security-scan]
+    if: always()
+    
+    steps:
+      - name: 📊 Результаты тестирования
+        run: |
+          echo "## 🧪 Результаты тестирования" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend Tests: ${{ needs.backend-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend Tests: ${{ needs.frontend-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          
+      - name: ✅ Успешное завершение
+        if: ${{ needs.backend-tests.result == 'success' && needs.frontend-tests.result == 'success' && needs.integration-tests.result == 'success' && needs.security-scan.result == 'success' }}
+        run: echo "🎉 Все тесты прошли успешно!"
+        
+      - name: ❌ Тесты провалены
+        if: ${{ needs.backend-tests.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.security-scan.result == 'failure' }}
+        run: |
+          echo "❌ Некоторые тесты провалены!"
+          exit 1 

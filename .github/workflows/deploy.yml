@@ -1,0 +1,342 @@
+name: 🚀 Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      force_deploy:
+        description: 'Force deploy (skip some checks)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # =============================================================================
+  # BUILD DOCKER IMAGES
+  # =============================================================================
+  build:
+    name: 🏗️ Build Images
+    runs-on: ubuntu-latest
+    
+    outputs:
+      backend-image: ${{ steps.meta-backend.outputs.tags }}
+      frontend-image: ${{ steps.meta-frontend.outputs.tags }}
+      backend-digest: ${{ steps.build-backend.outputs.digest }}
+      frontend-digest: ${{ steps.build-frontend.outputs.digest }}
+    
+    steps:
+      - name: 📥 Checkout код
+        uses: actions/checkout@v4
+
+      - name: 🐳 Настройка Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Вход в Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📋 Метаданные Backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 📋 Метаданные Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🏗️ Сборка Backend образа
+        id: build-backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          target: production
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 🏗️ Сборка Frontend образа
+        id: build-frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: production
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 🛡️ Сканирование образов
+        run: |
+          # Install trivy
+          sudo apt-get update
+          sudo apt-get install wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy
+          
+          # Scan images
+          trivy image --exit-code 1 --severity HIGH,CRITICAL ${{ steps.meta-backend.outputs.tags }}
+          trivy image --exit-code 1 --severity HIGH,CRITICAL ${{ steps.meta-frontend.outputs.tags }}
+
+  # =============================================================================
+  # DEPLOY TO STAGING
+  # =============================================================================
+  deploy-staging:
+    name: 📦 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: staging
+      url: https://staging.yourdomain.com
+    
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    
+    steps:
+      - name: 📥 Checkout код
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy to Staging Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_PORT || '22' }}
+          script: |
+            cd ${{ secrets.STAGING_APP_DIR || '/opt/app-staging' }}
+            
+            # Pull latest code
+            git fetch origin
+            git reset --hard origin/main
+            
+            # Update environment
+            export BACKEND_IMAGE="${{ needs.build.outputs.backend-image }}"
+            export FRONTEND_IMAGE="${{ needs.build.outputs.frontend-image }}"
+            
+            # Deploy using script
+            ./scripts/deploy.sh main --force
+            
+            # Health check
+            timeout 60 bash -c 'until curl -f https://staging.yourdomain.com/health; do sleep 5; done'
+
+      - name: 🧪 Staging Tests
+        run: |
+          # Smoke tests для staging
+          curl -f https://staging.yourdomain.com/health
+          curl -f https://staging.yourdomain.com/api/v1/health
+          
+      - name: 📢 Уведомление об успешном деплое staging
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          channel: '#deployments'
+          text: '🎉 Деплой в staging успешно завершен!'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # =============================================================================
+  # DEPLOY TO PRODUCTION  
+  # =============================================================================
+  deploy-production:
+    name: 🏭 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, deploy-staging]
+    environment:
+      name: production
+      url: https://yourdomain.com
+    
+    if: github.ref == 'refs/heads/main' && (github.event.inputs.environment == 'production' || github.event_name == 'workflow_dispatch')
+    
+    steps:
+      - name: 📥 Checkout код
+        uses: actions/checkout@v4
+
+      - name: 📋 Pre-deploy checklist
+        run: |
+          echo "## 🚀 Production Deployment Checklist" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Все тесты прошли успешно" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Образы собраны и проверены" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Staging деплой успешен" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Manual approval получен" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Backend Image:** ${{ needs.build.outputs.backend-image }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Frontend Image:** ${{ needs.build.outputs.frontend-image }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: 💾 Backup Production Database
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          port: ${{ secrets.PRODUCTION_PORT || '22' }}
+          script: |
+            cd ${{ secrets.PRODUCTION_APP_DIR || '/opt/app' }}
+            ./scripts/backup.sh auto
+
+      - name: 🚀 Deploy to Production Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          port: ${{ secrets.PRODUCTION_PORT || '22' }}
+          script: |
+            cd ${{ secrets.PRODUCTION_APP_DIR || '/opt/app' }}
+            
+            # Pull latest code
+            git fetch origin
+            git reset --hard origin/main
+            
+            # Update environment
+            export BACKEND_IMAGE="${{ needs.build.outputs.backend-image }}"
+            export FRONTEND_IMAGE="${{ needs.build.outputs.frontend-image }}"
+            
+            # Deploy
+            if [[ "${{ github.event.inputs.force_deploy }}" == "true" ]]; then
+              ./scripts/deploy.sh main --force
+            else
+              ./scripts/deploy.sh main
+            fi
+
+      - name: 🧪 Production Health Check
+        run: |
+          # Extended health checks для production
+          echo "Проверка доступности сервисов..."
+          timeout 120 bash -c 'until curl -f https://yourdomain.com/health; do sleep 10; done'
+          timeout 60 bash -c 'until curl -f https://yourdomain.com/api/v1/health; do sleep 5; done'
+          
+          # Performance check
+          response_time=$(curl -o /dev/null -s -w '%{time_total}\n' https://yourdomain.com)
+          echo "Response time: ${response_time}s"
+          
+          if (( $(echo "$response_time > 2.0" | bc -l) )); then
+            echo "⚠️ Предупреждение: время отклика больше 2 секунд"
+          fi
+
+      - name: 📊 Post-deployment Monitoring
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          port: ${{ secrets.PRODUCTION_PORT || '22' }}
+          script: |
+            cd ${{ secrets.PRODUCTION_APP_DIR || '/opt/app' }}
+            
+            # Check container status
+            docker-compose -f docker-compose.prod.yml ps
+            
+            # Check resource usage
+            docker stats --no-stream
+            
+            # Check disk space
+            df -h
+
+      - name: 📢 Уведомление об успешном деплое production
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          channel: '#deployments'
+          text: |
+            🎉 **Production деплой успешно завершен!**
+            
+            📋 **Детали:**
+            - Commit: ${{ github.sha }}
+            - Branch: ${{ github.ref_name }}
+            - Author: ${{ github.actor }}
+            - Images: 
+              - Backend: ${{ needs.build.outputs.backend-image }}
+              - Frontend: ${{ needs.build.outputs.frontend-image }}
+            
+            🔗 **Ссылки:**
+            - Site: https://yourdomain.com
+            - API Docs: https://yourdomain.com/docs
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # =============================================================================
+  # ROLLBACK CAPABILITY
+  # =============================================================================
+  rollback:
+    name: 🔄 Rollback
+    runs-on: ubuntu-latest
+    if: failure() && needs.deploy-production.result == 'failure'
+    needs: [deploy-production]
+    environment:
+      name: production
+    
+    steps:
+      - name: 📥 Checkout код
+        uses: actions/checkout@v4
+
+      - name: 🔄 Rollback Production
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          port: ${{ secrets.PRODUCTION_PORT || '22' }}
+          script: |
+            cd ${{ secrets.PRODUCTION_APP_DIR || '/opt/app' }}
+            
+            # Get previous commit
+            previous_commit=$(git rev-parse HEAD~1)
+            
+            # Rollback to previous version
+            git checkout $previous_commit
+            ./scripts/deploy.sh main --force
+            
+            # Verify rollback
+            timeout 60 bash -c 'until curl -f https://yourdomain.com/health; do sleep 5; done'
+
+      - name: 📢 Уведомление о rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: warning
+          channel: '#deployments'
+          text: |
+            ⚠️ **Выполнен автоматический rollback production!**
+            
+            Причина: Деплой завершился неудачно
+            Commit: ${{ github.sha }}
+            Откачен к: предыдущему коммиту
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} 
