@@ -1,0 +1,148 @@
+---
+description: "Environment configuration and secrets management patterns"
+globs: .env*, **/config.py, **/settings.py, **/.env*
+alwaysApply: false
+---
+
+# ⚙️ Environment Configuration Guidelines
+
+## 🔧 Pydantic Settings Configuration
+
+### Base Settings Class
+```python
+# app/core/config.py
+from typing import Any, Dict, List, Optional, Union
+from pydantic import BaseSettings, Field, validator, PostgresDsn, RedisDsn
+import secrets
+import warnings
+from pathlib import Path
+
+class Settings(BaseSettings):
+    """Конфигурация приложения с валидацией"""
+    
+    # Application
+    APP_NAME: str = Field("VK Comments Monitor", description="Название приложения")
+    APP_VERSION: str = Field("1.0.0", description="Версия приложения")
+    DEBUG: bool = Field(False, description="Режим отладки")
+    ENVIRONMENT: str = Field("production", description="Окружение (development/staging/production)")
+    
+    # Security
+    SECRET_KEY: str = Field(..., min_length=32, description="Секретный ключ для JWT")
+    ALGORITHM: str = Field("HS256", description="Алгоритм для JWT")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(30, gt=0, description="Время жизни access токена")
+    
+    # Database
+    DATABASE_HOST: str = Field("localhost", description="Хост PostgreSQL")
+    DATABASE_PORT: int = Field(5432, ge=1, le=65535, description="Порт PostgreSQL")
+    DATABASE_USER: str = Field("vk_monitor", description="Пользователь PostgreSQL")
+    DATABASE_PASSWORD: str = Field(..., min_length=8, description="Пароль PostgreSQL")
+    DATABASE_NAME: str = Field("vk_monitor", description="Название базы данных")
+    DATABASE_URL: Optional[PostgresDsn] = Field(None, description="Полный URL подключения к БД")
+    
+    # Redis
+    REDIS_HOST: str = Field("localhost", description="Хост Redis")
+    REDIS_PORT: int = Field(6379, ge=1, le=65535, description="Порт Redis")
+    REDIS_PASSWORD: Optional[str] = Field(None, description="Пароль Redis")
+    REDIS_DB: int = Field(0, ge=0, description="Номер базы данных Redis")
+    REDIS_URL: Optional[RedisDsn] = Field(None, description="Полный URL подключения к Redis")
+    
+    # VK API
+    VK_ACCESS_TOKEN: str = Field(..., min_length=85, description="VK API access token")
+    VK_API_VERSION: str = Field("5.131", description="Версия VK API")
+    VK_REQUESTS_PER_SECOND: int = Field(3, ge=1, le=20, description="Лимит запросов к VK API в секунду")
+    
+    @validator("SECRET_KEY", pre=True)
+    def validate_secret_key(cls, v):
+        """Валидация секретного ключа"""
+        if isinstance(v, str) and v:
+            return v
+        # Генерируем случайный ключ для разработки
+        if not v:
+            generated_key = secrets.token_urlsafe(32)
+            warnings.warn(
+                f"SECRET_KEY не установлен, используется сгенерированный: {generated_key}",
+                UserWarning
+            )
+            return generated_key
+        return v
+    
+    @validator("DATABASE_URL", pre=True)
+    def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
+        """Собираем DATABASE_URL из компонентов"""
+        if isinstance(v, str) and v:
+            return v
+        
+        return PostgresDsn.build(
+            scheme="postgresql+asyncpg",
+            user=values.get("DATABASE_USER"),
+            password=values.get("DATABASE_PASSWORD"),
+            host=values.get("DATABASE_HOST"),
+            port=str(values.get("DATABASE_PORT")),
+            path=f"/{values.get('DATABASE_NAME') or ''}",
+        )
+    
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        case_sensitive = True
+
+# Создаем глобальный экземпляр настроек
+settings = Settings()
+```
+
+## 📁 Environment Files Structure
+
+### .env.example (Template)
+```bash
+# Application Configuration
+APP_NAME="VK Comments Monitor"
+APP_VERSION="1.0.0"
+ENVIRONMENT="development"
+DEBUG=true
+
+# Security Configuration
+SECRET_KEY="your-super-secret-key-here-minimum-32-characters"
+ALGORITHM="HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Database Configuration (PostgreSQL)
+DATABASE_HOST="localhost"
+DATABASE_PORT=5432
+DATABASE_USER="vk_monitor"
+DATABASE_PASSWORD="your-secure-password"
+DATABASE_NAME="vk_monitor"
+
+# Redis Configuration
+REDIS_HOST="localhost"
+REDIS_PORT=6379
+REDIS_PASSWORD=""
+REDIS_DB=0
+
+# VK API Configuration
+VK_ACCESS_TOKEN="your-vk-group-access-token-here"
+VK_API_VERSION="5.131"
+VK_REQUESTS_PER_SECOND=3
+```
+
+## ✅ Configuration Checklist
+
+### Security
+- [ ] SECRET_KEY установлен и имеет минимум 32 символа
+- [ ] Пароли БД имеют достаточную сложность
+- [ ] VK токены не отображаются в логах
+- [ ] .env файлы добавлены в .gitignore
+- [ ] Продакшн секреты не хранятся в коде
+
+### Environment Files
+- [ ] .env.example содержит все переменные
+- [ ] .env.development настроен для разработки
+- [ ] .env.production настроен для продакшна
+- [ ] Переменные документированы и валидируются
+- [ ] Значения по умолчанию безопасны
+
+### Configuration Loading
+- [ ] Pydantic настроен для валидации
+- [ ] Ошибки конфигурации останавливают запуск
+- [ ] Database URLs собираются автоматически
+- [ ] Логирование настроено корректно
+

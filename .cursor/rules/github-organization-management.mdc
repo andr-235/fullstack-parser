@@ -1,0 +1,562 @@
+---
+description: "GitHub organization management with teams, security, and compliance"
+globs: .github/**/*.yml, .github/**/*.yaml, CODEOWNERS, .github/ISSUE_TEMPLATE/**/*, .github/organization/**/*
+alwaysApply: false
+---
+
+# GitHub Organization Management
+
+Комплексное руководство по управлению GitHub организациями, настройке безопасности и управлению командами.
+
+## 🏢 Organization Setup & Configuration
+
+### Initial Organization Security
+```bash
+# Создание организации через GitHub CLI
+gh api orgs --method POST --field login="company-org" \
+  --field billing_email="billing@company.com" \
+  --field company="Company Name" \
+  --field email="admin@company.com"
+
+# Базовая настройка безопасности
+gh api orgs/company-org --method PATCH \
+  --field two_factor_requirement_enabled=true \
+  --field members_can_create_repositories=false \
+  --field members_can_create_public_repositories=false \
+  --field default_repository_permission=read \
+  --field members_can_fork_private_repositories=false
+```
+
+### Organization Security Policy
+```yaml
+# Organization-wide security configuration
+organization_security:
+  authentication:
+    two_factor_authentication: required
+    saml_sso: enabled  # For Enterprise
+    ip_allowlist: 
+      - "10.0.0.0/8"
+      - "192.168.1.0/24"
+    
+  repository_defaults:
+    default_permission: read
+    members_can_create_repositories: false
+    members_can_create_public_repositories: false
+    members_can_fork_private_repositories: false
+    
+  security_features:
+    dependency_graph: enabled
+    dependabot_alerts: enabled
+    dependabot_security_updates: enabled
+    secret_scanning: enabled
+    advanced_security: enabled  # For Enterprise
+    
+  compliance:
+    require_signed_commits: true
+    require_linear_history: true
+    delete_head_branches: true
+```
+
+## 👥 Team Management & Permissions
+
+### Team Structure Best Practices
+```bash
+# Создание базовых команд
+TEAMS=(
+  "security-team:Security Team:closed"
+  "developers:Developers:closed"
+  "devops:DevOps Team:closed"
+  "qa-team:QA Team:closed"
+  "product-managers:Product Managers:closed"
+  "external-contributors:External Contributors:secret"
+)
+
+for team_config in "${TEAMS[@]}"; do
+  IFS=':' read -r team_name team_description privacy <<< "$team_config"
+  
+  gh api orgs/company-org/teams --method POST \
+    --field name="$team_name" \
+    --field description="$team_description" \
+    --field privacy="$privacy"
+done
+```
+
+### Role-Based Access Control
+```yaml
+# Team permission matrix
+team_permissions:
+  security-team:
+    organization_role: admin
+    repository_access:
+      - pattern: "security-*"
+        permission: admin
+      - pattern: "*"
+        permission: maintain
+    
+  developers:
+    organization_role: member
+    repository_access:
+      - pattern: "app-*"
+        permission: write
+      - pattern: "lib-*"
+        permission: write
+    
+  devops:
+    organization_role: member
+    repository_access:
+      - pattern: "infrastructure-*"
+        permission: admin
+      - pattern: "ci-cd-*"
+        permission: admin
+      - pattern: "*"
+        permission: read
+    
+  qa-team:
+    organization_role: member
+    repository_access:
+      - pattern: "test-*"
+        permission: write
+      - pattern: "*"
+        permission: read
+```
+
+### Custom Repository Roles
+```bash
+# Создание custom roles через API
+gh api orgs/company-org/custom-repository-roles --method POST \
+  --field name="security-reviewer" \
+  --field description="Can review security-related changes" \
+  --field base_role="read" \
+  --field permissions='["metadata","contents","issues","pull_requests"]'
+
+gh api orgs/company-org/custom-repository-roles --method POST \
+  --field name="release-manager" \
+  --field description="Can manage releases and tags" \
+  --field base_role="write" \
+  --field permissions='["metadata","contents","issues","pull_requests","releases"]'
+```
+
+## 🔐 Enterprise Security Features
+
+### SAML SSO Configuration
+```yaml
+# SAML SSO setup (Enterprise only)
+saml_configuration:
+  enabled: true
+  sso_url: "https://company.okta.com/app/github/sso/saml"
+  issuer: "http://www.okta.com/exk1fcia6d6EMsAKS0x7"
+  certificate: |
+    -----BEGIN CERTIFICATE-----
+    MIIDpDCCAoygAwIBAgIGAV2ka+55MA0GCSqGSIb3DQEBCwUAMIGSMQswCQYDVQQG
+    ...
+    -----END CERTIFICATE-----
+  
+  attribute_mapping:
+    username: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
+    email: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+    full_name: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname"
+```
+
+### IP Allowlist Management
+```bash
+# Управление IP allowlist
+gh api orgs/company-org/settings/ip-allowlist --method POST \
+  --field ip-address="192.168.1.0/24" \
+  --field description="Office network"
+
+gh api orgs/company-org/settings/ip-allowlist --method POST \
+  --field ip-address="10.0.0.0/8" \
+  --field description="VPN network"
+
+# Включение enforcement
+gh api orgs/company-org/settings/ip-allowlist --method PATCH \
+  --field enabled=true
+```
+
+## 📊 Organization Audit & Monitoring
+
+### Audit Log Analysis
+```bash
+#!/bin/bash
+# audit-analysis.sh
+
+# Получение audit logs за последние 30 дней
+THIRTY_DAYS_AGO=$(date -d '30 days ago' -Iseconds)
+
+gh api orgs/company-org/audit-log \
+  --field phrase="created:>$THIRTY_DAYS_AGO" \
+  --field include="all" \
+  --paginate > audit-logs.json
+
+# Анализ критических событий
+CRITICAL_EVENTS=(
+  "repo.create"
+  "repo.destroy" 
+  "repo.transfer"
+  "org.add_member"
+  "org.remove_member"
+  "org.update_member"
+  "team.add_member"
+  "team.remove_member"
+  "oauth_application.create"
+  "oauth_application.destroy"
+)
+
+echo "🔍 Critical Events Analysis:"
+for event in "${CRITICAL_EVENTS[@]}"; do
+  count=$(jq "[.[] | select(.action == \"$event\")] | length" audit-logs.json)
+  echo "  $event: $count occurrences"
+done
+```
+
+### Security Metrics Dashboard
+```python
+#!/usr/bin/env python3
+# org-security-metrics.py
+
+import requests
+import json
+from datetime import datetime, timedelta
+
+class GitHubOrgSecurity:
+    def __init__(self, org, token):
+        self.org = org
+        self.headers = {
+            'Authorization': f'token {token}',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+    
+    def get_2fa_compliance(self):
+        """Проверка соблюдения 2FA"""
+        url = f"https://api.github.com/orgs/{self.org}/members"
+        params = {'filter': '2fa_disabled'}
+        
+        response = requests.get(url, headers=self.headers, params=params)
+        non_compliant = len(response.json()) if response.status_code == 200 else 0
+        
+        # Общее количество участников
+        url = f"https://api.github.com/orgs/{self.org}/members"
+        response = requests.get(url, headers=self.headers)
+        total_members = len(response.json()) if response.status_code == 200 else 0
+        
+        compliance_rate = ((total_members - non_compliant) / total_members * 100) if total_members > 0 else 0
+        
+        return {
+            'total_members': total_members,
+            'non_compliant': non_compliant,
+            'compliance_rate': round(compliance_rate, 2)
+        }
+    
+    def get_repository_security_status(self):
+        """Статус безопасности репозиториев"""
+        url = f"https://api.github.com/orgs/{self.org}/repos"
+        response = requests.get(url, headers=self.headers)
+        repos = response.json() if response.status_code == 200 else []
+        
+        security_stats = {
+            'total_repos': len(repos),
+            'private_repos': 0,
+            'has_security_policy': 0,
+            'vulnerability_alerts_enabled': 0,
+            'dependency_graph_enabled': 0
+        }
+        
+        for repo in repos:
+            if repo['private']:
+                security_stats['private_repos'] += 1
+            
+            # Проверка security policy
+            security_url = f"https://api.github.com/repos/{self.org}/{repo['name']}/community/profile"
+            security_response = requests.get(security_url, headers=self.headers)
+            if security_response.status_code == 200:
+                profile = security_response.json()
+                if profile.get('files', {}).get('security'):
+                    security_stats['has_security_policy'] += 1
+        
+        return security_stats
+    
+    def generate_report(self):
+        """Генерация отчета по безопасности организации"""
+        print(f"🏢 Security Report for {self.org}")
+        print("=" * 50)
+        
+        # 2FA Compliance
+        tfa_data = self.get_2fa_compliance()
+        print(f"\n🔐 Two-Factor Authentication:")
+        print(f"  Total Members: {tfa_data['total_members']}")
+        print(f"  Non-compliant: {tfa_data['non_compliant']}")
+        print(f"  Compliance Rate: {tfa_data['compliance_rate']}%")
+        
+        # Repository Security
+        repo_data = self.get_repository_security_status()
+        print(f"\n📁 Repository Security:")
+        print(f"  Total Repositories: {repo_data['total_repos']}")
+        print(f"  Private Repositories: {repo_data['private_repos']}")
+        print(f"  With Security Policy: {repo_data['has_security_policy']}")
+        
+        # Compliance Score
+        compliance_score = (
+            (tfa_data['compliance_rate'] * 0.4) +
+            ((repo_data['private_repos'] / repo_data['total_repos'] * 100) * 0.3) +
+            ((repo_data['has_security_policy'] / repo_data['total_repos'] * 100) * 0.3)
+        ) if repo_data['total_repos'] > 0 else 0
+        
+        print(f"\n📊 Overall Compliance Score: {round(compliance_score, 2)}%")
+
+if __name__ == "__main__":
+    import os
+    
+    org = os.environ.get('GITHUB_ORG', 'your-org')
+    token = os.environ.get('GITHUB_TOKEN')
+    
+    if not token:
+        print("❌ GITHUB_TOKEN environment variable required")
+        exit(1)
+    
+    security = GitHubOrgSecurity(org, token)
+    security.generate_report()
+```
+
+## 🔄 Automated Organization Management
+
+### Member Onboarding Automation
+```yaml
+name: Member Onboarding
+
+on:
+  organization:
+    types: [member_added]
+
+jobs:
+  onboard-member:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add to default teams
+        run: |
+          # Добавление в команду по умолчанию
+          gh api orgs/${{ github.event.organization.login }}/teams/developers/memberships/${{ github.event.membership.user.login }} \
+            --method PUT \
+            --field role="member"
+          
+      - name: Send welcome message
+        run: |
+          # Отправка welcome сообщения
+          gh api repos/${{ github.event.organization.login }}/.github/issues \
+            --method POST \
+            --field title="Welcome @${{ github.event.membership.user.login }}!" \
+            --field body="Welcome to our organization! Please read our [security policy](mdc:SECURITY.md)" \
+            --field assignees='["${{ github.event.membership.user.login }}"]'
+```
+
+### Repository Template Management
+```bash
+#!/bin/bash
+# create-repo-from-template.sh
+
+TEMPLATE_REPO="company-org/template-repo"
+NEW_REPO_NAME="$1"
+TEAM_ACCESS="$2"
+
+if [ -z "$NEW_REPO_NAME" ] || [ -z "$TEAM_ACCESS" ]; then
+  echo "Usage: $0 <repo-name> <team-name>"
+  exit 1
+fi
+
+# Создание репозитория из template
+gh repo create "company-org/$NEW_REPO_NAME" \
+  --template "$TEMPLATE_REPO" \
+  --private \
+  --description "Created from template" \
+  --clone
+
+# Настройка доступа команды
+gh api repos/company-org/$NEW_REPO_NAME/teams/$TEAM_ACCESS \
+  --method PUT \
+  --field permission="write"
+
+# Включение security features
+gh api repos/company-org/$NEW_REPO_NAME \
+  --method PATCH \
+  --field has_vulnerability_alerts=true \
+  --field has_dependabot_alerts=true \
+  --field security_and_analysis='{
+    "secret_scanning": {"status": "enabled"},
+    "secret_scanning_push_protection": {"status": "enabled"}
+  }'
+
+echo "✅ Repository $NEW_REPO_NAME created and configured"
+```
+
+## 📋 Compliance & Governance
+
+### Repository Compliance Scan
+```python
+#!/usr/bin/env python3
+# compliance-scan.py
+
+import requests
+import json
+
+class ComplianceScanner:
+    def __init__(self, org, token):
+        self.org = org
+        self.headers = {
+            'Authorization': f'token {token}',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+    
+    def check_branch_protection(self, repo_name):
+        """Проверка branch protection rules"""
+        url = f"https://api.github.com/repos/{self.org}/{repo_name}/branches/main/protection"
+        response = requests.get(url, headers=self.headers)
+        
+        if response.status_code == 200:
+            protection = response.json()
+            return {
+                'enabled': True,
+                'required_reviews': protection.get('required_pull_request_reviews', {}).get('required_approving_review_count', 0),
+                'dismiss_stale_reviews': protection.get('required_pull_request_reviews', {}).get('dismiss_stale_reviews', False),
+                'require_code_owner_reviews': protection.get('required_pull_request_reviews', {}).get('require_code_owner_reviews', False),
+                'required_status_checks': len(protection.get('required_status_checks', {}).get('contexts', [])),
+                'enforce_admins': protection.get('enforce_admins', {}).get('enabled', False),
+                'allow_force_pushes': protection.get('allow_force_pushes', {}).get('enabled', True),
+                'allow_deletions': protection.get('allow_deletions', {}).get('enabled', True)
+            }
+        else:
+            return {'enabled': False}
+    
+    def check_security_features(self, repo_name):
+        """Проверка security features"""
+        url = f"https://api.github.com/repos/{self.org}/{repo_name}"
+        response = requests.get(url, headers=self.headers)
+        
+        if response.status_code == 200:
+            repo = response.json()
+            security = repo.get('security_and_analysis', {})
+            
+            return {
+                'vulnerability_alerts': repo.get('has_vulnerability_alerts', False),
+                'secret_scanning': security.get('secret_scanning', {}).get('status') == 'enabled',
+                'secret_scanning_push_protection': security.get('secret_scanning_push_protection', {}).get('status') == 'enabled',
+                'dependabot_security_updates': repo.get('has_dependabot_alerts', False)
+            }
+        else:
+            return {}
+    
+    def scan_organization(self):
+        """Сканирование всей организации"""
+        url = f"https://api.github.com/orgs/{self.org}/repos"
+        response = requests.get(url, headers=self.headers)
+        
+        if response.status_code != 200:
+            print(f"❌ Failed to fetch repositories: {response.status_code}")
+            return
+        
+        repos = response.json()
+        compliance_report = []
+        
+        for repo in repos:
+            repo_name = repo['name']
+            print(f"🔍 Scanning {repo_name}...")
+            
+            branch_protection = self.check_branch_protection(repo_name)
+            security_features = self.check_security_features(repo_name)
+            
+            # Расчет compliance score
+            score = self.calculate_compliance_score(branch_protection, security_features)
+            
+            compliance_report.append({
+                'repository': repo_name,
+                'private': repo['private'],
+                'branch_protection': branch_protection,
+                'security_features': security_features,
+                'compliance_score': score
+            })
+        
+        return compliance_report
+    
+    def calculate_compliance_score(self, branch_protection, security_features):
+        """Расчет compliance score"""
+        score = 0
+        max_score = 100
+        
+        # Branch Protection (50 points)
+        if branch_protection.get('enabled', False):
+            score += 10
+            if branch_protection.get('required_reviews', 0) >= 2:
+                score += 10
+            if branch_protection.get('dismiss_stale_reviews', False):
+                score += 5
+            if branch_protection.get('require_code_owner_reviews', False):
+                score += 10
+            if branch_protection.get('required_status_checks', 0) > 0:
+                score += 10
+            if branch_protection.get('enforce_admins', False):
+                score += 5
+        
+        # Security Features (50 points)
+        if security_features.get('vulnerability_alerts', False):
+            score += 10
+        if security_features.get('secret_scanning', False):
+            score += 15
+        if security_features.get('secret_scanning_push_protection', False):
+            score += 15
+        if security_features.get('dependabot_security_updates', False):
+            score += 10
+        
+        return round((score / max_score) * 100, 2)
+
+# Использование
+if __name__ == "__main__":
+    import os
+    
+    org = os.environ.get('GITHUB_ORG', 'your-org')
+    token = os.environ.get('GITHUB_TOKEN')
+    
+    scanner = ComplianceScanner(org, token)
+    report = scanner.scan_organization()
+    
+    # Вывод отчета
+    print("\n📊 Compliance Report")
+    print("=" * 50)
+    
+    for repo in report:
+        status = "✅" if repo['compliance_score'] >= 80 else "⚠️" if repo['compliance_score'] >= 60 else "❌"
+        print(f"{status} {repo['repository']}: {repo['compliance_score']}%")
+```
+
+## 🎯 Organization Security Checklist
+
+### Security Configuration
+- [ ] **Two-Factor Authentication** обязательна для всех участников
+- [ ] **SAML SSO** настроен (для Enterprise)
+- [ ] **IP Allowlist** настроен при необходимости
+- [ ] **Base permissions** установлены в "Read"
+- [ ] **Repository creation** ограничено для участников
+- [ ] **Forking private repos** запрещено
+
+### Team Management
+- [ ] **Teams** созданы по принципу least privilege
+- [ ] **Custom roles** настроены при необходимости
+- [ ] **CODEOWNERS** файлы настроены для критических репозиториев
+- [ ] **Regular access review** запланирован
+- [ ] **Onboarding process** автоматизирован
+
+### Monitoring & Compliance
+- [ ] **Audit logging** включен и мониторится
+- [ ] **Security metrics** отслеживаются
+- [ ] **Compliance scanning** автоматизирован
+- [ ] **Incident response plan** создан
+- [ ] **Regular security training** проводится
+
+## 🔗 Resources
+
+### GitHub Enterprise Documentation
+- [GitHub Enterprise Cloud](mdc:https:/docs.github.com/en/enterprise-cloud@latest)
+- [SAML SSO](mdc:https:/docs.github.com/en/organizations/managing-saml-single-sign-on-for-your-organization)
+- [Organization Management](mdc:https:/docs.github.com/en/organizations)
+
+### Best Practices
+- [Organization Security](mdc:https:/docs.github.com/en/organizations/keeping-your-organization-secure)
+- [Team Management](mdc:https:/docs.github.com/en/organizations/organizing-members-into-teams)
+- [Repository Roles](mdc:https:/docs.github.com/en/organizations/managing-access-to-your-organizations-repositories)

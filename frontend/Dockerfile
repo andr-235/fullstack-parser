@@ -1,24 +1,23 @@
-# Frontend Dockerfile
-FROM node:18-alpine AS base
+# Frontend Dockerfile for bun
+FROM oven/bun:1.0-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
-RUN npm ci
+# Install dependencies with bun
+COPY package.json bun.lock* ./
+RUN bun install --production
 
 # Development stage for local development
 FROM base AS development
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package.json bun.lock* ./
 
 # Install all dependencies (including devDependencies)
-RUN npm install
+RUN bun install
 
 # Copy source code
 COPY . .
@@ -27,7 +26,7 @@ COPY . .
 EXPOSE 3000
 
 # Start development server with correct host binding for Docker
-CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
+CMD ["bun", "dev", "--hostname", "0.0.0.0"]
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -38,7 +37,7 @@ COPY . .
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN npm run build
+RUN bun run build
 
 # Production image, copy all the files and run next
 FROM base AS production

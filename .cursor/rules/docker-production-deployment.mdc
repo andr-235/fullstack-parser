@@ -1,0 +1,511 @@
+---
+description: Production deployment strategies with health checks and monitoring
+globs: **/Dockerfile*, docker-compose*.yml, k8s/**/*.yml, k8s/**/*.yaml
+alwaysApply: false
+---
+# Docker Production Deployment
+
+Практики безопасного и надежного развертывания Docker в production среде.
+
+## Deployment Strategies 🚀
+
+### 1. Rolling Updates
+```bash
+# Плавное обновление без downtime
+docker service update --image myapp:v2.0 myapp-service
+docker-compose up -d --no-deps web
+
+# Blue-Green Deployment
+docker tag myapp:latest myapp:blue
+docker tag myapp:v2.0 myapp:green
+```
+
+### 2. Health Check Strategy
+```yaml
+services:
+  web:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        monitor: 60s
+        order: start-first
+```
+
+## Monitoring & Observability 📊
+
+### 3. Centralized Logging
+```yaml
+services:
+  app:
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "fluentd:24224"
+        tag: "app.{{.Name}}"
+
+  fluentd:
+    image: fluent/fluentd:v1.16-1
+    volumes:
+      - ./fluentd.conf:/fluentd/etc/fluent.conf
+    ports:
+      - "24224:24224"
+```
+
+### 4. Metrics Collection
+```yaml
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+```
+
+## Security Hardening 🔒
+
+### 5. Container Security
+```yaml
+services:
+  web:
+    # Run as non-root user
+    user: "1001:1001"
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:unconfined
+    
+    # Read-only root filesystem
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
+    
+    # Drop capabilities
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+```
+
+### 6. Network Security
+```yaml
+networks:
+  # External network for public access
+  public:
+    driver: overlay
+    external: true
+  
+  # Internal network for backend services
+  private:
+    driver: overlay
+    internal: true
+    encrypted: true
+    driver_opts:
+      encrypted: "true"
+
+services:
+  web:
+    networks:
+      - public
+      - private
+  
+  db:
+    networks:
+      - private  # Только внутренняя сеть
+```
+
+## Resource Management 💾
+
+### 7. Resource Limits & Reservations
+```yaml
+services:
+  web:
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "1.0"
+          memory: 512M
+      placement:
+        constraints:
+          - node.role == worker
+          - node.labels.environment == production
+```
+
+### 8. Auto-scaling Configuration
+```yaml
+services:
+  api:
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+```
+
+## Backup & Recovery 💽
+
+### 9. Volume Backup Strategy
+```yaml
+services:
+  backup:
+    image: alpine:latest
+    profiles:
+      - backup
+    volumes:
+      - postgres_data:/data:ro
+      - ./backups:/backup
+    command: >
+      sh -c "tar czf /backup/postgres_$(date +%Y%m%d_%H%M%S).tar.gz -C /data ."
+
+  db-restore:
+    image: postgres:15-alpine
+    profiles:
+      - restore
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backup
+    command: >
+      sh -c "pg_restore -h db -U postgres -d app /backup/latest.dump"
+```
+
+### 10. Disaster Recovery
+```bash
+# Automated backup script
+#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+
+# Database backup
+docker-compose exec -T db pg_dump -U postgres app > backup_${DATE}.sql
+
+# Volume backup
+docker run --rm -v postgres_data:/data -v $(pwd):/backup alpine \
+  tar czf /backup/volumes_${DATE}.tar.gz -C /data .
+
+# Upload to remote storage
+aws s3 cp backup_${DATE}.sql s3://backups/
+```
+
+## CI/CD Integration 🔄
+
+### 11. GitLab CI Pipeline
+```yaml
+stages:
+  - test
+  - build
+  - deploy
+
+test:
+  stage: test
+  script:
+    - docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit
+  after_script:
+    - docker-compose down
+
+build:
+  stage: build
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+
+deploy:
+  stage: deploy
+  script:
+    - docker stack deploy -c docker-compose.prod.yml myapp
+  only:
+    - main
+```
+
+### 12. GitHub Actions
+```yaml
+name: Docker Production Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Build and test
+        run: |
+          docker-compose -f docker-compose.test.yml build
+          docker-compose -f docker-compose.test.yml up --abort-on-container-exit
+      
+      - name: Security scan
+        run: |
+          docker run --rm -v $(pwd):/project aquasec/trivy fs /project
+      
+      - name: Deploy to production
+        run: |
+          docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+## Load Balancing & Reverse Proxy 🌐
+
+### 13. Traefik Configuration
+```yaml
+services:
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@example.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+
+  app:
+    image: myapp:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`app.example.com`)"
+      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
+```
+
+### 14. NGINX Load Balancer
+```yaml
+services:
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app1
+      - app2
+      - app3
+
+  app1:
+    image: myapp:latest
+  app2:
+    image: myapp:latest
+  app3:
+    image: myapp:latest
+```
+
+## Performance Optimization ⚡
+
+### 15. Caching Strategies
+```yaml
+services:
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+
+  memcached:
+    image: memcached:alpine
+    command: memcached -m 128
+```
+
+### 16. Database Optimization
+```yaml
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_SHARED_PRELOAD_LIBRARIES=pg_stat_statements
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+```
+
+## Environment Management 🌍
+
+### 17. Multi-Environment Configuration
+```bash
+# Development
+export COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml
+docker-compose up
+
+# Staging
+export COMPOSE_FILE=docker-compose.yml:docker-compose.staging.yml
+docker-compose up -d
+
+# Production
+export COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml
+docker-compose up -d
+```
+
+### 18. Secret Management
+```yaml
+# Using Docker Secrets
+services:
+  web:
+    secrets:
+      - db_password
+      - api_key
+    environment:
+      - DB_PASSWORD_FILE=/run/secrets/db_password
+      - API_KEY_FILE=/run/secrets/api_key
+
+secrets:
+  db_password:
+    external: true
+  api_key:
+    external: true
+```
+
+## Debugging & Troubleshooting 🔍
+
+### 19. Debug Tools
+```yaml
+services:
+  debug:
+    image: nicolaka/netshoot
+    profiles:
+      - debug
+    network_mode: "container:app"
+    command: sleep infinity
+
+  logs:
+    image: amir20/dozzle:latest
+    profiles:
+      - debug
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8888:8080"
+```
+
+### 20. Performance Monitoring
+```bash
+# Container stats
+docker stats --no-stream
+
+# Resource usage
+docker system df
+docker system events
+
+# Network inspection
+docker network ls
+docker network inspect bridge
+```
+
+## Production Checklist ✅
+
+### Pre-deployment:
+- [ ] Security scan completed (Trivy/Snyk)
+- [ ] Images signed and verified
+- [ ] Health checks configured
+- [ ] Resource limits set
+- [ ] Backup strategy implemented
+- [ ] Monitoring configured
+- [ ] Secrets management in place
+
+### Deployment:
+- [ ] Blue-green or rolling update strategy
+- [ ] Database migrations handled
+- [ ] Load balancer configured
+- [ ] SSL certificates in place
+- [ ] CDN configured if needed
+
+### Post-deployment:
+- [ ] Health checks passing
+- [ ] Metrics collecting properly
+- [ ] Logs aggregating correctly
+- [ ] Alerts configured
+- [ ] Backup verification
+
+## Emergency Procedures 🚨
+
+### 21. Rollback Strategy
+```bash
+# Quick rollback
+docker service rollback myapp-service
+
+# Manual rollback to specific version
+docker service update --image myapp:previous-stable myapp-service
+
+# Compose rollback
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
+docker-compose -f docker-compose.yml -f docker-compose.stable.yml up -d
+```
+
+### 22. Incident Response
+```bash
+# Scale up during high load
+docker service scale myapp-service=10
+
+# Emergency stop
+docker stack rm myapp
+
+# Resource cleanup
+docker system prune -af --volumes
+```
+
+## Tools & Resources 🛠️
+
+### Recommended Tools:
+- **Portainer**: Web-based container management
+- **Watchtower**: Automated container updates
+- **Traefik**: Modern reverse proxy
+- **Prometheus & Grafana**: Monitoring stack
+- **ELK Stack**: Logging solution
+- **Trivy**: Security scanner
+
+### Useful Commands:
+```bash
+# Production deployment
+docker stack deploy -c docker-compose.prod.yml myapp
+
+# Service inspection
+docker service ls
+docker service logs myapp-service
+
+# Node management
+docker node ls
+docker node inspect self
+
+# Secrets management
+echo "mysecret" | docker secret create db_password -
+docker secret ls
+```

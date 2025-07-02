@@ -1,0 +1,533 @@
+---
+description: Docker Compose best practices for multi-environment deployments
+globs: docker-compose*.yml, docker-compose*.yaml, compose*.yml, compose*.yaml
+alwaysApply: false
+---
+
+---
+description: "Docker Compose best practices for multi-environment deployments"
+globs: ["docker-compose*.yml", "docker-compose*.yaml", ".env*"]
+alwaysApply: false
+---
+
+# Docker Compose Best Practices
+
+Современные практики для создания maintainable и production-ready Docker Compose файлов.
+
+## File Structure & Organization 📁
+
+### 1. Use Version Schema
+```yaml
+version: "3.9"
+services:
+  web:
+    image: nginx:alpine
+```
+
+### 2. Modular Service Design
+```yaml
+# ✅ Хорошо - каждый сервис выполняет одну задачу
+services:
+  frontend:
+    build: ./frontend
+  
+  backend:
+    build: ./backend
+  
+  database:
+    image: postgres:15-alpine
+
+# ❌ Плохо - монолитный подход
+```
+
+### 3. Environment-Specific Files
+```yaml
+# docker-compose.yml (base)
+version: "3.9"
+services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+
+# docker-compose.prod.yml (production overrides)
+version: "3.9"
+services:
+  web:
+    ports:
+      - "443:443"
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          memory: 512M
+```
+
+## Environment Variables & Secrets 🔐
+
+### 4. Use .env Files
+```yaml
+# .env
+DB_USER=postgres
+DB_PASSWORD=secret
+NODE_ENV=production
+
+# docker-compose.yml
+services:
+  db:
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+```
+
+### 5. Docker Secrets (Swarm)
+```yaml
+services:
+  web:
+    secrets:
+      - db_password
+    environment:
+      - DB_PASSWORD_FILE=/run/secrets/db_password
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+```
+
+## Networking & Communication 🌐
+
+### 6. Custom Networks
+```yaml
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+
+services:
+  web:
+    networks:
+      - frontend
+      - backend
+  
+  db:
+    networks:
+      - backend  # Только внутренняя сеть
+```
+
+### 7. Service Dependencies
+```yaml
+services:
+  db:
+    image: postgres:15-alpine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./api
+    depends_on:
+      db:
+        condition: service_healthy
+```
+
+## Data Persistence & Volumes 💾
+
+### 8. Named Volumes
+```yaml
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+services:
+  db:
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  
+  cache:
+    volumes:
+      - redis_data:/data
+```
+
+### 9. Bind Mounts for Development
+```yaml
+services:
+  web:
+    volumes:
+      # Development - bind mount for hot reload
+      - ./src:/app/src:ro
+      # Production - named volume
+      - app_data:/app/data
+```
+
+## Resource Management & Scaling 📊
+
+### 10. Resource Limits
+```yaml
+services:
+  api:
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+```
+
+### 11. Profiles for Different Scenarios
+```yaml
+services:
+  web:
+    image: nginx:alpine
+  
+  debug:
+    image: busybox
+    profiles:
+      - debug
+    command: sleep infinity
+  
+  monitoring:
+    image: prom/prometheus
+    profiles:
+      - monitoring
+```
+
+## Health Checks & Monitoring 🏥
+
+### 12. Service Health Checks
+```yaml
+services:
+  web:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+### 13. Logging Configuration
+```yaml
+services:
+  web:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  
+  api:
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        tag: "api.logs"
+```
+
+## Security Best Practices 🛡️
+
+### 14. Non-root Containers
+```yaml
+services:
+  web:
+    user: "1000:1000"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+```
+
+### 15. Network Isolation
+```yaml
+networks:
+  public:
+    driver: overlay
+    external: true
+  
+  private:
+    driver: overlay
+    internal: true
+    encrypted: true
+
+services:
+  web:
+    networks:
+      - public
+  
+  db:
+    networks:
+      - private  # Изолированная сеть
+```
+
+## Production Configuration Examples 🚀
+
+### 16. Multi-Environment Setup
+```bash
+# Development
+docker-compose up
+
+# Production
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Testing
+docker-compose -f docker-compose.yml -f docker-compose.test.yml up --abort-on-container-exit
+```
+
+### 17. Complete Production Stack
+```yaml
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik:v2.10
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik:/etc/traefik
+    networks:
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  app:
+    build:
+      context: .
+      target: production
+    networks:
+      - traefik
+      - backend
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://user:pass@db:5432/app
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`app.example.com`)"
+      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=app
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    secrets:
+      - db_password
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+networks:
+  traefik:
+    external: true
+  backend:
+    internal: true
+
+volumes:
+  postgres_data:
+  redis_data:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+```
+
+## CI/CD Integration 🔄
+
+### 18. Docker Compose in CI
+```yaml
+# GitHub Actions
+name: CI/CD Pipeline
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run tests
+        run: |
+          docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit
+          docker-compose down
+      
+      - name: Deploy to production
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+## Performance Optimization ⚡
+
+### 19. Build Optimization
+```yaml
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - myapp:latest
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+```
+
+### 20. Resource Monitoring
+```yaml
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - monitoring
+```
+
+## Maintenance & Debugging 🔧
+
+### 21. Debugging Tools
+```yaml
+services:
+  debug:
+    image: nicolaka/netshoot
+    network_mode: "container:web"
+    profiles:
+      - debug
+    command: sleep infinity
+
+  db-admin:
+    image: adminer
+    profiles:
+      - admin
+    ports:
+      - "8080:8080"
+```
+
+### 22. Backup & Recovery
+```yaml
+services:
+  backup:
+    image: postgres:15-alpine
+    profiles:
+      - backup
+    volumes:
+      - postgres_data:/var/lib/postgresql/data:ro
+      - ./backups:/backup
+    command: >
+      sh -c "pg_dump -h db -U postgres app > /backup/backup_$$(date +%Y%m%d_%H%M%S).sql"
+    depends_on:
+      - db
+```
+
+## Best Practices Checklist ✅
+
+### Development:
+- [ ] Используется .env файл для переменных
+- [ ] Volumes настроены для hot reload
+- [ ] Debug профили доступны
+- [ ] Services имеют health checks
+
+### Production:
+- [ ] Separate compose файлы для разных сред
+- [ ] Resource limits установлены
+- [ ] Secrets management настроен
+- [ ] Logging drivers настроены
+- [ ] Networks изолированы
+- [ ] Backup стратегия определена
+- [ ] Monitoring tools интегрированы
+
+### Security:
+- [ ] Containers не запускаются от root
+- [ ] Secrets не hardcoded
+- [ ] Internal networks используются
+- [ ] Read-only filesystems где возможно
+- [ ] Security options применены
+
+## Common Commands
+
+```bash
+# Запуск в разных средах
+docker-compose up -d                                          # dev
+docker-compose -f compose.yml -f compose.prod.yml up -d      # prod
+docker-compose --profile debug up                            # debug
+
+# Масштабирование
+docker-compose up -d --scale api=3
+
+# Обновление сервисов
+docker-compose build api
+docker-compose up -d --no-deps api
+
+# Мониторинг
+docker-compose logs -f api
+docker-compose stats
+```
+
+## Troubleshooting 🚨
+
+### Common Issues:
+```yaml
+# Network connectivity issues
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: "custom_bridge"
+
+# Volume permission issues  
+services:
+  app:
+    volumes:
+      - app_data:/app/data
+    user: "${UID:-1000}:${GID:-1000}"
+```
