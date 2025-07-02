@@ -15,11 +15,7 @@ from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
 from app.models.vk_group import VKGroup
 from app.schemas.base import PaginatedResponse, PaginationParams
-from app.schemas.parser import (
-    GlobalStats,
-    ParseTaskCreate,
-    ParseTaskResponse,
-)
+from app.schemas.parser import GlobalStats, ParseTaskCreate, ParseTaskResponse
 from app.schemas.vk_comment import (
     CommentSearchParams,
     CommentWithKeywords,

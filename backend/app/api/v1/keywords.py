@@ -11,11 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.models.keyword import Keyword
 from app.schemas.base import PaginatedResponse, PaginationParams, StatusResponse
-from app.schemas.keyword import (
-    KeywordCreate,
-    KeywordResponse,
-    KeywordUpdate,
-)
+from app.schemas.keyword import KeywordCreate, KeywordResponse, KeywordUpdate
 
 router = APIRouter(prefix="/keywords", tags=["Keywords"])
 
