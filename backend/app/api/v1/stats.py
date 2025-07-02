@@ -7,11 +7,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.models.vk_group import VKGroup
+from app.models.comment_keyword_match import CommentKeywordMatch
 from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
-from app.models.comment_keyword_match import CommentKeywordMatch
-from app.schemas.base import StatusResponse
+from app.models.vk_group import VKGroup
 
 router = APIRouter(prefix="/stats", tags=["Statistics"])
 
