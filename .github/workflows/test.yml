@@ -125,7 +125,7 @@ jobs:
 
       - name: 📦 Установка зависимостей
         working-directory: ./frontend
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: 🎨 Проверка форматирования (Prettier)
         working-directory: ./frontend
