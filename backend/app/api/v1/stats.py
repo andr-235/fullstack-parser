@@ -25,7 +25,7 @@ async def get_global_stats(db: AsyncSession = Depends(get_async_session)) -> dic
 
     # Активные группы
     active_groups_result = await db.execute(
-        select(func.count(VKGroup.id)).where(VKGroup.is_active == True)
+        select(func.count(VKGroup.id)).where(VKGroup.is_active)
     )
     active_groups = active_groups_result.scalar() or 0
 
@@ -35,7 +35,7 @@ async def get_global_stats(db: AsyncSession = Depends(get_async_session)) -> dic
 
     # Активные ключевые слова
     active_keywords_result = await db.execute(
-        select(func.count(Keyword.id)).where(Keyword.is_active == True)
+        select(func.count(Keyword.id)).where(Keyword.is_active)
     )
     active_keywords = active_keywords_result.scalar() or 0
 
