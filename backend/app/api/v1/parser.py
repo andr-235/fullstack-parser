@@ -64,6 +64,9 @@ async def start_parsing(
         group_id=task_data.group_id,
         status="running",
         started_at=datetime.now(),
+        completed_at=None,
+        stats=None,
+        error_message=None,
     )
 
 

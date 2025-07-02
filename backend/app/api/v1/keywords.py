@@ -154,10 +154,10 @@ async def delete_keyword(
     )
 
 
-@router.post("/bulk", response_model=List[KeywordResponse])
+@router.post("/bulk", response_model=list[KeywordResponse])
 async def create_keywords_bulk(
-    keywords_data: List[KeywordCreate], db: AsyncSession = Depends(get_async_session)
-) -> List[KeywordResponse]:
+    keywords_data: list[KeywordCreate], db: AsyncSession = Depends(get_async_session)
+) -> list[KeywordResponse]:
     """Массовое добавление ключевых слов"""
 
     created_keywords = []
@@ -182,10 +182,10 @@ async def create_keywords_bulk(
     return [KeywordResponse.model_validate(keyword) for keyword in created_keywords]
 
 
-@router.get("/categories/", response_model=List[str])
+@router.get("/categories/", response_model=list[str])
 async def get_keyword_categories(
     db: AsyncSession = Depends(get_async_session),
-) -> List[str]:
+) -> list[str]:
     """Получить список всех категорий ключевых слов"""
 
     result = await db.execute(

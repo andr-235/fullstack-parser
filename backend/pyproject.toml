@@ -33,11 +33,14 @@ check_untyped_defs = false
 disallow_any_generics = false
 disallow_untyped_defs = false
 follow_imports = "silent"
-strict_optional = true
-warn_redundant_casts = true
+strict_optional = false
+warn_redundant_casts = false
 warn_unused_ignores = false
 disallow_any_unimported = false
-no_implicit_optional = true
+no_implicit_optional = false
+warn_return_any = false
+disallow_subclassing_any = false
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [

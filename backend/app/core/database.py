@@ -2,6 +2,8 @@
 Database configuration для VK Comments Parser
 """
 
+from typing import AsyncGenerator
+
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -15,14 +17,14 @@ async_engine = create_async_engine(
 
 # Async session factory
 AsyncSessionLocal = sessionmaker(
-    async_engine, class_=AsyncSession, expire_on_commit=False
+    bind=async_engine, class_=AsyncSession, expire_on_commit=False
 )
 
 # Base class для моделей
 Base = declarative_base()
 
 
-async def get_async_session() -> AsyncSession:
+async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     """Dependency для получения async database session"""
     async with AsyncSessionLocal() as session:
         try:
