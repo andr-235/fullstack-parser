@@ -2,13 +2,13 @@ name: 🧪 Tests & Quality Checks
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 env:
-  NODE_VERSION: '18'
-  PYTHON_VERSION: '3.11'
+  NODE_VERSION: "18"
+  PYTHON_VERSION: "3.11"
 
 jobs:
   # =============================================================================
@@ -17,7 +17,7 @@ jobs:
   backend-tests:
     name: 🐍 Backend Tests
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15-alpine
@@ -32,7 +32,7 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      
+
       redis:
         image: redis:7-alpine
         options: >-
@@ -51,7 +51,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
+          cache: "pip"
 
       - name: 📦 Установка зависимостей
         working-directory: ./backend
@@ -115,36 +115,41 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: './frontend/package-lock.json'
+          cache: "pnpm"
+          cache-dependency-path: "./frontend/pnpm-lock.yaml"
+
+      - name: 📦 Установка pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
 
       - name: 📦 Установка зависимостей
         working-directory: ./frontend
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: 🎨 Проверка форматирования (Prettier)
         working-directory: ./frontend
-        run: npm run format:check
+        run: pnpm format:check
 
       - name: 🔍 Линтинг (ESLint)
         working-directory: ./frontend
-        run: npm run lint
+        run: pnpm lint
 
       - name: 🔒 Типизация (TypeScript)
         working-directory: ./frontend
-        run: npm run type-check
+        run: pnpm type-check
 
       - name: 🔒 Аудит безопасности
         working-directory: ./frontend
-        run: npm audit --production
+        run: pnpm audit --prod
 
       - name: 🧪 Unit тесты
         working-directory: ./frontend
-        run: npm test -- --coverage --watchAll=false
+        run: pnpm test -- --coverage --watchAll=false
 
       - name: 🏗️ Тест сборки
         working-directory: ./frontend
-        run: npm run build
+        run: pnpm build
 
       - name: 📊 Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -159,7 +164,7 @@ jobs:
     name: 🔗 Integration Tests
     runs-on: ubuntu-latest
     needs: [backend-tests, frontend-tests]
-    
+
     steps:
       - name: 📥 Checkout код
         uses: actions/checkout@v4
@@ -171,7 +176,7 @@ jobs:
         run: |
           cp env.example .env
           docker-compose up -d --build
-          
+
       - name: ⏳ Ожидание готовности сервисов
         run: |
           timeout 60 bash -c 'until curl -f http://localhost:8000/health; do sleep 2; done'
@@ -182,16 +187,16 @@ jobs:
           # API integration tests
           curl -f http://localhost:8000/docs
           curl -f http://localhost:8000/api/v1/health
-          
+
           # Frontend integration tests
           curl -f http://localhost:3000
-          
+
       - name: 📊 Логи при ошибке
         if: failure()
         run: |
           docker-compose logs backend
           docker-compose logs frontend
-          
+
       - name: 🧹 Очистка
         if: always()
         run: docker-compose down -v
@@ -202,7 +207,7 @@ jobs:
   security-scan:
     name: 🛡️ Security Scan
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 📥 Checkout код
         uses: actions/checkout@v4
@@ -227,7 +232,7 @@ jobs:
           echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
           sudo apt-get update
           sudo apt-get install trivy
-          
+
           # Scan Dockerfiles
           trivy fs --format table ./backend/Dockerfile
           trivy fs --format table ./frontend/Dockerfile
@@ -240,7 +245,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-tests, frontend-tests, integration-tests, security-scan]
     if: always()
-    
+
     steps:
       - name: 📊 Результаты тестирования
         run: |
@@ -250,13 +255,13 @@ jobs:
           echo "- Frontend Tests: ${{ needs.frontend-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
-          
+
       - name: ✅ Успешное завершение
         if: ${{ needs.backend-tests.result == 'success' && needs.frontend-tests.result == 'success' && needs.integration-tests.result == 'success' && needs.security-scan.result == 'success' }}
         run: echo "🎉 Все тесты прошли успешно!"
-        
+
       - name: ❌ Тесты провалены
         if: ${{ needs.backend-tests.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.security-scan.result == 'failure' }}
         run: |
           echo "❌ Некоторые тесты провалены!"
-          exit 1 
+          exit 1
