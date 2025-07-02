@@ -2,7 +2,7 @@
 API endpoints для управления ключевыми словами
 """
 
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select

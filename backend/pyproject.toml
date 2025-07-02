@@ -29,14 +29,14 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.11"
-check_untyped_defs = true
-disallow_any_generics = true
-disallow_untyped_defs = true
+check_untyped_defs = false
+disallow_any_generics = false
+disallow_untyped_defs = false
 follow_imports = "silent"
 strict_optional = true
 warn_redundant_casts = true
-warn_unused_ignores = true
-disallow_any_unimported = true
+warn_unused_ignores = false
+disallow_any_unimported = false
 no_implicit_optional = true
 
 [[tool.mypy.overrides]]

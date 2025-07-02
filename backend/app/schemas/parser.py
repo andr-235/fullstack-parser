@@ -3,7 +3,7 @@ Pydantic схемы для парсинга и статистики
 """
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -26,7 +26,7 @@ class ParseTaskResponse(BaseModel):
     status: str = Field(..., description="Статус задачи (running, completed, failed)")
     started_at: datetime = Field(..., description="Время начала")
     completed_at: Optional[datetime] = Field(None, description="Время завершения")
-    stats: Optional[Dict[str, Any]] = Field(None, description="Статистика парсинга")
+    stats: Optional[dict[str, Any]] = Field(None, description="Статистика парсинга")
     error_message: Optional[str] = Field(None, description="Сообщение об ошибке")
 
 

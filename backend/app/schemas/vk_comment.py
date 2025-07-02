@@ -3,7 +3,7 @@ Pydantic схемы для VK комментариев
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -41,10 +41,10 @@ class VKCommentResponse(VKCommentBase, IDMixin, TimestampMixin, BaseSchema):
 class CommentWithKeywords(VKCommentResponse):
     """Комментарий с найденными ключевыми словами"""
 
-    matched_keywords: List[str] = Field(
+    matched_keywords: list[str] = Field(
         default=[], description="Найденные ключевые слова"
     )
-    keyword_matches: List[dict] = Field(default=[], description="Детали совпадений")
+    keyword_matches: list[dict] = Field(default=[], description="Детали совпадений")
 
 
 class CommentSearchParams(BaseModel):

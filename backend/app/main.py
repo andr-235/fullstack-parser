@@ -34,7 +34,7 @@ app.add_middleware(
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     """Инициализация при запуске"""
     logger.info("🚀 Запуск VK Comments Parser...")
     await init_db()
@@ -42,13 +42,13 @@ async def startup_event():
 
 
 @app.on_event("shutdown")
-async def shutdown_event():
+async def shutdown_event() -> None:
     """Очистка при остановке"""
     logger.info("🛑 Остановка VK Comments Parser...")
 
 
 @app.get("/")
-async def root():
+async def root() -> dict[str, str]:
     """Корневой endpoint"""
     return {
         "message": "VK Comments Parser API",
@@ -60,7 +60,7 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
     """Health check endpoint"""
     return {"status": "healthy", "service": "vk-comments-parser", "version": "1.0.0"}
 

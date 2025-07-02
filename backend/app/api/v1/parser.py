@@ -69,7 +69,7 @@ async def start_parsing(
 
 async def run_parsing_task(
     task_id: str, group_id: int, max_posts: Optional[int] = None
-):
+) -> None:
     """Background задача для парсинга"""
     from app.core.database import AsyncSessionLocal
 

@@ -15,7 +15,7 @@ api_router.include_router(parser.router)
 
 
 @api_router.get("/")
-async def api_info():
+async def api_info() -> dict[str, str | dict[str, str]]:
     """Информация об API"""
     return {
         "service": "VK Comments Parser API",

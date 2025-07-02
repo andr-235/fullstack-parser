@@ -5,14 +5,14 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_health_check():
+def test_health_check() -> None:
     """Тест health check endpoint"""
     response = client.get("/health")
     assert response.status_code == 200
     assert "status" in response.json()
 
 
-def test_root_endpoint():
+def test_root_endpoint() -> None:
     """Тест корневого endpoint"""
     response = client.get("/")
     assert response.status_code == 200
@@ -20,7 +20,7 @@ def test_root_endpoint():
     assert "message" in data or "detail" in data
 
 
-def test_api_docs():
+def test_api_docs() -> None:
     """Тест доступности API документации"""
     response = client.get("/docs")
     assert response.status_code == 200

@@ -6,7 +6,7 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import vk_api
 
@@ -25,7 +25,7 @@ class VKAPIService:
         self.requests_count = 0
         self.api_version = settings.vk_api_version
 
-    async def _rate_limit_wait(self):
+    async def _rate_limit_wait(self) -> None:
         """Контроль rate limit для VK API"""
         current_time = time.time()
         time_since_last = current_time - self.last_request_time
@@ -41,7 +41,7 @@ class VKAPIService:
         self.last_request_time = time.time()
         self.requests_count += 1
 
-    async def get_group_info(self, group_id: str) -> Optional[Dict[str, Any]]:
+    async def get_group_info(self, group_id: str) -> Optional[dict[str, Any]]:
         """
         Получить информацию о группе
 
@@ -78,7 +78,7 @@ class VKAPIService:
 
     async def get_group_posts(
         self, group_id: int, count: int = 100, offset: int = 0
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Получить посты группы
 
@@ -136,7 +136,7 @@ class VKAPIService:
         count: int = 100,
         offset: int = 0,
         sort: str = "asc",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Получить комментарии к посту
 
@@ -198,7 +198,7 @@ class VKAPIService:
             )
             return []
 
-    def _parse_attachments(self, attachments: List[Dict]) -> Dict[str, Any]:
+    def _parse_attachments(self, attachments: list[dict]) -> dict[str, Any]:
         """Парсинг вложений"""
         result = {
             "has_attachments": len(attachments) > 0,
@@ -214,8 +214,8 @@ class VKAPIService:
         return result
 
     def _find_author_info(
-        self, user_id: int, profiles: List[Dict], groups: List[Dict]
-    ) -> Optional[Dict]:
+        self, user_id: int, profiles: list[dict], groups: list[dict]
+    ) -> Optional[dict]:
         """Поиск информации об авторе комментария"""
         # Поиск среди пользователей
         if user_id > 0:

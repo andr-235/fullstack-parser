@@ -34,7 +34,7 @@ async def get_async_session() -> AsyncSession:
             await session.close()
 
 
-async def init_db():
+async def init_db() -> None:
     """Инициализация базы данных"""
     async with async_engine.begin() as conn:
         # Создаем все таблицы

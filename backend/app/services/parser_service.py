@@ -6,7 +6,7 @@ import asyncio
 import logging
 import re
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +30,7 @@ class ParserService:
 
     async def parse_group_comments(
         self, group_id: int, max_posts: Optional[int] = None
-    ) -> Dict[str, int]:
+    ) -> dict[str, int]:
         """
         Парсинг комментариев группы
 
@@ -107,8 +107,8 @@ class ParserService:
         return stats
 
     async def _parse_post_comments(
-        self, post: VKPost, keywords: List[Keyword]
-    ) -> Dict[str, int]:
+        self, post: VKPost, keywords: list[Keyword]
+    ) -> dict[str, int]:
         """Парсинг комментариев конкретного поста"""
         stats = {"total": 0, "with_keywords": 0, "new": 0, "matches": 0}
 
@@ -154,8 +154,8 @@ class ParserService:
         return stats
 
     async def _find_keywords_in_text(
-        self, text: str, keywords: List[Keyword]
-    ) -> List[Tuple[Keyword, str, int]]:
+        self, text: str, keywords: list[Keyword]
+    ) -> list[tuple[Keyword, str, int]]:
         """
         Поиск ключевых слов в тексте
 
@@ -186,7 +186,7 @@ class ParserService:
 
         return matches
 
-    async def _save_post(self, group: VKGroup, post_data: Dict) -> VKPost:
+    async def _save_post(self, group: VKGroup, post_data: dict) -> VKPost:
         """Сохранение поста в БД"""
         # Проверяем, есть ли уже этот пост
         result = await self.db.execute(
@@ -224,7 +224,7 @@ class ParserService:
         return post
 
     async def _save_comment(
-        self, post: VKPost, comment_data: Dict, matches: List[Tuple[Keyword, str, int]]
+        self, post: VKPost, comment_data: dict, matches: list[tuple[Keyword, str, int]]
     ) -> VKComment:
         """Сохранение комментария с найденными ключевыми словами"""
         # Получаем информацию об авторе
@@ -275,7 +275,7 @@ class ParserService:
 
         return comment
 
-    async def _get_active_keywords(self) -> List[Keyword]:
+    async def _get_active_keywords(self) -> list[Keyword]:
         """Получение списка активных ключевых слов"""
         result = await self.db.execute(select(Keyword).where(Keyword.is_active))
         return result.scalars().all()

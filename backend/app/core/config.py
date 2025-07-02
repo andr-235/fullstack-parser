@@ -2,7 +2,7 @@
 Конфигурация VK Comments Parser
 """
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = Field(default="INFO")
 
-    def get_cors_origins(self) -> List[str]:
+    def get_cors_origins(self) -> list[str]:
         """Получить список CORS origins"""
         if "," in self.cors_origins:
             return [url.strip() for url in self.cors_origins.split(",") if url.strip()]
