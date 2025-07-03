@@ -1,23 +1,26 @@
-# Frontend Dockerfile for bun
-FROM oven/bun:1.0-alpine AS base
+# Frontend Dockerfile for pnpm
+FROM node:18-alpine AS base
+
+# Install pnpm globally
+RUN npm install -g pnpm@8
 
 # Install dependencies only when needed
 FROM base AS deps
 WORKDIR /app
 
-# Install dependencies with bun (without --production to respect lockfile)
-COPY package.json bun.lock* ./
-RUN bun install --frozen-lockfile
+# Install dependencies with pnpm
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # Development stage for local development
 FROM base AS development
 WORKDIR /app
 
 # Copy package files
-COPY package.json bun.lock* ./
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 
 # Install all dependencies (including devDependencies)
-RUN bun install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -26,7 +29,7 @@ COPY . .
 EXPOSE 3000
 
 # Start development server with correct host binding for Docker
-CMD ["bun", "dev", "--hostname", "0.0.0.0"]
+CMD ["pnpm", "dev"]
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -37,7 +40,7 @@ COPY . .
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN bun run build
+RUN pnpm run build
 
 # Production image, copy all the files and run next
 FROM base AS production
