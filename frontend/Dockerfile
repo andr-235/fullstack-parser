@@ -5,9 +5,9 @@ FROM oven/bun:1.0-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
-# Install dependencies with bun
+# Install dependencies with bun (without --production to respect lockfile)
 COPY package.json bun.lock* ./
-RUN bun install --production
+RUN bun install --frozen-lockfile
 
 # Development stage for local development
 FROM base AS development
@@ -17,7 +17,7 @@ WORKDIR /app
 COPY package.json bun.lock* ./
 
 # Install all dependencies (including devDependencies)
-RUN bun install
+RUN bun install --frozen-lockfile
 
 # Copy source code
 COPY . .
