@@ -1,6 +1,6 @@
 # Dependencies
 node_modules
-.bun
+.pnpm-store
 
 # Build outputs
 .next
@@ -45,4 +45,10 @@ coverage
 
 # Cache directories
 .turbo
-.eslintcache 
+.eslintcache
+.pnpm-store-cache
+
+# Lock files (except pnpm)
+yarn.lock
+package-lock.json
+bun.lock 
