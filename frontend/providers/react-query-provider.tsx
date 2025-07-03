@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 interface ReactQueryProviderProps {
   children: React.ReactNode
@@ -26,7 +25,15 @@ export function ReactQueryProvider({ children }: ReactQueryProviderProps) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      <ReactQueryDevtools initialIsOpen={false} />
+      {process.env.NODE_ENV === 'development' && (
+        <DevTools />
+      )}
     </QueryClientProvider>
   )
+}
+
+// Динамическая загрузка DevTools для избежания проблем с chunks
+function DevTools() {
+  const { ReactQueryDevtools } = require('@tanstack/react-query-devtools')
+  return <ReactQueryDevtools initialIsOpen={false} />
 } 
