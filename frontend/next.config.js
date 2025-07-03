@@ -11,34 +11,9 @@ const nextConfig = {
     return config
   },
   
-  // Исправление chunk loading в Docker
+  // Удалена кастомная splitChunks оптимизация!
   webpack: (config, { isServer, dev }) => {
-    if (dev && !isServer) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            default: false,
-            vendors: false,
-            // Группировка vendor библиотек
-            vendor: {
-              name: 'vendor',
-              chunks: 'all',
-              test: /[\\/]node_modules[\\/]/,
-              priority: 20
-            },
-            // Отдельная группа для tanstack
-            tanstack: {
-              name: 'tanstack',
-              chunks: 'all',
-              test: /[\\/]node_modules[\\/]@tanstack[\\/]/,
-              priority: 30
-            }
-          }
-        }
-      }
-    }
+    // Не трогаем splitChunks, чтобы не ломать обработку CSS
     return config
   },
   
