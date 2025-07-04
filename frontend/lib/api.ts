@@ -53,7 +53,7 @@ class APIClient {
 
   // VK Groups API
   async getGroups(params?: PaginationParams & { active_only?: boolean }) {
-    const { data } = await this.client.get<PaginatedResponse<VKGroupResponse>>('/groups', {
+    const { data } = await this.client.get<PaginatedResponse<VKGroupResponse>>('/groups/', {
       params,
     })
     return data
@@ -65,7 +65,7 @@ class APIClient {
   }
 
   async createGroup(groupData: VKGroupCreate) {
-    const { data } = await this.client.post<VKGroupResponse>('/groups', groupData)
+    const { data } = await this.client.post<VKGroupResponse>('/groups/', groupData)
     return data
   }
 
@@ -86,7 +86,7 @@ class APIClient {
 
   // Keywords API
   async getKeywords(params?: PaginationParams & { active_only?: boolean; category?: string }) {
-    const { data } = await this.client.get<PaginatedResponse<KeywordResponse>>('/keywords', {
+    const { data } = await this.client.get<PaginatedResponse<KeywordResponse>>('/keywords/', {
       params,
     })
     return data
@@ -98,7 +98,7 @@ class APIClient {
   }
 
   async createKeyword(keywordData: KeywordCreate) {
-    const { data } = await this.client.post<KeywordResponse>('/keywords', keywordData)
+    const { data } = await this.client.post<KeywordResponse>('/keywords/', keywordData)
     return data
   }
 
@@ -113,7 +113,7 @@ class APIClient {
   }
 
   async createKeywordsBulk(keywordsData: KeywordCreate[]) {
-    const { data } = await this.client.post<KeywordResponse[]>('/keywords/bulk', keywordsData)
+    const { data } = await this.client.post<KeywordResponse[]>('/keywords/bulk/', keywordsData)
     return data
   }
 
