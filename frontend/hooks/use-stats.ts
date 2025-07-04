@@ -1,27 +1,26 @@
 import { useQuery } from '@tanstack/react-query'
 import { api, createQueryKey } from '@/lib/api'
+import type { DashboardStats, GlobalStats } from '@/types/api'
+
+/**
+ * Хук для получения общей статистики для дашборда
+ */
+export function useDashboardStats() {
+  return useQuery<DashboardStats>({
+    queryKey: createQueryKey.dashboardStats(),
+    queryFn: () => api.getDashboardStats(),
+    staleTime: 5 * 60 * 1000, // 5 минут
+  })
+}
 
 /**
  * Хук для получения глобальной статистики
  */
 export function useGlobalStats() {
-  return useQuery({
+  return useQuery<GlobalStats>({
     queryKey: createQueryKey.globalStats(),
     queryFn: () => api.getGlobalStats(),
-    staleTime: 1 * 60 * 1000, // 1 минута
-    refetchInterval: 2 * 60 * 1000, // Обновляем каждые 2 минуты
-  })
-}
-
-/**
- * Хук для получения статистики дашборда
- */
-export function useDashboardStats() {
-  return useQuery({
-    queryKey: createQueryKey.dashboardStats(),
-    queryFn: () => api.getDashboardStats(),
-    staleTime: 30 * 1000, // 30 секунд
-    refetchInterval: 60 * 1000, // Обновляем каждую минуту
+    staleTime: 5 * 60 * 1000, // 5 минут
   })
 }
 
@@ -36,4 +35,4 @@ export function useAPIHealth() {
     refetchInterval: 60 * 1000,
     retry: 3,
   })
-} 
+}

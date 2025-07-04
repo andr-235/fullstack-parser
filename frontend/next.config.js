@@ -1,27 +1,25 @@
 /** @type {import('next').NextConfig} */
+const isCI = !!process.env.CI || !!process.env.DOCKER
+
 const nextConfig = {
-  output: 'standalone',
-  
-  // Настройки для Docker development
-  webpackDevMiddleware: (config) => {
-    config.watchOptions = {
-      poll: 1000,
-      aggregateTimeout: 300,
+  // В CI / Docker включаем сборку standalone, локально — нет (избегаем ошибок symlink на Windows)
+  ...(isCI ? { output: 'standalone' } : {}),
+
+  // Настройки only for dev — переносим в функцию webpack
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.watchOptions = {
+        poll: 1000,
+        aggregateTimeout: 300,
+      }
     }
     return config
   },
-  
-  // Удалена кастомная splitChunks оптимизация!
-  webpack: (config, { isServer, dev }) => {
-    // Не трогаем splitChunks, чтобы не ломать обработку CSS
-    return config
-  },
-  
+
   images: {
     domains: ['localhost'],
   },
-  
-  // Настройки для development server
+
   experimental: {
     forceSwcTransforms: true,
   },

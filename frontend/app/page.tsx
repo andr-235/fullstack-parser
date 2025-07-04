@@ -1,66 +1,80 @@
-export default function Home() {
+'use client'
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { BarChart, Search, Zap, Code } from 'lucide-react'
+import Link from 'next/link'
+
+const features = [
+  {
+    icon: <Search className="h-8 w-8 text-primary" />,
+    title: 'Поиск по ключевым словам',
+    description:
+      'Настраиваемый поиск комментариев по заданным ключевым словам.',
+    href: '/keywords',
+  },
+  {
+    icon: <BarChart className="h-8 w-8 text-primary" />,
+    title: 'Аналитика',
+    description: 'Подробная статистика и визуализация найденных данных.',
+    href: '/dashboard',
+  },
+  {
+    icon: <Zap className="h-8 w-8 text-primary" />,
+    title: 'Высокая производительность',
+    description: 'Асинхронная обработка и кэширование для быстрого анализа.',
+    href: '/parser',
+  },
+]
+
+export default function HomePage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-inter)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <div className="flex items-center gap-4">
-          <div className="text-6xl">📊</div>
-          <div>
-            <h1 className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-              VK Comments Parser
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 mt-2">
-              Парсинг и анализ комментариев ВКонтакте
-            </p>
+    <div className="flex flex-col items-center justify-center min-h-full p-4 text-center">
+      <div className="max-w-4xl w-full">
+        <header className="mb-12">
+          <h1 className="text-5xl font-bold tracking-tight">
+            VK Comments Parser
+          </h1>
+          <p className="mt-4 text-lg text-muted-foreground">
+            Парсинг и анализ комментариев ВКонтакте на новом уровне.
+          </p>
+        </header>
+
+        <main className="grid gap-8 md:grid-cols-3">
+          {features.map((feature) => (
+            <Card key={feature.title} className="text-left">
+              <CardHeader>
+                {feature.icon}
+                <CardTitle className="mt-4">{feature.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>{feature.description}</CardDescription>
+              </CardContent>
+            </Card>
+          ))}
+        </main>
+
+        <footer className="mt-12">
+          <div className="flex justify-center gap-4">
+            <Button asChild>
+              <Link href="/parser">
+                <Zap className="mr-2 h-4 w-4" /> Начать парсинг
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/docs">
+                <Code className="mr-2 h-4 w-4" /> Посмотреть документацию
+              </Link>
+            </Button>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
-          <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-            <div className="text-3xl mb-3">🔍</div>
-            <h3 className="text-xl font-semibold mb-2">
-              Поиск по ключевым словам
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Настраиваемый поиск комментариев по заданным ключевым словам
-            </p>
-          </div>
-
-          <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-            <div className="text-3xl mb-3">📈</div>
-            <h3 className="text-xl font-semibold mb-2">Аналитика</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Подробная статистика и визуализация найденных данных
-            </p>
-          </div>
-
-          <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-            <div className="text-3xl mb-3">⚡</div>
-            <h3 className="text-xl font-semibold mb-2">
-              Высокая производительность
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Асинхронная обработка и кэширование для быстрого анализа
-            </p>
-          </div>
-        </div>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <button className="rounded-lg border border-solid border-transparent transition-colors flex items-center justify-center bg-blue-600 text-white gap-2 hover:bg-blue-700 font-medium text-sm sm:text-base h-10 sm:h-12 px-6 sm:px-8">
-            Начать парсинг
-          </button>
-          <button className="rounded-lg border border-solid border-gray-300 dark:border-gray-600 transition-colors flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 font-medium text-sm sm:text-base h-10 sm:h-12 px-6 sm:px-8">
-            Посмотреть документацию
-          </button>
-        </div>
-      </main>
-
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-        <span>Built with FastAPI + Next.js</span>
-        <span>•</span>
-        <span>Docker Ready</span>
-        <span>•</span>
-        <span>Open Source</span>
-      </footer>
+        </footer>
+      </div>
     </div>
   )
 }

@@ -13,7 +13,7 @@ from app.models.keyword import Keyword
 from app.schemas.base import PaginatedResponse, PaginationParams, StatusResponse
 from app.schemas.keyword import KeywordCreate, KeywordResponse, KeywordUpdate
 
-router = APIRouter(prefix="/keywords", tags=["Keywords"])
+router = APIRouter(tags=["Keywords"])
 
 
 @router.post("/", response_model=KeywordResponse, status_code=status.HTTP_201_CREATED)
@@ -73,6 +73,20 @@ async def get_keywords(
         limit=pagination.limit,
         items=[KeywordResponse.model_validate(keyword) for keyword in keywords],
     )
+
+
+@router.get("/categories", response_model=list[str])
+async def get_keyword_categories(
+    db: AsyncSession = Depends(get_async_session),
+) -> list[str]:
+    """Получить список всех категорий ключевых слов"""
+
+    result = await db.execute(
+        select(Keyword.category).distinct().where(Keyword.category.isnot(None))
+    )
+    categories = [cat for cat in result.scalars().all() if cat]
+
+    return sorted(categories)
 
 
 @router.get("/{keyword_id}", response_model=KeywordResponse)
@@ -180,17 +194,3 @@ async def create_keywords_bulk(
         await db.refresh(keyword)
 
     return [KeywordResponse.model_validate(keyword) for keyword in created_keywords]
-
-
-@router.get("/categories/", response_model=list[str])
-async def get_keyword_categories(
-    db: AsyncSession = Depends(get_async_session),
-) -> list[str]:
-    """Получить список всех категорий ключевых слов"""
-
-    result = await db.execute(
-        select(Keyword.category).distinct().where(Keyword.category.isnot(None))
-    )
-    categories = [cat for cat in result.scalars().all() if cat]
-
-    return sorted(categories)

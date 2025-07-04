@@ -54,19 +54,17 @@ services:
       - redis
     networks:
       - app-network
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   # Next.js Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: development
     container_name: fullstack_frontend
     restart: unless-stopped
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
       - NEXT_PUBLIC_APP_URL=http://localhost:3000
     ports:
       - "3000:3000"
@@ -74,7 +72,6 @@ services:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
-      - /app/.bun
     depends_on:
       - backend
     networks:

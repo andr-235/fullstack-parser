@@ -29,16 +29,14 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-gray-50`}
+        className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <ReactQueryProvider>
-          <div className="flex h-screen">
+          <div className="flex min-h-screen">
             <Sidebar />
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col">
               <Header />
-              <main className="flex-1 overflow-auto p-6">
-        {children}
-              </main>
+              <main className="flex-1 overflow-auto p-6">{children}</main>
             </div>
           </div>
         </ReactQueryProvider>

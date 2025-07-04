@@ -11,12 +11,15 @@ from app.models.comment_keyword_match import CommentKeywordMatch
 from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
 from app.models.vk_group import VKGroup
+from app.schemas.stats import DashboardStats, GlobalStats
 
-router = APIRouter(prefix="/stats", tags=["Statistics"])
+router = APIRouter(tags=["Stats"])
 
 
-@router.get("/global")
-async def get_global_stats(db: AsyncSession = Depends(get_async_session)) -> dict:
+@router.get("/global", response_model=GlobalStats)
+async def get_global_stats(
+    db: AsyncSession = Depends(get_async_session),
+) -> GlobalStats:
     """Получить глобальную статистику системы"""
 
     # Общее количество групп
@@ -49,15 +52,15 @@ async def get_global_stats(db: AsyncSession = Depends(get_async_session)) -> dic
     )
     comments_with_keywords = comments_with_keywords_result.scalar() or 0
 
-    return {
-        "total_groups": total_groups,
-        "active_groups": active_groups,
-        "total_keywords": total_keywords,
-        "active_keywords": active_keywords,
-        "total_comments": total_comments,
-        "comments_with_keywords": comments_with_keywords,
-        "last_parse_time": None,
-    }
+    return GlobalStats(
+        total_groups=total_groups,
+        active_groups=active_groups,
+        total_keywords=total_keywords,
+        active_keywords=active_keywords,
+        total_comments=total_comments,
+        comments_with_keywords=comments_with_keywords,
+        last_parse_time=None,
+    )
 
 
 @router.get("/dashboard")

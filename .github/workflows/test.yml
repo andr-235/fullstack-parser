@@ -116,8 +116,6 @@ jobs:
 
       - name: 📦 Установка pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 8
 
       - name: 📦 Настройка Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4

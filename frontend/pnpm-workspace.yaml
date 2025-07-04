@@ -1,6 +1,0 @@
-packages:
-  - '.'
-
-ignoredBuiltDependencies:
-  - '@tailwindcss/oxide'
-  - unrs-resolver

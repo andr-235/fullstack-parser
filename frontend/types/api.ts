@@ -82,6 +82,7 @@ export interface KeywordUpdate {
 }
 
 export interface KeywordResponse extends KeywordBase, BaseEntity {
+  keyword: string
   total_matches: number
 }
 
@@ -91,6 +92,16 @@ export interface KeywordStats {
   total_matches: number
   recent_matches: number
   top_groups: string[]
+  author_screen_name?: string
+  author_photo_url?: string
+  likes_count: number
+  parent_comment_id?: number
+  has_attachments: boolean
+  matched_keywords_count: number
+  is_processed: boolean
+  processed_at?: string
+  group?: VKGroupResponse
+  matched_keywords?: KeywordResponse[]
 }
 
 // VK Comment типы
@@ -104,6 +115,7 @@ export interface VKCommentBase {
 export interface VKCommentResponse extends VKCommentBase, BaseEntity {
   vk_id: number
   post_id: number
+  post_vk_id?: number
   author_screen_name?: string
   author_photo_url?: string
   likes_count: number
@@ -112,10 +124,12 @@ export interface VKCommentResponse extends VKCommentBase, BaseEntity {
   matched_keywords_count: number
   is_processed: boolean
   processed_at?: string
+  group?: VKGroupResponse
+  matched_keywords?: KeywordResponse[]
 }
 
 export interface CommentWithKeywords extends VKCommentResponse {
-  matched_keywords: string[]
+  matched_keywords: KeywordResponse[]
   keyword_matches: Array<{
     keyword: string
     matched_text: string
@@ -125,6 +139,7 @@ export interface CommentWithKeywords extends VKCommentResponse {
 }
 
 export interface CommentSearchParams {
+  text?: string
   group_id?: number
   keyword_id?: number
   author_id?: number
@@ -144,6 +159,7 @@ export interface ParseTaskCreate {
 export interface ParseTaskResponse {
   task_id: string
   group_id: number
+  group_name?: string
   status: 'running' | 'completed' | 'failed'
   started_at: string
   completed_at?: string
@@ -158,6 +174,27 @@ export interface ParseStats {
   new_comments: number
   keyword_matches: number
   duration_seconds?: number
+}
+
+export interface ParserState {
+  status: 'running' | 'stopped' | 'failed'
+  task?: {
+    task_id: string
+    group_id: number
+    group_name?: string
+    progress: number
+    posts_processed: number
+  }
+}
+
+export interface ParserStats {
+  total_runs: number
+  successful_runs: number
+  failed_runs: number
+  average_duration: number
+  total_posts_processed: number
+  total_comments_found: number
+  total_comments_with_keywords: number
 }
 
 export interface GlobalStats {
@@ -195,4 +232,4 @@ export interface APIError {
 export interface PaginationParams {
   skip?: number
   limit?: number
-} 
+}
