@@ -1,141 +1,225 @@
 'use client'
 
-import { useState } from 'react'
-import { useComments } from '@/hooks/use-comments'
-import { Search, ChevronDown, ExternalLink } from 'lucide-react'
-import { VKCommentResponse } from '@/types/api'
+import { useState, useMemo } from 'react'
+import { useInfiniteComments } from '@/hooks/use-comments'
+import { useGroups } from '@/hooks/use-groups'
+import { useKeywords } from '@/hooks/use-keywords'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { formatRelativeTime } from '@/lib/utils'
+import { Search, ExternalLink } from 'lucide-react'
+import {
+  VKCommentResponse,
+  VKGroupResponse,
+  KeywordResponse,
+} from '@/types/api'
 
 export default function CommentsPage() {
-  const { data, isLoading, error } = useComments()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterGroup, setFilterGroup] = useState('all')
   const [filterKeyword, setFilterKeyword] = useState('all')
 
-  // TODO: Add actual filtering logic
-  const filteredComments = data?.items
+  const {
+    data,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteComments({
+    text: searchTerm || undefined,
+    group_id: filterGroup !== 'all' ? Number(filterGroup) : undefined,
+    keyword_id: filterKeyword !== 'all' ? Number(filterKeyword) : undefined,
+  })
+
+  const { data: groupsData } = useGroups({})
+  const { data: keywordsData } = useKeywords({})
+
+  const allComments = useMemo(
+    () => data?.pages.flatMap((page) => page.items) ?? [],
+    [data]
+  )
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <div className="card bg-base-100 shadow">
-        <div className="card-body">
-          <h2 className="card-title mb-4">Фильтры</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="form-control">
-              <label className="input input-bordered flex items-center gap-2">
-                <input
-                  type="text"
-                  className="grow"
-                  placeholder="Поиск по тексту"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <Search size={16} />
-              </label>
-            </div>
-            <select className="select select-bordered w-full">
-              <option disabled selected>
-                Фильтр по группе
-              </option>
-              <option>Все группы</option>
-              {/* TODO: Populate with real groups */}
-              <option>Group 1</option>
-              <option>Group 2</option>
-            </select>
-            <select className="select select-bordered w-full">
-              <option disabled selected>
-                Фильтр по слову
-              </option>
-              <option>Все слова</option>
-              {/* TODO: Populate with real keywords */}
-              <option>Keyword 1</option>
-              <option>Keyword 2</option>
-            </select>
+      <Card>
+        <CardHeader>
+          <CardTitle>Фильтры комментариев</CardTitle>
+          <CardDescription>
+            Используйте фильтры для поиска нужных комментариев.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="relative">
+            <Input
+              placeholder="Поиск по тексту..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pr-10"
+            />
+            <Search
+              size={16}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
           </div>
-        </div>
-      </div>
+          <Select value={filterGroup} onValueChange={setFilterGroup}>
+            <SelectTrigger>
+              <SelectValue placeholder="Фильтр по группе" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все группы</SelectItem>
+              {groupsData?.items.map((group: VKGroupResponse) => (
+                <SelectItem key={group.id} value={String(group.id)}>
+                  {group.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterKeyword} onValueChange={setFilterKeyword}>
+            <SelectTrigger>
+              <SelectValue placeholder="Фильтр по ключевому слову" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все ключевые слова</SelectItem>
+              {keywordsData?.items.map((keyword: KeywordResponse) => (
+                <SelectItem key={keyword.id} value={String(keyword.id)}>
+                  {keyword.word}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
 
-      {/* Comments List */}
-      <div className="card bg-base-100 shadow">
-        <div className="card-body">
-          <h2 className="card-title">Найденные комментарии</h2>
-          <div className="overflow-x-auto">
-            {isLoading ? (
-              <div className="flex justify-center p-8">
-                <span className="loading loading-spinner loading-lg"></span>
-              </div>
-            ) : error ? (
-              <div role="alert" className="alert alert-error">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="stroke-current shrink-0 h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span>Ошибка: {error.message}</span>
-              </div>
-            ) : (
-              <table className="table table-zebra">
-                <thead>
-                  <tr>
-                    <th>Автор</th>
-                    <th>Текст комментария</th>
-                    <th>Группа</th>
-                    <th>Дата</th>
-                    <th>Ссылка</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredComments?.map((comment: VKCommentResponse) => (
-                    <tr key={comment.id}>
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <div className="avatar placeholder">
-                            <div className="bg-neutral-focus text-neutral-content rounded-full w-12">
-                              <span>
-                                {comment.author_name?.substring(0, 1) || 'A'}
+      <Card>
+        <CardHeader>
+          <CardTitle>Найденные комментарии</CardTitle>
+          <CardDescription>
+            Список комментариев, найденных по вашим фильтрам.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center p-8">
+              <LoadingSpinner />
+            </div>
+          ) : error ? (
+            <div className="text-destructive p-4 text-center">
+              Ошибка: {error.message}
+            </div>
+          ) : (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Автор</TableHead>
+                      <TableHead>Комментарий</TableHead>
+                      <TableHead>Группа</TableHead>
+                      <TableHead>Дата</TableHead>
+                      <TableHead>Ссылка</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {allComments.length > 0 ? (
+                      allComments.map((comment: VKCommentResponse) => (
+                        <TableRow key={comment.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage
+                                  src={comment.author_photo_url}
+                                  alt={comment.author_name}
+                                />
+                                <AvatarFallback>
+                                  {comment.author_name?.substring(0, 1) || 'A'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">
+                                {comment.author_name}
                               </span>
                             </div>
-                          </div>
-                          <div>
-                            <div className="font-bold">
-                              {comment.author_name}
+                          </TableCell>
+                          <TableCell className="max-w-md">
+                            <p className="truncate hover:whitespace-normal">
+                              {comment.text}
+                            </p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {comment.matched_keywords?.map(
+                                (kw: KeywordResponse) => (
+                                  <Badge key={kw.id} variant="secondary">
+                                    {kw.word}
+                                  </Badge>
+                                )
+                              )}
                             </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="max-w-md">
-                        <p className="truncate">{comment.text}</p>
-                      </td>
-                      <td>(Group)</td>
-                      <td>
-                        {new Date(comment.created_at).toLocaleDateString()}
-                      </td>
-                      <td>
-                        <a
-                          href={`https://vk.com/comment${comment.vk_id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn btn-ghost btn-xs"
-                        >
-                          <ExternalLink size={16} />
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-      </div>
+                          </TableCell>
+                          <TableCell>{comment.group?.name || 'N/A'}</TableCell>
+                          <TableCell>
+                            {formatRelativeTime(comment.created_at)}
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" asChild>
+                              <a
+                                href={`https://vk.com/wall-${comment.group?.vk_id}_${comment.post_vk_id}?reply=${comment.vk_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center">
+                          Комментарии не найдены.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              {hasNextPage && (
+                <div className="mt-4 text-center">
+                  <Button
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                  >
+                    {isFetchingNextPage ? <LoadingSpinner /> : 'Загрузить еще'}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

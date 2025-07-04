@@ -1,8 +1,10 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { Bell, Circle, ChevronRight, Menu } from 'lucide-react'
+import Link from 'next/link'
+import { Bell, Menu, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 
 interface HeaderProps {
   className?: string
@@ -24,72 +26,66 @@ export function Header({ className }: HeaderProps) {
   const breadcrumbs = pathSegments.map((segment, index) => {
     const path = '/' + pathSegments.slice(0, index + 1).join('/')
     return {
-      title: routeTitles[path] || segment,
+      title:
+        routeTitles[path] || segment.charAt(0).toUpperCase() + segment.slice(1),
       href: path,
       isLast: index === pathSegments.length - 1,
     }
   })
 
   return (
-    <div className={cn('navbar bg-base-100 border-b', className)}>
-      <div className="navbar-start">
-        <label htmlFor="my-drawer-2" className="btn btn-ghost lg:hidden">
-          <Menu />
-        </label>
-        <div className="text-sm breadcrumbs hidden sm:flex">
-          <ul>
-            <li>
-              <a>Главная</a>
-            </li>
-            {breadcrumbs.map((breadcrumb) => (
-              <li key={breadcrumb.href}>
-                <a>{breadcrumb.title}</a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-      <div className="navbar-end">
-        <div className="flex items-center space-x-2 mr-4">
-          <div className="badge badge-success badge-xs"></div>
-          <span className="text-sm">API активно</span>
-        </div>
-        <div className="dropdown dropdown-end">
-          <label tabIndex={0} className="btn btn-ghost btn-circle">
-            <div className="indicator">
-              <Bell size={20} />
-              <span className="badge badge-xs badge-primary indicator-item">
-                3
-              </span>
+    <header
+      className={cn(
+        'sticky top-0 z-10 flex h-16 w-full items-center justify-between border-b bg-white px-6 dark:bg-gray-950 dark:border-gray-800',
+        className
+      )}
+    >
+      <div className="flex items-center gap-4">
+        {/* Mobile menu button can be added here if needed */}
+        <nav className="hidden sm:flex items-center text-sm font-medium">
+          <Link href="/dashboard" className="text-gray-500 hover:text-gray-900">
+            Главная
+          </Link>
+          {breadcrumbs.map((breadcrumb, index) => (
+            <div key={index} className="flex items-center">
+              <ChevronRight className="h-4 w-4 mx-1 text-gray-400" />
+              <Link
+                href={breadcrumb.href}
+                className={cn(
+                  'hover:text-gray-900',
+                  breadcrumb.isLast
+                    ? 'text-gray-900 dark:text-white'
+                    : 'text-gray-500 dark:text-gray-400'
+                )}
+              >
+                {breadcrumb.title}
+              </Link>
             </div>
-          </label>
-          {/* Notifications dropdown content here */}
-        </div>
-        <div className="dropdown dropdown-end">
-          <label tabIndex={0} className="btn btn-ghost btn-circle avatar">
-            <div className="w-8 rounded-full bg-blue-100 ring ring-primary ring-offset-base-100 ring-offset-2">
-              <span className="text-sm font-medium text-blue-700">А</span>
-            </div>
-          </label>
-          <ul
-            tabIndex={0}
-            className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
-          >
-            <li>
-              <a className="justify-between">
-                Профиль
-                <span className="badge">New</span>
-              </a>
-            </li>
-            <li>
-              <a>Настройки</a>
-            </li>
-            <li>
-              <a>Выход</a>
-            </li>
-          </ul>
-        </div>
+          ))}
+        </nav>
       </div>
-    </div>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center space-x-2">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+          </span>
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+            API активно
+          </span>
+        </div>
+        <Button variant="ghost" size="icon">
+          <Bell className="h-5 w-5" />
+          <span className="sr-only">Уведомления</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full w-8 h-8 bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold"
+        >
+          А
+        </Button>
+      </div>
+    </header>
   )
 }
