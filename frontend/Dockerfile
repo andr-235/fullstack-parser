@@ -1,77 +1,40 @@
-# Frontend Dockerfile for pnpm
-FROM node:18-alpine AS base
-
-# Install pnpm globally
-RUN npm install -g pnpm@10
-
-# Install dependencies only when needed
-FROM base AS deps
+# Этап 1: Установка зависимостей и сборка
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Install dependencies with pnpm
-COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
+# Устанавливаем pnpm
+RUN npm install -g pnpm
+
+# Копируем package.json и pnpm-lock.yaml
+COPY package.json pnpm-lock.yaml ./
+
+# Устанавливаем все зависимости (включая dev)
 RUN pnpm install --frozen-lockfile
 
-# Development stage for local development
-FROM base AS development
-WORKDIR /app
-
-# Используем уже установленные зависимости из слоя deps
-COPY --from=deps /app/node_modules ./node_modules
-
-# Копируем манифесты (на случай, если локально что-то изменилось; при изменении package.json слой кеша пересоберётся)
-COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
-
-# Копируем исходники приложения
+# Копируем исходники
 COPY . .
 
-# Expose port
-EXPOSE 3000
+# Собираем проект
+RUN pnpm build
 
-# Start development server with correct host binding for Docker
-CMD ["pnpm", "dev"]
-
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-ARG DOCKER=1
-ENV DOCKER=$DOCKER
-COPY --from=deps /app/node_modules ./node_modules
-RUN mkdir -p public
-COPY . .
-
-# Disable telemetry during build
-ENV NEXT_TELEMETRY_DISABLED 1
-
-RUN pnpm run build
-
-# Production image, copy all the files and run next
-FROM base AS production
+# Этап 2: Production-образ
+FROM node:20-alpine AS runner
 WORKDIR /app
 
-ARG DOCKER=1
-ENV DOCKER=$DOCKER
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+# Устанавливаем pnpm
+RUN npm install -g pnpm
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Создаем пользователя без root прав
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
 
-COPY --from=builder /app/public ./public
-
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-# Automatically leverage output traces to reduce image size
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Копируем только необходимые файлы
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
 USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
-
-CMD ["node", "server.js"] 
+CMD ["node_modules/.bin/next", "start"] 

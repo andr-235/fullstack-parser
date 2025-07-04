@@ -17,7 +17,7 @@ from app.schemas.vk_group import (
 )
 from app.services.vk_api_service import VKAPIService
 
-router = APIRouter(prefix="/groups", tags=["VK Groups"])
+router = APIRouter(tags=["Groups"])
 
 
 @router.post("/", response_model=VKGroupResponse, status_code=status.HTTP_201_CREATED)
@@ -176,13 +176,12 @@ async def get_group_stats(
         )
 
     # TODO: Добавить получение детальной статистики из связанных таблиц
+    validated_group = VKGroupResponse.model_validate(group)
     return VKGroupStats(
-        group_id=int(group.id),
-        total_posts=int(group.total_posts_parsed),
-        total_comments=int(group.total_comments_found),
-        comments_with_keywords=int(
-            group.total_comments_found
-        ),  # TODO: точная статистика
-        last_activity=group.last_parsed_at,
+        group_id=validated_group.id,
+        total_posts=validated_group.total_posts_parsed,
+        total_comments=validated_group.total_comments_found,
+        comments_with_keywords=validated_group.total_comments_found,  # TODO: точная статистика
+        last_activity=validated_group.last_parsed_at,
         top_keywords=[],  # TODO: получить из БД
     )

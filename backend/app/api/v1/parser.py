@@ -14,8 +14,12 @@ from app.core.database import get_async_session
 from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
 from app.models.vk_group import VKGroup
-from app.schemas.base import PaginatedResponse, PaginationParams
-from app.schemas.parser import GlobalStats, ParseTaskCreate, ParseTaskResponse
+from app.schemas.base import PaginatedResponse, PaginationParams, StatusResponse
+from app.schemas.parser import (
+    GlobalStats,
+    ParseTaskCreate,
+    ParseTaskResponse,
+)
 from app.schemas.vk_comment import (
     CommentSearchParams,
     CommentWithKeywords,
@@ -23,7 +27,7 @@ from app.schemas.vk_comment import (
 )
 from app.services.parser_service import ParserService
 
-router = APIRouter(prefix="/parser", tags=["Parser"])
+router = APIRouter(tags=["Parser"])
 
 
 @router.post("/parse", response_model=ParseTaskResponse)

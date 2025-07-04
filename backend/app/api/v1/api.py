@@ -4,15 +4,16 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import groups, keywords, parser, stats
+from app.api.v1 import comments, groups, keywords, parser, stats
 
 api_router = APIRouter()
 
 # Подключение всех роутеров
-api_router.include_router(groups.router)
-api_router.include_router(keywords.router)
-api_router.include_router(parser.router)
-api_router.include_router(stats.router)
+api_router.include_router(comments.router, prefix="/comments")
+api_router.include_router(groups.router, prefix="/groups")
+api_router.include_router(keywords.router, prefix="/keywords")
+api_router.include_router(parser.router, prefix="/parser")
+api_router.include_router(stats.router, prefix="/stats")
 
 
 @api_router.get("/")
@@ -22,6 +23,7 @@ async def api_info() -> dict[str, str | dict[str, str]]:
         "service": "VK Comments Parser API",
         "version": "1.0.0",
         "endpoints": {
+            "comments": "/comments - Найденные комментарии",
             "groups": "/groups - Управление VK группами",
             "keywords": "/keywords - Управление ключевыми словами",
             "parser": "/parser - Парсинг и поиск комментариев",
