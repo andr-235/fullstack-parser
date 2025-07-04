@@ -2,7 +2,7 @@
 FROM node:18-alpine AS base
 
 # Install pnpm globally
-RUN npm install -g pnpm@8
+RUN npm install -g pnpm@10
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -16,13 +16,13 @@ RUN pnpm install --frozen-lockfile
 FROM base AS development
 WORKDIR /app
 
-# Copy package files
+# Используем уже установленные зависимости из слоя deps
+COPY --from=deps /app/node_modules ./node_modules
+
+# Копируем манифесты (на случай, если локально что-то изменилось; при изменении package.json слой кеша пересоберётся)
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 
-# Install all dependencies (including devDependencies)
-RUN pnpm install --frozen-lockfile
-
-# Copy source code
+# Копируем исходники приложения
 COPY . .
 
 # Expose port
@@ -34,7 +34,10 @@ CMD ["pnpm", "dev"]
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+ARG DOCKER=1
+ENV DOCKER=$DOCKER
 COPY --from=deps /app/node_modules ./node_modules
+RUN mkdir -p public
 COPY . .
 
 # Disable telemetry during build
@@ -46,6 +49,8 @@ RUN pnpm run build
 FROM base AS production
 WORKDIR /app
 
+ARG DOCKER=1
+ENV DOCKER=$DOCKER
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
