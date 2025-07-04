@@ -19,14 +19,21 @@
   - [x] **Step 2.3: Test API connectivity**
     - [x] Confirmed GET requests work after trailing slash fix
     - [x] Verified frontend can load without 404 errors
-- [ ] **Phase 3: Configure VK API Integration**
-  - [ ] **Step 3.1: Set up VK API credentials**
-    - [ ] Update .env file with valid VK_ACCESS_TOKEN
-    - [ ] Provide instructions for obtaining VK access token
-  - [ ] **Step 3.2: Test VK group addition**
-    - [ ] Attempt to add test group https://vk.com/livebir
-    - [ ] Verify group data is fetched and stored correctly
-- [ ] **Phase 4: Complete UI Functionality Testing**
+- [x] **Phase 3: Configure VK API Integration**
+  - [x] **Step 3.1: Set up VK API credentials**
+    - [x] Update .env file with test VK_ACCESS_TOKEN
+    - [x] Created documentation for obtaining VK access token
+  - [x] **Step 3.2: Test VK group addition**
+    - [x] Attempted to add test groups
+    - [x] Identified invalid token error: "User authorization failed: invalid access_token (4)"
+- [ ] **Phase 4: Fix VK API Token Authentication**
+  - [ ] **Step 4.1: Generate valid VK API token**
+    - [ ] Follow documentation in docs/VK_API_SETUP.md to create valid token
+    - [ ] Update .env with correct token format and permissions
+  - [ ] **Step 4.2: Test VK API connectivity**
+    - [ ] Test adding popular VK group
+    - [ ] Verify posts and comments parsing
+- [ ] **Phase 5: Complete UI Functionality Testing**
   - [ ] Test all pages for correct data loading
   - [ ] Verify statistics display correctly
   - [ ] Test keywords management functionality
