@@ -1,21 +1,33 @@
 'use client'
 
 import { useState } from 'react'
-import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup } from '@/hooks/use-groups'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  useGroups,
+  useCreateGroup,
+  useUpdateGroup,
+  useDeleteGroup,
+} from '@/hooks/use-groups'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinnerWithText } from '@/components/ui/loading-spinner'
-import { 
-  Plus, 
-  Users, 
+import {
+  Plus,
+  Users,
   Settings,
   Play,
   Pause,
   Trash2,
   ExternalLink,
   Search,
-  Filter
+  Filter,
+  Edit,
 } from 'lucide-react'
 import { formatNumber, formatRelativeTime } from '@/lib/utils'
 import type { VKGroupResponse } from '@/types/api'
@@ -23,14 +35,15 @@ import type { VKGroupResponse } from '@/types/api'
 export default function GroupsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeOnly, setActiveOnly] = useState(true)
-  
-  const { 
-    data: groupsData, 
-    isLoading, 
-    error 
-  } = useGroups({ 
+  const [newGroupUrl, setNewGroupUrl] = useState('')
+
+  const {
+    data: groupsData,
+    isLoading,
+    error,
+  } = useGroups({
     active_only: activeOnly,
-    limit: 50 
+    limit: 50,
   })
 
   const createGroupMutation = useCreateGroup()
@@ -41,16 +54,17 @@ export default function GroupsPage() {
   const total = groupsData?.total || 0
 
   // Фильтрация групп по поисковому запросу
-  const filteredGroups = groups.filter((group: VKGroupResponse) =>
-    group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    group.screen_name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredGroups = groups.filter(
+    (group: VKGroupResponse) =>
+      group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      group.screen_name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const handleToggleActive = async (group: VKGroupResponse) => {
     try {
       await updateGroupMutation.mutateAsync({
         groupId: group.id,
-        data: { is_active: !group.is_active }
+        data: { is_active: !group.is_active },
       })
     } catch (error) {
       console.error('Ошибка обновления группы:', error)
@@ -65,6 +79,12 @@ export default function GroupsPage() {
         console.error('Ошибка удаления группы:', error)
       }
     }
+  }
+
+  const handleAddGroup = () => {
+    // TODO: Implement add group logic
+    console.log('Adding group:', newGroupUrl)
+    setNewGroupUrl('')
   }
 
   if (isLoading) {
@@ -98,13 +118,28 @@ export default function GroupsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">VK Группы</h1>
           <p className="text-gray-600 mt-2">
-            Управление группами ВКонтакте для мониторинга и парсинга комментариев
+            Управление группами ВКонтакте для мониторинга и парсинга
+            комментариев
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Добавить группу
-        </Button>
+        <div className="card bg-base-100 shadow">
+          <div className="card-body">
+            <h2 className="card-title">Добавить новую группу</h2>
+            <div className="form-control flex-row gap-2">
+              <input
+                type="text"
+                placeholder="https://vk.com/example"
+                className="input input-bordered w-full"
+                value={newGroupUrl}
+                onChange={(e) => setNewGroupUrl(e.target.value)}
+              />
+              <button className="btn btn-primary" onClick={handleAddGroup}>
+                <Plus size={18} />
+                Добавить
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Stats */}
@@ -120,14 +155,16 @@ export default function GroupsPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Активных</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {formatNumber(groups.filter((g: VKGroupResponse) => g.is_active).length)}
+                  {formatNumber(
+                    groups.filter((g: VKGroupResponse) => g.is_active).length
+                  )}
                 </p>
               </div>
               <Play className="h-8 w-8 text-green-600" />
@@ -141,7 +178,9 @@ export default function GroupsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Неактивных</p>
                 <p className="text-2xl font-bold text-gray-500">
-                  {formatNumber(groups.filter((g: VKGroupResponse) => !g.is_active).length)}
+                  {formatNumber(
+                    groups.filter((g: VKGroupResponse) => !g.is_active).length
+                  )}
                 </p>
               </div>
               <Pause className="h-8 w-8 text-gray-500" />
@@ -153,10 +192,16 @@ export default function GroupsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Всего комментариев</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Всего комментариев
+                </p>
                 <p className="text-2xl font-bold text-purple-600">
                   {formatNumber(
-                    groups.reduce((sum: number, g: VKGroupResponse) => sum + g.total_comments_found, 0)
+                    groups.reduce(
+                      (sum: number, g: VKGroupResponse) =>
+                        sum + g.total_comments_found,
+                      0
+                    )
                   )}
                 </p>
               </div>
@@ -180,7 +225,7 @@ export default function GroupsPage() {
                 className="pl-9 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <Filter className="h-4 w-4 text-gray-600" />
               <label className="flex items-center space-x-2">
@@ -213,10 +258,10 @@ export default function GroupsPage() {
                       <ExternalLink className="h-3 w-3" />
                     </CardDescription>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Badge variant={group.is_active ? "success" : "secondary"}>
-                      {group.is_active ? "Активна" : "Неактивна"}
+                    <Badge variant={group.is_active ? 'success' : 'secondary'}>
+                      {group.is_active ? 'Активна' : 'Неактивна'}
                     </Badge>
                     {group.is_closed && (
                       <Badge variant="warning">Закрытая</Badge>
@@ -232,20 +277,28 @@ export default function GroupsPage() {
                     <div>
                       <p className="text-gray-600">Участников</p>
                       <p className="font-semibold">
-                        {group.members_count ? formatNumber(group.members_count) : 'N/A'}
+                        {group.members_count
+                          ? formatNumber(group.members_count)
+                          : 'N/A'}
                       </p>
                     </div>
                     <div>
                       <p className="text-gray-600">Постов проверено</p>
-                      <p className="font-semibold">{formatNumber(group.total_posts_parsed)}</p>
+                      <p className="font-semibold">
+                        {formatNumber(group.total_posts_parsed)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-600">Комментариев найдено</p>
-                      <p className="font-semibold">{formatNumber(group.total_comments_found)}</p>
+                      <p className="font-semibold">
+                        {formatNumber(group.total_comments_found)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-600">Лимит постов</p>
-                      <p className="font-semibold">{formatNumber(group.max_posts_to_check)}</p>
+                      <p className="font-semibold">
+                        {formatNumber(group.max_posts_to_check)}
+                      </p>
                     </div>
                   </div>
 
@@ -273,7 +326,7 @@ export default function GroupsPage() {
                     <div className="flex items-center space-x-2">
                       <Button
                         size="sm"
-                        variant={group.is_active ? "secondary" : "default"}
+                        variant={group.is_active ? 'secondary' : 'default'}
                         onClick={() => handleToggleActive(group)}
                         disabled={updateGroupMutation.isPending}
                       >
@@ -289,7 +342,7 @@ export default function GroupsPage() {
                           </>
                         )}
                       </Button>
-                      
+
                       <Button size="sm" variant="ghost">
                         <Settings className="h-3 w-3 mr-1" />
                         Настройки
@@ -320,10 +373,9 @@ export default function GroupsPage() {
                     Группы не найдены
                   </h3>
                   <p className="text-gray-600 mb-4">
-                    {searchTerm 
+                    {searchTerm
                       ? `Нет групп, соответствующих запросу "${searchTerm}"`
-                      : 'Добавьте первую группу для начала мониторинга'
-                    }
+                      : 'Добавьте первую группу для начала мониторинга'}
                   </p>
                   <Button>
                     <Plus className="h-4 w-4 mr-2" />
@@ -337,4 +389,4 @@ export default function GroupsPage() {
       </div>
     </div>
   )
-} 
+}

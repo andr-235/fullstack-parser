@@ -1,13 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinnerWithText } from '@/components/ui/loading-spinner'
-import { 
-  Plus, 
-  KeyRound, 
+import {
+  Plus,
+  KeyRound,
   Search,
   Filter,
   Edit,
@@ -16,8 +22,9 @@ import {
   Pause,
   Upload,
   Download,
-  Tag
+  Tag,
 } from 'lucide-react'
+import { useKeywords } from '@/hooks/use-keywords'
 
 // Пока используем моковые данные, потом подключим React Query
 const mockKeywords = [
@@ -28,7 +35,7 @@ const mockKeywords = [
     is_active: true,
     case_sensitive: false,
     created_at: '2024-01-15T10:00:00Z',
-    matches_count: 156
+    matches_count: 156,
   },
   {
     id: 2,
@@ -37,7 +44,7 @@ const mockKeywords = [
     is_active: true,
     case_sensitive: false,
     created_at: '2024-01-15T10:00:00Z',
-    matches_count: 89
+    matches_count: 89,
   },
   {
     id: 3,
@@ -46,7 +53,7 @@ const mockKeywords = [
     is_active: true,
     case_sensitive: false,
     created_at: '2024-01-14T15:30:00Z',
-    matches_count: 234
+    matches_count: 234,
   },
   {
     id: 4,
@@ -55,7 +62,7 @@ const mockKeywords = [
     is_active: false,
     case_sensitive: false,
     created_at: '2024-01-14T15:30:00Z',
-    matches_count: 67
+    matches_count: 67,
   },
   {
     id: 5,
@@ -64,30 +71,39 @@ const mockKeywords = [
     is_active: true,
     case_sensitive: false,
     created_at: '2024-01-13T09:15:00Z',
-    matches_count: 123
-  }
+    matches_count: 123,
+  },
 ]
 
-const mockCategories = ['Коммерция', 'Трудоустройство', 'Сервисы', 'Недвижимость', 'Транспорт']
+const mockCategories = [
+  'Коммерция',
+  'Трудоустройство',
+  'Сервисы',
+  'Недвижимость',
+  'Транспорт',
+]
 
 export default function KeywordsPage() {
+  const { data: keywords, isLoading, error } = useKeywords()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [activeOnly, setActiveOnly] = useState(true)
-  const [isLoading, setIsLoading] = useState(false)
+  const [newKeyword, setNewKeyword] = useState('')
 
   // Фильтрация ключевых слов
-  const filteredKeywords = mockKeywords.filter(keyword => {
-    const matchesSearch = keyword.word.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         keyword.category.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = !selectedCategory || keyword.category === selectedCategory
+  const filteredKeywords = mockKeywords.filter((keyword) => {
+    const matchesSearch =
+      keyword.word.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      keyword.category.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory =
+      !selectedCategory || keyword.category === selectedCategory
     const matchesActive = !activeOnly || keyword.is_active
-    
+
     return matchesSearch && matchesCategory && matchesActive
   })
 
   const totalKeywords = mockKeywords.length
-  const activeKeywords = mockKeywords.filter(k => k.is_active).length
+  const activeKeywords = mockKeywords.filter((k) => k.is_active).length
   const totalMatches = mockKeywords.reduce((sum, k) => sum + k.matches_count, 0)
 
   const formatNumber = (num: number) => {
@@ -104,6 +120,12 @@ export default function KeywordsPage() {
       // TODO: Реализовать через React Query
       console.log('Delete keyword:', keywordId)
     }
+  }
+
+  const handleAddKeyword = () => {
+    // TODO: Implement add keyword logic
+    console.log('Adding keyword:', newKeyword)
+    setNewKeyword('')
   }
 
   if (isLoading) {
@@ -147,13 +169,15 @@ export default function KeywordsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Всего слов</p>
-                <p className="text-2xl font-bold">{formatNumber(totalKeywords)}</p>
+                <p className="text-2xl font-bold">
+                  {formatNumber(totalKeywords)}
+                </p>
               </div>
               <KeyRound className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -212,7 +236,7 @@ export default function KeywordsPage() {
                 className="pl-9 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            
+
             {/* Category Filter */}
             <div className="sm:w-48">
               <select
@@ -221,8 +245,10 @@ export default function KeywordsPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Все категории</option>
-                {mockCategories.map(category => (
-                  <option key={category} value={category}>{category}</option>
+                {mockCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
                 ))}
               </select>
             </div>
@@ -269,11 +295,11 @@ export default function KeywordsPage() {
                         <h3 className="font-semibold text-gray-900">
                           {keyword.word}
                         </h3>
-                        <Badge 
-                          variant={keyword.is_active ? "success" : "secondary"}
+                        <Badge
+                          variant={keyword.is_active ? 'success' : 'secondary'}
                           className="text-xs"
                         >
-                          {keyword.is_active ? "Активно" : "Неактивно"}
+                          {keyword.is_active ? 'Активно' : 'Неактивно'}
                         </Badge>
                         <Badge variant="outline" className="text-xs">
                           {keyword.category}
@@ -285,8 +311,11 @@ export default function KeywordsPage() {
                         )}
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
-                        Совпадений: {formatNumber(keyword.matches_count)} • 
-                        Создано: {new Date(keyword.created_at).toLocaleDateString('ru-RU')}
+                        Совпадений: {formatNumber(keyword.matches_count)} •
+                        Создано:{' '}
+                        {new Date(keyword.created_at).toLocaleDateString(
+                          'ru-RU'
+                        )}
                       </p>
                     </div>
                   </div>
@@ -294,7 +323,7 @@ export default function KeywordsPage() {
                   <div className="flex items-center space-x-2">
                     <Button
                       size="sm"
-                      variant={keyword.is_active ? "secondary" : "default"}
+                      variant={keyword.is_active ? 'secondary' : 'default'}
                       onClick={() => handleToggleActive(keyword.id)}
                     >
                       {keyword.is_active ? (
@@ -309,7 +338,7 @@ export default function KeywordsPage() {
                         </>
                       )}
                     </Button>
-                    
+
                     <Button size="sm" variant="ghost">
                       <Edit className="h-3 w-3 mr-1" />
                       Изменить
@@ -336,8 +365,7 @@ export default function KeywordsPage() {
               <p className="text-gray-600 mb-4">
                 {searchTerm || selectedCategory
                   ? 'Измените критерии поиска или очистите фильтры'
-                  : 'Добавьте первое ключевое слово для начала мониторинга'
-                }
+                  : 'Добавьте первое ключевое слово для начала мониторинга'}
               </p>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
@@ -358,8 +386,10 @@ export default function KeywordsPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            {mockCategories.map(category => {
-              const categoryCount = mockKeywords.filter(k => k.category === category).length
+            {mockCategories.map((category) => {
+              const categoryCount = mockKeywords.filter(
+                (k) => k.category === category
+              ).length
               return (
                 <Badge key={category} variant="outline" className="px-3 py-1">
                   {category} ({categoryCount})
@@ -373,6 +403,91 @@ export default function KeywordsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="card bg-base-100 shadow">
+        <div className="card-body">
+          <h2 className="card-title">Добавить новое ключевое слово</h2>
+          <div className="form-control flex-row gap-2">
+            <input
+              type="text"
+              placeholder="Введите ключевое слово"
+              className="input input-bordered w-full"
+              value={newKeyword}
+              onChange={(e) => setNewKeyword(e.target.value)}
+            />
+            <button className="btn btn-primary" onClick={handleAddKeyword}>
+              <Plus size={18} />
+              Добавить
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="card bg-base-100 shadow">
+        <div className="card-body">
+          <h2 className="card-title">Список ключевых слов</h2>
+          <div className="overflow-x-auto">
+            {isLoading ? (
+              <div className="flex justify-center p-8">
+                <span className="loading loading-spinner loading-lg"></span>
+              </div>
+            ) : error ? (
+              <div role="alert" className="alert alert-error">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="stroke-current shrink-0 h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span>Ошибка: {error.message}</span>
+              </div>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Ключевое слово</th>
+                    <th>Кол-во упоминаний</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {keywords?.map((keyword) => (
+                    <tr key={keyword.id}>
+                      <td>{keyword.id}</td>
+                      <td>
+                        <span className="badge badge-lg">
+                          {keyword.keyword}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="badge badge-ghost">
+                          {keyword.matches_count}
+                        </div>
+                      </td>
+                      <td className="flex gap-2">
+                        <button className="btn btn-ghost btn-xs">
+                          <Edit size={16} />
+                        </button>
+                        <button className="btn btn-ghost btn-xs text-error">
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
-} 
+}

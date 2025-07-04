@@ -1,12 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinnerWithText } from '@/components/ui/loading-spinner'
-import { 
-  Play, 
+import {
+  Play,
   Pause,
   Square,
   Settings,
@@ -15,7 +21,10 @@ import {
   AlertCircle,
   CheckCircle,
   Info,
-  RefreshCw
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  Loader,
 } from 'lucide-react'
 
 // Моковые данные состояния парсера
@@ -28,7 +37,7 @@ const mockParserState = {
   avg_duration: 342, // seconds
   errors_count: 2,
   groups_in_queue: 5,
-  estimated_completion: null
+  estimated_completion: null,
 }
 
 const mockRecentRuns = [
@@ -40,7 +49,7 @@ const mockRecentRuns = [
     groups_processed: 12,
     comments_found: 89,
     errors: 0,
-    duration: 342
+    duration: 342,
   },
   {
     id: 2,
@@ -50,7 +59,7 @@ const mockRecentRuns = [
     groups_processed: 8,
     comments_found: 45,
     errors: 0,
-    duration: 331
+    duration: 331,
   },
   {
     id: 3,
@@ -60,14 +69,21 @@ const mockRecentRuns = [
     groups_processed: 3,
     comments_found: 12,
     errors: 2,
-    duration: 315
-  }
+    duration: 315,
+  },
 ]
+
+// Mock parsing function
+const startParsing = () => new Promise((resolve) => setTimeout(resolve, 2000))
 
 export default function ParserPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [parserState, setParserState] = useState(mockParserState)
   const [showSettings, setShowSettings] = useState(false)
+  const [isParsing, setIsParsing] = useState(false)
+  const [parseResult, setParseResult] = useState<'success' | 'error' | null>(
+    null
+  )
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
@@ -78,8 +94,10 @@ export default function ParserPage() {
   const formatRelativeTime = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
-    
+    const diffInMinutes = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60)
+    )
+
     if (diffInMinutes < 60) return `${diffInMinutes} мин назад`
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} ч назад`
     return `${Math.floor(diffInMinutes / 1440)} дн назад`
@@ -87,14 +105,17 @@ export default function ParserPage() {
 
   const handleStartParser = async () => {
     setIsLoading(true)
+    setIsParsing(true)
+    setParseResult(null)
     try {
-      // TODO: API call
-      console.log('Starting parser...')
-      setParserState(prev => ({ ...prev, is_running: true }))
-    } catch (error) {
-      console.error('Failed to start parser:', error)
+      await startParsing()
+      setParseResult('success')
+      setParserState((prev) => ({ ...prev, is_running: true }))
+    } catch (err) {
+      setParseResult('error')
     } finally {
       setIsLoading(false)
+      setIsParsing(false)
     }
   }
 
@@ -103,7 +124,7 @@ export default function ParserPage() {
     try {
       // TODO: API call
       console.log('Stopping parser...')
-      setParserState(prev => ({ ...prev, is_running: false }))
+      setParserState((prev) => ({ ...prev, is_running: false }))
     } catch (error) {
       console.error('Failed to stop parser:', error)
     } finally {
@@ -142,7 +163,9 @@ export default function ParserPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Управление парсингом</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Управление парсингом
+          </h1>
           <p className="text-gray-600 mt-2">
             Запуск и мониторинг парсинга комментариев ВКонтакте
           </p>
@@ -155,10 +178,7 @@ export default function ParserPage() {
             <Settings className="h-4 w-4 mr-2" />
             Настройки
           </Button>
-          <Button
-            variant="outline"
-            disabled={isLoading}
-          >
+          <Button variant="outline" disabled={isLoading}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Обновить
           </Button>
@@ -171,8 +191,8 @@ export default function ParserPage() {
           <CardTitle className="flex items-center gap-3">
             <Activity className="h-5 w-5" />
             Текущий статус парсера
-            <Badge variant={parserState.is_running ? "default" : "secondary"}>
-              {parserState.is_running ? "Запущен" : "Остановлен"}
+            <Badge variant={parserState.is_running ? 'default' : 'secondary'}>
+              {parserState.is_running ? 'Запущен' : 'Остановлен'}
             </Badge>
           </CardTitle>
         </CardHeader>
@@ -188,7 +208,7 @@ export default function ParserPage() {
                     disabled={isLoading}
                     className="w-full"
                   >
-                    {isLoading ? (
+                    {isParsing ? (
                       <LoadingSpinnerWithText text="" size="sm" />
                     ) : (
                       <Play className="h-4 w-4 mr-2" />
@@ -244,10 +264,30 @@ export default function ParserPage() {
             <div className="space-y-2">
               <h3 className="font-semibold text-gray-900">Статистика</h3>
               <div className="text-sm space-y-1">
-                <p className="text-gray-600">Всего запусков: <span className="text-gray-900 font-medium">{parserState.total_runs}</span></p>
-                <p className="text-gray-600">Успешность: <span className="text-green-600 font-medium">{parserState.success_rate}%</span></p>
-                <p className="text-gray-600">Средняя длительность: <span className="text-gray-900 font-medium">{formatDuration(parserState.avg_duration)}</span></p>
-                <p className="text-gray-600">Ошибки: <span className="text-red-600 font-medium">{parserState.errors_count}</span></p>
+                <p className="text-gray-600">
+                  Всего запусков:{' '}
+                  <span className="text-gray-900 font-medium">
+                    {parserState.total_runs}
+                  </span>
+                </p>
+                <p className="text-gray-600">
+                  Успешность:{' '}
+                  <span className="text-green-600 font-medium">
+                    {parserState.success_rate}%
+                  </span>
+                </p>
+                <p className="text-gray-600">
+                  Средняя длительность:{' '}
+                  <span className="text-gray-900 font-medium">
+                    {formatDuration(parserState.avg_duration)}
+                  </span>
+                </p>
+                <p className="text-gray-600">
+                  Ошибки:{' '}
+                  <span className="text-red-600 font-medium">
+                    {parserState.errors_count}
+                  </span>
+                </p>
               </div>
             </div>
 
@@ -255,10 +295,25 @@ export default function ParserPage() {
             <div className="space-y-2">
               <h3 className="font-semibold text-gray-900">Очередь</h3>
               <div className="text-sm space-y-1">
-                <p className="text-gray-600">Групп в очереди: <span className="text-blue-600 font-medium">{parserState.groups_in_queue}</span></p>
-                <p className="text-gray-600">Последний запуск: <span className="text-gray-900 font-medium">{formatRelativeTime(parserState.last_run_time)}</span></p>
+                <p className="text-gray-600">
+                  Групп в очереди:{' '}
+                  <span className="text-blue-600 font-medium">
+                    {parserState.groups_in_queue}
+                  </span>
+                </p>
+                <p className="text-gray-600">
+                  Последний запуск:{' '}
+                  <span className="text-gray-900 font-medium">
+                    {formatRelativeTime(parserState.last_run_time)}
+                  </span>
+                </p>
                 {parserState.estimated_completion && (
-                  <p className="text-gray-600">Завершение: <span className="text-orange-600 font-medium">{formatRelativeTime(parserState.estimated_completion)}</span></p>
+                  <p className="text-gray-600">
+                    Завершение:{' '}
+                    <span className="text-orange-600 font-medium">
+                      {formatRelativeTime(parserState.estimated_completion)}
+                    </span>
+                  </p>
                 )}
               </div>
             </div>
@@ -288,7 +343,7 @@ export default function ParserPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Максимум групп за раз
@@ -307,7 +362,9 @@ export default function ParserPage() {
                       defaultChecked
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-700">Автоматический запуск</span>
+                    <span className="text-sm text-gray-700">
+                      Автоматический запуск
+                    </span>
                   </label>
                 </div>
               </div>
@@ -342,7 +399,9 @@ export default function ParserPage() {
                       defaultChecked
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-700">Уведомления об ошибках</span>
+                    <span className="text-sm text-gray-700">
+                      Уведомления об ошибках
+                    </span>
                   </label>
                 </div>
               </div>
@@ -352,9 +411,7 @@ export default function ParserPage() {
               <Button variant="outline" onClick={() => setShowSettings(false)}>
                 Отмена
               </Button>
-              <Button>
-                Сохранить настройки
-              </Button>
+              <Button>Сохранить настройки</Button>
             </div>
           </CardContent>
         </Card>
@@ -382,12 +439,16 @@ export default function ParserPage() {
                   <div className="flex items-center space-x-2">
                     {getStatusIcon(run.status)}
                     <Badge variant={getStatusColor(run.status)}>
-                      {run.status === 'completed' ? 'Завершен' :
-                       run.status === 'failed' ? 'Ошибка' :
-                       run.status === 'running' ? 'Выполняется' : 'Неизвестно'}
+                      {run.status === 'completed'
+                        ? 'Завершен'
+                        : run.status === 'failed'
+                          ? 'Ошибка'
+                          : run.status === 'running'
+                            ? 'Выполняется'
+                            : 'Неизвестно'}
                     </Badge>
                   </div>
-                  
+
                   <div>
                     <p className="text-sm font-medium text-gray-900">
                       {formatRelativeTime(run.start_time)}
@@ -430,7 +491,9 @@ export default function ParserPage() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Комментариев в час</span>
+                <span className="text-sm text-gray-600">
+                  Комментариев в час
+                </span>
                 <span className="text-sm font-medium">~156</span>
               </div>
               <div className="flex justify-between items-center">
@@ -461,7 +524,9 @@ export default function ParserPage() {
                 <Badge variant="outline">100 постов</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Лимит комментариев</span>
+                <span className="text-sm text-gray-600">
+                  Лимит комментариев
+                </span>
                 <Badge variant="outline">1000 на пост</Badge>
               </div>
               <div className="flex justify-between items-center">
@@ -476,6 +541,25 @@ export default function ParserPage() {
           </CardContent>
         </Card>
       </div>
+
+      {parseResult && (
+        <div className="mt-6 w-full">
+          {parseResult === 'success' && (
+            <div role="alert" className="alert alert-success">
+              <CheckCircle2 size={24} />
+              <span>
+                Парсинг успешно завершен! Новые комментарии добавлены.
+              </span>
+            </div>
+          )}
+          {parseResult === 'error' && (
+            <div role="alert" className="alert alert-error">
+              <XCircle size={24} />
+              <span>Произошла ошибка во время парсинга. Попробуйте позже.</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
-} 
+}

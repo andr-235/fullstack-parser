@@ -27,18 +27,26 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ru">
+    <html lang="ru" data-theme="light">
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-gray-50`}
+        className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <ReactQueryProvider>
-          <div className="flex h-screen">
-            <Sidebar />
-            <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="drawer lg:drawer-open">
+            <input id="my-drawer-2" type="checkbox" className="drawer-toggle" />
+            <div className="drawer-content flex flex-col">
               <Header />
-              <main className="flex-1 overflow-auto p-6">
-        {children}
+              <main className="flex-1 overflow-auto p-6 bg-base-200">
+                {children}
               </main>
+            </div>
+            <div className="drawer-side">
+              <label
+                htmlFor="my-drawer-2"
+                aria-label="close sidebar"
+                className="drawer-overlay"
+              ></label>
+              <Sidebar />
             </div>
           </div>
         </ReactQueryProvider>
