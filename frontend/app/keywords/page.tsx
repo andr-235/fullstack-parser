@@ -50,7 +50,7 @@ export default function KeywordsPage() {
     isLoading,
     error,
   } = useKeywords({
-    // q: searchTerm, // TODO: Implement backend search
+    q: searchTerm || undefined,
     category: selectedCategory || undefined,
     active_only: activeOnly,
     limit: 100,
@@ -106,6 +106,17 @@ export default function KeywordsPage() {
         },
       }
     )
+  }
+
+  // Edit keyword word (simple prompt based editing)
+  const handleEditKeyword = (keyword: KeywordResponse) => {
+    const newWord = window.prompt('Изменить ключевое слово:', keyword.word)
+    if (newWord && newWord.trim() && newWord.trim() !== keyword.word) {
+      updateKeyword.mutate({
+        keywordId: keyword.id,
+        data: { word: newWord.trim() },
+      })
+    }
   }
 
   if (isLoading && !keywordsData) {
@@ -337,7 +348,15 @@ export default function KeywordsPage() {
                       )}
                     </Button>
 
-                    <Button size="sm" variant="ghost">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleEditKeyword(keyword)}
+                      disabled={
+                        updateKeyword.isPending &&
+                        updateKeyword.variables?.keywordId === keyword.id
+                      }
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
 
