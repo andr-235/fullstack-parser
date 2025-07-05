@@ -1,7 +1,7 @@
 # Этап 1: Сборка зависимостей
 # Этот этап создает requirements.txt из poetry.lock.
 # Он включает build-essential для компиляции пакетов, если это необходимо.
-FROM python:3.11-slim AS requirements-stage
+FROM python:3.13-slim AS requirements-stage
 
 WORKDIR /tmp
 
@@ -24,7 +24,7 @@ RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
 
 # Этап 2: Образ для разработки
 # Этот этап используется для локальной разработки с hot-reloading.
-FROM python:3.11-slim AS development
+FROM python:3.13-slim AS development
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -58,7 +58,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Этап 3: Финальный образ для production
 # Это оптимизированный, легковесный и безопасный образ.
-FROM python:3.11-slim AS production
+FROM python:3.13-slim AS production
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
