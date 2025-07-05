@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'react-hot-toast'
 import {
   Card,
   CardContent,
@@ -45,6 +46,10 @@ export default function KeywordsPage() {
   const [activeOnly, setActiveOnly] = useState(false)
   const [newKeyword, setNewKeyword] = useState('')
 
+  // Inline edit state
+  const [editingKeywordId, setEditingKeywordId] = useState<number | null>(null)
+  const [editWord, setEditWord] = useState('')
+
   const {
     data: keywordsData,
     isLoading,
@@ -78,10 +83,22 @@ export default function KeywordsPage() {
     keywordsData?.items?.reduce((sum, k) => sum + k.total_matches, 0) || 0
 
   const handleToggleActive = (keyword: KeywordResponse) => {
-    updateKeyword.mutate({
-      keywordId: keyword.id,
-      data: { is_active: !keyword.is_active },
-    })
+    updateKeyword.mutate(
+      {
+        keywordId: keyword.id,
+        data: { is_active: !keyword.is_active },
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            `Ключевое слово «${keyword.word}» теперь ${
+              keyword.is_active ? 'неактивно' : 'активно'
+            }`
+          )
+        },
+        onError: (err: Error) => toast.error(err.message),
+      }
+    )
   }
 
   const handleDeleteKeyword = (keywordId: number) => {
@@ -108,15 +125,43 @@ export default function KeywordsPage() {
     )
   }
 
-  // Edit keyword word (simple prompt based editing)
-  const handleEditKeyword = (keyword: KeywordResponse) => {
-    const newWord = window.prompt('Изменить ключевое слово:', keyword.word)
-    if (newWord && newWord.trim() && newWord.trim() !== keyword.word) {
-      updateKeyword.mutate({
-        keywordId: keyword.id,
-        data: { word: newWord.trim() },
-      })
+  // Start editing selected keyword (enter edit mode)
+  const handleStartEditing = (keyword: KeywordResponse) => {
+    setEditingKeywordId(keyword.id)
+    setEditWord(keyword.word)
+  }
+
+  // Cancel editing
+  const handleCancelEditing = () => {
+    setEditingKeywordId(null)
+    setEditWord('')
+  }
+
+  // Save changes
+  const handleSaveKeyword = (keywordId: number) => {
+    if (!editWord.trim()) {
+      toast.error('Ключевое слово не может быть пустым')
+      return
     }
+    if (editWord.trim().length < 2) {
+      toast.error('Ключевое слово слишком короткое')
+      return
+    }
+
+    toast.promise(
+      updateKeyword.mutateAsync({
+        keywordId,
+        data: { word: editWord.trim() },
+      }),
+      {
+        loading: 'Сохраняем…',
+        success: 'Сохранено',
+        error: (err: Error) => err.message,
+      }
+    ).then(() => {
+      setEditingKeywordId(null)
+      setEditWord('')
+    })
   }
 
   if (isLoading && !keywordsData) {
@@ -310,7 +355,15 @@ export default function KeywordsPage() {
                   <div className="flex items-center space-x-4">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3">
-                        <h3 className="font-semibold">{keyword.word}</h3>
+                        {editingKeywordId === keyword.id ? (
+                          <Input
+                            value={editWord}
+                            onChange={(e) => setEditWord(e.target.value)}
+                            className="w-48"
+                          />
+                        ) : (
+                          <h3 className="font-semibold">{keyword.word}</h3>
+                        )}
                         <Badge
                           variant={keyword.is_active ? 'success' : 'secondary'}
                         >
@@ -348,17 +401,37 @@ export default function KeywordsPage() {
                       )}
                     </Button>
 
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleEditKeyword(keyword)}
-                      disabled={
-                        updateKeyword.isPending &&
-                        updateKeyword.variables?.keywordId === keyword.id
-                      }
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    {editingKeywordId === keyword.id ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handleSaveKeyword(keyword.id)}
+                          disabled={
+                            updateKeyword.isPending &&
+                            updateKeyword.variables?.keywordId === keyword.id
+                          }
+                        >
+                          {updateKeyword.isPending &&
+                          updateKeyword.variables?.keywordId === keyword.id ? (
+                            <LoadingSpinnerWithText text="" size="sm" />
+                          ) : (
+                            'Сохранить'
+                          )}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={handleCancelEditing}>
+                          Отмена
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleStartEditing(keyword)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
 
                     <Button
                       size="sm"
