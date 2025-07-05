@@ -47,7 +47,7 @@ jobs:
         run: |
           cd backend
           poetry install --no-root --no-interaction
-        
+
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
 
@@ -84,14 +84,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Python Dependency Scan (safety)
         run: |
           pip install safety
           cd backend
           poetry export -f requirements.txt --output requirements.txt --without-hashes
           safety check -r requirements.txt --bare --output json > ../safety-report.json || true
-          
+
       - name: Node.js Dependency Scan (pnpm audit)
         uses: pnpm/action-setup@v4
         with:
@@ -191,7 +191,7 @@ jobs:
         run: |
           if [[ "${{ steps.final_status.outputs.status }}" == "failure" ]]; then
             echo "❌ At least one security check failed."
-            exit 1
+          exit 1 
           else
             echo "✅ All security checks passed."
           fi 

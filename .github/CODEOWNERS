@@ -1,0 +1,25 @@
+# Global owners
+* @andr-235
+
+# Backend code
+/backend/ @developers @andr-235
+/backend/app/core/ @security @andr-235
+/backend/app/models/ @developers @andr-235
+
+# Frontend code
+/frontend/ @developers @andr-235
+/frontend/app/ @developers @andr-235
+
+# Infrastructure
+/docker-compose*.yml @devops @andr-235
+/Dockerfile* @devops @andr-235
+/.github/workflows/ @devops @andr-235
+/scripts/ @devops @andr-235
+
+# Security
+/.github/SECURITY.md @security @andr-235
+/.github/dependabot.yml @security @andr-235
+
+# Documentation
+/docs/ @developers @andr-235
+README.md @andr-235 

@@ -13,7 +13,7 @@ jobs:
     environment:
       name: staging
       url: https://staging.your-domain.com
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
