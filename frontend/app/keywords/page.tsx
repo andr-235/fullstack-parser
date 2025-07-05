@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { toast } from 'react-hot-toast'
 import {
   Card,
   CardContent,
@@ -11,6 +12,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { LoadingSpinnerWithText } from '@/components/ui/loading-spinner'
 import {
   Plus,
@@ -25,6 +28,7 @@ import {
   Download,
   Tag,
   AlertCircle,
+  XCircle,
 } from 'lucide-react'
 import {
   useKeywords,
@@ -33,6 +37,7 @@ import {
   useUpdateKeyword,
   useDeleteKeyword,
 } from '@/hooks/use-keywords'
+import useDebounce from '@/hooks/use-debounce'
 import type { KeywordResponse } from '@/types/api'
 
 const formatNumber = (num: number) => {
@@ -42,15 +47,21 @@ const formatNumber = (num: number) => {
 export default function KeywordsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
-  const [activeOnly, setActiveOnly] = useState(false)
+  const [activeOnly, setActiveOnly] = useState(true)
   const [newKeyword, setNewKeyword] = useState('')
+
+  const debouncedSearchTerm = useDebounce(searchTerm, 300)
+
+  // Inline edit state
+  const [editingKeywordId, setEditingKeywordId] = useState<number | null>(null)
+  const [editWord, setEditWord] = useState('')
 
   const {
     data: keywordsData,
     isLoading,
     error,
   } = useKeywords({
-    // q: searchTerm, // TODO: Implement backend search
+    q: debouncedSearchTerm || undefined,
     category: selectedCategory || undefined,
     active_only: activeOnly,
     limit: 100,
@@ -61,14 +72,7 @@ export default function KeywordsPage() {
   const updateKeyword = useUpdateKeyword()
   const deleteKeyword = useDeleteKeyword()
 
-  // TODO: Implement client-side search until backend is ready
-  const keywords =
-    keywordsData?.items?.filter(
-      (k) =>
-        k.word.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        k.category?.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || []
-
+  const keywords = keywordsData?.items || []
   const categories = Array.isArray(categoriesData) ? categoriesData : []
 
   const totalKeywords = keywordsData?.total || 0
@@ -78,10 +82,22 @@ export default function KeywordsPage() {
     keywordsData?.items?.reduce((sum, k) => sum + k.total_matches, 0) || 0
 
   const handleToggleActive = (keyword: KeywordResponse) => {
-    updateKeyword.mutate({
-      keywordId: keyword.id,
-      data: { is_active: !keyword.is_active },
-    })
+    updateKeyword.mutate(
+      {
+        keywordId: keyword.id,
+        data: { is_active: !keyword.is_active },
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            `Ключевое слово «${keyword.word}» теперь ${
+              keyword.is_active ? 'неактивно' : 'активно'
+            }`
+          )
+        },
+        onError: (err: Error) => toast.error(err.message),
+      }
+    )
   }
 
   const handleDeleteKeyword = (keywordId: number) => {
@@ -106,6 +122,51 @@ export default function KeywordsPage() {
         },
       }
     )
+  }
+
+  // Start editing selected keyword (enter edit mode)
+  const handleStartEditing = (keyword: KeywordResponse) => {
+    setEditingKeywordId(keyword.id)
+    setEditWord(keyword.word)
+  }
+
+  // Cancel editing
+  const handleCancelEditing = () => {
+    setEditingKeywordId(null)
+    setEditWord('')
+  }
+
+  // Save changes
+  const handleSaveKeyword = (keywordId: number) => {
+    if (!editWord.trim()) {
+      toast.error('Ключевое слово не может быть пустым')
+      return
+    }
+    if (editWord.trim().length < 2) {
+      toast.error('Ключевое слово слишком короткое')
+      return
+    }
+
+    toast.promise(
+      updateKeyword.mutateAsync({
+        keywordId,
+        data: { word: editWord.trim() },
+      }),
+      {
+        loading: 'Сохраняем…',
+        success: 'Сохранено',
+        error: (err: Error) => err.message,
+      }
+    ).then(() => {
+      setEditingKeywordId(null)
+      setEditWord('')
+    })
+  }
+
+  const handleClearFilters = () => {
+    setSearchTerm('')
+    setSelectedCategory('')
+    setActiveOnly(true)
   }
 
   if (isLoading && !keywordsData) {
@@ -192,7 +253,7 @@ export default function KeywordsPage() {
                   {formatNumber(totalKeywords)}
                 </p>
               </div>
-              <KeyRound className="h-8 w-8 text-blue-600" />
+              <KeyRound className="h-8 w-8 text-gray-400" />
             </div>
           </CardContent>
         </Card>
@@ -202,25 +263,11 @@ export default function KeywordsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Активных</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-2xl font-bold">
                   {formatNumber(activeKeywords)}
                 </p>
               </div>
-              <Play className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Категорий</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {formatNumber(categories.length)}
-                </p>
-              </div>
-              <Tag className="h-8 w-8 text-purple-600" />
+              <Play className="h-8 w-8 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -230,17 +277,91 @@ export default function KeywordsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Совпадений</p>
-                <p className="text-2xl font-bold text-orange-600">
+                <p className="text-2xl font-bold">
                   {formatNumber(totalMatches)}
                 </p>
               </div>
-              <Search className="h-8 w-8 text-orange-600" />
+              <Tag className="h-8 w-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Категорий</p>
+                <p className="text-2xl font-bold">
+                  {formatNumber(categories.length)}
+                </p>
+              </div>
+              <Filter className="h-8 w-8 text-orange-500" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters & List */}
+      {/* Filters and Search */}
+      <Card>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-grow">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Поиск по словам и категориям..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="active-only"
+                  checked={activeOnly}
+                  onCheckedChange={setActiveOnly}
+                />
+                <Label htmlFor="active-only">Только активные</Label>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+                disabled={!searchTerm && !selectedCategory && activeOnly}
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Сбросить
+              </Button>
+            </div>
+          </div>
+          {categories.length > 0 && (
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-sm font-medium text-gray-600">
+                Категории:
+              </span>
+              {categories.map((category) => (
+                <Badge
+                  key={category}
+                  variant={
+                    selectedCategory === category ? 'default' : 'secondary'
+                  }
+                  onClick={() =>
+                    setSelectedCategory(
+                      selectedCategory === category ? '' : category
+                    )
+                  }
+                  className="cursor-pointer"
+                >
+                  {category}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Keywords table */}
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4">
@@ -299,7 +420,15 @@ export default function KeywordsPage() {
                   <div className="flex items-center space-x-4">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3">
-                        <h3 className="font-semibold">{keyword.word}</h3>
+                        {editingKeywordId === keyword.id ? (
+                          <Input
+                            value={editWord}
+                            onChange={(e) => setEditWord(e.target.value)}
+                            className="w-48"
+                          />
+                        ) : (
+                          <h3 className="font-semibold">{keyword.word}</h3>
+                        )}
                         <Badge
                           variant={keyword.is_active ? 'success' : 'secondary'}
                         >
@@ -322,7 +451,7 @@ export default function KeywordsPage() {
 
                   <div className="flex items-center space-x-1">
                     <Button
-                      size="sm"
+                      size="icon"
                       variant={keyword.is_active ? 'secondary' : 'default'}
                       onClick={() => handleToggleActive(keyword)}
                       disabled={
@@ -337,12 +466,40 @@ export default function KeywordsPage() {
                       )}
                     </Button>
 
-                    <Button size="sm" variant="ghost">
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    {editingKeywordId === keyword.id ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handleSaveKeyword(keyword.id)}
+                          disabled={
+                            updateKeyword.isPending &&
+                            updateKeyword.variables?.keywordId === keyword.id
+                          }
+                        >
+                          {updateKeyword.isPending &&
+                          updateKeyword.variables?.keywordId === keyword.id ? (
+                            <LoadingSpinnerWithText text="" size="sm" />
+                          ) : (
+                            'Сохранить'
+                          )}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={handleCancelEditing}>
+                          Отмена
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleStartEditing(keyword)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
 
                     <Button
-                      size="sm"
+                      size="icon"
                       variant="ghost"
                       onClick={() => handleDeleteKeyword(keyword.id)}
                       className="text-red-600 hover:text-red-700"

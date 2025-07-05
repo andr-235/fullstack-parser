@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 
 import { ReactQueryProvider } from '@/providers/react-query-provider'
+import { Toaster } from 'react-hot-toast'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 
@@ -37,6 +38,7 @@ export default function RootLayout({
             <div className="flex-1 flex flex-col">
               <Header />
               <main className="flex-1 overflow-auto p-6">{children}</main>
+              <Toaster position="bottom-center" toastOptions={{ duration: 4000 }} />
             </div>
           </div>
         </ReactQueryProvider>

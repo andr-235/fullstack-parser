@@ -82,7 +82,6 @@ export interface KeywordUpdate {
 }
 
 export interface KeywordResponse extends KeywordBase, BaseEntity {
-  keyword: string
   total_matches: number
 }
 

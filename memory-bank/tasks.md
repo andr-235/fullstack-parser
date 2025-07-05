@@ -2,16 +2,54 @@
 
 ## VAN-01: Stabilize and Complete Frontend UI Refactor (Strategy: Revert to pnpm)
 
-- [ ] **Phase 1: Fix Frontend Build by Reverting to pnpm**
-  - [ ] **Step 1.1: Update docker-compose.yml**
-    - [ ] Remove the volume mount for .bun from the frontend service, as it is related to the Bun package manager.
-  - [ ] **Step 1.2: Restore pnpm-lock.yaml**
-    - [ ] **User Action:** Run pnpm install in the frontend/ directory. This is necessary to regenerate the pnpm-lock.yaml file based on the latest changes in package.json. Without this file, the Docker build will fail.
-  - [ ] **Step 1.3: Verify Docker Build**
-    - [ ] Run docker-compose up --build to confirm the frontend service builds and starts correctly.
-- [ ] **Phase 2: Assess UI Refactor State** (Blocked by Phase 1)
-  - [ ] Review modified frontend components to understand the scope of the UI changes.
-- [ ] **Phase 3: Complete UI Refactor** (Blocked by Phase 1)
-  - [ ] Continue and complete the UI refactoring work.
-- [ ] **Phase 4: Verification** (Blocked by Phase 1)
-  - [ ] Test the application end-to-end and commit the changes.
+- [x] **Phase 1: Fix Frontend Build by Reverting to pnpm**
+  - [x] **Step 1.1: Update docker-compose.yml**
+    - [x] Remove the volume mount for .bun from the frontend service, as it is related to the Bun package manager.
+  - [x] **Step 1.2: Restore pnpm-lock.yaml**
+    - [x] **User Action:** Run pnpm install in the frontend/ directory. This is necessary to regenerate the pnpm-lock.yaml file based on the latest changes in package.json. Without this file, the Docker build will fail.
+  - [x] **Step 1.3: Verify Docker Build**
+    - [x] Run docker-compose up --build to confirm the frontend service builds and starts correctly.
+- [x] **Phase 2: Fix API Endpoints 404 Errors**
+  - [x] **Step 2.1: Diagnose API connectivity issues**
+    - [x] Identified FastAPI requires trailing slash in endpoints
+    - [x] Found VK access token is not configured
+  - [x] **Step 2.2: Fix API client endpoints**
+    - [x] Added trailing slash to all API endpoints (groups/, keywords/, etc.)
+    - [x] Verified backend services are running correctly
+  - [x] **Step 2.3: Test API connectivity**
+    - [x] Confirmed GET requests work after trailing slash fix
+    - [x] Verified frontend can load without 404 errors
+- [x] **Phase 3: Configure VK API Integration**
+  - [x] **Step 3.1: Set up VK API credentials**
+    - [x] Update .env file with test VK_ACCESS_TOKEN
+    - [x] Created documentation for obtaining VK access token
+  - [x] **Step 3.2: Test VK group addition**
+    - [x] Attempted to add test groups
+    - [x] Identified invalid token error: "User authorization failed: invalid access_token (4)"
+- [x] **Phase 4: Fix VK API Token Authentication**
+  - [x] **Step 4.1: Generate valid VK API token**
+    - [x] Follow documentation in docs/VK_API_SETUP.md to create valid token
+    - [x] Update .env with correct token format and permissions
+  - [x] **Step 4.2: Test VK API connectivity**
+    - [x] Test adding popular VK group
+    - [x] Verify posts and comments parsing
+- [x] **Phase 5: Implement Keyword Management**
+  - [x] **Step 5.1: Add new keywords**
+    - [x] Add keywords via API
+    - [x] Verify keywords are stored in the database
+  - [x] **Step 5.2: Re-run parsing**
+    - [x] Trigger parsing for the group again
+    - [x] Verify comments are now being found and processed against keywords
+- [ ] **Phase 6: Complete UI Functionality Testing**
+  - [x] Test all pages for correct data loading
+    - [x] Keywords page
+    - [x] Groups page
+    - [x] Comments page
+    - [x] Parser page
+    - [x] Dashboard page
+  - [x] Verify statistics display correctly
+  - [x] Test keywords management functionality
+  - [x] Test comments display and filtering
+- [x] **Phase 7: Final Documentation and Cleanup**
+  - [x] Review and update all documentation
+  - [x] Remove any unused code or test files

@@ -10,7 +10,7 @@ import type {
 /**
  * Хук для получения списка ключевых слов
  */
-export function useKeywords(params?: PaginationParams & { active_only?: boolean; category?: string }) {
+export function useKeywords(params?: PaginationParams & { active_only?: boolean; category?: string; q?: string }) {
   return useQuery({
     queryKey: createQueryKey.keywords(params),
     queryFn: () => api.getKeywords(params),

@@ -4,12 +4,6 @@ globs: .git/**, *.md
 alwaysApply: false
 ---
 
----
-description: "Git Flow branching strategy with naming conventions and workflow guidelines"
-globs: [".git/**/*", "*.md"]
-alwaysApply: false
----
-
 # Git Branching Strategy
 
 Следуйте этой стратегии ветвления для поддержания чистой истории проекта.

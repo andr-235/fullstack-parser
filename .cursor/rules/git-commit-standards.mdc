@@ -1,10 +1,4 @@
 ---
-description: Git commit message standards and best practices with Russian support
-globs: **/*.md, CHANGELOG.md, .gitmessage
-alwaysApply: false
----
-
----
 description: "Git commit message standards and best practices with Russian support"
 globs: [".git/**/*", "**/COMMIT_EDITMSG", ".gitmessage"]
 alwaysApply: false
