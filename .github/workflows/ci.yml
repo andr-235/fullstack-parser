@@ -2,7 +2,12 @@ name: 🔄 Continuous Integration
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: 
+      - main
+      - develop
+      - 'feature/*'
+      - 'fix/*'
+      - 'hotfix/*'
     paths-ignore:
       - '**.md'
       - 'docs/**'
@@ -23,9 +28,6 @@ permissions:
   pull-requests: write
 
 jobs:
-  # ================================
-  # CHANGES DETECTION
-  # ================================
   changes:
     name: 🔍 Detect Changes
     runs-on: ubuntu-latest
@@ -50,9 +52,6 @@ jobs:
               - '**/Dockerfile'
               - 'docker-compose.yml'
 
-  # ================================
-  # BACKEND & FRONTEND TESTS
-  # ================================
   backend-test:
     name: 🐍 Backend Tests
     needs: changes
@@ -65,9 +64,6 @@ jobs:
     if: needs.changes.outputs.frontend == 'true'
     uses: ./.github/workflows/reusable-frontend-test.yml
 
-  # ================================
-  # DOCKER & INTEGRATION
-  # ================================
   docker-test:
     name: 🐳 Docker Build Test
     needs: changes
@@ -99,14 +95,11 @@ jobs:
           cp env.example .env
           docker-compose up -d --build
       - name: Wait for services
-        run: sleep 30 && curl -f http://localhost:8000/api/v1/ && curl -f http://localhost:3000
+        run: sleep 30 && curl -f http://localhost:8000/api/v1/health && curl -f http://localhost:3000
       - name: Cleanup
         if: always()
         run: docker-compose down -v
 
-  # ================================
-  # QUALITY GATE & FINAL STATUS
-  # ================================
   quality-gate:
     name: 🎯 Quality Gate
     runs-on: ubuntu-latest
