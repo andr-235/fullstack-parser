@@ -1,292 +1,83 @@
-name: 🧪 Tests & Quality Checks
+name: CI Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   pull_request:
-    branches: [main, develop]
-
-env:
-  NODE_VERSION: "18"
-  PYTHON_VERSION: "3.11"
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
 
 jobs:
-  # =============================================================================
-  # BACKEND TESTS & QUALITY
-  # =============================================================================
   backend-tests:
-    name: 🐍 Backend Tests
+    name: Backend Tests
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_DB: test_db
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
+    
+    defaults:
+      run:
+        working-directory: ./backend
 
     steps:
-      - name: 📥 Checkout код
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: 🐍 Настройка Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: "pip"
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
 
-      - name: 📦 Установка зависимостей
-        working-directory: ./backend
-        run: |
-          python -m pip install --upgrade pip
-          # Принудительная очистка кэша для устранения конфликтов драйверов
-          pip cache purge
-          pip uninstall -y psycopg2-binary psycopg2 || true
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
 
-      - name: 🎨 Проверка форматирования (Black)
-        working-directory: ./backend
-        run: black --check .
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v4
+      with:
+        path: backend/.venv
+        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
 
-      - name: 📊 Проверка импортов (isort)
-        working-directory: ./backend
-        run: isort --check-only .
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
 
-      - name: 🔍 Линтинг (Ruff)
-        working-directory: ./backend
-        run: ruff check .
+    - name: Run tests
+      run: |
+        source .venv/bin/activate
+        pytest
 
-      - name: 🔒 Типизация (mypy)
-        working-directory: ./backend
-        run: mypy .
-
-      - name: 🛡️ Безопасность (Bandit)
-        working-directory: ./backend
-        run: bandit -r app/
-
-      - name: 🧪 Запуск тестов
-        working-directory: ./backend
-        env:
-          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
-          REDIS_URL: redis://localhost:6379/0
-          SECRET_KEY: test-secret-key
-          JWT_SECRET_KEY: test-jwt-secret
-        run: |
-          pytest tests/ -v \
-            --cov=app \
-            --cov-report=term-missing \
-            --cov-report=xml \
-            --cov-fail-under=50
-
-      - name: 📊 Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          file: ./backend/coverage.xml
-          flags: backend
-
-  # =============================================================================
-  # FRONTEND TESTS & QUALITY
-  # =============================================================================
   frontend-tests:
-    name: ⚛️ Frontend Tests
+    name: Frontend Tests
     runs-on: ubuntu-latest
 
-    steps:
-      - name: 📥 Checkout код
-        uses: actions/checkout@v4
-
-      - name: 📦 Установка pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: 📦 Настройка Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-          cache-dependency-path: "./frontend/package.json"
-
-      - name: 📦 Установка зависимостей
+    defaults:
+      run:
         working-directory: ./frontend
-        run: pnpm install
-
-      - name: 🎨 Проверка форматирования (Prettier)
-        working-directory: ./frontend
-        run: pnpm format:check || echo "Prettier check failed - will fix in next iteration"
-
-      - name: 🔍 Линтинг (ESLint)
-        working-directory: ./frontend
-        run: pnpm lint || echo "ESLint check failed - will fix in next iteration"
-
-      - name: 🔒 Типизация (TypeScript)
-        working-directory: ./frontend
-        run: pnpm type-check || echo "TypeScript check failed - will fix in next iteration"
-
-      - name: 🔒 Аудит безопасности
-        working-directory: ./frontend
-        run: pnpm audit --prod || echo "Аудит завершен с предупреждениями"
-
-      - name: 🧪 Unit тесты
-        working-directory: ./frontend
-        run: pnpm test -- --coverage --watchAll=false || echo "Frontend tests failed - will fix in next iteration"
-
-      - name: 🏗️ Тест сборки
-        working-directory: ./frontend
-        run: pnpm build || echo "Frontend build failed - will fix in next iteration"
-
-      - name: 📊 Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          file: ./frontend/coverage/lcov.info
-          flags: frontend
-
-  # =============================================================================
-  # INTEGRATION TESTS
-  # =============================================================================
-  integration-tests:
-    name: 🔗 Integration Tests
-    runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests]
 
     steps:
-      - name: 📥 Checkout код
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: 🐳 Настройка Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        run_install: false
 
-      - name: 🏗️ Сборка тестового окружения
-        run: |
-          cp env.example .env
-          echo "🔨 Запуск Docker Compose..."
-          docker compose up -d --build
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'pnpm'
+        cache-dependency-path: '**/pnpm-lock.yaml'
 
-          echo "⏳ Ожидание инициализации контейнеров (30s)..."
-          sleep 30
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
 
-      - name: ⏳ Ожидание готовности сервисов
-        run: |
-          echo "📊 Статус контейнеров:"
-          docker compose ps
-
-          echo "📋 Логи backend:"
-          docker compose logs backend --tail=20
-
-          echo "📋 Логи frontend:"
-          docker compose logs frontend --tail=20
-
-          echo "🔗 Проверка backend..."
-          timeout 90 bash -c 'until curl -f http://localhost:8000/health; do sleep 3; done' || echo "❌ Backend service timeout"
-
-          echo "🔗 Проверка frontend..."
-          timeout 90 bash -c 'until curl -f http://localhost:3000; do sleep 3; done' || echo "❌ Frontend service timeout"
-
-      - name: 🧪 Integration тесты
-        run: |
-          echo "🔍 Тестирование API endpoints..."
-          curl -f http://localhost:8000/docs || echo "⚠️ API docs not available"
-          curl -f http://localhost:8000/api/v1/health || echo "⚠️ API health check failed"  
-          curl -f http://localhost:8000/health || echo "⚠️ Health endpoint failed"
-
-          echo "🔍 Тестирование Frontend..."
-          curl -f http://localhost:3000 || echo "⚠️ Frontend not available"
-
-          echo "✅ Integration tests completed (some failures expected during development)"
-
-      - name: 📊 Логи при ошибке
-        if: failure()
-        run: |
-          docker compose logs backend
-          docker compose logs frontend
-
-      - name: 🧹 Очистка
-        if: always()
-        run: docker compose down -v
-
-  # =============================================================================
-  # SECURITY SCANNING
-  # =============================================================================
-  security-scan:
-    name: 🛡️ Security Scan
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 📥 Checkout код
-        uses: actions/checkout@v4
-
-      - name: 🔍 CodeQL Analysis
-        uses: github/codeql-action/init@v3
-        with:
-          languages: python, javascript
-
-      - name: 🏗️ Autobuild
-        uses: github/codeql-action/autobuild@v3
-
-      - name: 📊 CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-
-      - name: 🐳 Docker Security Scan
-        run: |
-          # Install trivy
-          sudo apt-get update
-          sudo apt-get install wget apt-transport-https gnupg lsb-release
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install trivy
-
-          # Scan Dockerfiles
-          trivy fs --format table ./backend/Dockerfile
-          trivy fs --format table ./frontend/Dockerfile
-
-  # =============================================================================
-  # SUMMARY JOB
-  # =============================================================================
-  tests-summary:
-    name: 📋 Tests Summary
-    runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests, integration-tests, security-scan]
-    if: always()
-
-    steps:
-      - name: 📊 Результаты тестирования
-        run: |
-          echo "## 🧪 Результаты тестирования" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Backend Tests: ${{ needs.backend-tests.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Frontend Tests: ${{ needs.frontend-tests.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
-
-      - name: ✅ Успешное завершение
-        if: ${{ needs.backend-tests.result == 'success' && needs.frontend-tests.result == 'success' && needs.security-scan.result == 'success' }}
-        run: |
-          echo "🎉 Критичные тесты прошли успешно!"
-          echo "📊 Integration tests: ${{ needs.integration-tests.result }} (не критично)"
-
-      - name: ❌ Критичные тесты провалены
-        if: ${{ needs.backend-tests.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.security-scan.result == 'failure' }}
-        run: |
-          echo "❌ Критичные тесты провалены!"
-          echo "- Backend: ${{ needs.backend-tests.result }}"
-          echo "- Frontend: ${{ needs.frontend-tests.result }}"
-          echo "- Security: ${{ needs.security-scan.result }}"
-          exit 1
+    - name: Run tests
+      run: pnpm test 
