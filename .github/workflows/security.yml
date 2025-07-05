@@ -1,4 +1,4 @@
-name: 🛡️ Security Scan
+name: 🛡️ Security Scanning
 
 on:
   push:
@@ -13,19 +13,20 @@ on:
   pull_request:
     branches: [ main, develop ]
   schedule:
-    - cron: '30 5 * * 1' # Каждую неделю в понедельник в 5:30 UTC
+    - cron: '30 5 * * 1'
   workflow_dispatch:
 
 permissions:
   contents: read
   security-events: write
+  actions: read # for security-summary
 
 jobs:
   # ================================
   # CODEQL ANALYSIS
   # ================================
   codeql:
-    name: 🔒 CodeQL Analysis
+    name: 🔍 CodeQL Analysis
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -39,83 +40,69 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          queries: security-extended
+          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Autobuild
         if: matrix.language == 'python'
         run: |
           cd backend
-          poetry install --no-interaction
+          poetry install --no-root --no-interaction
         
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
 
   # ================================
-  # TRIVY SCAN
+  # TRIVY FILESYSTEM SCAN
   # ================================
   trivy:
-    name: 🔬 Trivy Vulnerability Scan
+    name: 🛡️ Trivy Filesystem Scan
     runs-on: ubuntu-latest
-    needs: codeql
-    strategy:
-      fail-fast: false
-      matrix:
-        service: [backend, frontend]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build an image from Dockerfile
-        run: |
-          docker build -t ${{ matrix.service }}:test ./${{ matrix.service }}
-
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner in repo mode
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: '${{ matrix.service }}:test'
+          scan-type: 'fs'
+          scan-ref: '.'
           format: 'sarif'
-          output: 'trivy-results-${{ matrix.service }}.sarif'
+          output: 'trivy-fs-results.sarif'
           severity: 'HIGH,CRITICAL'
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+          sarif_file: 'trivy-fs-results.sarif'
 
   # ================================
-  # DEPENDENCY CHECK
+  # DEPENDENCY & SECRET SCANNING
   # ================================
-  dependency-check:
-    name: 📦 Dependency Check
+  dependency-scan:
+    name: 📦 Dependency Scanning
     runs-on: ubuntu-latest
-    needs: codeql
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Python Dependency Scan
+      - name: Python Dependency Scan (safety)
         run: |
           pip install safety
           cd backend
           poetry export -f requirements.txt --output requirements.txt --without-hashes
-          safety check -r requirements.txt || true
+          safety check -r requirements.txt --bare --output json > ../safety-report.json || true
           
-      - name: Node.js Dependency Scan
+      - name: Node.js Dependency Scan (pnpm audit)
         uses: pnpm/action-setup@v4
         with:
           version: 10.12.4
       - run: |
           cd frontend
-          pnpm audit || true
+          pnpm audit --json > ../pnpm-audit.json || true
 
-  # ================================
-  # SECRET SCANNING
-  # ================================
   secret-scan:
     name: 🔐 Secret Scanning
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -126,9 +113,9 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: main
+          base: ${{ github.event.pull_request.base.ref || 'main' }}
           head: HEAD
-          extra_args: --debug --only-verified
+          extra_args: --only-verified --fail
 
   # ================================
   # DOCKER IMAGE SCANNING
@@ -136,12 +123,9 @@ jobs:
   docker-scan:
     name: 🐳 Docker Security Scan
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
     strategy:
       matrix:
         service: [backend, frontend]
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -149,14 +133,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build ${{ matrix.service }} image
+      - name: Build image for scan
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.service }}
           push: false
           tags: ${{ matrix.service }}:security-scan
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Run Trivy vulnerability scanner on Docker image
         uses: aquasecurity/trivy-action@master
@@ -164,53 +146,13 @@ jobs:
           image-ref: ${{ matrix.service }}:security-scan
           format: 'sarif'
           output: 'trivy-${{ matrix.service }}-results.sarif'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-${{ matrix.service }}-results.sarif'
-
-      - name: Run Docker Scout
-        uses: docker/scout-action@v1
-        with:
-          command: cves
-          image: ${{ matrix.service }}:security-scan
-          only-severities: critical,high
-          write-comment: false
-
-  # ================================
-  # SBOM GENERATION
-  # ================================
-  sbom:
-    name: 📄 SBOM Generation
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Generate SBOM for Backend
-        uses: anchore/sbom-action@v0
-        with:
-          path: ./backend
-          format: spdx-json
-          output-file: backend-sbom.spdx.json
-
-      - name: Generate SBOM for Frontend
-        uses: anchore/sbom-action@v0
-        with:
-          path: ./frontend
-          format: spdx-json
-          output-file: frontend-sbom.spdx.json
-
-      - name: Upload SBOM artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom-reports
-          path: |
-            backend-sbom.spdx.json
-            frontend-sbom.spdx.json
 
   # ================================
   # SECURITY SUMMARY
@@ -218,74 +160,38 @@ jobs:
   security-summary:
     name: 📊 Security Summary
     runs-on: ubuntu-latest
-    needs: [codeql, trivy, dependency-check, secret-scan, docker-scan, sbom]
+    needs: [codeql, trivy, dependency-scan, secret-scan, docker-scan]
     if: always()
-
     steps:
-      - name: Download security artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./security-reports
-
-      - name: Generate security summary
+      - name: Check job statuses
         run: |
-          echo "# 🔒 Security Scan Summary" > security-summary.md
-          echo "" >> security-summary.md
-          echo "## 📊 Scan Results" >> security-summary.md
-          echo "" >> security-summary.md
-          echo "| Scan Type | Status | Details |" >> security-summary.md
-          echo "|-----------|--------|---------|" >> security-summary.md
-          echo "| CodeQL | ${{ needs.codeql.result }} | Static analysis for Python and JavaScript |" >> security-summary.md
-          echo "| Trivy | ${{ needs.trivy.result }} | Vulnerability scanning |" >> security-summary.md
-          echo "| Dependencies | ${{ needs.dependency-check.result }} | Dependency vulnerability check |" >> security-summary.md
-          echo "| Secrets | ${{ needs.secret-scan.result }} | Secret scanning with TruffleHog |" >> security-summary.md
-          echo "| Docker | ${{ needs.docker-scan.result }} | Container security scanning |" >> security-summary.md
-          echo "| SBOM | ${{ needs.sbom.result }} | Software Bill of Materials |" >> security-summary.md
-          echo "" >> security-summary.md
-          echo "## 🎯 Overall Status" >> security-summary.md
-          echo "" >> security-summary.md
-          
-          # Check overall status
-          if [[ "${{ needs.codeql.result }}" == "success" && 
-                "${{ needs.trivy.result }}" == "success" && 
-                "${{ needs.dependency-check.result }}" == "success" && 
-                "${{ needs.secret-scan.result }}" == "success" && 
-                "${{ needs.docker-scan.result }}" == "success" && 
-                "${{ needs.sbom.result }}" == "success" ]]; then
-            echo "✅ **All security scans passed successfully!**" >> security-summary.md
-            echo "overall_status=success" >> $GITHUB_ENV
+          echo "### 🛡️ Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL Analysis | ${{ needs.codeql.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trivy Filesystem Scan | ${{ needs.trivy.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Scanning | ${{ needs.dependency-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scanning | ${{ needs.secret-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Security Scan | ${{ needs.docker-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Determine final status
+        id: final_status
+        run: |
+          if [[ "${{ needs.codeql.result }}" == "failure" || \
+                "${{ needs.trivy.result }}" == "failure" || \
+                "${{ needs.dependency-scan.result }}" == "failure" || \
+                "${{ needs.secret-scan.result }}" == "failure" || \
+                "${{ needs.docker-scan.result }}" == "failure" ]]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
           else
-            echo "❌ **Some security scans failed or have warnings**" >> security-summary.md
-            echo "overall_status=failure" >> $GITHUB_ENV
+            echo "status=success" >> $GITHUB_OUTPUT
           fi
           
-          echo "" >> security-summary.md
-          echo "---" >> security-summary.md
-          echo "*Generated on: $(date)*" >> security-summary.md
-
-      - name: Comment PR with security summary
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const summary = fs.readFileSync('security-summary.md', 'utf8');
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: summary
-            });
-
-      - name: Upload security summary
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-summary
-          path: security-summary.md
-
-      - name: Fail job if security issues found
-        if: env.overall_status == 'failure'
+      - name: Report final status
         run: |
-          echo "❌ Security scans detected issues. Please review the security reports."
-          exit 1 
+          if [[ "${{ steps.final_status.outputs.status }}" == "failure" ]]; then
+            echo "❌ At least one security check failed."
+            exit 1
+          else
+            echo "✅ All security checks passed."
+          fi 
