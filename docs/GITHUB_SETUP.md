@@ -144,82 +144,6 @@ SEMGREP_APP_TOKEN="your-semgrep-token"
 
 ## 🛡️ Branch Protection Rules
 
-Настройте защиту main branch:
-
-**Settings → Branches → Add rule**
-
-- Branch name pattern: `main`
-- ✅ Require a pull request before merging
-  - ✅ Require approvals (1)
-  - ✅ Dismiss stale PR approvals when new commits are pushed
-  - ✅ Require review from code owners
-- ✅ Require status checks to pass before merging
-  - ✅ Require branches to be up to date before merging
-  - Required status checks:
-    - `Tests Summary`
-    - `Backend Tests`
-    - `Frontend Tests`
-    - `Security Scan`
-- ✅ Require conversation resolution before merging
-- ✅ Include administrators
-
-## 🔨 Pre-commit Hooks
-
-### Установка и настройка
-
-```bash
-# В корне проекта
-pip install pre-commit
-pre-commit install
-pre-commit install --hook-type commit-msg
-
-# Первый запуск (может занять время)
-pre-commit run --all-files
-
-# Обновление hooks
-pre-commit autoupdate
-```
-
-## 🚀 CI/CD Workflows
-
-### Созданные workflows:
-
-1. **`.github/workflows/test.yml`** - Тестирование
-   - Запускается при каждом PR и push
-   - Backend и frontend тесты
-   - Integration тесты
-   - Security scanning
-
-2. **`.github/workflows/deploy.yml`** - Деплой
-   - Сборка Docker образов
-   - Деплой в staging (автоматический)
-   - Деплой в production (manual approval)
-   - Rollback при ошибках
-
-3. **`.github/workflows/security.yml`** - Безопасность
-   - Еженедельное сканирование
-   - Dependency audit
-   - Container security
-   - Code analysis
-
-## 🎉 Заключение
-
-После выполнения всех шагов у вас будет полностью настроенный GitHub репозиторий с:
-
-- ✅ Автоматическим тестированием
-- ✅ Automated security scanning
-- ✅ Zero-downtime deployment
-- ✅ Code quality checks
-- ✅ Proper Git workflow
-- ✅ Issue и PR templates
-- ✅ Monitoring и notifications
-
-Теперь можно приступать к разработке! 🚀
-
-# GitHub Repository Setup Guide
-
-## Branch Protection Setup
-
 ### Обязательные Status Checks
 
 Для полной уверенности в качестве и безопасности кода, настройте следующие status checks в Branch Protection Rules для веток `main` и `develop`.
@@ -300,67 +224,55 @@ gh api repos/:owner/:repo/branches/main/protection \
 1.  **Проверьте `if` условия**: Убедитесь, что условия `if:` для job'а не блокируют его выполнение. Например, `if: needs.changes.outputs.backend == 'true'`.
 2.  **Проверьте `needs` зависимости**: Убедитесь, что все job'ы, от которых зависит текущий, успешно завершились.
 
-### Мониторинг Status Checks
+## 🔨 Pre-commit Hooks
 
-#### Просмотр статуса через GitHub CLI:
+### Установка и настройка
+
 ```bash
-# Проверка статуса PR
-gh pr status
+# В корне проекта
+pip install pre-commit
+pre-commit install
+pre-commit install --hook-type commit-msg
 
-# Проверка конкретного PR
-gh pr view 123 --json statusCheckRollup
+# Первый запуск (может занять время)
+pre-commit run --all-files
 
-# Проверка последнего commit
-gh api repos/:owner/:repo/commits/:sha/status
+# Обновление hooks
+pre-commit autoupdate
 ```
 
-#### Просмотр в веб-интерфейсе:
-1. Откройте Pull Request
-2. Прокрутите до секции **Checks**
-3. Нажмите на конкретный check для просмотра деталей
-4. Используйте **Re-run jobs** при необходимости
+## 🚀 CI/CD Workflows
 
-### Автоматизация
+### Созданные workflows:
 
-#### GitHub Actions для автоматической настройки:
-```yaml
-name: Setup Repository
+1. **`.github/workflows/test.yml`** - Тестирование
+   - Запускается при каждом PR и push
+   - Backend и frontend тесты
+   - Integration тесты
+   - Security scanning
 
-on:
-  workflow_dispatch:
+2. **`.github/workflows/deploy.yml`** - Деплой
+   - Сборка Docker образов
+   - Деплой в staging (автоматический)
+   - Деплой в production (manual approval)
+   - Rollback при ошибках
 
-jobs:
-  setup:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup branch protection
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.repos.updateBranchProtection({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              branch: 'main',
-              required_status_checks: {
-                strict: true,
-                contexts: [
-                  '🔍 Detect Changes',
-                  '🐍 Backend Lint',
-                  '🐍 Backend Tests',
-                  '⚛️ Frontend Lint',
-                  '⚛️ Frontend Tests',
-                  '🐳 Docker Build',
-                  '🔗 Integration Test',
-                  '✅ CI Status'
-                ]
-              },
-              enforce_admins: true,
-              required_pull_request_reviews: {
-                required_approving_review_count: 1,
-                dismiss_stale_reviews: true
-              },
-              restrictions: null,
-              allow_force_pushes: false,
-              allow_deletions: false
-            });
-```
+3. **`.github/workflows/security.yml`** - Безопасность
+   - Еженедельное сканирование
+   - Dependency audit
+   - Container security
+   - Code analysis
+
+## 🎉 Заключение
+
+После выполнения всех шагов у вас будет полностью настроенный GitHub репозиторий с:
+
+- ✅ Автоматическим тестированием
+- ✅ Automated security scanning
+- ✅ Zero-downtime deployment
+- ✅ Code quality checks
+- ✅ Proper Git workflow
+- ✅ Issue и PR templates
+- ✅ Monitoring и notifications
+
+Теперь можно приступать к разработке! 🚀
