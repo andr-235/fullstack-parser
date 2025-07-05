@@ -27,8 +27,9 @@ def _extract_screen_name(url_or_name: str) -> Optional[str]:
     if not url_or_name:
         return None
 
-    # Паттерн для поиска screen_name в URL
-    match = re.search(r"(?:vk\.com/)?([^/]+)$", url_or_name)
+    # Паттерн для поиска screen_name в URL.
+    # Используем [\w.-]+ для предотвращения ReDoS-уязвимости.
+    match = re.search(r"(?:vk\.com/)?([\w.-]+)$", url_or_name)
     return match.group(1) if match else url_or_name
 
 
