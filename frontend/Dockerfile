@@ -21,9 +21,6 @@ RUN pnpm build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Устанавливаем pnpm
-RUN npm install -g pnpm
-
 # Создаем пользователя без root прав
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nextjs -u 1001
@@ -33,8 +30,11 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
+# Копируем публичную папку, если она есть
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
 USER nextjs
 
 EXPOSE 3000
 
-CMD ["node_modules/.bin/next", "start"] 
+CMD ["next", "start"] 

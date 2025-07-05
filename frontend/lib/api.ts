@@ -85,7 +85,7 @@ class APIClient {
   }
 
   // Keywords API
-  async getKeywords(params?: PaginationParams & { active_only?: boolean; category?: string }) {
+  async getKeywords(params?: PaginationParams & { active_only?: boolean; category?: string; q?: string }) {
     const { data } = await this.client.get<PaginatedResponse<KeywordResponse>>('/keywords/', {
       params,
     })

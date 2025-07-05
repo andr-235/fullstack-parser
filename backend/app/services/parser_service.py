@@ -5,11 +5,8 @@ Parser Service для обработки комментариев и поиск�
 import asyncio
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
-
-from sqlalchemy import and_, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.comment_keyword_match import CommentKeywordMatch
 from app.models.keyword import Keyword
@@ -17,6 +14,8 @@ from app.models.vk_comment import VKComment
 from app.models.vk_group import VKGroup
 from app.models.vk_post import VKPost
 from app.services.vk_api_service import VKAPIService
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +108,7 @@ class ParserService:
                 continue
 
         # Обновляем статистику группы
-        group.last_parsed_at = datetime.utcnow()
+        group.last_parsed_at = datetime.now(timezone.utc)
         group.total_posts_parsed = (
             int(group.total_posts_parsed) + stats["posts_processed"]
         )
@@ -261,7 +260,7 @@ class ParserService:
             attachments_info=str(comment_data["attachments"]),
             matched_keywords_count=len(matches),
             is_processed=True,
-            processed_at=datetime.utcnow(),
+            processed_at=datetime.now(timezone.utc),
         )
 
         self.db.add(comment)

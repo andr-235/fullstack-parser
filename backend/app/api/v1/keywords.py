@@ -4,14 +4,13 @@ API endpoints для управления ключевыми словами
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.core.database import get_async_session
 from app.models.keyword import Keyword
 from app.schemas.base import PaginatedResponse, PaginationParams, StatusResponse
 from app.schemas.keyword import KeywordCreate, KeywordResponse, KeywordUpdate
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["Keywords"])
 
@@ -46,6 +45,7 @@ async def get_keywords(
     pagination: PaginationParams = Depends(),
     active_only: bool = True,
     category: Optional[str] = None,
+    q: Optional[str] = None,
     db: AsyncSession = Depends(get_async_session),
 ) -> PaginatedResponse:
     """Получить список ключевых слов"""
@@ -57,6 +57,13 @@ async def get_keywords(
 
     if category:
         query = query.where(Keyword.category == category)
+
+    if q:
+        search_pattern = f"%{q.lower()}%"
+        query = query.where(
+            func.lower(Keyword.word).like(search_pattern)
+            | func.lower(Keyword.category).like(search_pattern)
+        )
 
     # Подсчёт общего количества
     total_result = await db.execute(query)

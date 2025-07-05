@@ -23,24 +23,17 @@ project-root/
 │   │   ├── models/         # SQLAlchemy модели
 │   │   ├── schemas/        # Pydantic схемы
 │   │   ├── services/       # Бизнес логика
-│   │   ├── db/             # Database layer
-│   │   ├── utils/          # Утилиты
 │   │   └── main.py         # FastAPI app entry point
 │   ├── tests/              # Тесты backend
-│   ├── alembic/            # Миграции БД
 │   ├── Dockerfile          # Backend container
-│   ├── requirements.txt    # Python зависимости
-│   └── .env.example        # Пример переменных
+│   └── pyproject.toml      # Python зависимости
 ├── frontend/               # Next.js приложение
-│   ├── src/
-│   │   ├── app/            # App Router (Next.js 14)
-│   │   ├── components/     # Переиспользуемые компоненты
-│   │   ├── hooks/          # Custom React hooks
-│   │   ├── lib/            # Утилиты и конфигурация
-│   │   ├── services/       # API calls
-│   │   └── types/          # TypeScript типы
+│   ├── app/                # App Router (Next.js 14)
+│   ├── components/         # Переиспользуемые компоненты
+│   ├── hooks/              # Custom React hooks
+│   ├── lib/                # Утилиты и конфигурация
+│   ├── types/              # TypeScript типы
 │   ├── public/             # Статические файлы
-│   ├── tests/              # Тесты frontend
 │   ├── Dockerfile          # Frontend container
 │   ├── package.json        # Node.js зависимости
 │   └── next.config.js      # Next.js конфигурация

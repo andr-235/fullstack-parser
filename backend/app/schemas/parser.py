@@ -19,14 +19,18 @@ class ParseTaskCreate(BaseModel):
 
 
 class ParseTaskResponse(BaseModel):
-    """Результат задачи парсинга"""
+    """Информация о задаче парсинга."""
 
     task_id: str = Field(..., description="ID задачи")
     group_id: int = Field(..., description="ID группы")
-    status: str = Field(..., description="Статус задачи (running, completed, failed)")
+    group_name: Optional[str] = Field(None, description="Название группы")
+    status: str = Field(
+        ...,
+        description=("Статус задачи (running, completed, failed, stopped)"),
+    )
     started_at: datetime = Field(..., description="Время начала")
     completed_at: Optional[datetime] = Field(None, description="Время завершения")
-    stats: Optional[dict[str, Any]] = Field(None, description="Статистика парсинга")
+    stats: Optional["ParseStats"] = Field(None, description="Статистика парсинга")
     error_message: Optional[str] = Field(None, description="Сообщение об ошибке")
 
 
@@ -67,3 +71,33 @@ class DashboardStats(BaseModel):
     top_groups: list[dict]
     top_keywords: list[dict]
     recent_activity: list[dict]
+
+
+# ---------------------------------------------------------------------------
+# Aggregated parser information schemas
+# ---------------------------------------------------------------------------
+
+
+class ParserState(BaseModel):
+    """Текущее состояние парсера."""
+
+    status: str = Field(..., description="running, stopped или failed")
+    task: Optional[dict[str, Any]] = Field(
+        None,
+        description=(
+            "Информация об активной задаче: task_id, group_id, group_name, "
+            "progress, posts_processed",
+        ),
+    )
+
+
+class ParserStats(BaseModel):
+    """Сводная статистика по всем запускам парсера."""
+
+    total_runs: int
+    successful_runs: int
+    failed_runs: int
+    average_duration: float
+    total_posts_processed: int
+    total_comments_found: int
+    total_comments_with_keywords: int

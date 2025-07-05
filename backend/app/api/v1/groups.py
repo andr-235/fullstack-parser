@@ -2,9 +2,8 @@
 API endpoints для управления VK группами
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+import re
+from typing import Optional
 
 from app.core.database import get_async_session
 from app.models.vk_group import VKGroup
@@ -16,8 +15,21 @@ from app.schemas.vk_group import (
     VKGroupUpdate,
 )
 from app.services.vk_api_service import VKAPIService
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["Groups"])
+
+
+def _extract_screen_name(url_or_name: str) -> Optional[str]:
+    """Извлекает screen_name из URL или возвращает само значение."""
+    if not url_or_name:
+        return None
+
+    # Паттерн для поиска screen_name в URL
+    match = re.search(r"(?:vk\.com/)?([^/]+)$", url_or_name)
+    return match.group(1) if match else url_or_name
 
 
 @router.post("/", response_model=VKGroupResponse, status_code=status.HTTP_201_CREATED)
@@ -26,14 +38,21 @@ async def create_group(
 ) -> VKGroupResponse:
     """Добавить новую VK группу для мониторинга"""
 
+    screen_name = _extract_screen_name(group_data.vk_id_or_screen_name)
+    if not screen_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Не указан ID или screen name группы",
+        )
+
     # Получаем информацию о группе из VK API
     vk_service = VKAPIService()
-    group_info = await vk_service.get_group_info(group_data.vk_id_or_screen_name)
+    group_info = await vk_service.get_group_info(screen_name)
 
     if not group_info:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Группа '{group_data.vk_id_or_screen_name}' не найдена в ВК",
+            detail=f"Группа '{screen_name}' не найдена в ВК",
         )
 
     # Проверяем, что группа ещё не добавлена

@@ -4,12 +4,6 @@ globs: .git/**, .gitignore, .gitattributes, *.md
 alwaysApply: false
 ---
 
----
-description: "Git workflow automation and daily commands"
-globs: [".git/**/*", "*.md", ".gitignore", ".gitattributes"]
-alwaysApply: false
----
-
 # Git Workflow & Automation
 
 Этот файл автоматически применяется при работе с git-связанными файлами.

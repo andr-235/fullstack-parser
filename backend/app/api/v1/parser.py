@@ -5,11 +5,6 @@ API endpoints для парсинга комментариев VK
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy import and_, desc, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
 from app.core.database import get_async_session
 from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
@@ -17,6 +12,8 @@ from app.models.vk_group import VKGroup
 from app.schemas.base import PaginatedResponse, PaginationParams, StatusResponse
 from app.schemas.parser import (
     GlobalStats,
+    ParserState,
+    ParserStats,
     ParseTaskCreate,
     ParseTaskResponse,
 )
@@ -25,7 +22,12 @@ from app.schemas.vk_comment import (
     CommentWithKeywords,
     VKCommentResponse,
 )
+from app.services.parser_manager import get_parser_manager
 from app.services.parser_service import ParserService
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from sqlalchemy import and_, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 router = APIRouter(tags=["Parser"])
 
@@ -55,6 +57,21 @@ async def start_parsing(
     # Создаём ID задачи
     task_id = f"parse_{group.id}_{int(datetime.now().timestamp())}"
 
+    # Создаём базовый объект задачи и регистрируем его в менеджере
+    task_response = ParseTaskResponse(
+        task_id=task_id,
+        group_id=task_data.group_id,
+        group_name=group.name,
+        status="running",
+        started_at=datetime.now(),
+        completed_at=None,
+        stats=None,
+        error_message=None,
+    )
+
+    parser_manager = get_parser_manager()
+    parser_manager.start_task(task_response)
+
     # Запускаем парсинг в фоне
     background_tasks.add_task(
         run_parsing_task,
@@ -63,15 +80,7 @@ async def start_parsing(
         max_posts=task_data.max_posts,
     )
 
-    return ParseTaskResponse(
-        task_id=task_id,
-        group_id=task_data.group_id,
-        status="running",
-        started_at=datetime.now(),
-        completed_at=None,
-        stats=None,
-        error_message=None,
-    )
+    return task_response
 
 
 async def run_parsing_task(
@@ -80,14 +89,18 @@ async def run_parsing_task(
     """Background задача для парсинга"""
     from app.core.database import AsyncSessionLocal
 
+    manager = get_parser_manager()
+
     async with AsyncSessionLocal() as db:
         parser = ParserService(db)
         try:
-            stats = await parser.parse_group_comments(group_id, max_posts)
-            # TODO: Сохранить результат задачи в БД или Redis
-            print(f"Парсинг {task_id} завершён: {stats}")
-        except Exception as e:
-            print(f"Ошибка парсинга {task_id}: {e}")
+            stats_dict = await parser.parse_group_comments(group_id, max_posts)
+
+            # Обновляем задачу в менеджере
+            manager.complete_task(task_id, stats_dict)
+
+        except Exception as exc:
+            manager.fail_task(task_id, str(exc))
 
 
 @router.get("/comments", response_model=PaginatedResponse)
@@ -237,3 +250,47 @@ async def get_global_stats(
         comments_with_keywords=comments_with_keywords or 0,
         last_parse_time=last_parse_time,
     )
+
+
+# ---------------------------------------------------------------------------
+# New management endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get("/state", response_model=ParserState)
+async def get_parser_state() -> ParserState:
+    """Получить текущее состояние парсера."""
+
+    return get_parser_manager().get_state()
+
+
+@router.get("/stats", response_model=ParserStats)
+async def get_parser_stats() -> ParserStats:
+    """Получить агрегированную статистику парсера."""
+
+    return get_parser_manager().get_stats()
+
+
+@router.get("/tasks", response_model=PaginatedResponse)
+async def get_parse_tasks(
+    pagination: PaginationParams = Depends(),
+) -> PaginatedResponse:
+    """Получить список последних задач парсинга."""
+
+    manager = get_parser_manager()
+    tasks = manager.list_tasks(skip=pagination.skip, limit=pagination.limit)
+
+    return PaginatedResponse(
+        total=len(manager.list_tasks()),
+        skip=pagination.skip,
+        limit=pagination.limit,
+        items=tasks,
+    )
+
+
+@router.post("/stop", response_model=StatusResponse)
+async def stop_parser() -> StatusResponse:
+    """Остановить текущий парсинг (best-effort)."""
+
+    get_parser_manager().stop_current_task()
+    return StatusResponse(success=True, message="Парсер остановлен")
