@@ -1,4 +1,4 @@
-name: 🏭 Deploy to Production
+name: 🚀 Deploy to Production
 
 on:
   release:
@@ -371,3 +371,35 @@ jobs:
           echo "- **Deployed**: $(date)" >> $GITHUB_STEP_SUMMARY
           echo "- **Rollback**: Ready if needed" >> $GITHUB_STEP_SUMMARY
           echo "- **Monitoring**: Active" >> $GITHUB_STEP_SUMMARY 
+
+  deploy-to-production:
+    name: 🚚 Deploy to Production
+    runs-on: ubuntu-latest
+    # ВАЖНО: Перед использованием этого workflow, создайте environment с именем 'production'
+    # в настройках репозитория (Settings -> Environments -> New environment).
+    # Добавьте 'Required reviewers' для ручного подтверждения деплоя.
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Production Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          port: ${{ secrets.PRODUCTION_PORT }}
+          script: |
+            cd ${{ secrets.PRODUCTION_APP_DIR }}
+            git pull origin main
+            echo "DOCKER_PROD_IMAGE_BACKEND=ghcr.io/${{ github.repository_owner }}/backend:${{ github.event.release.tag_name }}" >> .env
+            echo "DOCKER_PROD_IMAGE_FRONTEND=ghcr.io/${{ github.repository_owner }}/frontend:${{ github.event.release.tag_name }}" >> .env
+            docker-compose -f docker-compose.prod.yml up -d --build
+            
+      - name: Health Check
+        run: |
+          sleep 30
+          curl -f https://your-domain.com
+          curl -f https://your-domain.com/api/v1/ 
