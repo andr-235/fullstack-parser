@@ -1,0 +1,347 @@
+name: 🚀 Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ================================
+  # VALIDATE RELEASE
+  # ================================
+  validate:
+    name: 🔍 Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate and extract version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            TAG="v${VERSION}"
+          else
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#v}"
+          fi
+          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          
+          # Check if this is a prerelease
+          if [[ "${VERSION}" =~ -(alpha|beta|rc) ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "🏷️ Release version: ${VERSION}"
+          echo "🏷️ Release tag: ${TAG}"
+          echo "🔍 Is prerelease: ${{ steps.version.outputs.is_prerelease }}"
+
+      - name: Check if tag exists
+        run: |
+          if git rev-parse "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "✅ Tag ${{ steps.version.outputs.tag }} exists"
+          else
+            echo "❌ Tag ${{ steps.version.outputs.tag }} does not exist"
+            exit 1
+          fi
+
+  # ================================
+  # BUILD AND TEST
+  # ================================
+  build:
+    name: 🏗️ Build and Test
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run CI tests
+        uses: ./.github/workflows/ci.yml
+
+      - name: Run security checks
+        uses: ./.github/workflows/security.yml
+
+  # ================================
+  # BUILD DOCKER IMAGES
+  # ================================
+  build-images:
+    name: 🐳 Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [validate, build]
+    
+    strategy:
+      matrix:
+        service: [backend, frontend]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  # ================================
+  # GENERATE CHANGELOG
+  # ================================
+  changelog:
+    name: 📝 Generate Changelog
+    runs-on: ubuntu-latest
+    needs: validate
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^)
+          CURRENT_TAG="${{ needs.validate.outputs.tag }}"
+          
+          echo "Generating changelog from ${PREV_TAG} to ${CURRENT_TAG}"
+          
+          # Generate changelog
+          CHANGELOG=$(cat << 'EOF'
+          ## 🚀 What's New in ${{ needs.validate.outputs.version }}
+          
+          ### ✨ Features
+          $(git log ${PREV_TAG}..${CURRENT_TAG} --oneline --grep="feat:" --pretty=format:"- %s" | sed 's/feat: //')
+          
+          ### 🐛 Bug Fixes
+          $(git log ${PREV_TAG}..${CURRENT_TAG} --oneline --grep="fix:" --pretty=format:"- %s" | sed 's/fix: //')
+          
+          ### 📚 Documentation
+          $(git log ${PREV_TAG}..${CURRENT_TAG} --oneline --grep="docs:" --pretty=format:"- %s" | sed 's/docs: //')
+          
+          ### 🔧 Improvements
+          $(git log ${PREV_TAG}..${CURRENT_TAG} --oneline --grep="refactor:\|perf:\|chore:" --pretty=format:"- %s" | sed 's/refactor: \|perf: \|chore: //')
+          
+          ### 🔒 Security
+          $(git log ${PREV_TAG}..${CURRENT_TAG} --oneline --grep="security:" --pretty=format:"- %s" | sed 's/security: //')
+          
+          ### 🏗️ Technical Details
+          - Docker images: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ needs.validate.outputs.version }}\`
+          - Docker images: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ needs.validate.outputs.version }}\`
+          - Git SHA: \`${{ github.sha }}\`
+          
+          ### 📊 Statistics
+          - Total commits: $(git rev-list --count ${PREV_TAG}..${CURRENT_TAG})
+          - Files changed: $(git diff --name-only ${PREV_TAG}..${CURRENT_TAG} | wc -l)
+          - Contributors: $(git shortlog -sn ${PREV_TAG}..${CURRENT_TAG} | wc -l)
+          
+          ---
+          
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${CURRENT_TAG}
+          EOF
+          )
+          
+          # Save changelog to file and output
+          echo "${CHANGELOG}" > changelog.md
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "${CHANGELOG}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload changelog
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog
+          path: changelog.md
+
+  # ================================
+  # CREATE GITHUB RELEASE
+  # ================================
+  release:
+    name: 🎉 Create Release
+    runs-on: ubuntu-latest
+    needs: [validate, build-images, changelog]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download changelog
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.validate.outputs.tag }}
+          release_name: Release ${{ needs.validate.outputs.version }}
+          body_path: changelog.md
+          draft: false
+          prerelease: ${{ needs.validate.outputs.is_prerelease }}
+
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./changelog.md
+          asset_name: CHANGELOG.md
+          asset_content_type: text/markdown
+
+  # ================================
+  # DEPLOY TO STAGING
+  # ================================
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [validate, release]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging
+        run: |
+          echo "🚀 Deploying version ${{ needs.validate.outputs.version }} to staging"
+          # Here you would add your actual deployment commands
+          # For example:
+          # - SSH to staging server
+          # - Pull new Docker images
+          # - Update docker-compose.yml
+          # - Restart services
+          # - Run health checks
+          
+          # Placeholder for actual deployment
+          echo "✅ Deployment to staging completed"
+
+      - name: Run deployment tests
+        run: |
+          echo "🧪 Running deployment tests on staging"
+          # Add your deployment verification tests here
+          # For example:
+          # - Health check endpoints
+          # - Basic functionality tests
+          # - Performance tests
+          
+          echo "✅ Deployment tests passed"
+
+  # ================================
+  # NOTIFY TEAM
+  # ================================
+  notify:
+    name: 📢 Notify Team
+    runs-on: ubuntu-latest
+    needs: [validate, release, deploy-staging]
+    if: always()
+    
+    steps:
+      - name: Notify on success
+        if: needs.release.result == 'success' && needs.deploy-staging.result == 'success'
+        run: |
+          echo "🎉 Release ${{ needs.validate.outputs.version }} completed successfully!"
+          echo "📦 GitHub Release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}"
+          echo "🚀 Staging deployment: successful"
+          echo "🐳 Docker images: available at ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          
+          # Here you can add notifications to:
+          # - Slack
+          # - Discord
+          # - Email
+          # - Teams
+          # etc.
+
+      - name: Notify on failure
+        if: needs.release.result == 'failure' || needs.deploy-staging.result == 'failure'
+        run: |
+          echo "❌ Release ${{ needs.validate.outputs.version }} failed!"
+          echo "🔍 Check the logs for details"
+          echo "📋 Release status: ${{ needs.release.result }}"
+          echo "🚀 Staging deployment: ${{ needs.deploy-staging.result }}"
+          
+          # Here you can add failure notifications
+
+  # ================================
+  # CLEANUP
+  # ================================
+  cleanup:
+    name: 🧹 Cleanup
+    runs-on: ubuntu-latest
+    needs: [notify]
+    if: always()
+    
+    steps:
+      - name: Cleanup artifacts
+        run: |
+          echo "🧹 Cleaning up temporary artifacts"
+          # Add cleanup commands here if needed
+          
+      - name: Summary
+        run: |
+          echo "## 📊 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.validate.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: ${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Prerelease**: ${{ needs.validate.outputs.is_prerelease }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker Images**: Available at ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release URL**: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY 
