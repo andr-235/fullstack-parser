@@ -1,10 +1,16 @@
-name: 🔄 CI
+name: 🔄 Continuous Integration
 
 on:
   push:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   pull_request:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   workflow_dispatch:
 
 env:
@@ -24,290 +30,103 @@ jobs:
     name: 🔍 Detect Changes
     runs-on: ubuntu-latest
     outputs:
-      backend: ${{ steps.changes.outputs.backend }}
-      frontend: ${{ steps.changes.outputs.frontend }}
-      docker: ${{ steps.changes.outputs.docker }}
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      docker: ${{ steps.filter.outputs.docker }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Detect changes
-        uses: dorny/paths-filter@v3
-        id: changes
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
         with:
           filters: |
             backend:
               - 'backend/**'
               - 'pyproject.toml'
-              - 'requirements*.txt'
             frontend:
               - 'frontend/**'
-              - 'package*.json'
+              - 'package.json'
               - 'pnpm-lock.yaml'
             docker:
-              - '**/Dockerfile*'
-              - 'docker-compose*.yml'
+              - '**/Dockerfile'
+              - 'docker-compose.yml'
 
   # ================================
-  # BACKEND
+  # BACKEND & FRONTEND TESTS
   # ================================
-  backend-lint:
-    name: 🐍 Backend Lint
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
-    defaults:
-      run:
-        working-directory: ./backend
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ env.PYTHON_VERSION_DEFAULT }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION_DEFAULT }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Load cached venv
-        uses: actions/cache@v4
-        with:
-          path: backend/.venv
-          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION_DEFAULT }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Install dependencies
-        run: poetry install --no-interaction
-
-      - name: Run linting
-        run: |
-          source .venv/bin/activate
-          ruff check .
-          black --check .
-          isort --check-only .
-          mypy app/
-
   backend-test:
-    name: 🐍 Backend Tests (${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    name: 🐍 Backend Tests
     needs: changes
     if: needs.changes.outputs.backend == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.11', '3.12']
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: test_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    defaults:
-      run:
-        working-directory: ./backend
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Load cached venv
-        uses: actions/cache@v4
-        with:
-          path: backend/.venv
-          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Install dependencies
-        run: poetry install --no-interaction
-
-      - name: Run tests
-        env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
-          REDIS_URL: redis://localhost:6379
-        run: |
-          source .venv/bin/activate
-          pytest --cov=app --cov-report=xml --cov-fail-under=70
-
-      - name: Upload coverage to Codecov
-        if: matrix.python-version == env.PYTHON_VERSION_DEFAULT
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./backend/coverage.xml
-          flags: backend
-          fail_ci_if_error: false
-
-  # ================================
-  # FRONTEND
-  # ================================
-  frontend-lint:
-    name: ⚛️ Frontend Lint
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
-    defaults:
-      run:
-        working-directory: ./frontend
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.12.4
-
-      - name: Setup Node.js ${{ env.NODE_VERSION_DEFAULT }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION_DEFAULT }}
-          cache: 'pnpm'
-          cache-dependency-path: 'frontend/pnpm-lock.yaml'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run linting
-        run: |
-          pnpm run lint
-          pnpm run type-check
-          pnpm run format:check
+    uses: ./.github/workflows/reusable-backend-test.yml
 
   frontend-test:
-    name: ⚛️ Frontend Tests (${{ matrix.node-version }})
-    runs-on: ubuntu-latest
+    name: ⚛️ Frontend Tests
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: ['18', '20']
-    defaults:
-      run:
-        working-directory: ./frontend
-    env:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
-      CI: true
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.12.4
-
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
-          cache-dependency-path: 'frontend/pnpm-lock.yaml'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build application
-        run: pnpm run build
-
-      - name: Run tests
-        run: pnpm test -- --coverage --watchAll=false
-
-      - name: Upload coverage to Codecov
-        if: matrix.node-version == env.NODE_VERSION_DEFAULT
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./frontend/coverage/lcov.info
-          flags: frontend
-          fail_ci_if_error: false
+    uses: ./.github/workflows/reusable-frontend-test.yml
 
   # ================================
   # DOCKER & INTEGRATION
   # ================================
-  docker-build:
-    name: 🐳 Docker Build
-    runs-on: ubuntu-latest
+  docker-test:
+    name: 🐳 Docker Build Test
     needs: changes
     if: needs.changes.outputs.docker == 'true'
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         service: [backend, frontend]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Build ${{ matrix.service }} image
+      - name: Build image
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.service }}
           push: false
           tags: ${{ matrix.service }}:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   integration-test:
     name: 🔗 Integration Test
-    runs-on: ubuntu-latest
     needs: [backend-test, frontend-test]
     if: success()
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Start services
         run: |
           cp env.example .env
           docker-compose up -d --build
-          sleep 30
-
       - name: Wait for services
-        run: |
-          timeout 60 bash -c 'until curl -f http://localhost:8000/api/v1/ > /dev/null 2>&1; do sleep 2; done'
-          timeout 60 bash -c 'until curl -f http://localhost:3000 > /dev/null 2>&1; do sleep 2; done'
-
-      - name: Run API health check
-        run: |
-          curl -f http://localhost:8000/api/v1/ | jq .
-          curl -f http://localhost:3000 > /dev/null
-
+        run: sleep 30 && curl -f http://localhost:8000/api/v1/ && curl -f http://localhost:3000
       - name: Cleanup
         if: always()
-        run: docker-compose down -v 
+        run: docker-compose down -v
+
+  # ================================
+  # QUALITY GATE & FINAL STATUS
+  # ================================
+  quality-gate:
+    name: 🎯 Quality Gate
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test, docker-test]
+    if: always()
+    steps:
+      - name: Check job statuses
+        run: |
+          if [[ "${{ needs.backend-test.result }}" == "failure" || "${{ needs.frontend-test.result }}" == "failure" || "${{ needs.docker-test.result }}" == "failure" ]]; then
+            echo "❌ Quality gate failed due to test failures."
+            exit 1
+          else
+            echo "✅ Quality gate passed."
+          fi
+
+  ci-success:
+    name: ✅ CI Success
+    runs-on: ubuntu-latest
+    needs: [quality-gate, integration-test]
+    if: always() && needs.quality-gate.result == 'success' && (needs.integration-test.result == 'success' || needs.integration-test.result == 'skipped')
+    steps:
+      - name: Report success
+        run: echo "🎉 All CI checks passed successfully!" 
