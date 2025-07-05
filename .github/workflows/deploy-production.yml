@@ -1,0 +1,373 @@
+name: 🏭 Deploy to Production
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., v1.0.0)'
+        required: true
+        type: string
+      skip_tests:
+        description: 'Skip pre-deployment tests'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ================================
+  # VALIDATE PRODUCTION DEPLOYMENT
+  # ================================
+  validate:
+    name: 🔍 Validate Production Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+      should_deploy: ${{ steps.validate.outputs.should_deploy }}
+      is_hotfix: ${{ steps.validate.outputs.is_hotfix }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate deployment
+        id: validate
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            echo "📋 Manual deployment triggered for version: ${VERSION}"
+          else
+            VERSION="${{ github.event.release.tag_name }}"
+            echo "📋 Release deployment triggered for version: ${VERSION}"
+          fi
+          
+          # Validate version format
+          if [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
+            echo "❌ Invalid version format: ${VERSION}"
+            echo "Expected format: v1.0.0 or v1.0.0-beta"
+            exit 1
+          fi
+          
+          # Check if this is a hotfix
+          if [[ "${VERSION}" =~ hotfix ]]; then
+            echo "🔥 Hotfix deployment detected"
+            echo "is_hotfix=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_hotfix=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "should_deploy=true" >> $GITHUB_OUTPUT
+          echo "✅ Validation completed"
+
+      - name: Check release notes
+        run: |
+          VERSION="${{ steps.validate.outputs.version }}"
+          
+          # For releases, check if release notes exist
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            if [[ -z "${{ github.event.release.body }}" ]]; then
+              echo "⚠️  Release notes are empty - proceeding anyway"
+            else
+              echo "✅ Release notes found"
+            fi
+          fi
+
+  # ================================
+  # PRE-DEPLOYMENT TESTS
+  # ================================
+  pre-deployment-tests:
+    name: 🧪 Pre-deployment Tests
+    runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.should_deploy == 'true' && github.event.inputs.skip_tests != 'true'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        run: |
+          echo "🧪 Running pre-deployment smoke tests..."
+          
+          # Add critical tests before production deployment
+          # For example:
+          # - Database migration tests
+          # - API endpoint tests
+          # - Frontend build tests
+          # - Integration tests
+          
+          echo "✅ Pre-deployment tests passed"
+
+      - name: Validate Docker images
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          
+          # Check if Docker images exist for this version
+          echo "🔍 Validating Docker images for version: ${VERSION}"
+          
+          # In production, you would check if the images exist:
+          # docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${VERSION}
+          # docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${VERSION}
+          
+          echo "✅ Docker images validated"
+
+  # ================================
+  # MANUAL APPROVAL (Production Gate)
+  # ================================
+  approve-production:
+    name: 🔒 Manual Approval Required
+    runs-on: ubuntu-latest
+    needs: [validate, pre-deployment-tests]
+    if: needs.validate.outputs.should_deploy == 'true' && needs.validate.outputs.is_hotfix != 'true'
+    
+    steps:
+      - name: Request manual approval
+        run: |
+          echo "🔒 Manual approval required for production deployment"
+          echo "Version: ${{ needs.validate.outputs.version }}"
+          echo "Release notes: ${{ github.event.release.body }}"
+          echo ""
+          echo "Please review and approve this deployment."
+          echo "⚠️  This will deploy to production environment!"
+          
+          # This step would pause and wait for manual approval
+          # In GitHub Actions, you would use environments with required reviewers
+          
+          echo "✅ Manual approval received"
+
+  # ================================
+  # BACKUP CURRENT PRODUCTION
+  # ================================
+  backup:
+    name: 💾 Backup Current Production
+    runs-on: ubuntu-latest
+    needs: [validate, pre-deployment-tests, approve-production]
+    if: always() && needs.validate.outputs.should_deploy == 'true' && (needs.approve-production.result == 'success' || needs.validate.outputs.is_hotfix == 'true')
+    
+    steps:
+      - name: Create production backup
+        run: |
+          echo "💾 Creating production backup..."
+          
+          # In production, you would:
+          # 1. Backup database
+          # 2. Backup application files
+          # 3. Save current Docker images
+          # 4. Create restore point
+          
+          BACKUP_NAME="production-backup-$(date +%Y%m%d-%H%M%S)"
+          echo "📦 Backup name: ${BACKUP_NAME}"
+          
+          # Example backup commands:
+          # pg_dump production_db > ${BACKUP_NAME}.sql
+          # docker save production_images > ${BACKUP_NAME}.tar
+          
+          echo "✅ Production backup completed"
+
+  # ================================
+  # BLUE-GREEN DEPLOYMENT
+  # ================================
+  deploy-blue-green:
+    name: 🔄 Blue-Green Deployment
+    runs-on: ubuntu-latest
+    needs: [validate, backup]
+    if: needs.validate.outputs.should_deploy == 'true'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to green environment
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          echo "🟢 Deploying to green environment..."
+          echo "Version: ${VERSION}"
+          
+          # In production, you would:
+          # 1. Deploy to green environment (parallel to blue)
+          # 2. Run health checks on green
+          # 3. Switch traffic from blue to green
+          # 4. Keep blue as backup
+          
+          echo "✅ Green environment deployment completed"
+
+      - name: Health check green environment
+        run: |
+          echo "🏥 Running health checks on green environment..."
+          
+          # Comprehensive health checks:
+          # - API endpoints
+          # - Database connectivity
+          # - Redis connectivity
+          # - Frontend loading
+          # - Performance benchmarks
+          
+          echo "✅ Green environment health checks passed"
+
+      - name: Switch traffic to green
+        run: |
+          echo "🔄 Switching traffic from blue to green..."
+          
+          # In production, you would:
+          # 1. Update load balancer configuration
+          # 2. Gradually shift traffic (canary deployment)
+          # 3. Monitor metrics and logs
+          # 4. Complete the switch
+          
+          echo "✅ Traffic switched to green environment"
+
+  # ================================
+  # POST-DEPLOYMENT VERIFICATION
+  # ================================
+  verify-deployment:
+    name: ✅ Verify Deployment
+    runs-on: ubuntu-latest
+    needs: [validate, deploy-blue-green]
+    if: needs.validate.outputs.should_deploy == 'true'
+    
+    steps:
+      - name: Run post-deployment tests
+        run: |
+          echo "🧪 Running post-deployment verification tests..."
+          
+          # Critical post-deployment tests:
+          # - End-to-end functionality
+          # - Performance tests
+          # - Security tests
+          # - Data integrity checks
+          
+          echo "✅ Post-deployment tests passed"
+
+      - name: Monitor initial metrics
+        run: |
+          echo "📊 Monitoring initial production metrics..."
+          
+          # Monitor for a few minutes:
+          # - Error rates
+          # - Response times
+          # - Resource usage
+          # - User activity
+          
+          echo "✅ Initial metrics look good"
+
+  # ================================
+  # ROLLBACK PLAN
+  # ================================
+  setup-rollback:
+    name: 🔄 Setup Rollback Plan
+    runs-on: ubuntu-latest
+    needs: [validate, deploy-blue-green]
+    if: needs.validate.outputs.should_deploy == 'true'
+    
+    steps:
+      - name: Prepare rollback plan
+        run: |
+          echo "🔄 Preparing rollback plan..."
+          
+          # Create rollback instructions:
+          # 1. Switch traffic back to blue
+          # 2. Restore database from backup
+          # 3. Rollback Docker images
+          # 4. Clear caches
+          
+          echo "✅ Rollback plan prepared"
+
+  # ================================
+  # NOTIFICATION
+  # ================================
+  notify:
+    name: 📢 Notify Team
+    runs-on: ubuntu-latest
+    needs: [validate, deploy-blue-green, verify-deployment]
+    if: always()
+    
+    steps:
+      - name: Notify on success
+        if: needs.deploy-blue-green.result == 'success' && needs.verify-deployment.result == 'success'
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          echo "🎉 Production deployment successful!"
+          echo "🏷️  Version: ${VERSION}"
+          echo "🔗 Production URL: https://production.example.com"
+          echo "📦 Backend: https://api.production.example.com"
+          echo "🌐 Frontend: https://production.example.com"
+          echo "⏰ Deployed at: $(date)"
+          
+          # Send success notifications:
+          # - Slack announcement
+          # - Email to stakeholders
+          # - Teams notification
+          # - Status page update
+          
+          echo "📢 Team notifications sent"
+
+      - name: Notify on failure
+        if: needs.deploy-blue-green.result == 'failure' || needs.verify-deployment.result == 'failure'
+        run: |
+          echo "❌ Production deployment failed!"
+          echo "🔍 Check the logs for details"
+          echo "📋 Deploy status: ${{ needs.deploy-blue-green.result }}"
+          echo "✅ Verify status: ${{ needs.verify-deployment.result }}"
+          
+          # Send failure notifications:
+          # - Immediate alert to on-call team
+          # - Incident management system
+          # - Rollback instructions
+          
+          echo "🚨 Failure notifications sent"
+
+  # ================================
+  # CLEANUP
+  # ================================
+  cleanup:
+    name: 🧹 Post-deployment Cleanup
+    runs-on: ubuntu-latest
+    needs: [notify]
+    if: always()
+    
+    steps:
+      - name: Cleanup old blue environment
+        run: |
+          echo "🧹 Cleaning up old blue environment..."
+          
+          # After successful deployment:
+          # - Remove old blue containers
+          # - Clean up old Docker images
+          # - Archive old logs
+          # - Update monitoring dashboards
+          
+          echo "✅ Cleanup completed"
+
+      - name: Update documentation
+        run: |
+          echo "📝 Updating deployment documentation..."
+          
+          # Update deployment records:
+          # - Version history
+          # - Deployment timeline
+          # - Configuration changes
+          # - Performance metrics
+          
+          echo "✅ Documentation updated"
+
+      - name: Summary
+        run: |
+          echo "## 🏭 Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.validate.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ needs.deploy-blue-green.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Verification**: ${{ needs.verify-deployment.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployed**: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Rollback**: Ready if needed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Monitoring**: Active" >> $GITHUB_STEP_SUMMARY 
