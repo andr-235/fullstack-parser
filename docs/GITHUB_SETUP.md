@@ -215,3 +215,162 @@ pre-commit autoupdate
 - ✅ Monitoring и notifications
 
 Теперь можно приступать к разработке! 🚀
+
+# GitHub Repository Setup Guide
+
+## Branch Protection Setup
+
+### Обязательные Status Checks
+
+Для правильной работы CI/CD pipeline настройте следующие status checks в Branch Protection Rules:
+
+#### Required Status Checks:
+- `🔍 Detect Changes`
+- `🐍 Backend Lint` (для backend изменений)
+- `🐍 Backend Tests` (для backend изменений)
+- `⚛️ Frontend Lint` (для frontend изменений)
+- `⚛️ Frontend Tests` (для frontend изменений)
+- `🐳 Docker Build` (для Docker изменений)
+- `🔗 Integration Test` (если backend и frontend тесты прошли)
+- `✅ CI Status` (финальный статус)
+
+#### Настройка через веб-интерфейс:
+
+1. Перейдите в **Settings → Branches**
+2. Нажмите **Add rule** или отредактируйте существующее правило
+3. Укажите **Branch name pattern**: `main`
+4. Включите **Require status checks to pass before merging**
+5. Включите **Require branches to be up to date before merging**
+6. В поле поиска status checks добавьте:
+   - `🔍 Detect Changes`
+   - `🐍 Backend Lint`
+   - `🐍 Backend Tests`
+   - `⚛️ Frontend Lint`
+   - `⚛️ Frontend Tests`
+   - `🐳 Docker Build`
+   - `🔗 Integration Test`
+   - `✅ CI Status`
+
+#### Настройка через GitHub CLI:
+
+```bash
+# Установка branch protection для main
+gh api repos/:owner/:repo/branches/main/protection \
+  --method PUT \
+  --field required_status_checks='{"strict":true,"contexts":["🔍 Detect Changes","🐍 Backend Lint","🐍 Backend Tests","⚛️ Frontend Lint","⚛️ Frontend Tests","🐳 Docker Build","🔗 Integration Test","✅ CI Status"]}' \
+  --field enforce_admins=true \
+  --field required_pull_request_reviews='{"required_approving_review_count":1,"dismiss_stale_reviews":true}' \
+  --field restrictions=null \
+  --field allow_force_pushes=false \
+  --field allow_deletions=false
+```
+
+### Рекомендуемые настройки:
+
+- ✅ **Require status checks to pass before merging**
+- ✅ **Require branches to be up to date before merging**
+- ✅ **Require pull request reviews before merging** (минимум 1)
+- ✅ **Dismiss stale pull request reviews when new commits are pushed**
+- ✅ **Require review from code owners**
+- ✅ **Include administrators**
+- ✅ **Allow force pushes** (отключено)
+- ✅ **Allow deletions** (отключено)
+
+### Troubleshooting Status Checks
+
+#### Проблема: Status checks не отображаются
+
+1. **Проверьте workflow файл**:
+   - Убедитесь, что workflow запускается на `pull_request` событиях
+   - Проверьте, что job names точно совпадают с указанными в branch protection
+
+2. **Проверьте permissions**:
+   ```yaml
+   permissions:
+     contents: read
+     checks: write
+     pull-requests: write
+   ```
+
+3. **Проверьте trigger условия**:
+   - Workflow должен запускаться на нужных ветках
+   - Убедитесь, что условия `if:` не блокируют выполнение
+
+4. **Проверьте зависимости между jobs**:
+   - Убедитесь, что `needs:` правильно настроены
+   - Избегайте циклических зависимостей
+
+#### Проблема: Status checks показывают неправильный статус
+
+1. **Проверьте финальный job**:
+   - `ci-status` job должен корректно анализировать результаты
+   - Убедитесь, что `if: always()` не маскирует ошибки
+
+2. **Проверьте условия в jobs**:
+   - Убедитесь, что условия `if:` корректны
+   - Проверьте, что skipped jobs не вызывают ложных негативов
+
+### Мониторинг Status Checks
+
+#### Просмотр статуса через GitHub CLI:
+```bash
+# Проверка статуса PR
+gh pr status
+
+# Проверка конкретного PR
+gh pr view 123 --json statusCheckRollup
+
+# Проверка последнего commit
+gh api repos/:owner/:repo/commits/:sha/status
+```
+
+#### Просмотр в веб-интерфейсе:
+1. Откройте Pull Request
+2. Прокрутите до секции **Checks**
+3. Нажмите на конкретный check для просмотра деталей
+4. Используйте **Re-run jobs** при необходимости
+
+### Автоматизация
+
+#### GitHub Actions для автоматической настройки:
+```yaml
+name: Setup Repository
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup branch protection
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.updateBranchProtection({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              branch: 'main',
+              required_status_checks: {
+                strict: true,
+                contexts: [
+                  '🔍 Detect Changes',
+                  '🐍 Backend Lint',
+                  '🐍 Backend Tests',
+                  '⚛️ Frontend Lint',
+                  '⚛️ Frontend Tests',
+                  '🐳 Docker Build',
+                  '🔗 Integration Test',
+                  '✅ CI Status'
+                ]
+              },
+              enforce_admins: true,
+              required_pull_request_reviews: {
+                required_approving_review_count: 1,
+                dismiss_stale_reviews: true
+              },
+              restrictions: null,
+              allow_force_pushes: false,
+              allow_deletions: false
+            });
+```
