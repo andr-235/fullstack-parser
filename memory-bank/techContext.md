@@ -12,10 +12,8 @@ equirements.txt.
 
 - **Framework**: Next.js 14
 - **Language**: TypeScript
-- **Dependency Management**: **Конфликт!**
-    - docker-compose.yml указывает на использование **Bun** (через том .bun).
-    - frontend/Dockerfile использует **pnpm** и ссылается на удаленный pnpm-lock.yaml.
-    - **Вывод**: Сборка фронтенда в Docker сломана. Требуется синхронизация Dockerfile с использованием Bun.
+- **Dependency Management**: **pnpm**. Dockerfile использует `pnpm install --frozen-lockfile` для установки зависимостей.
+- **Dockerfile**: Многостадийный, использует `output: 'standalone'` в Next.js для создания минимального production-образа. Сборка фронтенда происходит с помощью `pnpm`.
 
 ## Infrastructure
 

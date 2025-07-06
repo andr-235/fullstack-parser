@@ -1,55 +1,48 @@
-# Task List
+# План по обновлению дизайна (Задача `DESIGN-01`)
 
-## VAN-01: Stabilize and Complete Frontend UI Refactor (Strategy: Revert to pnpm)
+**Уровень сложности:** 3 (Средний)
 
-- [x] **Phase 1: Fix Frontend Build by Reverting to pnpm**
-  - [x] **Step 1.1: Update docker-compose.yml**
-    - [x] Remove the volume mount for .bun from the frontend service, as it is related to the Bun package manager.
-  - [x] **Step 1.2: Restore pnpm-lock.yaml**
-    - [x] **User Action:** Run pnpm install in the frontend/ directory. This is necessary to regenerate the pnpm-lock.yaml file based on the latest changes in package.json. Without this file, the Docker build will fail.
-  - [x] **Step 1.3: Verify Docker Build**
-    - [x] Run docker-compose up --build to confirm the frontend service builds and starts correctly.
-- [x] **Phase 2: Fix API Endpoints 404 Errors**
-  - [x] **Step 2.1: Diagnose API connectivity issues**
-    - [x] Identified FastAPI requires trailing slash in endpoints
-    - [x] Found VK access token is not configured
-  - [x] **Step 2.2: Fix API client endpoints**
-    - [x] Added trailing slash to all API endpoints (groups/, keywords/, etc.)
-    - [x] Verified backend services are running correctly
-  - [x] **Step 2.3: Test API connectivity**
-    - [x] Confirmed GET requests work after trailing slash fix
-    - [x] Verified frontend can load without 404 errors
-- [x] **Phase 3: Configure VK API Integration**
-  - [x] **Step 3.1: Set up VK API credentials**
-    - [x] Update .env file with test VK_ACCESS_TOKEN
-    - [x] Created documentation for obtaining VK access token
-  - [x] **Step 3.2: Test VK group addition**
-    - [x] Attempted to add test groups
-    - [x] Identified invalid token error: "User authorization failed: invalid access_token (4)"
-- [x] **Phase 4: Fix VK API Token Authentication**
-  - [x] **Step 4.1: Generate valid VK API token**
-    - [x] Follow documentation in docs/VK_API_SETUP.md to create valid token
-    - [x] Update .env with correct token format and permissions
-  - [x] **Step 4.2: Test VK API connectivity**
-    - [x] Test adding popular VK group
-    - [x] Verify posts and comments parsing
-- [x] **Phase 5: Implement Keyword Management**
-  - [x] **Step 5.1: Add new keywords**
-    - [x] Add keywords via API
-    - [x] Verify keywords are stored in the database
-  - [x] **Step 5.2: Re-run parsing**
-    - [x] Trigger parsing for the group again
-    - [x] Verify comments are now being found and processed against keywords
-- [ ] **Phase 6: Complete UI Functionality Testing**
-  - [x] Test all pages for correct data loading
-    - [x] Keywords page
-    - [x] Groups page
-    - [x] Comments page
-    - [x] Parser page
-    - [x] Dashboard page
-  - [x] Verify statistics display correctly
-  - [x] Test keywords management functionality
-  - [x] Test comments display and filtering
-- [x] **Phase 7: Final Documentation and Cleanup**
-  - [x] Review and update all documentation
-  - [x] Remove any unused code or test files
+**Цель:** Модернизировать визуальный стиль и пользовательский опыт (UI/UX) веб-приложения, сделав его более чистым, интуитивно понятным и современным.
+
+---
+
+### 1. Анализ и Креативная Фаза (Creative Mode)
+
+Этот этап почти полностью попадает под креативную фазу, так как "современный дизайн" — это субъективное понятие, требующее проработки.
+
+*   **1.1. Определение визуального стиля:**
+    *   [ ] Выбрать цветовую палитру (основные, вторичные, акцентные цвета, цвета для состояний success/error/warning).
+    *   [ ] Определить типографику (шрифты, размеры, начертания для заголовков, основного текста, подписей).
+    *   [ ] Установить систему отступов и сеток (spacing, layout grids).
+*   **1.2. Проектирование UI-кита (UI Kit):**
+    *   [ ] Провести ревизию и редизайн существующих компонентов в `frontend/components/ui`.
+    *   [ ] Добавить новые компоненты, если потребуется (например, `Tabs`, `Dialog`, `Tooltip`).
+    *   [ ] Определить состояния для интерактивных элементов (hover, focus, active, disabled).
+*   **1.3. Дизайн макетов страниц:**
+    *   [ ] Создать высокоуровневые макеты (wireframes или mockups) для ключевых страниц:
+        *   `Dashboard`
+        *   `Groups` (Страница с группами)
+        *   `Keywords` (Страница с ключевыми словами)
+        *   `Parser` (Страница управления парсером)
+        *   `Comments` (Страница с результатами)
+    *   [ ] Особое внимание уделить главному `layout.tsx` и навигации (`sidebar.tsx`, `header.tsx`).
+
+### 2. Фаза Реализации (Implement Mode)
+
+*   **2.1. Обновление UI-кита:**
+    *   [ ] Реализовать в коде (React/TailwindCSS) обновленный дизайн для всех компонентов в `frontend/components/ui`.
+    *   [ ] Обеспечить их переиспользуемость и кастомизируемость.
+*   **2.2. Применение дизайна к страницам:**
+    *   [ ] Обновить основной макет `app/layout.tsx`, `components/layout/header.tsx`, `components/layout/sidebar.tsx`.
+    *   [ ] Применить новые стили и компоненты ко всем страницам (`dashboard`, `groups` и т.д.).
+    *   [ ] Обеспечить адаптивность (responsive design) для корректного отображения на разных устройствах.
+*   **2.3. Рефакторинг и чистка:**
+    *   [ ] Удалить старые, неиспользуемые стили из `globals.css`.
+    *   [ ] Проверить консистентность применения стилей по всему приложению.
+
+### 3. Потенциальные вызовы и пути их решения
+
+*   **Вызов:** Необходимость установки новых зависимостей (например, `clsx`, `tailwind-merge`, если их нет).
+    *   **Решение:** Провести аудит `package.json` и добавить нужные пакеты на начальном этапе.
+*   **Вызов:** Обеспечение консистентности на всех страницах.
+    *   **Решение:** Строго следовать разработанному UI-киту. Проводить ревью кода на предмет соответствия дизайн-системе.

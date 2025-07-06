@@ -1,1 +1,11 @@
  M frontend/after.txt
+ M frontend/app/comments/page.tsx
+ M frontend/app/dashboard/page.tsx
+ M frontend/app/layout.tsx
+ M frontend/app/parser/page.tsx
+ M frontend/components/layout/header.tsx
+ M frontend/components/ui/button.tsx
+ M frontend/components/ui/card.tsx
+ M frontend/components/ui/progress.tsx
+ M frontend/components/ui/select.tsx
+ M frontend/components/ui/table.tsx

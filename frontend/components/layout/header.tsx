@@ -2,9 +2,10 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Bell, Menu, ChevronRight } from 'lucide-react'
+import { Bell, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 interface HeaderProps {
   className?: string
@@ -36,26 +37,26 @@ export function Header({ className }: HeaderProps) {
   return (
     <header
       className={cn(
-        'sticky top-0 z-10 flex h-16 w-full items-center justify-between border-b bg-white px-6 dark:bg-gray-950 dark:border-gray-800',
+        'sticky top-0 z-10 flex h-16 w-full items-center justify-between border-b border-slate-700 bg-slate-900 px-6',
         className
       )}
     >
       <div className="flex items-center gap-4">
-        {/* Mobile menu button can be added here if needed */}
         <nav className="hidden sm:flex items-center text-sm font-medium">
-          <Link href="/dashboard" className="text-gray-500 hover:text-gray-900">
+          <Link
+            href="/dashboard"
+            className="text-slate-400 hover:text-slate-50"
+          >
             Главная
           </Link>
           {breadcrumbs.map((breadcrumb, index) => (
             <div key={index} className="flex items-center">
-              <ChevronRight className="h-4 w-4 mx-1 text-gray-400" />
+              <ChevronRight className="h-4 w-4 mx-1 text-slate-600" />
               <Link
                 href={breadcrumb.href}
                 className={cn(
-                  'hover:text-gray-900',
-                  breadcrumb.isLast
-                    ? 'text-gray-900 dark:text-white'
-                    : 'text-gray-500 dark:text-gray-400'
+                  'hover:text-slate-50',
+                  breadcrumb.isLast ? 'text-slate-50' : 'text-slate-400'
                 )}
               >
                 {breadcrumb.title}
@@ -70,7 +71,7 @@ export function Header({ className }: HeaderProps) {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
           </span>
-          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+          <span className="text-sm font-medium text-slate-300">
             API активно
           </span>
         </div>
@@ -78,13 +79,10 @@ export function Header({ className }: HeaderProps) {
           <Bell className="h-5 w-5" />
           <span className="sr-only">Уведомления</span>
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full w-8 h-8 bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold"
-        >
-          А
-        </Button>
+        <Avatar>
+          <AvatarImage src="/avatars/01.png" alt="User avatar" />
+          <AvatarFallback>А</AvatarFallback>
+        </Avatar>
       </div>
     </header>
   )
