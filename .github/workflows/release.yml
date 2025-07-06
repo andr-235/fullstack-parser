@@ -105,6 +105,31 @@ jobs:
           fail_on_unmatched_files: true
 
   # ================================
+  # VALIDATE RELEASE
+  # ================================
+  validate:
+    name: 🛡️ Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      tag: ${{ steps.get_version.outputs.tag }}
+      is_prerelease: ${{ steps.get_version.outputs.is_prerelease }}
+    steps:
+      - name: Get version from tag
+        id: get_version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          # remove 'v' prefix
+          VERSION=${TAG#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          if [[ $TAG == *"beta"* || $TAG == *"alpha"* || $TAG == *"rc"* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ================================
   # DEPLOY TO STAGING
   # ================================
   deploy-staging:
