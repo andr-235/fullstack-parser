@@ -5,6 +5,10 @@ API endpoints для управления VK группами
 import re
 from typing import Optional
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_async_session
 from app.models.vk_group import VKGroup
 from app.schemas.base import PaginatedResponse, PaginationParams, StatusResponse
@@ -15,9 +19,6 @@ from app.schemas.vk_group import (
     VKGroupUpdate,
 )
 from app.services.vk_api_service import VKAPIService
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["Groups"])
 

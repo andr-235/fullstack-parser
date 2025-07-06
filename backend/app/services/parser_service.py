@@ -8,14 +8,15 @@ import re
 from datetime import datetime, timezone
 from typing import Optional
 
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.comment_keyword_match import CommentKeywordMatch
 from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
 from app.models.vk_group import VKGroup
 from app.models.vk_post import VKPost
 from app.services.vk_api_service import VKAPIService
-from sqlalchemy import and_, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 

@@ -2,8 +2,9 @@
 Главный роутер API v1 для VK Comments Parser
 """
 
-from app.api.v1 import comments, groups, health, keywords, parser, stats
 from fastapi import APIRouter
+
+from app.api.v1 import comments, groups, health, keywords, parser, stats
 
 api_router = APIRouter()
 

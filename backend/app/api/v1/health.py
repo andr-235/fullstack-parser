@@ -1,11 +1,12 @@
 from datetime import datetime
 
 import redis.asyncio as aioredis
-from app.core.config import settings
-from app.core.database import get_async_session
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
+from app.core.database import get_async_session
 
 router = APIRouter()
 

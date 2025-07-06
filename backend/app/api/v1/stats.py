@@ -11,7 +11,7 @@ from app.models.comment_keyword_match import CommentKeywordMatch
 from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
 from app.models.vk_group import VKGroup
-from app.schemas.stats import DashboardStats, GlobalStats
+from app.schemas.stats import GlobalStats
 
 router = APIRouter(tags=["Stats"])
 
