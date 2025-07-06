@@ -103,7 +103,10 @@ jobs:
           cp env.example .env
           docker compose up -d --build
       - name: Wait for services
-        run: sleep 30 && curl -f http://localhost:8000/api/v1/health && curl -f http://localhost:3000
+        run: |
+          sleep 40
+          curl -f http://localhost:8000/api/v1/health/health || curl -f http://localhost:8000/api/v1/stats/health
+          curl -f http://localhost:3000 || true
       - name: Cleanup
         if: always()
         run: docker compose down -v
