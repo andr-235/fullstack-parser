@@ -2,258 +2,38 @@ name: 🚀 Deploy to Staging
 
 on:
   push:
-    branches: [ main ]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
+    branches:
+      - develop
   workflow_dispatch:
 
-permissions:
-  contents: read
-  packages: read
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
-  # ================================
-  # VALIDATE DEPLOYMENT
-  # ================================
-  validate:
-    name: 🔍 Validate Deployment
-    runs-on: ubuntu-latest
-    outputs:
-      should_deploy: ${{ steps.check.outputs.should_deploy }}
-      commit_sha: ${{ steps.check.outputs.commit_sha }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Check deployment conditions
-        id: check
-        run: |
-          # Check if this is a merge commit or direct push to main
-          if git show --no-patch --format="%P" HEAD | grep -q " "; then
-            echo "✅ Merge commit detected - proceeding with deployment"
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
-          else
-            echo "ℹ️  Direct push to main - proceeding with deployment"
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
-          fi
-          
-          echo "commit_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-          echo "🔸 Commit SHA: $(git rev-parse HEAD)"
-
-      - name: Check for skip deployment flag
-        run: |
-          if git log -1 --pretty=%B | grep -q "\[skip deploy\]"; then
-            echo "⏭️  Deployment skipped due to [skip deploy] flag"
-            echo "should_deploy=false" >> $GITHUB_OUTPUT
-          fi
-
-  # ================================
-  # BUILD IMAGES
-  # ================================
-  build:
-    name: 🏗️ Build Images
-    runs-on: ubuntu-latest
-    needs: validate
-    if: needs.validate.outputs.should_deploy == 'true'
-    
-    strategy:
-      matrix:
-        service: [backend, frontend]
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push staging image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./${{ matrix.service }}
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:staging
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:staging-${{ needs.validate.outputs.commit_sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # ================================
-  # DEPLOY TO STAGING
-  # ================================
   deploy:
-    name: 🚀 Deploy to Staging
+    name: 🚚 Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [validate, build]
-    if: needs.validate.outputs.should_deploy == 'true'
+    environment:
+      name: staging
+      url: https://staging.your-domain.com
     
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup staging environment
+      - name: Deploy to Staging Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_PORT }}
+          script: |
+            cd ${{ secrets.STAGING_APP_DIR }}
+            git pull origin develop
+            echo "DOCKER_PROD_IMAGE_BACKEND=ghcr.io/${{ github.repository_owner }}/backend:sha-${GITHUB_SHA::7}" >> .env
+            echo "DOCKER_PROD_IMAGE_FRONTEND=ghcr.io/${{ github.repository_owner }}/frontend:sha-${GITHUB_SHA::7}" >> .env
+            docker-compose -f docker-compose.prod.yml up -d --build
+            
+      - name: Health Check
         run: |
-          # Create staging environment configuration
-          mkdir -p staging
-          cp docker-compose.yml staging/docker-compose.staging.yml
-          cp env.example staging/.env.staging
-          
-          # Update staging configuration
-          sed -i 's/:latest/:staging/g' staging/docker-compose.staging.yml
-          sed -i 's/3000:3000/3001:3000/g' staging/docker-compose.staging.yml
-          sed -i 's/8000:8000/8001:8000/g' staging/docker-compose.staging.yml
-          
-          # Update environment variables for staging
-          sed -i 's/localhost:3000/localhost:3001/g' staging/.env.staging
-          sed -i 's/localhost:8000/localhost:8001/g' staging/.env.staging
-          sed -i 's/DB_NAME=.*/DB_NAME=vk_parser_staging/g' staging/.env.staging
-
-      - name: Deploy to staging server
-        run: |
-          echo "🚀 Deploying to staging environment..."
-          
-          # In a real deployment, this would be something like:
-          # 1. SSH to staging server
-          # 2. Pull new Docker images
-          # 3. Update docker-compose files
-          # 4. Restart services with zero downtime
-          # 5. Run health checks
-          
-          # For now, simulate deployment
-          echo "✅ Simulating deployment to staging server"
-          echo "🏷️  Image tags: staging-${{ needs.validate.outputs.commit_sha }}"
-          
-          # Example deployment commands:
-          # ssh staging-server "cd /opt/app && docker-compose pull && docker-compose up -d"
-          # ssh staging-server "cd /opt/app && docker-compose exec backend python -m pytest tests/smoke/"
-
-      - name: Wait for services to be ready
-        run: |
-          echo "⏳ Waiting for services to be ready..."
-          # In production, you would wait for actual health checks
           sleep 30
-          echo "✅ Services are ready"
-
-  # ================================
-  # HEALTH CHECKS
-  # ================================
-  health-check:
-    name: 🏥 Health Check
-    runs-on: ubuntu-latest
-    needs: [validate, deploy]
-    if: needs.validate.outputs.should_deploy == 'true'
-    
-    steps:
-      - name: Run health checks
-        run: |
-          echo "🏥 Running health checks on staging..."
-          
-          # Example health checks:
-          # curl -f http://staging.example.com:8001/api/v1/health
-          # curl -f http://staging.example.com:3001/api/health
-          
-          # Simulate health checks
-          echo "✅ Backend health check: OK"
-          echo "✅ Frontend health check: OK"
-          echo "✅ Database connectivity: OK"
-          echo "✅ Redis connectivity: OK"
-
-      - name: Run smoke tests
-        run: |
-          echo "🧪 Running smoke tests..."
-          
-          # Example smoke tests:
-          # Test basic functionality
-          # Test API endpoints
-          # Test frontend pages
-          # Test database operations
-          
-          echo "✅ Smoke tests passed"
-
-  # ================================
-  # NOTIFICATION
-  # ================================
-  notify:
-    name: 📢 Notify Team
-    runs-on: ubuntu-latest
-    needs: [validate, deploy, health-check]
-    if: always()
-    
-    steps:
-      - name: Notify on success
-        if: needs.deploy.result == 'success' && needs.health-check.result == 'success'
-        run: |
-          echo "🎉 Staging deployment successful!"
-          echo "🔗 Staging URL: http://staging.example.com"
-          echo "📦 Backend: http://staging.example.com:8001"
-          echo "🌐 Frontend: http://staging.example.com:3001"
-          echo "🏷️  Version: staging-${{ needs.validate.outputs.commit_sha }}"
-          
-          # Here you can add notifications to:
-          # - Slack webhook
-          # - Discord webhook
-          # - Email notifications
-          # - Teams notifications
-          # Example:
-          # curl -X POST -H 'Content-type: application/json' \
-          #   --data '{"text":"🚀 Staging deployment successful!"}' \
-          #   $SLACK_WEBHOOK_URL
-
-      - name: Notify on failure
-        if: needs.deploy.result == 'failure' || needs.health-check.result == 'failure'
-        run: |
-          echo "❌ Staging deployment failed!"
-          echo "🔍 Check the logs for details"
-          echo "📋 Deploy status: ${{ needs.deploy.result }}"
-          echo "🏥 Health check status: ${{ needs.health-check.result }}"
-          
-          # Add failure notifications here
-
-  # ================================
-  # CLEANUP
-  # ================================
-  cleanup:
-    name: 🧹 Cleanup
-    runs-on: ubuntu-latest
-    needs: [notify]
-    if: always()
-    
-    steps:
-      - name: Cleanup old images
-        run: |
-          echo "🧹 Cleaning up old staging images..."
-          
-          # In production, you would clean up old Docker images
-          # to save space and keep only the last N versions
-          
-          # Example:
-          # docker image prune -f
-          # docker system prune -f
-          
-          echo "✅ Cleanup completed"
-
-      - name: Summary
-        run: |
-          echo "## 🚀 Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ${{ needs.deploy.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Health Check**: ${{ needs.health-check.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: ${{ needs.validate.outputs.commit_sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Images**: staging-${{ needs.validate.outputs.commit_sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Deployed**: $(date)" >> $GITHUB_STEP_SUMMARY 
+          curl -f https://staging.your-domain.com
+          curl -f https://staging.your-domain.com/api/v1/ 

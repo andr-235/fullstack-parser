@@ -8,6 +8,7 @@ WORKDIR /tmp
 # Устанавливаем системные зависимости, необходимые для сборки
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Устанавливаем Poetry
@@ -33,6 +34,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     build-essential \
+    && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Устанавливаем Poetry
@@ -69,6 +71,7 @@ RUN groupadd -r appuser && useradd --no-log-init -r -g appuser appuser
 # Устанавливаем ТОЛЬКО runtime системные зависимости
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
