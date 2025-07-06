@@ -1,5 +1,5 @@
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 
 /**
  * Объединяет CSS классы с поддержкой условных классов
@@ -33,10 +33,10 @@ export function formatDate(date: string | Date): string {
  */
 export function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds} сек`
-  
+
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return `${minutes} мин ${seconds % 60} сек`
-  
+
   const hours = Math.floor(minutes / 60)
   return `${hours} ч ${minutes % 60} мин`
 }
@@ -47,14 +47,16 @@ export function formatDuration(seconds: number): string {
 export function formatRelativeTime(date: string | Date): string {
   const now = new Date()
   const target = new Date(date)
-  const diffInMinutes = Math.floor((now.getTime() - target.getTime()) / (1000 * 60))
-  
+  const diffInMinutes = Math.floor(
+    (now.getTime() - target.getTime()) / (1000 * 60)
+  )
+
   if (diffInMinutes < 1) return 'только что'
   if (diffInMinutes < 60) return `${diffInMinutes} мин назад`
-  
+
   const diffInHours = Math.floor(diffInMinutes / 60)
   if (diffInHours < 24) return `${diffInHours} ч назад`
-  
+
   const diffInDays = Math.floor(diffInHours / 24)
   return `${diffInDays} дн назад`
 }
@@ -82,4 +84,4 @@ export function debounce<T extends (...args: any[]) => any>(
     clearTimeout(timeoutId)
     timeoutId = setTimeout(() => func(...args), delay)
   }
-} 
+}

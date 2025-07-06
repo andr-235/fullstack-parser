@@ -38,7 +38,10 @@ export default function RootLayout({
             <div className="flex-1 flex flex-col">
               <Header />
               <main className="flex-1 overflow-auto p-6">{children}</main>
-              <Toaster position="bottom-center" toastOptions={{ duration: 4000 }} />
+              <Toaster
+                position="bottom-center"
+                toastOptions={{ duration: 4000 }}
+              />
             </div>
           </div>
         </ReactQueryProvider>

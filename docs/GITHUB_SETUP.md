@@ -144,24 +144,85 @@ SEMGREP_APP_TOKEN="your-semgrep-token"
 
 ## 🛡️ Branch Protection Rules
 
-Настройте защиту main branch:
+### Обязательные Status Checks
 
-**Settings → Branches → Add rule**
+Для полной уверенности в качестве и безопасности кода, настройте следующие status checks в Branch Protection Rules для веток `main` и `develop`.
 
-- Branch name pattern: `main`
-- ✅ Require a pull request before merging
-  - ✅ Require approvals (1)
-  - ✅ Dismiss stale PR approvals when new commits are pushed
-  - ✅ Require review from code owners
-- ✅ Require status checks to pass before merging
-  - ✅ Require branches to be up to date before merging
-  - Required status checks:
-    - `Tests Summary`
-    - `Backend Tests`
-    - `Frontend Tests`
-    - `Security Scan`
-- ✅ Require conversation resolution before merging
-- ✅ Include administrators
+#### CI Checks (`ci.yml`)
+- `🔍 Detect Changes`
+- `🐍 Backend Lint`
+- `🐍 Backend Tests (3.11)`
+- `🐍 Backend Tests (3.12)`
+- `⚛️ Frontend Lint`
+- `⚛️ Frontend Tests (18)`
+- `⚛️ Frontend Tests (20)`
+- `🐳 Docker Build`
+- `🔗 Integration Test`
+
+#### Security Checks (`security.yml`)
+- `🔒 CodeQL Analysis`
+- `🔬 Trivy Vulnerability Scan`
+- `📦 Dependency Check`
+
+#### Настройка через веб-интерфейс:
+
+1.  Перейдите в **Settings → Branches** вашего репозитория.
+2.  Нажмите **Add rule** или отредактируйте существующее правило для `main` или `develop`.
+3.  Включите **Require status checks to pass before merging**.
+4.  Включите **Require branches to be up to date before merging**.
+5.  В поле поиска **Search for status checks** добавьте все перечисленные выше checks.
+
+    *Вы должны запустить workflow хотя бы один раз после этих изменений, чтобы GitHub "увидел" новые job'ы и предложил их в списке.*
+
+#### Настройка через GitHub CLI:
+
+```bash
+# Пример команды для ветки main
+gh api repos/:owner/:repo/branches/main/protection \
+  --method PUT \
+  -f required_status_checks='{"strict":true,"checks":[
+    {"context":"🔍 Detect Changes"},
+    {"context":"🐍 Backend Lint"},
+    {"context":"🐍 Backend Tests (3.11)"},
+    {"context":"🐍 Backend Tests (3.12)"},
+    {"context":"⚛️ Frontend Lint"},
+    {"context":"⚛️ Frontend Tests (18)"},
+    {"context":"⚛️ Frontend Tests (20)"},
+    {"context":"🐳 Docker Build"},
+    {"context":"🔗 Integration Test"},
+    {"context":"🔒 CodeQL Analysis"},
+    {"context":"🔬 Trivy Vulnerability Scan"},
+    {"context":"📦 Dependency Check"}
+  ]}' \
+  -f enforce_admins=true \
+  -f required_pull_request_reviews='{"required_approving_review_count":1,"dismiss_stale_reviews":true}' \
+  -F allow_force_pushes=false \
+  -F allow_deletions=false
+```
+
+### Рекомендуемые настройки:
+
+-   ✅ **Require status checks to pass before merging**
+-   ✅ **Require branches to be up to date before merging**
+-   ✅ **Require pull request reviews before merging** (минимум 1)
+-   ✅ **Dismiss stale pull request reviews when new commits are pushed**
+-   ✅ **Require review from code owners** (если используется `CODEOWNERS`)
+-   ✅ **Include administrators**
+-   ❌ **Allow force pushes** (отключено)
+-   ❌ **Allow deletions** (отключено)
+
+### Troubleshooting Status Checks
+
+#### Проблема: Status checks не отображаются в списке
+
+1.  **Запустите Workflow**: Создайте Pull Request после обновления `.github/workflows/`, чтобы запустить CI и Security workflows. GitHub добавит job'ы в список только после их первого запуска.
+2.  **Проверьте `name` job'a**: Имя job'а в workflow файле (`name: ...`) должно точно совпадать с тем, что вы добавляете в `contexts`.
+3.  **Проверьте `permissions`**: Убедитесь, что в workflow есть права на `checks: write` и `pull-requests: write`.
+
+#### Проблема: Status check "завис" в состоянии pending
+
+1.  **Проверьте `if` условия**: Убедитесь, что условия `if:` для job'а не блокируют его выполнение. Например, `if: needs.changes.outputs.backend == 'true'`.
+2.  **Проверьте `needs` зависимости**: Убедитесь, что все job'ы, от которых зависит текущий, успешно завершились.
 
 ## 🔨 Pre-commit Hooks
 

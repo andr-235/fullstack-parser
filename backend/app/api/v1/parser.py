@@ -5,6 +5,11 @@ API endpoints для парсинга комментариев VK
 from datetime import datetime
 from typing import Optional
 
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from sqlalchemy import and_, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from app.core.database import get_async_session
 from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
@@ -24,10 +29,6 @@ from app.schemas.vk_comment import (
 )
 from app.services.parser_manager import get_parser_manager
 from app.services.parser_service import ParserService
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy import and_, desc, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 router = APIRouter(tags=["Parser"])
 

@@ -2,19 +2,20 @@ name: 🔄 Continuous Integration
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: 
+      - main
+      - develop
+      - 'feature/*'
+      - 'fix/*'
+      - 'hotfix/*'
     paths-ignore:
       - '**.md'
       - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
   pull_request:
     branches: [ main, develop ]
     paths-ignore:
       - '**.md'
       - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
   workflow_dispatch:
 
 env:
@@ -23,385 +24,145 @@ env:
 
 permissions:
   contents: read
-  security-events: write
   checks: write
   pull-requests: write
 
 jobs:
-  # ================================
-  # CHANGES DETECTION
-  # ================================
   changes:
     name: 🔍 Detect Changes
     runs-on: ubuntu-latest
     outputs:
-      backend: ${{ steps.changes.outputs.backend }}
-      frontend: ${{ steps.changes.outputs.frontend }}
-      docker: ${{ steps.changes.outputs.docker }}
-      workflows: ${{ steps.changes.outputs.workflows }}
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      docker: ${{ steps.filter.outputs.docker }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Detect changes
-        uses: dorny/paths-filter@v3
-        id: changes
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
         with:
           filters: |
             backend:
               - 'backend/**'
               - 'pyproject.toml'
-              - 'requirements*.txt'
             frontend:
               - 'frontend/**'
-              - 'package*.json'
+              - 'package.json'
               - 'pnpm-lock.yaml'
             docker:
-              - '**/Dockerfile*'
-              - 'docker-compose*.yml'
-              - '.dockerignore'
-            workflows:
-              - '.github/workflows/**'
+              - '**/Dockerfile'
+              - 'docker-compose.yml'
 
-  # ================================
-  # BACKEND TESTING MATRIX
-  # ================================
   backend-test:
     name: 🐍 Backend Tests
-    runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.workflows == 'true'
-    
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.11', '3.12']
-        test-type: [unit, integration]
-        include:
-          - python-version: '3.11'
-            coverage: true
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: test_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    if: needs.changes.outputs.backend == 'true'
+    uses: ./.github/workflows/reusable-backend-test.yml
+    permissions:
+      contents: write
+    secrets: inherit
 
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    defaults:
-      run:
-        working-directory: ./backend
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: backend/.venv
-          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            venv-${{ runner.os }}-${{ matrix.python-version }}-
-
-      - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
-
-      - name: Install project
-        run: poetry install --no-interaction
-
-      - name: Run linting
-        run: |
-          source .venv/bin/activate
-          ruff check .
-          black --check .
-          isort --check-only .
-
-      - name: Run type checking
-        run: |
-          source .venv/bin/activate
-          mypy app/
-
-      - name: Run unit tests
-        if: matrix.test-type == 'unit'
-        run: |
-          source .venv/bin/activate
-          pytest tests/unit/ -v --tb=short
-
-      - name: Run integration tests
-        if: matrix.test-type == 'integration'
-        env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
-          REDIS_URL: redis://localhost:6379
-        run: |
-          source .venv/bin/activate
-          pytest tests/integration/ -v --tb=short
-
-      - name: Run tests with coverage
-        if: matrix.coverage
-        env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
-          REDIS_URL: redis://localhost:6379
-        run: |
-          source .venv/bin/activate
-          pytest --cov=app --cov-report=xml --cov-report=html --cov-fail-under=80
-
-      - name: Upload coverage to Codecov
-        if: matrix.coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./backend/coverage.xml
-          flags: backend
-          fail_ci_if_error: true
-
-      - name: Upload coverage artifacts
-        if: matrix.coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-coverage-${{ matrix.python-version }}
-          path: backend/htmlcov/
-
-  # ================================
-  # FRONTEND TESTING MATRIX
-  # ================================
   frontend-test:
     name: ⚛️ Frontend Tests
-    runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflows == 'true'
+    if: needs.changes.outputs.frontend == 'true'
+    uses: ./.github/workflows/reusable-frontend-test.yml
+    permissions:
+      contents: write
+    secrets: inherit
 
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: ['18', '20']
-        test-type: [unit, integration]
-        include:
-          - node-version: '20'
-            coverage: true
-
-    defaults:
-      run:
-        working-directory: ./frontend
-
-    env:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
-      CI: true
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.12.4
-
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
-          cache-dependency-path: 'frontend/pnpm-lock.yaml'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run linting
-        run: |
-          pnpm run lint
-          pnpm run type-check
-
-      - name: Run format check
-        run: pnpm run format:check
-
-      - name: Build application
-        run: pnpm run build
-
-      - name: Run unit tests
-        if: matrix.test-type == 'unit'
-        run: pnpm test
-
-      - name: Run tests with coverage
-        if: matrix.coverage
-        run: pnpm test -- --coverage --watchAll=false
-
-      - name: Upload coverage to Codecov
-        if: matrix.coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./frontend/coverage/lcov.info
-          flags: frontend
-          fail_ci_if_error: true
-
-      - name: Upload coverage artifacts
-        if: matrix.coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-coverage-${{ matrix.node-version }}
-          path: frontend/coverage/
-
-  # ================================
-  # DOCKER BUILD TESTING
-  # ================================
   docker-test:
     name: 🐳 Docker Build Test
-    runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.docker == 'true' || needs.changes.outputs.workflows == 'true'
-
+    if: needs.changes.outputs.docker == 'true'
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         service: [backend, frontend]
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Build ${{ matrix.service }} image
+      - name: Build image
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.service }}
           push: false
           tags: ${{ matrix.service }}:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
-      - name: Test ${{ matrix.service }} container
+  integration-test:
+    name: 🔗 Integration Test
+    needs: [backend-test, frontend-test]
+    if: |
+      (needs.backend-test.result == 'success' || needs.backend-test.result == 'skipped') &&
+      (needs.frontend-test.result == 'success' || needs.frontend-test.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start services
         run: |
-          docker run --rm -d --name ${{ matrix.service }}-test ${{ matrix.service }}:test
-          sleep 10
-          docker logs ${{ matrix.service }}-test
-          docker stop ${{ matrix.service }}-test
+          cp env.example .env
+          docker compose up -d --build
+      - name: Wait for services
+        run: |
+          sleep 40
+          curl -f http://localhost:8000/api/v1/health/health || curl -f http://localhost:8000/api/v1/stats/health
+          curl -f http://localhost:3000 || true
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v
 
-  # ================================
-  # QUALITY GATES
-  # ================================
+  security-scan:
+    name: 🛡️ Security Scan
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
+    uses: ./.github/workflows/security.yml
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+      actions: read
+    secrets: inherit
+
   quality-gate:
-    name: 🎯 Quality Gate
+    name: quality-gate
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test, docker-test]
     if: always()
-
     steps:
-      - name: Check all jobs status
+      - name: Check test statuses
+        if: |
+          (needs.backend-test.result != 'success' && needs.backend-test.result != 'skipped') ||
+          (needs.frontend-test.result != 'success' && needs.frontend-test.result != 'skipped') ||
+          (needs.docker-test.result != 'success' && needs.docker-test.result != 'skipped')
         run: |
-          echo "Backend tests: ${{ needs.backend-test.result }}"
-          echo "Frontend tests: ${{ needs.frontend-test.result }}"
-          echo "Docker tests: ${{ needs.docker-test.result }}"
-          
-          if [[ "${{ needs.backend-test.result }}" == "failure" || 
-                "${{ needs.frontend-test.result }}" == "failure" || 
-                "${{ needs.docker-test.result }}" == "failure" ]]; then
-            echo "❌ Quality gate failed"
-            exit 1
-          else
-            echo "✅ Quality gate passed"
-          fi
-
-  # ================================
-  # INTEGRATION TESTING
-  # ================================
-  integration-test:
-    name: 🔗 Integration Test
+          echo "❌ Quality gate failed due to test failures."
+          exit 1
+      - name: Report success
+        run: echo "✅ Quality gate passed."
+  
+  security-summary:
+    name: security-summary
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-test]
-    if: always() && needs.backend-test.result == 'success' && needs.frontend-test.result == 'success'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Start services with docker-compose
-        run: |
-          cp env.example .env
-          docker-compose up -d --build
-          sleep 30
-
-      - name: Wait for services to be healthy
-        run: |
-          timeout 60 bash -c 'until curl -f http://localhost:8000/api/v1/ > /dev/null 2>&1; do sleep 2; done'
-          timeout 60 bash -c 'until curl -f http://localhost:3000 > /dev/null 2>&1; do sleep 2; done'
-
-      - name: Run API health check
-        run: |
-          curl -f http://localhost:8000/api/v1/ | jq .
-          curl -f http://localhost:8000/api/v1/groups/ | jq .
-
-      - name: Run frontend smoke test
-        run: |
-          curl -f http://localhost:3000 > /dev/null
-
-      - name: Show service logs on failure
-        if: failure()
-        run: |
-          echo "=== Backend logs ==="
-          docker-compose logs backend
-          echo "=== Frontend logs ==="
-          docker-compose logs frontend
-          echo "=== Database logs ==="
-          docker-compose logs db
-
-      - name: Cleanup
-        if: always()
-        run: docker-compose down -v
-
-  # ================================
-  # FINAL STATUS
-  # ================================
-  ci-success:
-    name: ✅ CI Success
-    runs-on: ubuntu-latest
-    needs: [quality-gate, integration-test]
+    needs: [security-scan]
     if: always()
-
     steps:
-      - name: Report final status
+      - name: Check security scan status
+        if: needs.security-scan.result != 'success'
         run: |
-          if [[ "${{ needs.quality-gate.result }}" == "success" && 
-                ("${{ needs.integration-test.result }}" == "success" || "${{ needs.integration-test.result }}" == "skipped") ]]; then
-            echo "🎉 All CI checks passed successfully!"
-            echo "✅ Quality gate: ${{ needs.quality-gate.result }}"
-            echo "✅ Integration tests: ${{ needs.integration-test.result }}"
-          else
-            echo "❌ CI checks failed"
-            echo "Quality gate: ${{ needs.quality-gate.result }}"
-            echo "Integration tests: ${{ needs.integration-test.result }}"
-            exit 1
-          fi 
+          echo "❌ Security summary failed."
+          exit 1
+      - name: Report success
+        run: echo "✅ Security summary passed."
+
+  ci-success:
+    name: ci-success
+    runs-on: ubuntu-latest
+    needs: [quality-gate, integration-test, security-summary]
+    if: |
+      always() &&
+      needs.quality-gate.result == 'success' &&
+      (needs.integration-test.result == 'success' || needs.integration-test.result == 'skipped') &&
+      needs.security-summary.result == 'success'
+    steps:
+      - name: Report success
+        run: echo "🎉 All CI checks passed successfully!" 

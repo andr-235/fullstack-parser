@@ -4,16 +4,17 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import comments, groups, keywords, parser, stats
+from app.api.v1 import comments, groups, health, keywords, parser, stats
 
 api_router = APIRouter()
 
 # Подключение всех роутеров
-api_router.include_router(comments.router, prefix="/comments")
-api_router.include_router(groups.router, prefix="/groups")
-api_router.include_router(keywords.router, prefix="/keywords")
-api_router.include_router(parser.router, prefix="/parser")
-api_router.include_router(stats.router, prefix="/stats")
+api_router.include_router(health.router, prefix="/health", tags=["Health"])
+api_router.include_router(comments.router, prefix="/comments", tags=["Comments"])
+api_router.include_router(groups.router, prefix="/groups", tags=["Groups"])
+api_router.include_router(keywords.router, prefix="/keywords", tags=["Keywords"])
+api_router.include_router(parser.router, prefix="/parser", tags=["Parser"])
+api_router.include_router(stats.router, prefix="/stats", tags=["Stats"])
 
 
 @api_router.get("/")
@@ -28,5 +29,6 @@ async def api_info() -> dict[str, str | dict[str, str]]:
             "keywords": "/keywords - Управление ключевыми словами",
             "parser": "/parser - Парсинг и поиск комментариев",
             "stats": "/stats - Статистика системы",
+            "health": "/health - Состояние сервиса",
         },
     }

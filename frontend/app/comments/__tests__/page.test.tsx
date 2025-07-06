@@ -1,9 +1,4 @@
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-} from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import CommentsPage from '../page'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useInfiniteComments } from '@/hooks/use-comments'
@@ -106,4 +101,4 @@ describe('CommentsPage', () => {
       )
     })
   })
-}) 
+})

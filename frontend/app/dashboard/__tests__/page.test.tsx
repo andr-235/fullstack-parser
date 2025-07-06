@@ -68,4 +68,4 @@ describe('DashboardPage', () => {
     expect(screen.getByText('1000')).toBeInTheDocument()
     expect(screen.getByText('100')).toBeInTheDocument()
   })
-}) 
+})

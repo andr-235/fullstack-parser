@@ -1,9 +1,5 @@
 // Статистика и здоровье API
-export {
-  useGlobalStats,
-  useDashboardStats,
-  useAPIHealth
-} from './use-stats'
+export { useGlobalStats, useDashboardStats, useAPIHealth } from './use-stats'
 
 // Управление группами VK
 export {
@@ -12,7 +8,7 @@ export {
   useCreateGroup,
   useUpdateGroup,
   useDeleteGroup,
-  useGroupStats
+  useGroupStats,
 } from './use-groups'
 
 // Управление ключевыми словами
@@ -23,12 +19,12 @@ export {
   useCreateKeyword,
   useCreateKeywordsBulk,
   useUpdateKeyword,
-  useDeleteKeyword
+  useDeleteKeyword,
 } from './use-keywords'
 
 // Работа с комментариями
 export {
   useComments,
   useInfiniteComments,
-  useCommentWithKeywords
-} from './use-comments' 
+  useCommentWithKeywords,
+} from './use-comments'

@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import KeywordsPage from '../page'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
@@ -107,9 +113,8 @@ describe('KeywordsPage', () => {
       .closest('div.space-x-2') as HTMLElement
     if (!addKeywordCard) throw new Error('Add keyword card not found')
 
-    const input = within(addKeywordCard).getByPlaceholderText(
-      /Новое ключевое слово/i
-    )
+    const input =
+      within(addKeywordCard).getByPlaceholderText(/Новое ключевое слово/i)
     const addButton = within(addKeywordCard).getByRole('button', {
       name: /Добавить/i,
     })
@@ -149,4 +154,4 @@ describe('KeywordsPage', () => {
     // Check that create was not called
     expect(mockUseCreateKeyword().mutate).not.toHaveBeenCalled()
   })
-}) 
+})
