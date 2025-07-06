@@ -70,8 +70,13 @@ RUN groupadd -r appuser && useradd --no-log-init -r -g appuser appuser
 
 # Устанавливаем ТОЛЬКО runtime системные зависимости
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    # for psycopg2
+    libpq-dev \
+    # for git
+    git \
+    # other essentials
     curl \
-    && apt-get upgrade -y \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

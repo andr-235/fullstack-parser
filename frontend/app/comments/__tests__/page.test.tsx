@@ -196,7 +196,9 @@ describe('CommentsPage', () => {
     })
 
     renderWithProviders(<CommentsPage />)
-    const loadMoreButton = screen.getByRole('button', { name: /Загрузить еще/i })
+    const loadMoreButton = screen.getByRole('button', {
+      name: /Загрузить еще/i,
+    })
     fireEvent.click(loadMoreButton)
     expect(fetchNextPage).toHaveBeenCalled()
   })

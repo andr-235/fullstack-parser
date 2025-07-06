@@ -2,19 +2,19 @@
 VK Comments Parser - FastAPI Backend
 """
 
-import logging
 from contextlib import asynccontextmanager
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.database import init_db
+from app.core.logging import get_logger, setup_logging
+from app.middleware.request_logging import RequestLoggingMiddleware
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-# Логирование
-logging.basicConfig(level=getattr(logging, settings.log_level))
-logger = logging.getLogger(__name__)
+# Настройка и инициализация логирования
+setup_logging(log_level=settings.log_level, json_logs=not settings.debug)
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
@@ -48,6 +48,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Request Logging middleware
+app.add_middleware(RequestLoggingMiddleware)
 
 
 @app.get("/")

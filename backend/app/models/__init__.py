@@ -1,11 +1,12 @@
-# SQLAlchemy модели для VK Comments Parser
+"""Initializes the models package."""
 
-from .base import BaseModel
-from .comment_keyword_match import CommentKeywordMatch
-from .keyword import Keyword
-from .vk_comment import VKComment
-from .vk_group import VKGroup
-from .vk_post import VKPost
+# Import all models here to ensure they are registered with SQLAlchemy's metadata
+from app.models.base import Base, BaseModel
+from app.models.comment_keyword_match import CommentKeywordMatch
+from app.models.keyword import Keyword
+from app.models.vk_comment import VKComment
+from app.models.vk_group import VKGroup
+from app.models.vk_post import VKPost
 
 __all__ = [
     "BaseModel",

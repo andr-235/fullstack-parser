@@ -2,35 +2,55 @@
 Модель связи комментария с ключевым словом
 """
 
-from datetime import datetime
+from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 
 from app.models.base import BaseModel
+from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from app.models.keyword import Keyword
+    from app.models.vk_comment import VKComment
 
 
 class CommentKeywordMatch(BaseModel):
-    """Модель связи комментария с найденным ключевым словом"""
+    """Модель связи комментария с найденным ключевым словом."""
 
     __tablename__ = "comment_keyword_matches"
 
     # Связи
-    comment_id = Column(Integer, ForeignKey("vk_comments.id"), nullable=False)
-    comment = relationship("VKComment", back_populates="keyword_matches")
+    comment_id: Mapped[int] = mapped_column(
+        ForeignKey("vk_comments.id"), nullable=False
+    )
+    comment: Mapped["VKComment"] = relationship(back_populates="keyword_matches")
 
-    keyword_id = Column(Integer, ForeignKey("keywords.id"), nullable=False)
-    keyword = relationship("Keyword", back_populates="comment_matches")
+    keyword_id: Mapped[int] = mapped_column(ForeignKey("keywords.id"), nullable=False)
+    keyword: Mapped["Keyword"] = relationship(back_populates="comment_matches")
 
     # Детали совпадения
-    matched_text = Column(String(500), comment="Найденный текст")
-    match_position = Column(Integer, comment="Позиция совпадения в тексте")
-    match_context = Column(String(1000), comment="Контекст вокруг совпадения")
-
-    # Метаданные
-    found_at = Column(
-        DateTime, default=datetime.utcnow, comment="Когда найдено совпадение"
+    matched_text: Mapped[Optional[str]] = mapped_column(
+        String(500), comment="Найденный текст"
+    )
+    match_position: Mapped[Optional[int]] = mapped_column(
+        comment="Позиция совпадения в тексте"
+    )
+    match_context: Mapped[Optional[str]] = mapped_column(
+        String(1000), comment="Контекст вокруг совпадения"
     )
 
-    def __repr__(self):
-        return f"<CommentKeywordMatch(comment_id={self.comment_id}, keyword_id={self.keyword_id})>"
+    # Метаданные
+    found_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        comment="Когда найдено совпадение",
+        nullable=False,
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<CommentKeywordMatch(comment_id={self.comment_id}, "
+            f"keyword_id={self.keyword_id})>"
+        )

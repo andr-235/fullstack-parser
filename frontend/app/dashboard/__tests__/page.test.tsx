@@ -52,9 +52,7 @@ describe('DashboardPage', () => {
       error: null,
     })
     renderWithProviders(<DashboardPage />)
-    expect(
-      screen.getByRole('heading', { name: /Группы/i })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Группы/i })).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: /Комментарии/i })
     ).toBeInTheDocument()
@@ -88,7 +86,9 @@ describe('DashboardPage', () => {
       name: /Ключевые слова/i,
     }).parentElement?.parentElement
 
-    expect(within(groupsCard as HTMLElement).getByText('10')).toBeInTheDocument()
+    expect(
+      within(groupsCard as HTMLElement).getByText('10')
+    ).toBeInTheDocument()
     expect(
       within(commentsCard as HTMLElement).getByText('1000')
     ).toBeInTheDocument()
