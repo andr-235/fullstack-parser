@@ -55,12 +55,14 @@ jobs:
       - name: Commit changes
         working-directory: ./frontend
         if: steps.lint.outputs.changes_detected == 'true'
+        continue-on-error: true
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add .
-          git commit -m "style: auto-format frontend code"
-          git push origin HEAD:${{ steps.get_branch.outputs.branch_name }}
+          git commit -m "style: auto-format frontend code" || true
+          git pull --rebase origin "${{ steps.get_branch.outputs.branch_name }}" || true
+          git push --force-with-lease origin HEAD:"${{ steps.get_branch.outputs.branch_name }}" || true
 
   frontend-test:
     name: ⚛️ Frontend Tests (${{ matrix.node-version }})
