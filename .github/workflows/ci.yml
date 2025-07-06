@@ -124,7 +124,7 @@ jobs:
     secrets: inherit
 
   quality-gate:
-    name: 🎯 Quality Gate
+    name: quality-gate
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test, docker-test]
     if: always()
@@ -141,7 +141,7 @@ jobs:
         run: echo "✅ Quality gate passed."
   
   security-summary:
-    name: 🔒 Security Summary
+    name: security-summary
     runs-on: ubuntu-latest
     needs: [security-scan]
     if: always()
@@ -155,7 +155,7 @@ jobs:
         run: echo "✅ Security summary passed."
 
   ci-success:
-    name: ✅ CI Success
+    name: ci-success
     runs-on: ubuntu-latest
     needs: [quality-gate, integration-test, security-summary]
     if: |
