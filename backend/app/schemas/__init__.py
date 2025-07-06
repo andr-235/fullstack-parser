@@ -31,7 +31,7 @@ from .vk_comment import (
 from .vk_group import (
     VKGroupBase,
     VKGroupCreate,
-    VKGroupResponse,
+    VKGroupRead,
     VKGroupStats,
     VKGroupUpdate,
 )
@@ -48,7 +48,7 @@ __all__ = [
     "VKGroupBase",
     "VKGroupCreate",
     "VKGroupUpdate",
-    "VKGroupResponse",
+    "VKGroupRead",
     "VKGroupStats",
     # Keywords
     "KeywordBase",

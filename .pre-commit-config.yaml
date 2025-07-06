@@ -2,12 +2,15 @@
 # Установка: pip install pre-commit && pre-commit install
 # Запуск: pre-commit run --all-files
 
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
 repos:
   # =============================================================================
   # ОБЩИЕ ПРОВЕРКИ
   # =============================================================================
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace        # Удаляет лишние пробелы в конце строк
       - id: end-of-file-fixer         # Добавляет перенос строки в конец файла
@@ -29,10 +32,10 @@ repos:
   # =============================================================================
   # Black - форматирование кода
   - repo: https://github.com/psf/black
-    rev: 23.9.1
+    rev: 24.4.2
     hooks:
       - id: black
-        language_version: python3
+        language_version: python3.11
         files: ^backend/
         args: [--line-length=88]
 
@@ -46,20 +49,25 @@ repos:
 
   # Ruff - быстрый линтер для Python
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.0.292
+    rev: v0.4.4
     hooks:
       - id: ruff
         files: ^backend/
-        args: [--fix, --exit-non-zero-on-fix]
+        args: [--fix]
+      - id: ruff-format
 
   # mypy - проверка типов
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.5.1
+    rev: v1.10.0
     hooks:
       - id: mypy
-        files: ^backend/
-        args: [--ignore-missing-imports, --no-strict-optional]
-        additional_dependencies: [types-all]
+        files: ^backend/app/
+        args: [--config-file=backend/pyproject.toml]
+        additional_dependencies:
+          - sqlalchemy[asyncio]
+          - pydantic
+          - types-python-dateutil
+          - types-pytz
 
   # Bandit - проверка безопасности Python кода
   - repo: https://github.com/pycqa/bandit

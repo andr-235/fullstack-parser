@@ -5,42 +5,48 @@ Pydantic схемы для VK групп
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
-
 from app.schemas.base import BaseSchema, IDMixin, TimestampMixin
+from pydantic import Field
 
 
-class VKGroupBase(BaseModel):
-    """Базовая схема VK группы"""
+# 1. Базовая схема с общими, валидируемыми полями
+class VKGroupBase(BaseSchema):
+    """Базовая схема VK группы с полями, общими для создания и чтения."""
 
     screen_name: str = Field(..., description="Короткое имя группы (@group_name)")
     name: str = Field(..., description="Название группы")
     description: Optional[str] = Field(None, description="Описание группы")
     is_active: bool = Field(default=True, description="Активен ли мониторинг группы")
     max_posts_to_check: int = Field(
-        default=100, description="Максимум постов для проверки"
+        default=100, gte=1, lte=1000, description="Максимум постов для проверки"
     )
 
 
+# 2. Схема для создания новой записи
 class VKGroupCreate(VKGroupBase):
-    """Схема для создания VK группы"""
+    """Схема для создания VK группы в БД."""
 
     vk_id_or_screen_name: str = Field(
         ..., description="ID группы или короткое имя для поиска в VK"
     )
 
 
-class VKGroupUpdate(BaseModel):
-    """Схема для обновления VK группы"""
+# 3. Схема для обновления существующей записи
+class VKGroupUpdate(BaseSchema):
+    """Схема для обновления VK группы. Все поля опциональны."""
 
+    screen_name: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None
-    max_posts_to_check: Optional[int] = None
+    max_posts_to_check: Optional[int] = Field(
+        default=None, gte=1, lte=1000, description="Максимум постов для проверки"
+    )
 
 
-class VKGroupResponse(VKGroupBase, IDMixin, TimestampMixin, BaseSchema):
-    """Схема ответа VK группы"""
+# 4. Схема для возврата данных через API (Read)
+class VKGroupRead(VKGroupBase, IDMixin, TimestampMixin):
+    """Схема для представления VK группы в API ответах."""
 
     vk_id: int = Field(..., description="ID группы в ВК")
     last_parsed_at: Optional[datetime] = Field(
@@ -53,11 +59,19 @@ class VKGroupResponse(VKGroupBase, IDMixin, TimestampMixin, BaseSchema):
         default=0, description="Общее количество найденных комментариев"
     )
     members_count: Optional[int] = Field(None, description="Количество участников")
-    is_closed: bool = Field(default=False, description="Закрытая ли группа")
+    is_closed: Optional[bool] = Field(None, description="Закрытая ли группа")
     photo_url: Optional[str] = Field(None, description="URL аватара группы")
 
 
-class VKGroupStats(BaseModel):
+# 5. Схема для представления данных в базе данных (InDB)
+class VKGroupInDB(VKGroupRead):
+    """Схема, представляющая полную модель группы в БД."""
+
+    pass
+
+
+# Статистика остается без изменений, так как у нее другая цель
+class VKGroupStats(BaseSchema):
     """Статистика по группе"""
 
     group_id: int
