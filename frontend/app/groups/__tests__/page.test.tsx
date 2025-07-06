@@ -131,9 +131,7 @@ describe('GroupsPage', () => {
     renderWithProviders(<GroupsPage />)
 
     // Всего групп
-    expect(
-      screen.getByText(mockGroups.length.toString())
-    ).toBeInTheDocument()
+    expect(screen.getByText(mockGroups.length.toString())).toBeInTheDocument()
     // Активных
     const activeCount = mockGroups.filter((g) => g.is_active).length
     expect(screen.getByText(activeCount.toString())).toBeInTheDocument()

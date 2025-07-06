@@ -43,7 +43,10 @@ export function Header({ className }: HeaderProps) {
     >
       <div className="flex items-center gap-4">
         <nav className="hidden sm:flex items-center text-sm font-medium">
-          <Link href="/dashboard" className="text-slate-400 hover:text-slate-50">
+          <Link
+            href="/dashboard"
+            className="text-slate-400 hover:text-slate-50"
+          >
             Главная
           </Link>
           {breadcrumbs.map((breadcrumb, index) => (

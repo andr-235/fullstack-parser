@@ -146,14 +146,15 @@ describe('KeywordsPage', () => {
     renderWithProviders(<KeywordsPage />)
 
     // Total Keywords
-    expect(
-      screen.getByText(mockKeywords.length.toString())
-    ).toBeInTheDocument()
+    expect(screen.getByText(mockKeywords.length.toString())).toBeInTheDocument()
     // Active Keywords
     const activeKeywords = mockKeywords.filter((k) => k.is_active).length
     expect(screen.getByText(activeKeywords.toString())).toBeInTheDocument()
     // Total Matches
-    const totalMatches = mockKeywords.reduce((sum, k) => sum + k.total_matches, 0)
+    const totalMatches = mockKeywords.reduce(
+      (sum, k) => sum + k.total_matches,
+      0
+    )
     expect(
       screen.getByText(new Intl.NumberFormat('ru-RU').format(totalMatches))
     ).toBeInTheDocument()

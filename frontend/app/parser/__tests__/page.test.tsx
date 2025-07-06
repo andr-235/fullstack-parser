@@ -1,9 +1,4 @@
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-} from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import ParserPage from '../page'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
@@ -114,9 +109,15 @@ const renderWithProviders = (ui: React.ReactElement) => {
 describe('ParserPage', () => {
   beforeEach(() => {
     // Reset mocks
-    mockUseParserState.mockReturnValue({ data: mockStoppedState, isLoading: false })
+    mockUseParserState.mockReturnValue({
+      data: mockStoppedState,
+      isLoading: false,
+    })
     mockUseParserStats.mockReturnValue({ data: mockStats, isLoading: false })
-    mockUseRecentRuns.mockReturnValue({ data: mockRecentRuns, isLoading: false })
+    mockUseRecentRuns.mockReturnValue({
+      data: mockRecentRuns,
+      isLoading: false,
+    })
     mockUseStartParser.mockReturnValue({ mutate: jest.fn(), isPending: false })
     mockUseStopParser.mockReturnValue({ mutate: jest.fn(), isPending: false })
     mockUseGroups.mockReturnValue({
@@ -138,7 +139,9 @@ describe('ParserPage', () => {
     // Stats
     expect(screen.getByText(mockStats.total_runs)).toBeInTheDocument()
     // Recent Runs
-    expect(screen.getByText(mockRecentRuns.items[0].group_name!)).toBeInTheDocument()
+    expect(
+      screen.getByText(mockRecentRuns.items[0].group_name!)
+    ).toBeInTheDocument()
     expect(screen.getByText('Завершено')).toBeInTheDocument()
   })
 
@@ -165,7 +168,10 @@ describe('ParserPage', () => {
 
   it('должна позволять запустить парсер', async () => {
     const startMutate = jest.fn()
-    mockUseStartParser.mockReturnValue({ mutate: startMutate, isPending: false })
+    mockUseStartParser.mockReturnValue({
+      mutate: startMutate,
+      isPending: false,
+    })
     renderWithProviders(<ParserPage />)
 
     const startButton = screen.getByRole('button', { name: /Запустить/i })

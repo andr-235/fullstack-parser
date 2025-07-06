@@ -1,7 +1,12 @@
  M frontend/after.txt
+ M frontend/app/comments/__tests__/page.test.tsx
  M frontend/app/comments/page.tsx
+ M frontend/app/dashboard/__tests__/page.test.tsx
  M frontend/app/dashboard/page.tsx
+ M frontend/app/groups/__tests__/page.test.tsx
+ M frontend/app/keywords/__tests__/page.test.tsx
  M frontend/app/layout.tsx
+ M frontend/app/parser/__tests__/page.test.tsx
  M frontend/app/parser/page.tsx
  M frontend/components/layout/header.tsx
  M frontend/components/ui/button.tsx
