@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 
 import { ReactQueryProvider } from '@/providers/react-query-provider'
@@ -7,14 +7,10 @@ import { Toaster } from 'react-hot-toast'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 
-const inter = Inter({
+const inter = localFont({
+  src: './fonts/Inter-VariableFont_opsz,wght.ttf',
+  display: 'swap',
   variable: '--font-inter',
-  subsets: ['latin'],
-})
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: '--font-jetbrains-mono',
-  subsets: ['latin'],
 })
 
 export const metadata: Metadata = {
@@ -28,10 +24,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ru">
-      <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
-      >
+    <html lang="ru" className="dark">
+      <body className={`${inter.variable} bg-slate-900 font-sans text-slate-50`}>
         <ReactQueryProvider>
           <div className="flex min-h-screen">
             <Sidebar />

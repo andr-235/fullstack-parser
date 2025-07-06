@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import {
   useParserState,
-  useRecentRuns,
   useParserStats,
   useStartParser,
   useStopParser,
+  useRecentRuns,
 } from '@/hooks/use-parser'
 import { useGroups } from '@/hooks/use-groups'
 import {
@@ -34,273 +34,213 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { formatDuration, formatRelativeTime } from '@/lib/utils'
 import {
   Play,
-  Square,
-  Clock,
-  Activity,
-  AlertCircle,
-  CheckCircle,
-  Info,
-  RefreshCw,
-  BarChart,
+  Pause,
+  Server,
+  Timer,
+  CheckCircle2,
+  XCircle,
   History,
-  HardDrive,
 } from 'lucide-react'
+import { Progress } from '@/components/ui/progress'
+import { formatDistanceToNow } from 'date-fns'
+import { ru } from 'date-fns/locale'
+import type { ParseTaskResponse } from '@/types/api'
 
-const StatusInfo = ({
-  status,
-}: {
-  status: 'running' | 'completed' | 'failed' | 'stopped'
-}) => {
-  const statusConfig: {
-    [key in typeof status]: {
-      icon: JSX.Element
-      label: string
-      variant: BadgeProps['variant']
-    }
-  } = {
-    running: {
-      icon: <Activity className="h-4 w-4 text-blue-500" />,
-      label: 'Выполняется',
-      variant: 'default',
-    },
-    completed: {
-      icon: <CheckCircle className="h-4 w-4 text-green-500" />,
-      label: 'Завершено',
-      variant: 'secondary',
-    },
-    failed: {
-      icon: <AlertCircle className="h-4 w-4 text-destructive" />,
-      label: 'Ошибка',
-      variant: 'destructive',
-    },
-    stopped: {
-      icon: <Info className="h-4 w-4 text-muted-foreground" />,
-      label: 'Остановлен',
-      variant: 'outline',
-    },
-  }
+const statusConfig: Record<
+  string,
+  { label: string; variant: BadgeProps['variant']; icon: React.ElementType }
+> = {
+  running: { label: 'В работе', variant: 'success', icon: Play },
+  completed: { label: 'Завершен', variant: 'default', icon: CheckCircle2 },
+  failed: { label: 'Ошибка', variant: 'destructive', icon: XCircle },
+  stopped: { label: 'Остановлен', variant: 'secondary', icon: Pause },
+}
+
+const ParserStatus = ({ status }: { status: string }) => {
   const config = statusConfig[status] || statusConfig.stopped
   return (
     <Badge variant={config.variant} className="flex items-center gap-1.5">
-      {config.icon}
+      <config.icon className="h-3 w-3" />
       <span>{config.label}</span>
     </Badge>
   )
 }
 
 export default function ParserPage() {
-  const [selectedGroup, setSelectedGroup] = useState<string | undefined>()
-
-  const {
-    data: state,
-    isLoading: isLoadingState,
-    refetch: refetchState,
-  } = useParserState()
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('')
+  const { data: state, isLoading: isLoadingState } = useParserState()
   const { data: stats, isLoading: isLoadingStats } = useParserStats()
-  const { data: runs, isLoading: isLoadingRuns } = useRecentRuns()
-  const { data: groups } = useGroups({})
-
-  const startParser = useStartParser()
-  const stopParser = useStopParser()
+  const { data: history, isLoading: isLoadingHistory } = useRecentRuns()
+  const { data: groupsData } = useGroups()
+  const startParserMutation = useStartParser()
+  const stopParserMutation = useStopParser()
 
   const handleStart = () => {
-    if (selectedGroup) {
-      startParser.mutate({ group_id: Number(selectedGroup) })
+    if (selectedGroupId) {
+      startParserMutation.mutate({ group_id: Number(selectedGroupId) })
     }
   }
 
-  const handleStop = () => {
-    stopParser.mutate()
-  }
+  const isActionInProgress =
+    isLoadingState ||
+    startParserMutation.isPending ||
+    stopParserMutation.isPending
 
-  const isLoading =
-    isLoadingState || startParser.isPending || stopParser.isPending
+  const groups = groupsData?.items || []
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <HardDrive /> Управление парсером
-          </CardTitle>
-          <CardDescription>
-            Запуск и мониторинг процесса сбора комментариев.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <h3 className="font-semibold text-muted-foreground">Статус</h3>
-            <div className="flex items-center gap-4">
-              {isLoadingState ? (
-                <LoadingSpinner />
-              ) : (
-                <StatusInfo status={state?.status || 'stopped'} />
-              )}
+    <div className="grid gap-6 md:grid-cols-3">
+      {/* Control Panel */}
+      <div className="md:col-span-1 space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Управление парсером</CardTitle>
+            <CardDescription>
+              Запустите или остановите процесс парсинга.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">
+              <span className="text-sm font-medium">Статус</span>
+              <ParserStatus status={state?.status || 'stopped'} />
             </div>
-            <h3 className="font-semibold text-muted-foreground pt-4">Запуск</h3>
-            <div className="flex gap-4">
+
+            {state?.status === 'running' && state.task ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">
+                  Обработка: {state.task.group_name}
+                </p>
+                <Progress value={state.task.progress} className="w-full" />
+                <p className="text-xs text-slate-400">
+                  {state.task.posts_processed} постов обработано
+                </p>
+              </div>
+            ) : (
               <Select
-                value={selectedGroup}
-                onValueChange={setSelectedGroup}
-                disabled={state?.status === 'running'}
+                onValueChange={setSelectedGroupId}
+                defaultValue={selectedGroupId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Выберите группу для парсинга" />
+                  <SelectValue placeholder="Выберите группу" />
                 </SelectTrigger>
                 <SelectContent>
-                  {groups?.items.map((g) => (
-                    <SelectItem key={g.id} value={String(g.id)}>
-                      {g.name}
+                  {groups.map((group) => (
+                    <SelectItem key={group.id} value={String(group.id)}>
+                      {group.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {state?.status !== 'running' ? (
-                <Button
-                  onClick={handleStart}
-                  disabled={!selectedGroup || startParser.isPending}
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Запустить
-                </Button>
-              ) : (
-                <Button
-                  variant="destructive"
-                  onClick={handleStop}
-                  disabled={stopParser.isPending}
-                >
-                  <Square className="h-4 w-4 mr-2" />
-                  Остановить
-                </Button>
-              )}
-            </div>
-          </div>
-          <div className="space-y-4">
-            <h3 className="font-semibold text-muted-foreground">
-              Текущая задача
-            </h3>
-            {state?.status === 'running' && state.task ? (
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <p>
-                  <strong>Группа:</strong> {state.task.group_name}
-                </p>
-                <p>
-                  <strong>Прогресс:</strong> {state.task.progress.toFixed(2)}%
-                </p>
-                <p>
-                  <strong>Обработано постов:</strong>{' '}
-                  {state.task.posts_processed}
-                </p>
-              </div>
-            ) : (
-              <p className="text-muted-foreground italic">Нет активных задач</p>
             )}
-          </div>
-        </CardContent>
-      </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <History /> Недавние запуски
-            </CardTitle>
-            <Button variant="ghost" size="icon" onClick={() => refetchState()}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {isLoadingRuns ? (
-              <LoadingSpinner />
+            {state?.status === 'running' ? (
+              <Button
+                className="w-full"
+                variant="destructive"
+                onClick={() => stopParserMutation.mutate()}
+                disabled={isActionInProgress}
+              >
+                <Pause className="mr-2 h-4 w-4" />
+                Остановить
+              </Button>
             ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Статус</TableHead>
-                      <TableHead>Группа</TableHead>
-                      <TableHead>Длительность</TableHead>
-                      <TableHead>Ошибки</TableHead>
-                      <TableHead>Время</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {runs?.items.map((run) => (
-                      <TableRow key={run.task_id}>
-                        <TableCell>
-                          <StatusInfo status={run.status} />
-                        </TableCell>
-                        <TableCell>{run.group_name || 'N/A'}</TableCell>
-                        <TableCell>
-                          {run.stats?.duration_seconds
-                            ? formatDuration(run.stats.duration_seconds)
-                            : '-'}
-                        </TableCell>
-                        <TableCell>
-                          {run.error_message ? (
-                            <span className="text-destructive">Да</span>
-                          ) : (
-                            'Нет'
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {formatRelativeTime(run.started_at)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <Button
+                className="w-full"
+                onClick={handleStart}
+                disabled={!selectedGroupId || isActionInProgress}
+              >
+                <Play className="mr-2 h-4 w-4" />
+                Запустить
+              </Button>
             )}
           </CardContent>
         </Card>
+
+        {/* Stats */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BarChart /> Общая статистика
+              <Server className="h-5 w-5" /> Статистика
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {isLoadingStats ? (
               <LoadingSpinner />
             ) : (
-              <div className="space-y-4">
+              <>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Всего запусков</span>
-                  <strong>{stats?.total_runs}</strong>
+                  <span className="text-slate-400">Всего запусков</span>
+                  <span>{stats?.total_runs || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Успешных запусков
+                  <span className="text-slate-400">Успешных</span>
+                  <span className="text-green-500">
+                    {stats?.successful_runs || 0}
                   </span>
-                  <strong>{stats?.successful_runs}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Среднее время (сек)
-                  </span>
-                  <strong>
-                    {stats?.average_duration
-                      ? stats.average_duration.toFixed(2)
-                      : 0}
-                  </strong>
+                  <span className="text-slate-400">Неуспешных</span>
+                  <span className="text-red-500">{stats?.failed_runs || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Постов обработано
+                  <span className="text-slate-400">Среднее время</span>
+                  <span>
+                    {Math.round(stats?.average_duration || 0)} сек
                   </span>
-                  <strong>{stats?.total_posts_processed}</strong>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Комментариев найдено
-                  </span>
-                  <strong>{stats?.total_comments_found}</strong>
-                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* History */}
+      <div className="md:col-span-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" /> История запусков
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingHistory ? (
+              <div className="flex justify-center items-center h-64">
+                <LoadingSpinner />
               </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Группа</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead>Длительность</TableHead>
+                    <TableHead>Время</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history?.items?.map((task: ParseTaskResponse) => (
+                    <TableRow key={task.task_id}>
+                      <TableCell>{task.group_name}</TableCell>
+                      <TableCell>
+                        <ParserStatus status={task.status} />
+                      </TableCell>
+                      <TableCell>
+                        {task.stats?.duration_seconds
+                          ? `${Math.round(task.stats.duration_seconds)} сек`
+                          : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {formatDistanceToNow(new Date(task.started_at), {
+                          addSuffix: true,
+                          locale: ru,
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
