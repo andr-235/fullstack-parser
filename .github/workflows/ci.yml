@@ -57,6 +57,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     uses: ./.github/workflows/reusable-backend-test.yml
+    permissions:
+      contents: write
     secrets: inherit
 
   frontend-test:
@@ -64,6 +66,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     uses: ./.github/workflows/reusable-frontend-test.yml
+    permissions:
+      contents: write
     secrets: inherit
 
   docker-test:
