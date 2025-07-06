@@ -1,34 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import DashboardPage from '../page'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useGlobalStats } from '@/hooks/use-stats'
 
 jest.mock('@/hooks/use-stats', () => ({
-  useDashboardStats: jest.fn(() => ({
-    data: {
-      today_comments: 0,
-      today_matches: 0,
-      week_comments: 0,
-      week_matches: 0,
-      top_groups: [],
-      top_keywords: [],
-      recent_activity: [],
-    },
-    isLoading: false,
-    error: null,
-  })),
-  useGlobalStats: jest.fn(() => ({
-    data: {
-      total_groups: 0,
-      active_groups: 0,
-      total_keywords: 0,
-      active_keywords: 0,
-      total_comments: 0,
-      comments_with_keywords: 0,
-    },
-    isLoading: false,
-    error: null,
-  })),
+  useGlobalStats: jest.fn(),
 }))
 
 const queryClient = new QueryClient()
@@ -40,8 +16,51 @@ const renderWithProviders = (ui: React.ReactElement) => {
 }
 
 describe('DashboardPage', () => {
-  it('должна рендериться без ошибок', () => {
+  beforeEach(() => {
+    // Сбрасываем моки перед каждым тестом
+    ;(useGlobalStats as jest.Mock).mockClear()
+  })
+
+  it('должна отображать спиннер загрузки', () => {
+    ;(useGlobalStats as jest.Mock).mockReturnValue({
+      data: null,
+      isLoading: true,
+      error: null,
+    })
     renderWithProviders(<DashboardPage />)
+    expect(screen.getByRole('status')).toBeInTheDocument()
+  })
+
+  it('должна отображать сообщение об ошибке', () => {
+    const errorMessage = 'Network Error'
+    ;(useGlobalStats as jest.Mock).mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: new Error(errorMessage),
+    })
+    renderWithProviders(<DashboardPage />)
+    expect(screen.getByText('Ошибка')).toBeInTheDocument()
+    expect(
+      screen.getByText(`Не удалось загрузить статистику: ${errorMessage}`)
+    ).toBeInTheDocument()
+  })
+
+  it('должна рендериться без ошибок и отображать заголовки', () => {
+    ;(useGlobalStats as jest.Mock).mockReturnValue({
+      data: {},
+      isLoading: false,
+      error: null,
+    })
+    renderWithProviders(<DashboardPage />)
+    expect(
+      screen.getByRole('heading', { name: /Группы/i })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /Комментарии/i })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /Ключевые слова/i })
+    ).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: /Активность комментариев/i })
     ).toBeInTheDocument()
@@ -50,11 +69,8 @@ describe('DashboardPage', () => {
   it('должна правильно отображать статистику', () => {
     const mockStats = {
       total_groups: 10,
-      active_groups: 5,
-      total_keywords: 100,
-      active_keywords: 50,
       total_comments: 1000,
-      comments_with_keywords: 200,
+      total_keywords: 100,
     }
     ;(useGlobalStats as jest.Mock).mockReturnValue({
       data: mockStats,
@@ -64,8 +80,30 @@ describe('DashboardPage', () => {
 
     renderWithProviders(<DashboardPage />)
 
-    expect(screen.getByText('10')).toBeInTheDocument()
-    expect(screen.getByText('1000')).toBeInTheDocument()
-    expect(screen.getByText('100')).toBeInTheDocument()
+    const groupsCard = screen.getByRole('heading', { name: /Группы/i })
+      .parentElement?.parentElement
+    const commentsCard = screen.getByRole('heading', { name: /Комментарии/i })
+      .parentElement?.parentElement
+    const keywordsCard = screen.getByRole('heading', {
+      name: /Ключевые слова/i,
+    }).parentElement?.parentElement
+
+    expect(within(groupsCard as HTMLElement).getByText('10')).toBeInTheDocument()
+    expect(
+      within(commentsCard as HTMLElement).getByText('1000')
+    ).toBeInTheDocument()
+    expect(
+      within(keywordsCard as HTMLElement).getByText('100')
+    ).toBeInTheDocument()
+  })
+
+  it('должна отображать заглушку для графика', () => {
+    ;(useGlobalStats as jest.Mock).mockReturnValue({
+      data: {},
+      isLoading: false,
+      error: null,
+    })
+    renderWithProviders(<DashboardPage />)
+    expect(screen.getByText('(График в разработке)')).toBeInTheDocument()
   })
 })
