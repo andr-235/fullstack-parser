@@ -57,12 +57,14 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     uses: ./.github/workflows/reusable-backend-test.yml
+    secrets: inherit
 
   frontend-test:
     name: ⚛️ Frontend Tests
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     uses: ./.github/workflows/reusable-frontend-test.yml
+    secrets: inherit
 
   docker-test:
     name: 🐳 Docker Build Test
@@ -100,26 +102,53 @@ jobs:
         if: always()
         run: docker-compose down -v
 
+  security-scan:
+    name: 🛡️ Security Scan
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
+    uses: ./.github/workflows/security.yml
+    secrets: inherit
+
   quality-gate:
     name: 🎯 Quality Gate
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test, docker-test]
     if: always()
     steps:
-      - name: Check job statuses
+      - name: Check test statuses
+        if: |
+          (needs.backend-test.result != 'success' && needs.backend-test.result != 'skipped') ||
+          (needs.frontend-test.result != 'success' && needs.frontend-test.result != 'skipped') ||
+          (needs.docker-test.result != 'success' && needs.docker-test.result != 'skipped')
         run: |
-          if [[ "${{ needs.backend-test.result }}" == "failure" || "${{ needs.frontend-test.result }}" == "failure" || "${{ needs.docker-test.result }}" == "failure" ]]; then
-            echo "❌ Quality gate failed due to test failures."
-            exit 1
-          else
-            echo "✅ Quality gate passed."
-          fi
+          echo "❌ Quality gate failed due to test failures."
+          exit 1
+      - name: Report success
+        run: echo "✅ Quality gate passed."
+  
+  security-summary:
+    name: 🔒 Security Summary
+    runs-on: ubuntu-latest
+    needs: [security-scan]
+    if: always()
+    steps:
+      - name: Check security scan status
+        if: needs.security-scan.result != 'success'
+        run: |
+          echo "❌ Security summary failed."
+          exit 1
+      - name: Report success
+        run: echo "✅ Security summary passed."
 
   ci-success:
     name: ✅ CI Success
     runs-on: ubuntu-latest
-    needs: [quality-gate, integration-test]
-    if: always() && needs.quality-gate.result == 'success' && (needs.integration-test.result == 'success' || needs.integration-test.result == 'skipped')
+    needs: [quality-gate, integration-test, security-summary]
+    if: |
+      always() &&
+      needs.quality-gate.result == 'success' &&
+      (needs.integration-test.result == 'success' || needs.integration-test.result == 'skipped') &&
+      needs.security-summary.result == 'success'
     steps:
       - name: Report success
         run: echo "🎉 All CI checks passed successfully!" 

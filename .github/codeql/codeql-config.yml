@@ -1,19 +1,11 @@
-name: "CodeQL configuration"
+name: "Default CodeQL configuration"
 
 paths-ignore:
-  - '**/test/**'
-  - '**/tests/**'
-  - '**/node_modules/**'
-  - '**/dist/**'
-  - '**/build/**'
-  - 'backend/.venv/'
-  - '**/*.test.js'
-  - '**/*.spec.js'
-  - '**/*.test.ts'
-  - '**/*.spec.ts'
-  - '**/*.test.tsx'
-  - '**/*.spec.tsx'
+  - '**/node_modules'
+  - '**/test'
+  - '**/tests'
+  - 'docs'
+  - 'frontend/public'
 
-disable-default-queries: false
 queries:
   - uses: security-and-quality 

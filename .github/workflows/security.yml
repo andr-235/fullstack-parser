@@ -1,205 +1,113 @@
-name: 🛡️ Security Scanning
+name: '🛡️ Security Scanning'
 
 on:
-  push:
-    branches: [ main, develop ]
-    paths:
-      - 'backend/**'
-      - 'frontend/**'
-      - '**/Dockerfile'
-      - 'docker-compose*.yml'
-      - 'pyproject.toml'
-      - 'package.json'
-  pull_request:
-    branches: [ main, develop ]
-  schedule:
-    - cron: '30 5 * * 1'
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  security-events: write
-  actions: read # for security-summary
+  workflow_call:
+    inputs:
+      image_name:
+        description: 'Docker image name'
+        required: false
+        type: string
+        default: 'test-image'
 
 jobs:
-  # ================================
-  # CODEQL ANALYSIS
-  # ================================
-  codeql:
-    name: 🔍 CodeQL Analysis
+  trufflehog:
+    name: TruffleHog Scan
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.pull_request.base.sha || 'main' }}
+          head: HEAD
+          extra_args: --debug --fail
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
     strategy:
       fail-fast: false
       matrix:
         language: [ 'python', 'javascript' ]
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
           config-file: ./.github/codeql/codeql-config.yml
-
-      - name: Install poetry for autobuild
-        if: matrix.language == 'python'
-        run: pip install poetry==1.8.2
-
       - name: Autobuild
-        if: matrix.language == 'python'
-        run: |
-          cd backend
-          poetry install --no-root --no-interaction
-
+        uses: github/codeql-action/autobuild@v3
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
 
-  # ================================
-  # TRIVY FILESYSTEM SCAN
-  # ================================
-  trivy:
-    name: 🛡️ Trivy Filesystem Scan
+  docker-security-scan:
+    name: Docker Security Scan
     runs-on: ubuntu-latest
+    needs: [codeql] # Depends on codeql to run after it
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Run Trivy vulnerability scanner in repo mode
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-fs-results.sarif'
-          severity: 'HIGH,CRITICAL'
-
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-fs-results.sarif'
-
-  # ================================
-  # DEPENDENCY & SECRET SCANNING
-  # ================================
-  dependency-scan:
-    name: 📦 Dependency Scanning
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Poetry for backend scan
-        run: pip install poetry==1.8.2
-
-      - name: Python Dependency Scan (safety)
-        run: |
-          pip install safety
-          cd backend
-          poetry export -f requirements.txt --output requirements.txt --without-hashes
-          safety check -r requirements.txt --bare --output json > ../safety-report.json || true
-
-      - name: Node.js Dependency Scan (pnpm audit)
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.12.4
-      - run: |
-          cd frontend
-          pnpm audit --json > ../pnpm-audit.json || true
-
-  secret-scan:
-    name: 🔐 Secret Scanning
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run TruffleHog OSS
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.pull_request.base.ref || 'main' }}
-          head: HEAD
-          extra_args: --only-verified
-
-  # ================================
-  # DOCKER IMAGE SCANNING
-  # ================================
-  docker-scan:
-    name: 🐳 Docker Security Scan
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [backend, frontend]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Build image for scan
+      - name: Build Docker image for scanning
         uses: docker/build-push-action@v5
         with:
-          context: ./${{ matrix.service }}
-          load: true
+          context: backend
+          file: backend/Dockerfile
           push: false
-          tags: ${{ matrix.service }}:security-scan
-
-      - name: Run Trivy vulnerability scanner on Docker image
+          load: true # Important: makes the image available to subsequent steps
+          tags: ${{ inputs.image_name }}:${{ github.sha }}
+      - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ matrix.service }}:security-scan
-          format: 'sarif'
-          output: 'trivy-${{ matrix.service }}-results.sarif'
+          image-ref: ${{ inputs.image_name }}:${{ github.sha }}
           ignore-unfixed: true
-          severity: 'HIGH,CRITICAL'
-
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          exit-code: '1'
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-${{ matrix.service }}-results.sarif'
+          sarif_file: 'trivy-results.sarif'
 
-  # ================================
-  # SECURITY SUMMARY
-  # ================================
   security-summary:
     name: 📊 Security Summary
     runs-on: ubuntu-latest
-    needs: [codeql, trivy, dependency-scan, secret-scan, docker-scan]
+    needs: [trufflehog, codeql, docker-security-scan]
     if: always()
     steps:
-      - name: Check job statuses
+      - name: Aggregate results
+        id: summary
         run: |
-          echo "### 🛡️ Security Scan Summary" >> $GITHUB_STEP_SUMMARY
-          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| CodeQL Analysis | ${{ needs.codeql.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Trivy Filesystem Scan | ${{ needs.trivy.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Dependency Scanning | ${{ needs.dependency-scan.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Secret Scanning | ${{ needs.secret-scan.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker Security Scan | ${{ needs.docker-scan.result }} |" >> $GITHUB_STEP_SUMMARY
-      
-      - name: Determine final status
-        id: final_status
-        run: |
-          if [[ "${{ needs.codeql.result }}" == "failure" || \
-                "${{ needs.trivy.result }}" == "failure" || \
-                "${{ needs.dependency-scan.result }}" == "failure" || \
-                "${{ needs.secret-scan.result }}" == "failure" || \
-                "${{ needs.docker-scan.result }}" == "failure" ]]; then
-            echo "status=failure" >> $GITHUB_OUTPUT
-          else
-            echo "status=success" >> $GITHUB_OUTPUT
+          SUMMARY_TEXT=""
+          if [[ "${{ needs.trufflehog.result }}" != "success" ]]; then
+            SUMMARY_TEXT="${SUMMARY_TEXT}TruffleHog found secrets.\n"
           fi
-          
-      - name: Report final status
+          if [[ "${{ needs.codeql.result }}" != "success" ]]; then
+            SUMMARY_TEXT="${SUMMARY_TEXT}CodeQL found vulnerabilities.\n"
+          fi
+          if [[ "${{ needs.docker-security-scan.result }}" != "success" ]]; then
+            SUMMARY_TEXT="${SUMMARY_TEXT}Docker scan found vulnerabilities.\n"
+          fi
+          echo "summary_text<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$SUMMARY_TEXT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Report security summary
         run: |
-          if [[ "${{ steps.final_status.outputs.status }}" == "failure" ]]; then
-            echo "❌ At least one security check failed."
-          exit 1 
+          if [[ -n "${{ steps.summary.outputs.summary_text }}" ]]; then
+            echo "❌ Security summary:"
+            echo -e "${{ steps.summary.outputs.summary_text }}"
+            exit 1
           else
             echo "✅ All security checks passed."
           fi 
