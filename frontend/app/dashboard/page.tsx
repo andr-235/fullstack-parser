@@ -1,6 +1,11 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { useGlobalStats } from '@/hooks/use-stats'
 import { Users, MessageSquare, KeyRound, Activity } from 'lucide-react'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -24,9 +29,7 @@ export default function DashboardPage() {
             <CardTitle className="text-red-500">Ошибка</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>
-              Не удалось загрузить статистику. Попробуйте обновить страницу.
-            </p>
+            <p>Не удалось загрузить статистику. Попробуйте обновить страницу.</p>
             <p className="text-sm text-slate-400 mt-2">
               {error instanceof Error ? error.message : String(error)}
             </p>
