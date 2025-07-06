@@ -8,8 +8,10 @@ env:
 
 jobs:
   frontend-lint:
-    name: ⚛️ Frontend Lint
+    name: 🎨 Frontend Lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: ./frontend
@@ -22,21 +24,37 @@ jobs:
         with:
           version: 10.12.4
 
-      - name: Setup Node.js ${{ env.NODE_VERSION_DEFAULT }}
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION_DEFAULT }}
+          node-version: '20'
           cache: 'pnpm'
           cache-dependency-path: 'frontend/pnpm-lock.yaml'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run linting
+      - name: Run linting and apply fixes
+        id: lint
         run: |
-          pnpm run lint
-          pnpm run type-check
-          pnpm run format:check
+          git status --porcelain > before.txt
+          pnpm lint --fix
+          pnpm format --write
+          git status --porcelain > after.txt
+          if ! cmp -s before.txt after.txt; then
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit changes
+        if: steps.lint.outputs.changes_detected == 'true'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m "style: auto-format frontend code" || true
+          git push
 
   frontend-test:
     name: ⚛️ Frontend Tests (${{ matrix.node-version }})

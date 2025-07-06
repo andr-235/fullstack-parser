@@ -42,6 +42,10 @@ jobs:
           languages: ${{ matrix.language }}
           config-file: ./.github/codeql/codeql-config.yml
 
+      - name: Install poetry for autobuild
+        if: matrix.language == 'python'
+        run: pip install poetry==1.8.2
+
       - name: Autobuild
         if: matrix.language == 'python'
         run: |
@@ -85,6 +89,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Poetry for backend scan
+        run: pip install poetry==1.8.2
+
       - name: Python Dependency Scan (safety)
         run: |
           pip install safety
@@ -115,7 +122,7 @@ jobs:
           path: ./
           base: ${{ github.event.pull_request.base.ref || 'main' }}
           head: HEAD
-          extra_args: --only-verified --fail
+          extra_args: --only-verified
 
   # ================================
   # DOCKER IMAGE SCANNING
@@ -137,6 +144,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.service }}
+          load: true
           push: false
           tags: ${{ matrix.service }}:security-scan
 

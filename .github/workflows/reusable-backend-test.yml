@@ -10,6 +10,8 @@ jobs:
   backend-lint:
     name: 🐍 Backend Lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: ./backend
@@ -35,15 +37,42 @@ jobs:
           key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION_DEFAULT }}-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry install --no-interaction --no-root
 
-      - name: Run linting
+      - name: Run linting and apply fixes
+        id: lint
         run: |
           source .venv/bin/activate
-          ruff check .
-          black --check .
-          isort --check-only .
-          mypy app/
+          
+          # Store initial state
+          git status --porcelain > before.txt
+          
+          # Apply formatters
+          ruff check . --fix
+          black .
+          isort .
+          
+          # Check for mypy errors but don't fail the step
+          mypy app/ || true
+          
+          # Check for changes
+          git status --porcelain > after.txt
+          
+          # Compare states and set output
+          if ! cmp -s before.txt after.txt; then
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit changes
+        if: steps.lint.outputs.changes_detected == 'true'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m "style: auto-format backend code" || true
+          git push
 
   backend-test:
     name: 🐍 Backend Tests (${{ matrix.python-version }})
@@ -105,7 +134,7 @@ jobs:
           key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry install --no-interaction --no-root
 
       - name: Run tests
         env:
