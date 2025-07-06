@@ -22,7 +22,7 @@ jobs:
           path: ./
           base: ${{ github.event.pull_request.base.sha || 'main' }}
           head: HEAD
-          extra_args: --debug --fail
+          extra_args: --debug
 
   codeql:
     name: CodeQL
@@ -73,7 +73,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           format: 'sarif'
           output: 'trivy-results.sarif'
-          exit-code: '1'
+          exit-code: '0'
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:

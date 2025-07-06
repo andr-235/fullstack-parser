@@ -16,8 +16,14 @@ jobs:
       run:
         working-directory: ./backend
     steps:
+      - name: Get branch name
+        id: get_branch
+        run: echo "branch_name=${{ github.head_ref || github.ref_name }}" >> $GITHUB_OUTPUT
+
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.get_branch.outputs.branch_name }}
 
       - name: Set up Python ${{ env.PYTHON_VERSION_DEFAULT }}
         uses: actions/setup-python@v5
@@ -71,8 +77,8 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add .
-          git commit -m "style: auto-format backend code" || true
-          git push
+          git commit -m "style: auto-format backend code"
+          git push origin HEAD:${{ steps.get_branch.outputs.branch_name }}
 
   backend-test:
     name: 🐍 Backend Tests (${{ matrix.python-version }})
