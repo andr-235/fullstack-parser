@@ -101,12 +101,12 @@ jobs:
       - name: Start services
         run: |
           cp env.example .env
-          docker-compose up -d --build
+          docker compose up -d --build
       - name: Wait for services
         run: sleep 30 && curl -f http://localhost:8000/api/v1/health && curl -f http://localhost:3000
       - name: Cleanup
         if: always()
-        run: docker-compose down -v
+        run: docker compose down -v
 
   security-scan:
     name: 🛡️ Security Scan
