@@ -101,7 +101,7 @@ jobs:
 
       - name: Run tests
         working-directory: ./frontend
-        run: pnpm test -- --passWithNoTests --watchAll=false
+        run: pnpm test --passWithNoTests --watchAll=false
 
       - name: Upload coverage to Codecov
         if: false
