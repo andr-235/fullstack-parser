@@ -12,9 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    defaults:
-      run:
-        working-directory: ./backend
     steps:
       - name: Get branch name
         id: get_branch
@@ -43,9 +40,11 @@ jobs:
           key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION_DEFAULT }}-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install dependencies
+        working-directory: ./backend
         run: poetry install --no-interaction --no-root
 
       - name: Run linting and apply fixes
+        working-directory: ./backend
         id: lint
         run: |
           source .venv/bin/activate
@@ -72,6 +71,7 @@ jobs:
           fi
 
       - name: Commit changes
+        working-directory: ./backend
         if: steps.lint.outputs.changes_detected == 'true'
         run: |
           git config --global user.name 'github-actions[bot]'
@@ -114,10 +114,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-    defaults:
-      run:
-        working-directory: ./backend
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -140,9 +136,11 @@ jobs:
           key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install dependencies
+        working-directory: ./backend
         run: poetry install --no-interaction --no-root
 
       - name: Run tests
+        working-directory: ./backend
         env:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
