@@ -117,6 +117,7 @@ jobs:
       contents: read
       security-events: write
       pull-requests: write
+      actions: read
     secrets: inherit
 
   quality-gate:
