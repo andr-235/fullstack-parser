@@ -147,20 +147,22 @@ export default function KeywordsPage() {
       return
     }
 
-    toast.promise(
-      updateKeyword.mutateAsync({
-        keywordId,
-        data: { word: editWord.trim() },
-      }),
-      {
-        loading: 'Сохраняем…',
-        success: 'Сохранено',
-        error: (err: Error) => err.message,
-      }
-    ).then(() => {
-      setEditingKeywordId(null)
-      setEditWord('')
-    })
+    toast
+      .promise(
+        updateKeyword.mutateAsync({
+          keywordId,
+          data: { word: editWord.trim() },
+        }),
+        {
+          loading: 'Сохраняем…',
+          success: 'Сохранено',
+          error: (err: Error) => err.message,
+        }
+      )
+      .then(() => {
+        setEditingKeywordId(null)
+        setEditWord('')
+      })
   }
 
   const handleClearFilters = () => {
@@ -484,7 +486,11 @@ export default function KeywordsPage() {
                             'Сохранить'
                           )}
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={handleCancelEditing}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleCancelEditing}
+                        >
                           Отмена
                         </Button>
                       </>

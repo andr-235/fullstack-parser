@@ -1,9 +1,9 @@
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query'
 import { api, createQueryKey } from '@/lib/api'
-import type { 
+import type {
   VKCommentResponse,
   CommentSearchParams,
-  PaginationParams 
+  PaginationParams,
 } from '@/types/api'
 
 /**
@@ -23,11 +23,11 @@ export function useComments(params?: CommentSearchParams & PaginationParams) {
 export function useInfiniteComments(filters?: CommentSearchParams) {
   return useInfiniteQuery({
     queryKey: ['comments', 'infinite', filters],
-    queryFn: ({ pageParam = 0 }) => 
-      api.getComments({ 
-        ...filters, 
-        skip: pageParam, 
-        limit: 20 
+    queryFn: ({ pageParam = 0 }) =>
+      api.getComments({
+        ...filters,
+        skip: pageParam,
+        limit: 20,
       }),
     getNextPageParam: (lastPage, pages) => {
       const totalLoaded = pages.length * 20
@@ -48,4 +48,4 @@ export function useCommentWithKeywords(commentId: number) {
     enabled: !!commentId,
     staleTime: 5 * 60 * 1000,
   })
-} 
+}

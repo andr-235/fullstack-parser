@@ -53,67 +53,104 @@ class APIClient {
 
   // VK Groups API
   async getGroups(params?: PaginationParams & { active_only?: boolean }) {
-    const { data } = await this.client.get<PaginatedResponse<VKGroupResponse>>('/groups/', {
-      params,
-    })
+    const { data } = await this.client.get<PaginatedResponse<VKGroupResponse>>(
+      '/groups/',
+      {
+        params,
+      }
+    )
     return data
   }
 
   async getGroup(groupId: number) {
-    const { data } = await this.client.get<VKGroupResponse>(`/groups/${groupId}`)
+    const { data } = await this.client.get<VKGroupResponse>(
+      `/groups/${groupId}`
+    )
     return data
   }
 
   async createGroup(groupData: VKGroupCreate) {
-    const { data } = await this.client.post<VKGroupResponse>('/groups/', groupData)
+    const { data } = await this.client.post<VKGroupResponse>(
+      '/groups/',
+      groupData
+    )
     return data
   }
 
   async updateGroup(groupId: number, updateData: VKGroupUpdate) {
-    const { data } = await this.client.put<VKGroupResponse>(`/groups/${groupId}`, updateData)
+    const { data } = await this.client.put<VKGroupResponse>(
+      `/groups/${groupId}`,
+      updateData
+    )
     return data
   }
 
   async deleteGroup(groupId: number) {
-    const { data } = await this.client.delete<StatusResponse>(`/groups/${groupId}`)
+    const { data } = await this.client.delete<StatusResponse>(
+      `/groups/${groupId}`
+    )
     return data
   }
 
   async getGroupStats(groupId: number) {
-    const { data } = await this.client.get<VKGroupStats>(`/groups/${groupId}/stats`)
+    const { data } = await this.client.get<VKGroupStats>(
+      `/groups/${groupId}/stats`
+    )
     return data
   }
 
   // Keywords API
-  async getKeywords(params?: PaginationParams & { active_only?: boolean; category?: string; q?: string }) {
-    const { data } = await this.client.get<PaginatedResponse<KeywordResponse>>('/keywords/', {
-      params,
-    })
+  async getKeywords(
+    params?: PaginationParams & {
+      active_only?: boolean
+      category?: string
+      q?: string
+    }
+  ) {
+    const { data } = await this.client.get<PaginatedResponse<KeywordResponse>>(
+      '/keywords/',
+      {
+        params,
+      }
+    )
     return data
   }
 
   async getKeyword(keywordId: number) {
-    const { data } = await this.client.get<KeywordResponse>(`/keywords/${keywordId}`)
+    const { data } = await this.client.get<KeywordResponse>(
+      `/keywords/${keywordId}`
+    )
     return data
   }
 
   async createKeyword(keywordData: KeywordCreate) {
-    const { data } = await this.client.post<KeywordResponse>('/keywords/', keywordData)
+    const { data } = await this.client.post<KeywordResponse>(
+      '/keywords/',
+      keywordData
+    )
     return data
   }
 
   async updateKeyword(keywordId: number, updateData: KeywordUpdate) {
-    const { data } = await this.client.put<KeywordResponse>(`/keywords/${keywordId}`, updateData)
+    const { data } = await this.client.put<KeywordResponse>(
+      `/keywords/${keywordId}`,
+      updateData
+    )
     return data
   }
 
   async deleteKeyword(keywordId: number) {
-    const { data } = await this.client.delete<StatusResponse>(`/keywords/${keywordId}`)
+    const { data } = await this.client.delete<StatusResponse>(
+      `/keywords/${keywordId}`
+    )
     return data
   }
 
   async createKeywordsBulk(keywordsData: KeywordCreate[]) {
-    const { data } = await this.client.post<KeywordResponse[]>('/keywords/bulk/', keywordsData)
+    const { data } = await this.client.post<KeywordResponse[]>(
+      '/keywords/bulk/',
+      keywordsData
+    )
     return data
   }
 
@@ -124,20 +161,27 @@ class APIClient {
 
   // Comments API
   async getComments(params?: CommentSearchParams & PaginationParams) {
-    const { data } = await this.client.get<PaginatedResponse<VKCommentResponse>>('/parser/comments', {
+    const { data } = await this.client.get<
+      PaginatedResponse<VKCommentResponse>
+    >('/parser/comments', {
       params,
     })
     return data
   }
 
   async getCommentWithKeywords(commentId: number) {
-    const { data } = await this.client.get<CommentWithKeywords>(`/parser/comments/${commentId}`)
+    const { data } = await this.client.get<CommentWithKeywords>(
+      `/parser/comments/${commentId}`
+    )
     return data
   }
 
   // Parser API
   async startParser(taskData: ParseTaskCreate) {
-    const { data } = await this.client.post<ParseTaskResponse>('/parser/parse', taskData)
+    const { data } = await this.client.post<ParseTaskResponse>(
+      '/parser/parse',
+      taskData
+    )
     return data
   }
 
@@ -152,7 +196,9 @@ class APIClient {
   }
 
   async getRecentParseTasks(params?: PaginationParams) {
-    const { data } = await this.client.get<PaginatedResponse<ParseTaskResponse>>('/parser/tasks', {
+    const { data } = await this.client.get<
+      PaginatedResponse<ParseTaskResponse>
+    >('/parser/tasks', {
       params,
     })
     return data
@@ -219,18 +265,18 @@ export const createQueryKey = {
   groups: (params?: any) => ['groups', params] as const,
   group: (id: number) => ['groups', id] as const,
   groupStats: (id: number) => ['groups', id, 'stats'] as const,
-  
+
   keywords: (params?: any) => ['keywords', params] as const,
   keyword: (id: number) => ['keywords', id] as const,
   keywordCategories: () => ['keywords', 'categories'] as const,
-  
+
   comments: (params?: any) => ['comments', params] as const,
   comment: (id: number) => ['comments', id] as const,
-  
+
   parserState: () => ['parser', 'state'] as const,
   parserStats: () => ['parser', 'stats'] as const,
   parserRuns: () => ['parser', 'tasks'] as const,
-  
+
   globalStats: () => ['stats', 'global'] as const,
   dashboardStats: () => ['stats', 'dashboard'] as const,
-} 
+}

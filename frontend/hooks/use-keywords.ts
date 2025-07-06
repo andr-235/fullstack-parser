@@ -1,16 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, createQueryKey } from '@/lib/api'
-import type { 
-  KeywordResponse, 
-  KeywordCreate, 
+import type {
+  KeywordResponse,
+  KeywordCreate,
   KeywordUpdate,
-  PaginationParams 
+  PaginationParams,
 } from '@/types/api'
 
 /**
  * Хук для получения списка ключевых слов
  */
-export function useKeywords(params?: PaginationParams & { active_only?: boolean; category?: string; q?: string }) {
+export function useKeywords(
+  params?: PaginationParams & {
+    active_only?: boolean
+    category?: string
+    q?: string
+  }
+) {
   return useQuery({
     queryKey: createQueryKey.keywords(params),
     queryFn: () => api.getKeywords(params),
@@ -45,7 +51,7 @@ export function useKeywordCategories() {
  */
 export function useCreateKeyword() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: (data: KeywordCreate) => api.createKeyword(data),
     onSuccess: () => {
@@ -60,7 +66,7 @@ export function useCreateKeyword() {
  */
 export function useCreateKeywordsBulk() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: (data: KeywordCreate[]) => api.createKeywordsBulk(data),
     onSuccess: () => {
@@ -75,10 +81,15 @@ export function useCreateKeywordsBulk() {
  */
 export function useUpdateKeyword() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: ({ keywordId, data }: { keywordId: number; data: KeywordUpdate }) => 
-      api.updateKeyword(keywordId, data),
+    mutationFn: ({
+      keywordId,
+      data,
+    }: {
+      keywordId: number
+      data: KeywordUpdate
+    }) => api.updateKeyword(keywordId, data),
     onSuccess: (_, { keywordId }) => {
       queryClient.invalidateQueries({ queryKey: ['keywords', keywordId] })
       queryClient.invalidateQueries({ queryKey: ['keywords'] })
@@ -91,11 +102,11 @@ export function useUpdateKeyword() {
  */
 export function useDeleteKeyword() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: (keywordId: number) => api.deleteKeyword(keywordId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['keywords'] })
     },
   })
-} 
+}

@@ -1,16 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, createQueryKey } from '@/lib/api'
-import type { 
-  VKGroupResponse, 
-  VKGroupCreate, 
+import type {
+  VKGroupResponse,
+  VKGroupCreate,
   VKGroupUpdate,
-  PaginationParams 
+  PaginationParams,
 } from '@/types/api'
 
 /**
  * Хук для получения списка групп
  */
-export function useGroups(params?: PaginationParams & { active_only?: boolean }) {
+export function useGroups(
+  params?: PaginationParams & { active_only?: boolean }
+) {
   return useQuery({
     queryKey: createQueryKey.groups(params),
     queryFn: () => api.getGroups(params),
@@ -34,7 +36,7 @@ export function useGroup(groupId: number) {
  */
 export function useCreateGroup() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: (data: VKGroupCreate) => api.createGroup(data),
     onSuccess: () => {
@@ -49,9 +51,9 @@ export function useCreateGroup() {
  */
 export function useUpdateGroup() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: ({ groupId, data }: { groupId: number; data: VKGroupUpdate }) => 
+    mutationFn: ({ groupId, data }: { groupId: number; data: VKGroupUpdate }) =>
       api.updateGroup(groupId, data),
     onSuccess: (_, { groupId }) => {
       // Инвалидируем конкретную группу и список групп
@@ -66,7 +68,7 @@ export function useUpdateGroup() {
  */
 export function useDeleteGroup() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: (groupId: number) => api.deleteGroup(groupId),
     onSuccess: () => {
@@ -86,4 +88,4 @@ export function useGroupStats(groupId: number) {
     enabled: !!groupId,
     staleTime: 2 * 60 * 1000, // 2 минуты
   })
-} 
+}

@@ -32,4 +32,4 @@ describe('ParserPage', () => {
       screen.getByRole('heading', { name: /Управление парсером/i })
     ).toBeInTheDocument()
   })
-}) 
+})

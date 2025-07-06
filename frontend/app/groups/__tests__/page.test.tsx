@@ -39,4 +39,4 @@ describe('GroupsPage', () => {
       screen.getByRole('heading', { name: /VK Группы/i, level: 1 })
     ).toBeInTheDocument()
   })
-}) 
+})
