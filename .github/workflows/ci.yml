@@ -88,7 +88,9 @@ jobs:
   integration-test:
     name: 🔗 Integration Test
     needs: [backend-test, frontend-test]
-    if: success()
+    if: |
+      (needs.backend-test.result == 'success' || needs.backend-test.result == 'skipped') &&
+      (needs.frontend-test.result == 'success' || needs.frontend-test.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
