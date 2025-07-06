@@ -182,13 +182,13 @@ export default function ParserPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Неуспешных</span>
-                  <span className="text-red-500">{stats?.failed_runs || 0}</span>
+                  <span className="text-red-500">
+                    {stats?.failed_runs || 0}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Среднее время</span>
-                  <span>
-                    {Math.round(stats?.average_duration || 0)} сек
-                  </span>
+                  <span>{Math.round(stats?.average_duration || 0)} сек</span>
                 </div>
               </>
             )}

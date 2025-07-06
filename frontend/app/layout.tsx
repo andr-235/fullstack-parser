@@ -25,7 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className="dark">
-      <body className={`${inter.variable} bg-slate-900 font-sans text-slate-50`}>
+      <body
+        className={`${inter.variable} bg-slate-900 font-sans text-slate-50`}
+      >
         <ReactQueryProvider>
           <div className="flex min-h-screen">
             <Sidebar />
