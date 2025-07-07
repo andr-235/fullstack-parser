@@ -260,3 +260,16 @@ class VKAPIService:
                 f"Ошибка получения количества комментариев {owner_id}_{post_id}: {e}"
             )
             return 0
+
+
+_vk_api_service_instance: Optional[VKAPIService] = None
+
+
+def get_vk_service() -> VKAPIService:
+    """
+    Возвращает синглтон экземпляр VKAPIService.
+    """
+    global _vk_api_service_instance
+    if _vk_api_service_instance is None:
+        _vk_api_service_instance = VKAPIService()
+    return _vk_api_service_instance

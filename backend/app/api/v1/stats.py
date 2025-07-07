@@ -2,23 +2,23 @@
 API endpoints для статистики VK Comments Parser
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_async_session
+from app.core.database import get_db
 from app.models.comment_keyword_match import CommentKeywordMatch
 from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
 from app.models.vk_group import VKGroup
-from app.schemas.stats import GlobalStats
+from app.schemas.stats import GlobalStats, Stats
 
 router = APIRouter(tags=["Stats"])
 
 
 @router.get("/global", response_model=GlobalStats)
 async def get_global_stats(
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSession = Depends(get_db),
 ) -> GlobalStats:
     """Получить глобальную статистику системы"""
 
@@ -63,8 +63,22 @@ async def get_global_stats(
     )
 
 
-@router.get("/dashboard")
-async def get_dashboard_stats(db: AsyncSession = Depends(get_async_session)) -> dict:
+@router.get("/", response_model=Stats)
+async def get_stats(db: AsyncSession = Depends(get_db)):
+    """
+    Эндпоинт для получения статистики.
+    """
+    # Здесь может быть логика для сбора данных для статистики
+    return Stats(
+        groups=group_stats,
+        keywords=keyword_stats,
+        comments=comment_stats,
+        parser=parser_stats,
+    )
+
+
+@router.get("/dashboard", response_model=dict)
+async def get_dashboard_stats(db: AsyncSession = Depends(get_db)) -> dict:
     """Получить статистику для дашборда"""
 
     return {
@@ -100,7 +114,7 @@ async def get_dashboard_stats(db: AsyncSession = Depends(get_async_session)) -> 
 
 
 @router.get("/health")
-async def get_api_health(db: AsyncSession = Depends(get_async_session)) -> dict:
+async def get_api_health(db: AsyncSession = Depends(get_db)) -> dict:
     """Проверка здоровья API и подключений"""
 
     try:

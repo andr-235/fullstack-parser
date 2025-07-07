@@ -36,10 +36,7 @@ services:
 
   # FastAPI Backend
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: production
+    image: ${DOCKER_IMAGE_BACKEND}
     container_name: fullstack_backend_prod
     restart: always
     environment:
@@ -71,10 +68,7 @@ services:
 
   # Next.js Frontend
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: production
+    image: ${DOCKER_IMAGE_FRONTEND}
     container_name: fullstack_frontend_prod
     restart: always
     environment:
