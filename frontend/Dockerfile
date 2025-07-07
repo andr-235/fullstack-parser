@@ -20,7 +20,7 @@ COPY . .
 RUN pnpm build
 
 # Этап 2: Production-образ
-FROM node:20-alpine AS runner
+FROM node:20-alpine AS production
 WORKDIR /app
 
 # Устанавливаем wget для healthcheck

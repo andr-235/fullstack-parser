@@ -147,14 +147,14 @@ async def get_comments(
     total = len(total_result.scalars().all())
 
     # Получение данных с пагинацией
-    paginated_query = query.offset(pagination.skip).limit(pagination.limit)
+    paginated_query = query.offset(pagination.skip).limit(pagination.size)
     result = await db.execute(paginated_query)
     comments = result.scalars().all()
 
     return PaginatedResponse(
         total=total,
-        skip=pagination.skip,
-        limit=pagination.limit,
+        page=pagination.page,
+        size=pagination.size,
         items=[VKCommentResponse.model_validate(comment) for comment in comments],
     )
 
@@ -276,15 +276,15 @@ async def get_parser_stats() -> ParserStats:
 async def get_parse_tasks(
     pagination: PaginationParams = Depends(),
 ) -> PaginatedResponse:
-    """Получить список последних задач парсинга."""
-
+    """Получить список задач парсинга"""
     manager = get_parser_manager()
-    tasks = manager.list_tasks(skip=pagination.skip, limit=pagination.limit)
+    tasks = manager.list_tasks(skip=pagination.skip, limit=pagination.size)
+    total = manager.total_tasks()
 
     return PaginatedResponse(
-        total=len(manager.list_tasks()),
-        skip=pagination.skip,
-        limit=pagination.limit,
+        total=total,
+        page=pagination.page,
+        size=pagination.size,
         items=tasks,
     )
 
