@@ -87,7 +87,7 @@ class ParserService:
                     stats.new_comments += comment_stats["new"]
                     stats.keyword_matches += comment_stats["matches"]
 
-                post.last_parsed_at = datetime.now(timezone.utc)
+                post.last_parsed_at = datetime.utcnow()
                 stats.posts_processed += 1
                 if progress_callback:
                     progress = (i + 1) / total_posts
@@ -126,7 +126,7 @@ class ParserService:
             post.reposts_count = post_data.get("reposts", {}).get("count", 0)
             post.comments_count = post_data.get("comments", {}).get("count", 0)
             post.views_count = post_data.get("views", {}).get("count", 0)
-            post.updated_at = datetime.fromtimestamp(post_data["date"], tz=timezone.utc)
+            post.updated_at = datetime.utcnow()
             return post
 
         new_post = VKPost(
@@ -137,8 +137,7 @@ class ParserService:
             reposts_count=post_data.get("reposts", {}).get("count", 0),
             comments_count=post_data.get("comments", {}).get("count", 0),
             views_count=post_data.get("views", {}).get("count", 0),
-            published_at=datetime.fromtimestamp(post_data["date"], tz=timezone.utc),
-            updated_at=datetime.fromtimestamp(post_data["date"], tz=timezone.utc),
+            published_at=post_data["date"].replace(tzinfo=None),
         )
         self.db.add(new_post)
         await self.db.flush()
@@ -205,7 +204,7 @@ class ParserService:
             vk_id=comment_data["id"],
             post_id=post.id,
             text=comment_data["text"],
-            published_at=datetime.fromtimestamp(comment_data["date"], tz=timezone.utc),
+            published_at=datetime.fromtimestamp(comment_data["date"]),
             author_id=comment_data.get("from_id"),
         )
         self.db.add(new_comment)
@@ -223,7 +222,7 @@ class ParserService:
         return new_comment
 
     async def _update_group_stats(self, group: VKGroup, stats: ParseStats) -> None:
-        group.last_parsed_at = datetime.now(timezone.utc)
+        group.last_parsed_at = datetime.utcnow()
         group.total_posts_parsed += stats.posts_processed
         group.total_comments_found += stats.comments_found
         await self.db.commit()

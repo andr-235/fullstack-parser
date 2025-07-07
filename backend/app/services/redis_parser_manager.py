@@ -23,7 +23,7 @@ class RedisParserManager:
         """Initializes and returns the Redis client."""
         if self._redis_client is None:
             self._redis_client = redis.from_url(
-                settings.REDIS_URL, decode_responses=True
+                settings.redis_url, decode_responses=True
             )
         return self._redis_client
 

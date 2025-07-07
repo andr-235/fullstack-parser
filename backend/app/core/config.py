@@ -49,11 +49,6 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = Field(default="INFO")
 
-    DATABASE_URL: PostgresDsn
-    VK_ACCESS_TOKEN: str
-    VK_API_VERSION: str = "5.131"
-    REDIS_URL: str = "redis://redis:6379/0"
-
     def get_cors_origins(self) -> list[str]:
         """Получить список CORS origins"""
         return [origin.strip() for origin in self.cors_origins.split(",")]

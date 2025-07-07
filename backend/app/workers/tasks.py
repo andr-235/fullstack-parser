@@ -43,5 +43,4 @@ async def run_parsing_task(
         logger.error(f"Task {task_id} failed: {e}", exc_info=True)
         error_message = str(e)
         await redis_manager.fail_task(task_id, error_message)
-        self.update_state(state="FAILURE", meta={"error": error_message})
-        raise
+        raise e
