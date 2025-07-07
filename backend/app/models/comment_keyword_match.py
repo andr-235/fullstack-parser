@@ -44,9 +44,7 @@ class CommentKeywordMatch(BaseModel):
     # Метаданные
     found_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        server_default=func.now(),
         comment="Когда найдено совпадение",
-        nullable=False,
     )
 
     def __repr__(self) -> str:
