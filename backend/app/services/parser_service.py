@@ -286,6 +286,7 @@ class ParserService:
                 matched_text=matched_text,
                 match_position=position,
                 match_context=context,
+                found_at=datetime.now(timezone.utc),
             )
 
             self.db.add(match)
