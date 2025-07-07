@@ -73,12 +73,14 @@ class ParserService:
                 post = await self._get_or_create_post(group, post_data)
                 if (
                     not force_reparse
-                    and post.last_parsed_at
-                    and post.last_parsed_at > post.updated_at
+                    and post.parsed_at
+                    and post.updated_at
+                    and post.parsed_at > post.updated_at
                 ):
                     continue
 
-                if post_data.get("comments", {}).get("count", 0) > 0:
+                comments_count = self._get_nested_count(post_data, "comments")
+                if comments_count > 0:
                     comment_stats = await self._parse_post_comments(
                         post, keywords, force_reparse
                     )
@@ -87,7 +89,8 @@ class ParserService:
                     stats.new_comments += comment_stats["new"]
                     stats.keyword_matches += comment_stats["matches"]
 
-                post.last_parsed_at = datetime.now(timezone.utc)
+                post.is_parsed = True
+                post.parsed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 stats.posts_processed += 1
                 if progress_callback:
                     progress = (i + 1) / total_posts
@@ -108,6 +111,18 @@ class ParserService:
         logger.info(f"Парсинг группы {group.name} завершён. Статистика: {stats}")
         return stats
 
+    def _get_nested_count(self, data: dict, key: str) -> int:
+        """
+        Безопасно извлекает значение 'count' из вложенного словаря.
+        API VK может возвращать как объект {'count': X}, так и просто X.
+        """
+        value = data.get(key, {})
+        if isinstance(value, dict):
+            return value.get("count", 0)
+        if isinstance(value, int):
+            return value
+        return 0
+
     async def _get_group(self, group_id: int) -> Optional[VKGroup]:
         result = await self.db.execute(select(VKGroup).where(VKGroup.id == group_id))
         return result.scalar_one_or_none()
@@ -122,23 +137,30 @@ class ParserService:
         )
         post = result.scalar_one_or_none()
         if post:
-            post.likes_count = post_data.get("likes", {}).get("count", 0)
-            post.reposts_count = post_data.get("reposts", {}).get("count", 0)
-            post.comments_count = post_data.get("comments", {}).get("count", 0)
-            post.views_count = post_data.get("views", {}).get("count", 0)
-            post.updated_at = datetime.fromtimestamp(post_data["date"], tz=timezone.utc)
+            post.likes_count = self._get_nested_count(post_data, "likes")
+            post.reposts_count = self._get_nested_count(post_data, "reposts")
+            post.comments_count = self._get_nested_count(post_data, "comments")
+            post.views_count = self._get_nested_count(post_data, "views")
+            post.updated_at = datetime.fromtimestamp(
+                post_data["date"], tz=timezone.utc
+            ).replace(tzinfo=None)
             return post
 
         new_post = VKPost(
             vk_id=post_data["id"],
+            vk_owner_id=post_data["owner_id"],
             group_id=group.id,
             text=post_data.get("text", ""),
-            likes_count=post_data.get("likes", {}).get("count", 0),
-            reposts_count=post_data.get("reposts", {}).get("count", 0),
-            comments_count=post_data.get("comments", {}).get("count", 0),
-            views_count=post_data.get("views", {}).get("count", 0),
-            published_at=datetime.fromtimestamp(post_data["date"], tz=timezone.utc),
-            updated_at=datetime.fromtimestamp(post_data["date"], tz=timezone.utc),
+            likes_count=self._get_nested_count(post_data, "likes"),
+            reposts_count=self._get_nested_count(post_data, "reposts"),
+            comments_count=self._get_nested_count(post_data, "comments"),
+            views_count=self._get_nested_count(post_data, "views"),
+            published_at=datetime.fromtimestamp(
+                post_data["date"], tz=timezone.utc
+            ).replace(tzinfo=None),
+            updated_at=datetime.fromtimestamp(
+                post_data["date"], tz=timezone.utc
+            ).replace(tzinfo=None),
         )
         self.db.add(new_post)
         await self.db.flush()
@@ -205,7 +227,9 @@ class ParserService:
             vk_id=comment_data["id"],
             post_id=post.id,
             text=comment_data["text"],
-            published_at=datetime.fromtimestamp(comment_data["date"], tz=timezone.utc),
+            published_at=datetime.fromtimestamp(
+                comment_data["date"], tz=timezone.utc
+            ).replace(tzinfo=None),
             author_id=comment_data.get("from_id"),
         )
         self.db.add(new_comment)
@@ -223,7 +247,7 @@ class ParserService:
         return new_comment
 
     async def _update_group_stats(self, group: VKGroup, stats: ParseStats) -> None:
-        group.last_parsed_at = datetime.now(timezone.utc)
+        group.last_parsed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         group.total_posts_parsed += stats.posts_processed
         group.total_comments_found += stats.comments_found
         await self.db.commit()
@@ -239,3 +263,10 @@ class ParserService:
         )
         stats = await self.parse_group_posts(group_id, max_posts_count=max_posts)
         return stats.model_dump()
+
+    async def get_parsing_status(self, task_id: str) -> dict:
+        """Получить статус задачи парсинга."""
+        return await self.redis_manager.get_task_status(task_id)
+
+    async def run_parser_for_all_groups(self) -> dict:
+        # ... existing code ...
