@@ -54,6 +54,11 @@ class Settings(BaseSettings):
         alias="VK_ACCESS_TOKEN", description="VK API access token"
     )
     vk_api_version: str = Field(default="5.131", alias="VK_API_VERSION")
+    vk_requests_per_second: int = Field(
+        default=3,
+        alias="VK_REQUESTS_PER_SECOND",
+        description="Максимальное количество запросов к VK API в секунду",
+    )
 
     # Logging
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")

@@ -25,8 +25,8 @@ class AsyncTask(Task):
 celery_app = Celery(
     "worker",
     task_cls=AsyncTask,
-    broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL,
+    broker=settings.redis_url,
+    backend=settings.redis_url,
     include=["app.workers.tasks"],
 )
 
