@@ -109,7 +109,7 @@ class ParserService:
                 continue
 
         # Обновляем статистику группы
-        group.last_parsed_at = datetime.now(timezone.utc)
+        group.last_parsed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         group.total_posts_parsed = (
             int(group.total_posts_parsed) + stats["posts_processed"]
         )
@@ -221,12 +221,13 @@ class ParserService:
             return existing_post
 
         # Создаём новый пост
+        published_at_naive = post_data["date"].replace(tzinfo=None)
         post = VKPost(
             vk_id=post_data["id"],
             vk_owner_id=post_data["owner_id"],
             text=post_data["text"],
             group_id=group.id,
-            published_at=post_data["date"],
+            published_at=published_at_naive,
             likes_count=post_data["likes"],
             reposts_count=post_data["reposts"],
             comments_count=post_data["comments"],
@@ -246,6 +247,9 @@ class ParserService:
         # Получаем информацию об авторе
         author_info = comment_data.get("author", {})
 
+        published_at_naive = comment_data["date"].replace(tzinfo=None)
+        processed_at_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+
         comment = VKComment(
             vk_id=comment_data["id"],
             text=comment_data["text"],
@@ -254,14 +258,14 @@ class ParserService:
             author_name=author_info.get("name", ""),
             author_screen_name=author_info.get("screen_name", ""),
             author_photo_url=author_info.get("photo_url", ""),
-            published_at=comment_data["date"],
+            published_at=published_at_naive,
             likes_count=comment_data["likes"],
             parent_comment_id=comment_data.get("reply_to_comment"),
             has_attachments=comment_data["attachments"]["has_attachments"],
             attachments_info=str(comment_data["attachments"]),
             matched_keywords_count=len(matches),
             is_processed=True,
-            processed_at=datetime.now(timezone.utc),
+            processed_at=processed_at_naive,
         )
 
         self.db.add(comment)
