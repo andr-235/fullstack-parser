@@ -11,7 +11,7 @@ from app.models.comment_keyword_match import CommentKeywordMatch
 from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
 from app.models.vk_group import VKGroup
-from app.schemas.stats import GlobalStats, Stats
+from app.schemas.stats import GlobalStats
 
 router = APIRouter(tags=["Stats"])
 
@@ -63,18 +63,18 @@ async def get_global_stats(
     )
 
 
-@router.get("/", response_model=Stats)
-async def get_stats(db: AsyncSession = Depends(get_db)):
-    """
-    Эндпоинт для получения статистики.
-    """
-    # Здесь может быть логика для сбора данных для статистики
-    return Stats(
-        groups=group_stats,
-        keywords=keyword_stats,
-        comments=comment_stats,
-        parser=parser_stats,
-    )
+# @router.get("/", response_model=Stats)
+# async def get_stats(db: AsyncSession = Depends(get_db)):
+#     """
+#     Эндпоинт для получения статистики.
+#     """
+#     # Здесь может быть логика для сбора данных для статистики
+#     return Stats(
+#         groups=group_stats,
+#         keywords=keyword_stats,
+#         comments=comment_stats,
+#         parser=parser_stats,
+#     )
 
 
 @router.get("/dashboard", response_model=dict)
