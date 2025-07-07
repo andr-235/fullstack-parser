@@ -269,4 +269,4 @@ class ParserService:
         return await self.redis_manager.get_task_status(task_id)
 
     async def run_parser_for_all_groups(self) -> dict:
-        # ... existing code ...
+        pass
