@@ -9,33 +9,4 @@ on:
 jobs:
   deploy:
     name: Deploy to Production Server
-    runs-on: ubuntu-latest
 
-    steps:
-      - name: Deploy to Server
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.PROD_SERVER_IP }}
-          username: ${{ secrets.PROD_SERVER_USER }}
-          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
-          script: |
-            set -e # Exit on error
-            echo "--- Connecting to server ${{ secrets.PROD_SERVER_IP }} ---"
-            
-            # Navigate to the app directory
-            # Make sure this path is correct on your server
-            cd /opt/app 
-            
-            echo "--- Updating repository ---"
-            git stash # Stash any local changes on the server
-            git pull origin main
-            
-            echo "--- Running deployment script ---"
-            # Ensure the script is executable
-            chmod +x ./scripts/deploy-ip.sh
-            
-            # Run the deployment script
-            # This script should handle docker-compose, migrations, etc.
-            ./scripts/deploy-ip.sh
-            
-            echo "--- Deployment script finished ---" 
