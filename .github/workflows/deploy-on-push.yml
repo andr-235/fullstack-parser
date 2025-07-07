@@ -9,18 +9,4 @@ on:
 jobs:
   deploy:
     name: Deploy to Production Server
-    runs-on: self-hosted # Use the self-hosted runner
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run deployment script
-        run: |
-          set -e # Exit on error
-          echo "--- Starting deployment on self-hosted runner ---"
-          # The deploy script is in the checked-out code.
-          echo "--- Running deployment script ---"
-          chmod +x ./scripts/deploy-ip.sh
-          ./scripts/deploy-ip.sh
 

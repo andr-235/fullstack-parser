@@ -2,10 +2,17 @@
 Модель VK группы для мониторинга
 """
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
-from sqlalchemy.orm import relationship
+from __future__ import annotations
+from datetime import datetime
+
+from typing import TYPE_CHECKING, List, Optional
 
 from app.models.base import BaseModel
+from sqlalchemy import Boolean, DateTime, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from app.models.vk_post import VKPost
 
 
 class VKGroup(BaseModel):
@@ -14,37 +21,51 @@ class VKGroup(BaseModel):
     __tablename__ = "vk_groups"
 
     # Основная информация
-    vk_id = Column(
+    vk_id: Mapped[int] = mapped_column(
         Integer, unique=True, nullable=False, index=True, comment="ID группы в ВК"
     )
-    screen_name = Column(
+    screen_name: Mapped[str] = mapped_column(
         String(100), nullable=False, comment="Короткое имя группы (@group_name)"
     )
-    name = Column(String(200), nullable=False, comment="Название группы")
-    description = Column(Text, comment="Описание группы")
+    name: Mapped[str] = mapped_column(
+        String(200), nullable=False, comment="Название группы"
+    )
+    description: Mapped[Optional[str]] = mapped_column(Text, comment="Описание группы")
 
     # Настройки мониторинга
-    is_active = Column(Boolean, default=True, comment="Активен ли мониторинг группы")
-    max_posts_to_check = Column(
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, comment="Активен ли мониторинг группы"
+    )
+    max_posts_to_check: Mapped[int] = mapped_column(
         Integer, default=100, comment="Максимум постов для проверки"
     )
 
     # Статистика
-    last_parsed_at = Column(DateTime, comment="Когда последний раз парсили группу")
-    total_posts_parsed = Column(
+    last_parsed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, comment="Когда последний раз парсили группу"
+    )
+    total_posts_parsed: Mapped[int] = mapped_column(
         Integer, default=0, comment="Общее количество обработанных постов"
     )
-    total_comments_found = Column(
+    total_comments_found: Mapped[int] = mapped_column(
         Integer, default=0, comment="Общее количество найденных комментариев"
     )
 
     # Метаданные VK
-    members_count = Column(Integer, comment="Количество участников")
-    is_closed = Column(Boolean, default=False, comment="Закрытая ли группа")
-    photo_url = Column(String(500), comment="URL аватара группы")
+    members_count: Mapped[Optional[int]] = mapped_column(
+        Integer, comment="Количество участников"
+    )
+    is_closed: Mapped[bool] = mapped_column(
+        Boolean, default=False, comment="Закрытая ли группа"
+    )
+    photo_url: Mapped[Optional[str]] = mapped_column(
+        String(500), comment="URL аватара группы"
+    )
 
     # Связи
-    posts = relationship("VKPost", back_populates="group", cascade="all, delete-orphan")
+    posts: Mapped[List["VKPost"]] = relationship(
+        "VKPost", back_populates="group", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return (

@@ -41,14 +41,14 @@ async def create_keyword(
     return KeywordResponse.model_validate(new_keyword)
 
 
-@router.get("/", response_model=PaginatedResponse)
+@router.get("/", response_model=PaginatedResponse[KeywordResponse])
 async def get_keywords(
     pagination: PaginationParams = Depends(),
     active_only: bool = True,
     category: Optional[str] = None,
     q: Optional[str] = None,
     db: AsyncSession = Depends(get_async_session),
-) -> PaginatedResponse:
+) -> PaginatedResponse[KeywordResponse]:
     """Получить список ключевых слов"""
 
     query = select(Keyword)
@@ -67,18 +67,18 @@ async def get_keywords(
         )
 
     # Подсчёт общего количества
-    total_result = await db.execute(query)
-    total = len(total_result.scalars().all())
+    count_query = select(func.count()).select_from(query.subquery())
+    total = await db.scalar(count_query)
 
     # Получение данных с пагинацией
-    paginated_query = query.offset(pagination.skip).limit(pagination.limit)
+    paginated_query = query.offset(pagination.skip).limit(pagination.size)
     result = await db.execute(paginated_query)
     keywords = result.scalars().all()
 
     return PaginatedResponse(
-        total=total,
-        skip=pagination.skip,
-        limit=pagination.limit,
+        total=total or 0,
+        page=pagination.page,
+        size=pagination.size,
         items=[KeywordResponse.model_validate(keyword) for keyword in keywords],
     )
 
@@ -172,7 +172,7 @@ async def delete_keyword(
     await db.commit()
 
     return StatusResponse(
-        success=True, message=f"Ключевое слово '{keyword.word}' удалено"
+        status="success", message=f"Ключевое слово '{keyword.word}' удалено"
     )
 
 
