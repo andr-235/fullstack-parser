@@ -29,10 +29,10 @@ class Base(DeclarativeBase):
     metadata = metadata
 
 
-# Async SQLAlchemy engine
-async_engine = create_async_engine(settings.database_url, echo=settings.debug)
+# Глобальный асинхронный движок SQLAlchemy
+async_engine = create_async_engine(str(settings.database_url), echo=settings.debug)
 
-# Async session factory
+# Фабрика асинхронных сессий
 AsyncSessionLocal = async_sessionmaker(
     bind=async_engine,
     class_=AsyncSession,
