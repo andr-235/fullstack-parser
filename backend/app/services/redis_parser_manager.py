@@ -23,7 +23,7 @@ class RedisParserManager:
         """Initializes and returns the Redis client."""
         if self._redis_client is None:
             self._redis_client = redis.from_url(
-                settings.REDIS_URL, decode_responses=True
+                str(settings.redis_url), decode_responses=True
             )
         return self._redis_client
 
@@ -257,6 +257,11 @@ class RedisParserManager:
             total_comments_found=total_comments_found,
             total_comments_with_keywords=total_comments_with_keywords,
         )
+
+    async def close(self) -> None:
+        """Closes the Redis connection."""
+        if self._redis_client:
+            await self._redis_client.close()
 
 
 def get_redis_parser_manager() -> RedisParserManager:
