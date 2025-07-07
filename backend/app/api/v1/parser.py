@@ -2,15 +2,16 @@
 API endpoints для парсинга комментариев VK
 """
 
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timezone
+from typing import Optional, List
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.database import get_async_session
+from app.core.database import get_db
+from app.core.security import get_current_user
 from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
 from app.models.vk_group import VKGroup
@@ -27,8 +28,14 @@ from app.schemas.vk_comment import (
     CommentWithKeywords,
     VKCommentResponse,
 )
-from app.services.parser_manager import get_parser_manager
+from app.services.group_service import GroupService
 from app.services.parser_service import ParserService
+from app.services.redis_parser_manager import (
+    get_redis_parser_manager,
+    RedisParserManager,
+)
+from app.models.user import User
+from app.core.celery_app import celery_app
 
 router = APIRouter(tags=["Parser"])
 
@@ -37,7 +44,9 @@ router = APIRouter(tags=["Parser"])
 async def start_parsing(
     task_data: ParseTaskCreate,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    parser_manager: RedisParserManager = Depends(get_redis_parser_manager),
 ) -> ParseTaskResponse:
     """Запустить парсинг комментариев для группы"""
 
@@ -64,13 +73,13 @@ async def start_parsing(
         group_id=task_data.group_id,
         group_name=group.name,
         status="running",
-        started_at=datetime.now(),
+        started_at=datetime.now(timezone.utc),
         completed_at=None,
         stats=None,
         error_message=None,
     )
 
-    parser_manager = get_parser_manager()
+    parser_manager = get_redis_parser_manager()
     parser_manager.start_task(task_response)
 
     # Запускаем парсинг в фоне
@@ -90,7 +99,7 @@ async def run_parsing_task(
     """Background задача для парсинга"""
     from app.core.database import AsyncSessionLocal
 
-    manager = get_parser_manager()
+    manager = get_redis_parser_manager()
 
     async with AsyncSessionLocal() as db:
         parser = ParserService(db)
@@ -108,7 +117,7 @@ async def run_parsing_task(
 async def get_comments(
     search_params: CommentSearchParams = Depends(),
     pagination: PaginationParams = Depends(),
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse:
     """Получить список найденных комментариев с фильтрацией"""
 
@@ -161,7 +170,7 @@ async def get_comments(
 
 @router.get("/comments/{comment_id}", response_model=CommentWithKeywords)
 async def get_comment_with_keywords(
-    comment_id: int, db: AsyncSession = Depends(get_async_session)
+    comment_id: int, db: AsyncSession = Depends(get_db)
 ) -> CommentWithKeywords:
     """Получить комментарий с детальной информацией о найденных ключевых словах"""
 
@@ -203,7 +212,7 @@ async def get_comment_with_keywords(
 
 @router.get("/stats/global", response_model=GlobalStats)
 async def get_global_stats(
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSession = Depends(get_db),
 ) -> GlobalStats:
     """Получить общую статистику системы"""
 
@@ -259,17 +268,21 @@ async def get_global_stats(
 
 
 @router.get("/state", response_model=ParserState)
-async def get_parser_state() -> ParserState:
+async def get_parser_state(
+    current_user: User = Depends(get_current_user),
+    parser_manager: RedisParserManager = Depends(get_redis_parser_manager),
+) -> ParserState:
     """Получить текущее состояние парсера."""
-
-    return get_parser_manager().get_state()
+    return await parser_manager.get_state()
 
 
 @router.get("/stats", response_model=ParserStats)
-async def get_parser_stats() -> ParserStats:
+async def get_parser_stats(
+    current_user: User = Depends(get_current_user),
+    parser_manager: RedisParserManager = Depends(get_redis_parser_manager),
+) -> ParserStats:
     """Получить агрегированную статистику парсера."""
-
-    return get_parser_manager().get_stats()
+    return await parser_manager.get_stats()
 
 
 @router.get("/tasks", response_model=PaginatedResponse)
@@ -277,7 +290,7 @@ async def get_parse_tasks(
     pagination: PaginationParams = Depends(),
 ) -> PaginatedResponse:
     """Получить список задач парсинга"""
-    manager = get_parser_manager()
+    manager = get_redis_parser_manager()
     tasks = manager.list_tasks(skip=pagination.skip, limit=pagination.size)
     total = manager.total_tasks()
 
@@ -290,8 +303,21 @@ async def get_parse_tasks(
 
 
 @router.post("/stop", response_model=StatusResponse)
-async def stop_parser() -> StatusResponse:
+async def stop_parser(
+    current_user: User = Depends(get_current_user),
+    parser_manager: RedisParserManager = Depends(get_redis_parser_manager),
+) -> StatusResponse:
     """Остановить текущий парсинг (best-effort)."""
-
-    get_parser_manager().stop_current_task()
+    await parser_manager.stop_current_task()
     return StatusResponse(success=True, message="Парсер остановлен")
+
+
+@router.get("/history", response_model=List[ParseTaskResponse])
+async def get_parsing_history(
+    skip: int = 0,
+    limit: int = 10,
+    current_user: User = Depends(get_current_user),
+    parser_manager: RedisParserManager = Depends(get_redis_parser_manager),
+):
+    """Retrieves the history of parsing tasks."""
+    return await parser_manager.list_tasks(skip=skip, limit=limit)

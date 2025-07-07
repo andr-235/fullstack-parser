@@ -4,9 +4,14 @@
 
 from datetime import datetime
 
-from app.core.database import Base
-from sqlalchemy import DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.ext.asyncio import AsyncAttrs
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.sql import func
+import sqlalchemy as sa
+
+
+class Base(AsyncAttrs, DeclarativeBase):
+    pass
 
 
 class BaseModel(Base):
@@ -16,11 +21,13 @@ class BaseModel(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        sa.DateTime(timezone=True),
+        server_default=func.now(),
+        comment="Время создания записи",
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        sa.DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
-        nullable=False,
+        comment="Время последнего обновления записи",
     )

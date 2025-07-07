@@ -40,17 +40,12 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False,
 )
 
+Base = DeclarativeBase()
 
-async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
-    """Dependency для получения async database session."""
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
+        yield session
 
 
 async def init_db() -> None:

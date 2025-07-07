@@ -2,13 +2,13 @@
 API endpoints для управления ключевыми словами
 """
 
-from typing import Optional
+from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_async_session
+from app.core.database import get_db
 from app.models.keyword import Keyword
 from app.schemas.base import PaginatedResponse, PaginationParams, StatusResponse
 from app.schemas.keyword import KeywordCreate, KeywordResponse, KeywordUpdate
@@ -18,7 +18,7 @@ router = APIRouter(tags=["Keywords"])
 
 @router.post("/", response_model=KeywordResponse, status_code=status.HTTP_201_CREATED)
 async def create_keyword(
-    keyword_data: KeywordCreate, db: AsyncSession = Depends(get_async_session)
+    keyword_data: KeywordCreate, db: AsyncSession = Depends(get_db)
 ) -> KeywordResponse:
     """Добавить новое ключевое слово"""
 
@@ -47,7 +47,7 @@ async def get_keywords(
     active_only: bool = True,
     category: Optional[str] = None,
     q: Optional[str] = None,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[KeywordResponse]:
     """Получить список ключевых слов"""
 
@@ -85,7 +85,7 @@ async def get_keywords(
 
 @router.get("/categories", response_model=list[str])
 async def get_keyword_categories(
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSession = Depends(get_db),
 ) -> list[str]:
     """Получить список всех категорий ключевых слов"""
 
@@ -99,7 +99,7 @@ async def get_keyword_categories(
 
 @router.get("/{keyword_id}", response_model=KeywordResponse)
 async def get_keyword(
-    keyword_id: int, db: AsyncSession = Depends(get_async_session)
+    keyword_id: int, db: AsyncSession = Depends(get_db)
 ) -> KeywordResponse:
     """Получить информацию о конкретном ключевом слове"""
 
@@ -118,7 +118,7 @@ async def get_keyword(
 async def update_keyword(
     keyword_id: int,
     keyword_update: KeywordUpdate,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSession = Depends(get_db),
 ) -> KeywordResponse:
     """Обновить ключевое слово"""
 
@@ -156,7 +156,7 @@ async def update_keyword(
 
 @router.delete("/{keyword_id}", response_model=StatusResponse)
 async def delete_keyword(
-    keyword_id: int, db: AsyncSession = Depends(get_async_session)
+    keyword_id: int, db: AsyncSession = Depends(get_db)
 ) -> StatusResponse:
     """Удалить ключевое слово"""
 
@@ -178,7 +178,7 @@ async def delete_keyword(
 
 @router.post("/bulk", response_model=list[KeywordResponse])
 async def create_keywords_bulk(
-    keywords_data: list[KeywordCreate], db: AsyncSession = Depends(get_async_session)
+    keywords_data: list[KeywordCreate], db: AsyncSession = Depends(get_db)
 ) -> list[KeywordResponse]:
     """Массовое добавление ключевых слов"""
 

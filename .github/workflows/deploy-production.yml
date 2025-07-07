@@ -1,405 +1,94 @@
 name: 🚀 Deploy to Production
 
 on:
-  release:
-    types: [published]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to deploy (e.g., v1.0.0)'
-        required: true
-        type: string
-      skip_tests:
-        description: 'Skip pre-deployment tests'
-        required: false
-        type: boolean
-        default: false
-
-permissions:
-  contents: read
-  packages: read
+  push:
+    branches:
+      - main
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
 
 jobs:
-  # ================================
-  # VALIDATE PRODUCTION DEPLOYMENT
-  # ================================
-  validate:
-    name: 🔍 Validate Production Deployment
+  build:
+    name: 🏗️ Build and Push Docker Images
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     outputs:
-      version: ${{ steps.validate.outputs.version }}
-      should_deploy: ${{ steps.validate.outputs.should_deploy }}
-      is_hotfix: ${{ steps.validate.outputs.is_hotfix }}
-    
+      short_sha: ${{ steps.vars.outputs.sha }}
+
     steps:
-      - name: Checkout code
+      - name: ⬇️ Check out code
         uses: actions/checkout@v4
+
+      - name: 🧮 Set reusable variables
+        id: vars
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: 🔐 Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          fetch-depth: 0
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate deployment
-        id: validate
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            VERSION="${{ github.event.inputs.version }}"
-            echo "📋 Manual deployment triggered for version: ${VERSION}"
-          else
-            VERSION="${{ github.event.release.tag_name }}"
-            echo "📋 Release deployment triggered for version: ${VERSION}"
-          fi
-          
-          # Validate version format
-          if [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
-            echo "❌ Invalid version format: ${VERSION}"
-            echo "Expected format: v1.0.0 or v1.0.0-beta"
-            exit 1
-          fi
-          
-          # Check if this is a hotfix
-          if [[ "${VERSION}" =~ hotfix ]]; then
-            echo "🔥 Hotfix deployment detected"
-            echo "is_hotfix=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_hotfix=false" >> $GITHUB_OUTPUT
-          fi
-          
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "should_deploy=true" >> $GITHUB_OUTPUT
-          echo "✅ Validation completed"
+      - name: 🏗️ Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.vars.outputs.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Check release notes
-        run: |
-          VERSION="${{ steps.validate.outputs.version }}"
-          
-          # For releases, check if release notes exist
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            if [[ -z "${{ github.event.release.body }}" ]]; then
-              echo "⚠️  Release notes are empty - proceeding anyway"
-            else
-              echo "✅ Release notes found"
-            fi
-          fi
+      - name: 🏗️ Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.vars.outputs.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-  # ================================
-  # PRE-DEPLOYMENT TESTS
-  # ================================
-  pre-deployment-tests:
-    name: 🧪 Pre-deployment Tests
-    runs-on: ubuntu-latest
-    needs: validate
-    if: needs.validate.outputs.should_deploy == 'true' && github.event.inputs.skip_tests != 'true'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run smoke tests
-        run: |
-          echo "🧪 Running pre-deployment smoke tests..."
-          
-          # Add critical tests before production deployment
-          # For example:
-          # - Database migration tests
-          # - API endpoint tests
-          # - Frontend build tests
-          # - Integration tests
-          
-          echo "✅ Pre-deployment tests passed"
-
-      - name: Validate Docker images
-        run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          
-          # Check if Docker images exist for this version
-          echo "🔍 Validating Docker images for version: ${VERSION}"
-          
-          # In production, you would check if the images exist:
-          # docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${VERSION}
-          # docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${VERSION}
-          
-          echo "✅ Docker images validated"
-
-  # ================================
-  # MANUAL APPROVAL (Production Gate)
-  # ================================
-  approve-production:
-    name: 🔒 Manual Approval Required
-    runs-on: ubuntu-latest
-    needs: [validate, pre-deployment-tests]
-    if: needs.validate.outputs.should_deploy == 'true' && needs.validate.outputs.is_hotfix != 'true'
-    
-    steps:
-      - name: Request manual approval
-        run: |
-          echo "🔒 Manual approval required for production deployment"
-          echo "Version: ${{ needs.validate.outputs.version }}"
-          echo "Release notes: ${{ github.event.release.body }}"
-          echo ""
-          echo "Please review and approve this deployment."
-          echo "⚠️  This will deploy to production environment!"
-          
-          # This step would pause and wait for manual approval
-          # In GitHub Actions, you would use environments with required reviewers
-          
-          echo "✅ Manual approval received"
-
-  # ================================
-  # BACKUP CURRENT PRODUCTION
-  # ================================
-  backup:
-    name: 💾 Backup Current Production
-    runs-on: ubuntu-latest
-    needs: [validate, pre-deployment-tests, approve-production]
-    if: always() && needs.validate.outputs.should_deploy == 'true' && (needs.approve-production.result == 'success' || needs.validate.outputs.is_hotfix == 'true')
-    
-    steps:
-      - name: Create production backup
-        run: |
-          echo "💾 Creating production backup..."
-          
-          # In production, you would:
-          # 1. Backup database
-          # 2. Backup application files
-          # 3. Save current Docker images
-          # 4. Create restore point
-          
-          BACKUP_NAME="production-backup-$(date +%Y%m%d-%H%M%S)"
-          echo "📦 Backup name: ${BACKUP_NAME}"
-          
-          # Example backup commands:
-          # pg_dump production_db > ${BACKUP_NAME}.sql
-          # docker save production_images > ${BACKUP_NAME}.tar
-          
-          echo "✅ Production backup completed"
-
-  # ================================
-  # BLUE-GREEN DEPLOYMENT
-  # ================================
-  deploy-blue-green:
-    name: 🔄 Blue-Green Deployment
-    runs-on: ubuntu-latest
-    needs: [validate, backup]
-    if: needs.validate.outputs.should_deploy == 'true'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to green environment
-        run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          echo "🟢 Deploying to green environment..."
-          echo "Version: ${VERSION}"
-          
-          # In production, you would:
-          # 1. Deploy to green environment (parallel to blue)
-          # 2. Run health checks on green
-          # 3. Switch traffic from blue to green
-          # 4. Keep blue as backup
-          
-          echo "✅ Green environment deployment completed"
-
-      - name: Health check green environment
-        run: |
-          echo "🏥 Running health checks on green environment..."
-          
-          # Comprehensive health checks:
-          # - API endpoints
-          # - Database connectivity
-          # - Redis connectivity
-          # - Frontend loading
-          # - Performance benchmarks
-          
-          echo "✅ Green environment health checks passed"
-
-      - name: Switch traffic to green
-        run: |
-          echo "🔄 Switching traffic from blue to green..."
-          
-          # In production, you would:
-          # 1. Update load balancer configuration
-          # 2. Gradually shift traffic (canary deployment)
-          # 3. Monitor metrics and logs
-          # 4. Complete the switch
-          
-          echo "✅ Traffic switched to green environment"
-
-  # ================================
-  # POST-DEPLOYMENT VERIFICATION
-  # ================================
-  verify-deployment:
-    name: ✅ Verify Deployment
-    runs-on: ubuntu-latest
-    needs: [validate, deploy-blue-green]
-    if: needs.validate.outputs.should_deploy == 'true'
-    
-    steps:
-      - name: Run post-deployment tests
-        run: |
-          echo "🧪 Running post-deployment verification tests..."
-          
-          # Critical post-deployment tests:
-          # - End-to-end functionality
-          # - Performance tests
-          # - Security tests
-          # - Data integrity checks
-          
-          echo "✅ Post-deployment tests passed"
-
-      - name: Monitor initial metrics
-        run: |
-          echo "📊 Monitoring initial production metrics..."
-          
-          # Monitor for a few minutes:
-          # - Error rates
-          # - Response times
-          # - Resource usage
-          # - User activity
-          
-          echo "✅ Initial metrics look good"
-
-  # ================================
-  # ROLLBACK PLAN
-  # ================================
-  setup-rollback:
-    name: 🔄 Setup Rollback Plan
-    runs-on: ubuntu-latest
-    needs: [validate, deploy-blue-green]
-    if: needs.validate.outputs.should_deploy == 'true'
-    
-    steps:
-      - name: Prepare rollback plan
-        run: |
-          echo "🔄 Preparing rollback plan..."
-          
-          # Create rollback instructions:
-          # 1. Switch traffic back to blue
-          # 2. Restore database from backup
-          # 3. Rollback Docker images
-          # 4. Clear caches
-          
-          echo "✅ Rollback plan prepared"
-
-  # ================================
-  # NOTIFICATION
-  # ================================
-  notify:
-    name: 📢 Notify Team
-    runs-on: ubuntu-latest
-    needs: [validate, deploy-blue-green, verify-deployment]
-    if: always()
-    
-    steps:
-      - name: Notify on success
-        if: needs.deploy-blue-green.result == 'success' && needs.verify-deployment.result == 'success'
-        run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          echo "🎉 Production deployment successful!"
-          echo "🏷️  Version: ${VERSION}"
-          echo "🔗 Production URL: https://production.example.com"
-          echo "📦 Backend: https://api.production.example.com"
-          echo "🌐 Frontend: https://production.example.com"
-          echo "⏰ Deployed at: $(date)"
-          
-          # Send success notifications:
-          # - Slack announcement
-          # - Email to stakeholders
-          # - Teams notification
-          # - Status page update
-          
-          echo "📢 Team notifications sent"
-
-      - name: Notify on failure
-        if: needs.deploy-blue-green.result == 'failure' || needs.verify-deployment.result == 'failure'
-        run: |
-          echo "❌ Production deployment failed!"
-          echo "🔍 Check the logs for details"
-          echo "📋 Deploy status: ${{ needs.deploy-blue-green.result }}"
-          echo "✅ Verify status: ${{ needs.verify-deployment.result }}"
-          
-          # Send failure notifications:
-          # - Immediate alert to on-call team
-          # - Incident management system
-          # - Rollback instructions
-          
-          echo "🚨 Failure notifications sent"
-
-  # ================================
-  # CLEANUP
-  # ================================
-  cleanup:
-    name: 🧹 Post-deployment Cleanup
-    runs-on: ubuntu-latest
-    needs: [notify]
-    if: always()
-    
-    steps:
-      - name: Cleanup old blue environment
-        run: |
-          echo "🧹 Cleaning up old blue environment..."
-          
-          # After successful deployment:
-          # - Remove old blue containers
-          # - Clean up old Docker images
-          # - Archive old logs
-          # - Update monitoring dashboards
-          
-          echo "✅ Cleanup completed"
-
-      - name: Update documentation
-        run: |
-          echo "📝 Updating deployment documentation..."
-          
-          # Update deployment records:
-          # - Version history
-          # - Deployment timeline
-          # - Configuration changes
-          # - Performance metrics
-          
-          echo "✅ Documentation updated"
-
-      - name: Summary
-        run: |
-          echo "## 🏭 Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version**: ${{ needs.validate.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ${{ needs.deploy-blue-green.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Verification**: ${{ needs.verify-deployment.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Deployed**: $(date)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Rollback**: Ready if needed" >> $GITHUB_STEP_SUMMARY
-          echo "- **Monitoring**: Active" >> $GITHUB_STEP_SUMMARY 
-
-  deploy-to-production:
-    name: 🚚 Deploy to Production
-    runs-on: ubuntu-latest
-    # ВАЖНО: Перед использованием этого workflow, создайте environment с именем 'production'
-    # в настройках репозитория (Settings -> Environments -> New environment).
-    # Добавьте 'Required reviewers' для ручного подтверждения деплоя.
-    environment: production
+  deploy:
+    name: 🚚 Deploy to Production Server
+    needs: build
+    runs-on: self-hosted # <-- Используется ваш self-hosted runner
+    environment: production # <-- Настройте environment 'production' в репозитории
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Deploy to Production Server
+      - name: 🚀 Deploy to Production
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.PRODUCTION_HOST }}
+          host: ${{ secrets.PRODUCTION_HOST }} # <-- IP вашего сервера
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           port: ${{ secrets.PRODUCTION_PORT }}
           script: |
+            set -e # Exit immediately if a command exits with a non-zero status.
+
+            echo "Changing to app directory..."
             cd ${{ secrets.PRODUCTION_APP_DIR }}
+
+            echo "Pulling latest changes from main branch..."
             git pull origin main
-            echo "DOCKER_PROD_IMAGE_BACKEND=ghcr.io/${{ github.repository_owner }}/backend:${{ github.event.release.tag_name }}" >> .env
-            echo "DOCKER_PROD_IMAGE_FRONTEND=ghcr.io/${{ github.repository_owner }}/frontend:${{ github.event.release.tag_name }}" >> .env
-            docker-compose -f docker-compose.prod.yml up -d --build
-            
-      - name: Health Check
-        run: |
-          sleep 30
-          curl -f https://your-domain.com
-          curl -f https://your-domain.com/api/v1/ 
+
+            echo "Updating .env.prod file with new image tags..."
+            echo "DOCKER_IMAGE_BACKEND=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ needs.build.outputs.short_sha }}" > .env.prod
+            echo "DOCKER_IMAGE_FRONTEND=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ needs.build.outputs.short_sha }}" >> .env.prod
+
+            echo "Pulling latest Docker images..."
+            docker-compose -f docker-compose.prod.yml --env-file .env.prod pull
+
+            echo "Starting services with docker-compose..."
+            docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans
+
+            echo "Cleaning up old Docker images..."
+            docker image prune -af
+
+            echo "✅ Deployment successful!"

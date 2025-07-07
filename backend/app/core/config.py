@@ -3,9 +3,10 @@
 """
 
 from typing import Optional
-
+from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings
+from pydantic import PostgresDsn
 
 
 class Settings(BaseSettings):
@@ -48,13 +49,19 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = Field(default="INFO")
 
+    DATABASE_URL: PostgresDsn
+    VK_ACCESS_TOKEN: str
+    VK_API_VERSION: str = "5.131"
+    REDIS_URL: str = "redis://redis:6379/0"
+
     def get_cors_origins(self) -> list[str]:
         """Получить список CORS origins"""
-        if "," in self.cors_origins:
-            return [url.strip() for url in self.cors_origins.split(",") if url.strip()]
-        return [self.cors_origins.strip()]
+        return [origin.strip() for origin in self.cors_origins.split(",")]
 
-    model_config = {"env_file": ".env", "case_sensitive": False, "extra": "ignore"}
+    class Config:
+        env_file = str(Path(__file__).resolve().parent.parent.parent / ".env")
+        case_sensitive = False
+        extra = "ignore"
 
 
 # Глобальный объект настроек

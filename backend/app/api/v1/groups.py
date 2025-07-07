@@ -5,11 +5,11 @@ API endpoints для управления VK группами
 import re
 from typing import Optional
 
-from app.core.database import get_async_session
+from app.core.database import get_db
 from app.models import VKGroup
 from app.schemas.base import PaginatedResponse, PaginationParams
 from app.schemas.vk_group import VKGroupCreate, VKGroupRead, VKGroupStats, VKGroupUpdate
-from app.services.vk_api_service import VKAPIService
+from app.services.vk_api_service import VKAPIService, get_vk_service
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +30,9 @@ def _extract_screen_name(url_or_name: str) -> Optional[str]:
 
 @router.post("/", response_model=VKGroupRead, status_code=status.HTTP_201_CREATED)
 async def create_group(
-    group_data: VKGroupCreate, db: AsyncSession = Depends(get_async_session)
+    group_data: VKGroupCreate,
+    db: AsyncSession = Depends(get_db),
+    vk_service: VKAPIService = Depends(get_vk_service),
 ) -> VKGroupRead:
     """Добавить новую VK группу для мониторинга"""
     screen_name = _extract_screen_name(group_data.vk_id_or_screen_name)
@@ -73,7 +75,7 @@ async def create_group(
 async def get_groups(
     pagination: PaginationParams = Depends(),
     active_only: bool = True,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[VKGroupRead]:
     """Получить список VK групп"""
     query = select(VKGroup)
@@ -94,7 +96,8 @@ async def get_groups(
 
 @router.get("/{group_id}", response_model=VKGroupRead)
 async def get_group(
-    group_id: int, db: AsyncSession = Depends(get_async_session)
+    group_id: int,
+    db: AsyncSession = Depends(get_db),
 ) -> VKGroupRead:
     """Получить информацию о конкретной группе"""
     group = await db.get(VKGroup, group_id)
@@ -110,7 +113,7 @@ async def get_group(
 async def update_group(
     group_id: int,
     group_update: VKGroupUpdate,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSession = Depends(get_db),
 ) -> VKGroupRead:
     """Обновить настройки группы"""
     group = await db.get(VKGroup, group_id)
@@ -130,7 +133,10 @@ async def update_group(
 
 
 @router.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_group(group_id: int, db: AsyncSession = Depends(get_async_session)):
+async def delete_group(
+    group_id: int,
+    db: AsyncSession = Depends(get_db),
+):
     """Удалить группу"""
     group = await db.get(VKGroup, group_id)
     if group:
@@ -141,7 +147,7 @@ async def delete_group(group_id: int, db: AsyncSession = Depends(get_async_sessi
 
 @router.get("/{group_id}/stats", response_model=VKGroupStats)
 async def get_group_stats(
-    group_id: int, db: AsyncSession = Depends(get_async_session)
+    group_id: int, db: AsyncSession = Depends(get_db)
 ) -> VKGroupStats:
     """Получить статистику по группе"""
     group = await db.get(VKGroup, group_id)
