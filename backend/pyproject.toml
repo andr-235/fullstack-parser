@@ -96,6 +96,7 @@ mypy = "1.8.0"
 bandit = {version = "1.7.6", extras = ["toml"]}
 python-dotenv = "1.0.0"
 watchdog = "3.0.0"
+types-passlib = "^1.7.7.20250602"
 
 [build-system]
 requires = ["poetry-core"]

@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_password_hash, verify_password
+from app.core.hashing import get_password_hash, verify_password
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.services.base import BaseService
