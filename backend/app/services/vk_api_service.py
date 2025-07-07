@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 import vk_api
+from vk_api.exceptions import ApiError
 
 from app.core.config import settings
 
@@ -196,6 +197,17 @@ class VKAPIService:
 
             return comments
 
+        except ApiError as e:
+            if hasattr(e, "code") and e.code == 15:
+                logger.warning(
+                    f"VK API Access denied for post {owner_id}_{post_id}: {e} (code: {getattr(e, 'code', None)})"
+                )
+                return []
+            logger.error(
+                f"VK API error for post {owner_id}_{post_id}: {e} (code: {getattr(e, 'code', None)})",
+                exc_info=True,
+            )
+            return []
         except Exception as e:
             logger.error(
                 f"Ошибка получения комментариев поста {owner_id}_{post_id}: {e}"

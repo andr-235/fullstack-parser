@@ -141,10 +141,35 @@ class ParserService:
             post.reposts_count = self._get_nested_count(post_data, "reposts")
             post.comments_count = self._get_nested_count(post_data, "comments")
             post.views_count = self._get_nested_count(post_data, "views")
-            post.updated_at = datetime.fromtimestamp(
-                post_data["date"], tz=timezone.utc
-            ).replace(tzinfo=None)
+            date_value = post_data["date"]
+            if isinstance(date_value, datetime):
+                post.updated_at = date_value.replace(tzinfo=None)
+            elif isinstance(date_value, (int, float)):
+                post.updated_at = datetime.fromtimestamp(
+                    date_value, tz=timezone.utc
+                ).replace(tzinfo=None)
+            else:
+                logger.warning(
+                    f"Неожиданный тип даты: {type(date_value)} — {date_value}"
+                )
+                post.updated_at = None
             return post
+
+        date_value = post_data["date"]
+        if isinstance(date_value, datetime):
+            published_at = date_value.replace(tzinfo=None)
+            updated_at = date_value.replace(tzinfo=None)
+        elif isinstance(date_value, (int, float)):
+            published_at = datetime.fromtimestamp(date_value, tz=timezone.utc).replace(
+                tzinfo=None
+            )
+            updated_at = datetime.fromtimestamp(date_value, tz=timezone.utc).replace(
+                tzinfo=None
+            )
+        else:
+            logger.warning(f"Неожиданный тип даты: {type(date_value)} — {date_value}")
+            published_at = None
+            updated_at = None
 
         new_post = VKPost(
             vk_id=post_data["id"],
@@ -155,12 +180,8 @@ class ParserService:
             reposts_count=self._get_nested_count(post_data, "reposts"),
             comments_count=self._get_nested_count(post_data, "comments"),
             views_count=self._get_nested_count(post_data, "views"),
-            published_at=datetime.fromtimestamp(
-                post_data["date"], tz=timezone.utc
-            ).replace(tzinfo=None),
-            updated_at=datetime.fromtimestamp(
-                post_data["date"], tz=timezone.utc
-            ).replace(tzinfo=None),
+            published_at=published_at,
+            updated_at=updated_at,
         )
         self.db.add(new_post)
         await self.db.flush()

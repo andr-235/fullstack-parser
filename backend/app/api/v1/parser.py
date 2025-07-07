@@ -35,7 +35,7 @@ from app.services.redis_parser_manager import (
     RedisParserManager,
 )
 from app.models.user import User
-from app.workers.celery_app import celery_app
+from app.services.arq_enqueue import enqueue_run_parsing_task
 
 router = APIRouter(tags=["Parser"])
 
@@ -81,11 +81,12 @@ async def start_parsing(
 
     await parser_manager.start_task(task_response)
 
-    # Запускаем парсинг в фоне
-    celery_app.send_task(
-        "app.workers.tasks.run_parsing_task",
-        args=[task_data.group_id, task_data.max_posts, task_data.force_reparse],
-        task_id=task_id,
+    # Запускаем парсинг в фоне через Arq
+    await enqueue_run_parsing_task(
+        group_id=task_data.group_id,
+        max_posts=task_data.max_posts,
+        force_reparse=task_data.force_reparse,
+        job_id=task_id,
     )
 
     return task_response

@@ -46,7 +46,6 @@ disable_error_code = ["assignment", "arg-type", "attr-defined"]
 [[tool.mypy.overrides]]
 module = [
     "vk_api.*",
-    "celery.*",
 ]
 ignore_missing_imports = true
 
@@ -73,8 +72,7 @@ alembic = ">=1.13.0"
 asyncpg = "0.30.0"
 vk-api = "11.9.9"
 requests = "2.31.0"
-redis = "6.2.0"
-celery = "5.3.4"
+redis = "5.3.0"
 python-jose = {version = "3.5.0", extras = ["cryptography"]}
 passlib = {version = "1.7.4", extras = ["bcrypt"]}
 python-multipart = "0.0.20"
