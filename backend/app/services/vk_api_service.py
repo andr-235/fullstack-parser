@@ -119,10 +119,10 @@ class VKAPIService:
                     "owner_id": item["owner_id"],
                     "text": item.get("text", ""),
                     "date": datetime.fromtimestamp(item["date"], tz=timezone.utc),
-                    "likes": item.get("likes", {}).get("count", 0),
-                    "reposts": item.get("reposts", {}).get("count", 0),
-                    "comments": item.get("comments", {}).get("count", 0),
-                    "views": item.get("views", {}).get("count", 0),
+                    "likes": item.get("likes", {}),
+                    "reposts": item.get("reposts", {}),
+                    "comments": item.get("comments", {}),
+                    "views": item.get("views", {}),
                     "attachments": self._parse_attachments(item.get("attachments", [])),
                 }
                 posts.append(post_data)
