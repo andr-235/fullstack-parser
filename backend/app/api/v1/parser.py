@@ -79,38 +79,16 @@ async def start_parsing(
         error_message=None,
     )
 
-    parser_manager = get_redis_parser_manager()
-    parser_manager.start_task(task_response)
+    await parser_manager.start_task(task_response)
 
     # Запускаем парсинг в фоне
-    background_tasks.add_task(
-        run_parsing_task,
+    celery_app.send_task(
+        "app.workers.tasks.run_parsing_task",
+        args=[task_data.group_id, task_data.max_posts, task_data.force_reparse],
         task_id=task_id,
-        group_id=task_data.group_id,
-        max_posts=task_data.max_posts,
     )
 
     return task_response
-
-
-async def run_parsing_task(
-    task_id: str, group_id: int, max_posts: Optional[int] = None
-) -> None:
-    """Background задача для парсинга"""
-    from app.core.database import AsyncSessionLocal
-
-    manager = get_redis_parser_manager()
-
-    async with AsyncSessionLocal() as db:
-        parser = ParserService(db)
-        try:
-            stats_dict = await parser.parse_group_comments(group_id, max_posts)
-
-            # Обновляем задачу в менеджере
-            await manager.complete_task(task_id, stats_dict)
-
-        except Exception as exc:
-            await manager.fail_task(task_id, str(exc))
 
 
 @router.get("/comments", response_model=PaginatedResponse)
@@ -289,11 +267,10 @@ async def get_parser_stats(
 @router.get("/tasks", response_model=PaginatedResponse)
 async def get_parse_tasks(
     pagination: PaginationParams = Depends(),
+    manager: RedisParserManager = Depends(get_redis_parser_manager),
 ) -> PaginatedResponse:
-    """Получить список задач парсинга"""
-    manager = get_redis_parser_manager()
-    tasks = await manager.list_tasks(skip=pagination.skip, limit=pagination.size)
-    total = await manager.total_tasks()
+    """Получить список задач парсинга с пагинацией."""
+    tasks, total = await manager.list_tasks(skip=pagination.skip, limit=pagination.size)
 
     return PaginatedResponse(
         total=total,

@@ -28,6 +28,12 @@ class ParseTaskResponse(BaseModel):
         ...,
         description=("Статус задачи (running, completed, failed, stopped)"),
     )
+    progress: float = Field(
+        0.0,
+        description="Прогресс выполнения задачи (от 0.0 до 1.0)",
+        ge=0,
+        le=1,
+    )
     started_at: datetime = Field(..., description="Время начала")
     completed_at: Optional[datetime] = Field(None, description="Время завершения")
     stats: Optional["ParseStats"] = Field(None, description="Статистика парсинга")
