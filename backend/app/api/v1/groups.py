@@ -33,14 +33,31 @@ async def create_group(
     group_data: VKGroupCreate, db: AsyncSession = Depends(get_async_session)
 ) -> VKGroupRead:
     """Добавить новую VK группу для мониторинга"""
+    screen_name = _extract_screen_name(group_data.vk_id_or_screen_name)
+    if not screen_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Не указан ID или короткое имя группы.",
+        )
 
     vk_api_service = VKAPIService()
-    vk_group_data = await vk_api_service.get_group_info(group_data.vk_id_or_screen_name)
+    vk_group_data = await vk_api_service.get_group_info(screen_name)
 
     if not vk_group_data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Группа ВКонтакте не найдена.",
+        )
+
+    # Проверка на существование группы в БД (case-insensitive)
+    existing_group_result = await db.execute(
+        select(VKGroup).where(func.lower(VKGroup.screen_name) == screen_name.lower())
+    )
+    existing_group = existing_group_result.scalar_one_or_none()
+    if existing_group:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Группа '{existing_group.name}' ({screen_name}) уже существует в системе.",
         )
 
     # TODO: Перенести логику в сервис
@@ -136,7 +153,7 @@ async def get_group_stats(
     # TODO: Добавить получение детальной статистики из связанных таблиц
     validated_group = VKGroupRead.model_validate(group)
     return VKGroupStats(
-        group_id=validated_group.id,
+        group_id=validated_group.vk_id,
         total_posts=0,
         total_comments=0,
         comments_with_keywords=0,

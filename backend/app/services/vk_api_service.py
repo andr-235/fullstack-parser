@@ -51,6 +51,9 @@ class VKAPIService:
         Returns:
             Словарь с информацией о группе или None
         """
+        if not group_id:
+            return None
+
         await self._rate_limit_wait()
 
         try:
@@ -62,7 +65,7 @@ class VKAPIService:
             if response:
                 group = response[0]
                 return {
-                    "id": group["id"],
+                    "vk_id": group["id"],
                     "name": group["name"],
                     "screen_name": group["screen_name"],
                     "description": group.get("description", ""),
