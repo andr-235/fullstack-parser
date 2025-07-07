@@ -6,6 +6,7 @@ import redis.asyncio as redis
 from app.core.config import settings
 from app.schemas.parser import ParseTaskResponse, ParserState, ParserStats, ParseStats
 
+
 class RedisParserManager:
     """Manages parser tasks and their state using Redis for persistence."""
 
@@ -20,7 +21,9 @@ class RedisParserManager:
     async def _get_redis(self) -> redis.Redis:
         """Initializes and returns the Redis client."""
         if self._redis_client is None:
-            self._redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+            self._redis_client = redis.from_url(
+                settings.REDIS_URL, decode_responses=True
+            )
         return self._redis_client
 
     # Task lifecycle helpers
@@ -28,22 +31,48 @@ class RedisParserManager:
         """Registers a new running task in Redis."""
         r = await self._get_redis()
         task_key = f"parser:task:{task.task_id}"
+
+        # Получаем существующие данные
+        existing_data_json = await r.get(task_key)
+        if existing_data_json:
+            task_data = json.loads(existing_data_json)
+        else:
+            task_data = {}
+
+        # Обновляем данные
+        task_data.update(json.loads(task.model_dump_json()))
+        task_data["status"] = "in_progress"
+
         current_task_key = "parser:current_task_id"
-        
+
         async with r.pipeline() as pipe:
             pipe.set(current_task_key, task.task_id)
-            pipe.hset(task_key, mapping=json.loads(task.model_dump_json()))
+            pipe.set(task_key, json.dumps(task_data))
             await pipe.execute()
 
     async def complete_task(self, task_id: str, stats: dict[str, int]) -> None:
         """Marks a task as completed in Redis."""
         r = await self._get_redis()
         task_key = f"parser:task:{task_id}"
-        
+
+        # Получаем существующие данные
+        existing_data_json = await r.get(task_key)
+        if existing_data_json:
+            task_data = json.loads(existing_data_json)
+        else:
+            task_data = {}
+
+        # Обновляем данные
+        task_data.update(
+            {
+                "status": "completed",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "stats": json.dumps(stats),
+            }
+        )
+
         async with r.pipeline() as pipe:
-            pipe.hset(task_key, "status", "completed")
-            pipe.hset(task_key, "completed_at", datetime.now(timezone.utc).isoformat())
-            pipe.hset(task_key, "stats", json.dumps(stats))
+            pipe.set(task_key, json.dumps(task_data))
             pipe.delete("parser:current_task_id")
             await pipe.execute()
 
@@ -51,11 +80,25 @@ class RedisParserManager:
         """Marks a task as failed in Redis."""
         r = await self._get_redis()
         task_key = f"parser:task:{task_id}"
-        
+
+        # Получаем существующие данные
+        existing_data_json = await r.get(task_key)
+        if existing_data_json:
+            task_data = json.loads(existing_data_json)
+        else:
+            task_data = {}
+
+        # Обновляем данные
+        task_data.update(
+            {
+                "status": "failed",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "error_message": error_message,
+            }
+        )
+
         async with r.pipeline() as pipe:
-            pipe.hset(task_key, "status", "failed")
-            pipe.hset(task_key, "completed_at", datetime.now(timezone.utc).isoformat())
-            pipe.hset(task_key, "error_message", error_message)
+            pipe.set(task_key, json.dumps(task_data))
             pipe.delete("parser:current_task_id")
             await pipe.execute()
 
@@ -67,7 +110,9 @@ class RedisParserManager:
             task_key = f"parser:task:{current_task_id}"
             async with r.pipeline() as pipe:
                 pipe.hset(task_key, "status", "stopped")
-                pipe.hset(task_key, "completed_at", datetime.now(timezone.utc).isoformat())
+                pipe.hset(
+                    task_key, "completed_at", datetime.now(timezone.utc).isoformat()
+                )
                 pipe.delete("parser:current_task_id")
                 await pipe.execute()
 
@@ -76,14 +121,14 @@ class RedisParserManager:
         """Retrieves the current parser state from Redis."""
         r = await self._get_redis()
         current_task_id = await r.get("parser:current_task_id")
-        
+
         if not current_task_id:
             return ParserState(status="stopped", task=None)
-            
+
         task_data = await r.hgetall(f"parser:task:{current_task_id}")
         if not task_data:
             return ParserState(status="stopped", task=None)
-            
+
         task = ParseTaskResponse(**task_data)
         return ParserState(
             status="running",
@@ -96,34 +141,44 @@ class RedisParserManager:
             },
         )
 
-    async def list_tasks(self, skip: int = 0, limit: int = 100) -> List[ParseTaskResponse]:
+    async def list_tasks(
+        self, skip: int = 0, limit: int = 100
+    ) -> List[ParseTaskResponse]:
         """Lists all parser tasks from Redis."""
         r = await self._get_redis()
         task_keys = await r.keys("parser:task:*")
-        
+
         tasks = []
         for key in task_keys:
             task_data = await r.hgetall(key)
+            task_id = key.split(":")[-1]
+            task_data["task_id"] = task_id
             tasks.append(ParseTaskResponse(**task_data))
-            
+
         tasks.sort(key=lambda t: t.started_at, reverse=True)
-        return tasks[skip: skip + limit]
+        return tasks[skip : skip + limit]
 
     async def get_stats(self) -> ParserStats:
         """Calculates and returns overall parser stats from Redis."""
-        tasks = await self.list_tasks(limit=1000) # Assuming max 1000 tasks for stats
-        
+        tasks = await self.list_tasks(limit=1000)  # Assuming max 1000 tasks for stats
+
         total_runs = len(tasks)
         successful_runs = sum(1 for t in tasks if t.status == "completed")
         failed_runs = sum(1 for t in tasks if t.status == "failed")
-        
-        durations = [t.stats.duration_seconds or 0 for t in tasks if t.status == "completed" and t.stats]
+
+        durations = [
+            t.stats.duration_seconds or 0
+            for t in tasks
+            if t.status == "completed" and t.stats
+        ]
         average_duration = sum(durations) / len(durations) if durations else 0
-        
+
         total_posts_processed = sum(t.stats.posts_processed for t in tasks if t.stats)
         total_comments_found = sum(t.stats.comments_found for t in tasks if t.stats)
-        total_comments_with_keywords = sum(t.stats.comments_with_keywords for t in tasks if t.stats)
-        
+        total_comments_with_keywords = sum(
+            t.stats.comments_with_keywords for t in tasks if t.stats
+        )
+
         return ParserStats(
             total_runs=total_runs,
             successful_runs=successful_runs,
@@ -134,6 +189,7 @@ class RedisParserManager:
             total_comments_with_keywords=total_comments_with_keywords,
         )
 
+
 def get_redis_parser_manager() -> RedisParserManager:
     """Returns a singleton instance of the RedisParserManager."""
-    return RedisParserManager() 
+    return RedisParserManager()
