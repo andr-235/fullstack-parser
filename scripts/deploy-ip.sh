@@ -22,7 +22,7 @@ SERVER_IP="192.168.88.12"
 APP_DIR="/opt/app"
 BACKUP_DIR="/opt/app/backup"
 COMPOSE_FILE="docker-compose.prod.ip.yml"
-ENV_FILE=".env.prod"
+ENV_FILE="/opt/app/.env.prod"
 
 # =============================================================================
 # HELPER FUNCTIONS

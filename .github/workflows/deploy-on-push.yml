@@ -19,10 +19,7 @@ jobs:
         run: |
           set -e # Exit on error
           echo "--- Starting deployment on self-hosted runner ---"
-          
           # The deploy script is in the checked-out code.
           echo "--- Running deployment script ---"
           chmod +x ./scripts/deploy-ip.sh
           ./scripts/deploy-ip.sh
-          
-          echo "--- Deployment script finished ---"
