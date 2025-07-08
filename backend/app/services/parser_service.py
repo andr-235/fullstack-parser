@@ -330,11 +330,7 @@ class ParserService:
             author_photo_url=author_photo_url,
             is_processed=True,
             matched_keywords_count=len(matches),
-<<<<<<< HEAD
             processed_at=datetime.now(timezone.utc).replace(tzinfo=None),
-=======
-            processed_at=(datetime.now(timezone.utc).replace(tzinfo=None)),
->>>>>>> 27c6a78 (fix: доработки парсера и логики сохранения комментариев)
         )
         self.db.add(new_comment)
         await self.db.flush()
