@@ -330,7 +330,7 @@ class ParserService:
             author_photo_url=author_photo_url,
             is_processed=True,
             matched_keywords_count=len(matches),
-            processed_at=(datetime.now(timezone.utc).replace(tzinfo=None)),
+            processed_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         self.db.add(new_comment)
         await self.db.flush()
@@ -376,4 +376,3 @@ class ParserService:
 
     async def run_parser_for_all_groups(self) -> dict:
         return {}
-      

@@ -20,11 +20,11 @@ COPY . .
 RUN pnpm build
 
 # Этап 2: Production-образ
-FROM node:20-alpine AS production
+FROM node:20-alpine3.18 AS production
 WORKDIR /app
 
 # Устанавливаем wget для healthcheck
-RUN apk add --no-cache wget
+RUN apk update && apk add --no-cache wget
 
 # Создаем пользователя без root прав
 RUN addgroup -g 1001 -S nodejs

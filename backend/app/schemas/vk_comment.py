@@ -3,11 +3,11 @@ Pydantic схемы для VK комментариев
 """
 
 from datetime import datetime
-from typing import Optional
-
-from pydantic import BaseModel, Field
+from typing import List, Optional
 
 from app.schemas.base import BaseSchema, IDMixin, TimestampMixin
+from app.schemas.vk_group import VKGroupResponse
+from pydantic import BaseModel, Field
 
 
 class VKCommentBase(BaseModel):
@@ -36,6 +36,7 @@ class VKCommentResponse(VKCommentBase, IDMixin, TimestampMixin, BaseSchema):
     )
     is_processed: bool = Field(default=False, description="Обработан ли комментарий")
     processed_at: Optional[datetime] = Field(None, description="Когда был обработан")
+    group: Optional[VKGroupResponse] = None
 
 
 class CommentWithKeywords(VKCommentResponse):
