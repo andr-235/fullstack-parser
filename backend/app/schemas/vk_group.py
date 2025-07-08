@@ -18,7 +18,10 @@ class VKGroupBase(BaseSchema):
     description: Optional[str] = Field(None, description="Описание группы")
     is_active: bool = Field(default=True, description="Активен ли мониторинг группы")
     max_posts_to_check: int = Field(
-        default=100, gte=1, lte=1000, description="Максимум постов для проверки"
+        default=100,
+        gte=1,
+        lte=1000,
+        description="Максимум постов для проверки",
     )
 
 
@@ -80,3 +83,14 @@ class VKGroupStats(BaseSchema):
     comments_with_keywords: int
     last_activity: Optional[datetime]
     top_keywords: list[str]
+
+
+# --- Добавлено для корректного импорта в vk_comment.py ---
+class VKGroupResponse(BaseSchema):
+    """Минимальная схема для вложенного объекта group в комментарии."""
+
+    id: int
+    vk_id: int
+    name: str
+    screen_name: str
+    photo_url: Optional[str] = None

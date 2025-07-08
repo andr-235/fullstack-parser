@@ -3,18 +3,15 @@ API endpoints для парсинга комментариев VK
 """
 
 from datetime import datetime, timezone
-from typing import Optional, List
-
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy import and_, desc, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from typing import List, Optional
 
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.keyword import Keyword
+from app.models.user import User
 from app.models.vk_comment import VKComment
 from app.models.vk_group import VKGroup
+from app.models.vk_post import VKPost
 from app.schemas.base import PaginatedResponse, PaginationParams, StatusResponse
 from app.schemas.parser import (
     GlobalStats,
@@ -28,14 +25,17 @@ from app.schemas.vk_comment import (
     CommentWithKeywords,
     VKCommentResponse,
 )
+from app.services.arq_enqueue import enqueue_run_parsing_task
 from app.services.group_service import GroupService
 from app.services.parser_service import ParserService
 from app.services.redis_parser_manager import (
-    get_redis_parser_manager,
     RedisParserManager,
+    get_redis_parser_manager,
 )
-from app.models.user import User
-from app.services.arq_enqueue import enqueue_run_parsing_task
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from sqlalchemy import and_, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 router = APIRouter(tags=["Parser"])
 
@@ -100,7 +100,9 @@ async def get_comments(
 ) -> PaginatedResponse:
     """Получить список найденных комментариев с фильтрацией"""
 
-    query = select(VKComment)
+    query = select(VKComment).options(
+        selectinload(VKComment.post).selectinload(VKPost.group)
+    )
 
     # Применяем фильтры
     if search_params.group_id:
@@ -139,16 +141,22 @@ async def get_comments(
     result = await db.execute(paginated_query)
     comments = result.scalars().all()
 
-    import structlog
+    items = []
+    for comment in comments:
+        group = None
+        if comment.post and comment.post.group:
+            from app.schemas.vk_group import VKGroupResponse
 
-    logger = structlog.get_logger(__name__)
-    logger.warning(f"comments: {comments}")
+            group = VKGroupResponse.model_validate(comment.post.group)
+        comment_data = VKCommentResponse.model_validate(comment)
+        comment_data.group = group
+        items.append(comment_data)
 
     return PaginatedResponse(
         total=total,
         page=pagination.page,
         size=pagination.size,
-        items=[VKCommentResponse.model_validate(comment) for comment in comments],
+        items=items,
     )
 
 
