@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -59,7 +60,6 @@ jobs:
     name: 🚚 Deploy to Production Server
     needs: build
     runs-on: self-hosted # <-- Используется ваш self-hosted runner
-    environment: production # <-- Настройте environment 'production' в репозитории
 
     steps:
       - name: 🚀 Deploy to Production
