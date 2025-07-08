@@ -8,9 +8,6 @@ import re
 from datetime import datetime, timezone
 from typing import Callable, Coroutine, List, Optional, Tuple
 
-from sqlalchemy import and_, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.models.comment_keyword_match import CommentKeywordMatch
 from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
@@ -18,6 +15,8 @@ from app.models.vk_group import VKGroup
 from app.models.vk_post import VKPost
 from app.schemas.parser import ParseStats
 from app.services.vkbottle_service import VKBottleService
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -189,9 +188,8 @@ class ParserService:
             published_at = datetime.fromtimestamp(date_value, tz=timezone.utc).replace(
                 tzinfo=None
             )
-            updated_at = datetime.fromtimestamp(date_value, tz=timezone.utc).replace(
-                tzinfo=None
-            )
+            updated_at = datetime.fromtimestamp(date_value, tz=timezone.utc)
+            updated_at = updated_at.replace(tzinfo=None)
         else:
             logger.warning(f"Неожиданный тип даты: {type(date_value)} — {date_value}")
             published_at = None
@@ -286,6 +284,9 @@ class ParserService:
                 getattr(comment_data, "date", 0), tz=timezone.utc
             ).replace(tzinfo=None),
             author_id=getattr(comment_data, "from_id", None),
+            is_processed=True,
+            matched_keywords_count=len(matches),
+            processed_at=datetime.now(timezone.utc),
         )
         self.db.add(new_comment)
         await self.db.flush()
@@ -295,6 +296,8 @@ class ParserService:
                 comment_id=new_comment.id,
                 keyword_id=keyword.id,
                 matched_text=matched_text,
+                match_position=position,
+                found_at=datetime.now(timezone.utc),
             )
             self.db.add(match)
 
