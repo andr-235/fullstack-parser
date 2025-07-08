@@ -90,10 +90,7 @@ class ParserState(BaseModel):
     status: str = Field(..., description="running, stopped или failed")
     task: Optional[dict[str, Any]] = Field(
         None,
-        description=(
-            "Информация об активной задаче: task_id, group_id, group_name, "
-            "progress, posts_processed",
-        ),
+        description="Информация об активной задаче: task_id, group_id, group_name, progress, posts_processed",
     )
 
 

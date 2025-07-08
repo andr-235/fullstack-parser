@@ -18,8 +18,10 @@ class Settings(BaseSettings):
     # API
     api_v1_str: str = "/api/v1"
 
-    # CORS - упрощенная конфигурация
-    cors_origins: str = Field(default="http://localhost:3000,http://127.0.0.1:3000")
+    # CORS - поддержка переменной окружения CORS_ORIGINS
+    cors_origins: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000", alias="CORS_ORIGINS"
+    )
 
     # Database connection components from .env
     db_user: str = Field(alias="DB_USER", default="postgres")

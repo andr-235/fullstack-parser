@@ -139,6 +139,11 @@ async def get_comments(
     result = await db.execute(paginated_query)
     comments = result.scalars().all()
 
+    import structlog
+
+    logger = structlog.get_logger(__name__)
+    logger.warning(f"comments: {comments}")
+
     return PaginatedResponse(
         total=total,
         page=pagination.page,
