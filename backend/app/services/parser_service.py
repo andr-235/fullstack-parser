@@ -3,6 +3,7 @@ Parser Service для обработки комментариев и поиск�
 """
 
 import asyncio
+import functools
 import logging
 import re
 from datetime import datetime, timezone
@@ -262,7 +263,7 @@ class ParserService:
                 keyword.word if keyword.is_case_sensitive else keyword.word.lower()
             )
             if keyword.is_whole_word:
-                pattern = r"\b" + re.escape(search_word) + r"\b"
+                pattern = r"\\b" + re.escape(search_word) + r"\\b"
                 flags = re.IGNORECASE if not keyword.is_case_sensitive else 0
                 for match in re.finditer(pattern, search_text, flags):
                     matches.append((keyword, match.group(0), match.start()))
@@ -273,9 +274,49 @@ class ParserService:
                     pos = search_text.find(search_word, pos + 1)
         return matches
 
+    async def _get_author_info(self, author_id: int) -> tuple[str, str, str]:
+        self.vk_service.logger.info(f"Получаю данные об авторе VK: {author_id}")
+        if author_id is None:
+            return None, None, None
+        if author_id > 0:
+            users = await self.vk_service.api.users.get(
+                user_ids=[author_id], fields=["screen_name", "photo_100"]
+            )
+            if users:
+                user = users[0]
+                name = f"{user.first_name} {user.last_name}"
+                screen_name = getattr(user, "screen_name", None)
+                photo_url = getattr(user, "photo_100", None)
+                self.vk_service.logger.info(
+                    f"User info: {name}, {screen_name}, {photo_url}"
+                )
+                return name, screen_name, photo_url
+        else:
+            group_id = abs(author_id)
+            groups = await self.vk_service.api.groups.get_by_id(
+                group_ids=[group_id], fields=["screen_name", "photo_100"]
+            )
+            if groups:
+                group = groups[0]
+                name = group.name
+                screen_name = getattr(group, "screen_name", None)
+                photo_url = getattr(group, "photo_100", None)
+                self.vk_service.logger.info(
+                    f"Group info: {name}, {screen_name}, {photo_url}"
+                )
+                return name, screen_name, photo_url
+        self.vk_service.logger.warning(
+            f"Не удалось получить данные об авторе VK: {author_id}"
+        )
+        return None, None, None
+
     async def _save_comment(
         self, post: VKPost, comment_data, matches: list
     ) -> VKComment:
+        author_id = getattr(comment_data, "from_id", None)
+        author_name, author_screen_name, author_photo_url = await self._get_author_info(
+            author_id
+        )
         new_comment = VKComment(
             vk_id=getattr(comment_data, "id", None),
             post_id=post.id,
@@ -283,10 +324,13 @@ class ParserService:
             published_at=datetime.fromtimestamp(
                 getattr(comment_data, "date", 0), tz=timezone.utc
             ).replace(tzinfo=None),
-            author_id=getattr(comment_data, "from_id", None),
+            author_id=author_id,
+            author_name=author_name,
+            author_screen_name=author_screen_name,
+            author_photo_url=author_photo_url,
             is_processed=True,
             matched_keywords_count=len(matches),
-            processed_at=datetime.now(timezone.utc),
+            processed_at=(datetime.now(timezone.utc).replace(tzinfo=None)),
         )
         self.db.add(new_comment)
         await self.db.flush()
@@ -301,6 +345,7 @@ class ParserService:
             )
             self.db.add(match)
 
+        await self.db.flush()
         return new_comment
 
     async def _update_group_stats(self, group: VKGroup, stats: ParseStats) -> None:
