@@ -376,3 +376,4 @@ class ParserService:
 
     async def run_parser_for_all_groups(self) -> dict:
         return {}
+      
