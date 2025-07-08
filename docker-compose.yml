@@ -14,6 +14,11 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Redis Cache
   redis:
@@ -26,17 +31,22 @@ services:
       - redis_data:/data
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # FastAPI Backend
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: development
+      target: production
     container_name: fullstack_backend
     restart: unless-stopped
     environment:
-      - ENV=development
+      - ENV=production
       - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-vk_parser}
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
@@ -46,12 +56,11 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend:/app
-      - /app/__pycache__
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -81,34 +90,26 @@ services:
     networks:
       - app-network
 
-  celery-worker:
+  # Arq Worker (async очередь)
+  arq-worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A app.workers.celery_app.celery_app worker -l info
-    volumes:
-      - ./backend:/app
-    env_file:
-      - .env
+      target: production
+    command: python -m arq app.workers.arq_worker.WorkerSettings
+    environment:
+      - ENV=production
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-vk_parser}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN:-your-vk-token}
+      - VK_API_VERSION=${VK_API_VERSION:-5.131}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     depends_on:
-      - redis
-      - backend
-    restart: unless-stopped
-    networks:
-      - app-network
-
-  celery-beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    command: celery -A app.workers.celery_app.celery_app beat -l info
-    volumes:
-      - ./backend:/app
-    env_file:
-      - .env
-    depends_on:
-      - redis
-      - backend
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - app-network

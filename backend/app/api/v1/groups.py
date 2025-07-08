@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.models import VKGroup
 from app.schemas.base import PaginatedResponse, PaginationParams
 from app.schemas.vk_group import VKGroupCreate, VKGroupRead, VKGroupStats, VKGroupUpdate
-from app.services.vk_api_service import VKAPIService, get_vk_service
+from app.services.vkbottle_service import VKBottleService
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,7 +32,6 @@ def _extract_screen_name(url_or_name: str) -> Optional[str]:
 async def create_group(
     group_data: VKGroupCreate,
     db: AsyncSession = Depends(get_db),
-    vk_service: VKAPIService = Depends(get_vk_service),
 ) -> VKGroupRead:
     """Добавить новую VK группу для мониторинга"""
     screen_name = _extract_screen_name(group_data.vk_id_or_screen_name)
@@ -42,8 +41,8 @@ async def create_group(
             detail="Не указан ID или короткое имя группы.",
         )
 
-    vk_api_service = VKAPIService()
-    vk_group_data = await vk_api_service.get_group_info(screen_name)
+    vk_service = VKBottleService(token=settings.vk_access_token, api_version=settings.vk_api_version)
+    vk_group_data = await vk_service.get_group_info(screen_name)
 
     if not vk_group_data:
         raise HTTPException(

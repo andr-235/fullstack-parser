@@ -1,103 +1,49 @@
-# Этап 1: Сборка зависимостей
-# Этот этап создает requirements.txt из poetry.lock.
-# Он включает build-essential для компиляции пакетов, если это необходимо.
-FROM python:3.13-slim AS requirements-stage
-
-WORKDIR /tmp
-
-# Устанавливаем системные зависимости, необходимые для сборки
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && apt-get upgrade -y \
-    && rm -rf /var/lib/apt/lists/*
-
-# Устанавливаем Poetry
-RUN pip install poetry==1.8.2
-
-# Копируем файлы Poetry
-COPY ./pyproject.toml ./poetry.lock* /tmp/
-
-# Отключаем создание виртуального окружения внутри Poetry
-RUN poetry config virtualenvs.create false
-
-# Экспортируем зависимости в requirements.txt
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
-
-# Этап 2: Образ для разработки
-# Этот этап используется для локальной разработки с hot-reloading.
-FROM python:3.13-slim AS development
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-# Устанавливаем системные зависимости для разработки
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    build-essential \
-    && apt-get upgrade -y \
-    && rm -rf /var/lib/apt/lists/*
-
-# Устанавливаем Poetry
-RUN pip install poetry==1.8.2
-
-# Конфигурируем Poetry
-RUN poetry config virtualenvs.create false
-
+# Stage 1: Build dependencies with uv
+FROM python:3.13-slim AS builder
 WORKDIR /app
 
-# Копируем файлы зависимостей и устанавливаем ВСЕ зависимости (включая dev)
-COPY pyproject.toml poetry.lock* /app/
-RUN poetry install --no-root
+# Системные зависимости для сборки
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential curl git libpq-dev && rm -rf /var/lib/apt/lists/*
 
-# Копируем остальной код приложения
-COPY . /app/
+# Устанавливаем uv только для build
+RUN pip install uv
 
-EXPOSE 8000
+# Копируем pyproject.toml и poetry.lock
+COPY pyproject.toml poetry.lock* ./
 
-# Команда по умолчанию для разработки
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Устанавливаем poetry последней версии 2.1.3 и плагин poetry-plugin-export
+RUN pip install --no-cache-dir poetry==2.1.3 poetry-plugin-export
 
+# Экспортируем зависимости poetry в requirements.txt
+RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+# Устанавливаем зависимости через uv
+RUN uv pip install --system --no-deps --requirements requirements.txt
 
-# Этап 3: Финальный образ для production
-# Это оптимизированный, легковесный и безопасный образ.
+# Копируем весь проект (для миграций, alembic и т.д.)
+COPY . .
+
+# Stage 2: Production image (без poetry/uv/pip)
 FROM python:3.13-slim AS production
+WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+# Системные зависимости для рантайма
+RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev git curl && rm -rf /var/lib/apt/lists/*
 
-# Создаем пользователя без root-прав
+# Создаем non-root пользователя
 RUN groupadd -r appuser && useradd --no-log-init -r -g appuser appuser
 
-# Устанавливаем ТОЛЬКО runtime системные зависимости
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    # for psycopg2
-    libpq-dev \
-    # for git
-    git \
-    # other essentials
-    curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Копируем установленные библиотеки из builder
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
-WORKDIR /app
+# Копируем код приложения
+COPY --from=builder /app /app
 
-# Копируем requirements.txt из этапа сборки зависимостей
-COPY --from=requirements-stage /tmp/requirements.txt /app/requirements.txt
-
-# Устанавливаем Python зависимости через pip
-RUN pip install --no-cache-dir -r /app/requirements.txt
-
-# Копируем код приложения от имени non-root пользователя
-COPY --chown=appuser:appuser . /app/
-
-# Переключаемся на non-root пользователя
 USER appuser
 
 EXPOSE 8000
 
-# Проверка состояния
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Команда для запуска приложения в production
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
