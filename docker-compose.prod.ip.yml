@@ -68,13 +68,16 @@ services:
 
   # Next.js Frontend
   frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://${SERVER_IP}
     image: ${DOCKER_IMAGE_FRONTEND}
     container_name: fullstack_frontend_prod
     restart: always
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://${SERVER_IP}/api
-      - NEXT_PUBLIC_APP_URL=https://${SERVER_IP}
       - SERVER_IP=${SERVER_IP}
     expose:
       - "3000"

@@ -73,6 +73,7 @@ async def start_parsing(
         group_id=task_data.group_id,
         group_name=group.name,
         status="running",
+        progress=0.0,
         started_at=datetime.now(timezone.utc),
         completed_at=None,
         stats=None,
@@ -81,6 +82,7 @@ async def start_parsing(
 
     await parser_manager.start_task(task_response)
 
+    # Запускаем парсинг в фоне через Arq
     # Запускаем парсинг в фоне через Arq
     await enqueue_run_parsing_task(
         group_id=task_data.group_id,
@@ -301,7 +303,9 @@ async def stop_parser(
 ) -> StatusResponse:
     """Остановить текущую задачу парсинга"""
     stopped = parser_manager.stop_current_task()
-    return StatusResponse(success=stopped, message="Парсер остановлен")
+    return StatusResponse(
+        status="stopped" if stopped else "not_stopped", message="Парсер остановлен"
+    )
 
 
 @router.get("/history", response_model=List[ParseTaskResponse])
