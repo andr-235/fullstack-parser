@@ -82,7 +82,8 @@ export default function CommentsPage() {
     console.log('groupFilter:', groupFilter)
     console.log('useInfiniteComments params:', {
       text: debouncedText,
-      group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
+      group_id:
+        groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
       keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
       limit: 20,
     })
@@ -97,7 +98,8 @@ export default function CommentsPage() {
     isFetchingNextPage,
   } = useInfiniteComments({
     text: debouncedText,
-    group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
+    group_id:
+      groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
     keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
     limit: 20,
   })
@@ -129,10 +131,13 @@ export default function CommentsPage() {
             onChange={(e) => setTextFilter(e.target.value)}
             className="md:col-span-2"
           />
-          <Select value={groupFilter} onValueChange={(val) => {
-            console.log('Select group changed:', val)
-            setGroupFilter(val)
-          }}>
+          <Select
+            value={groupFilter}
+            onValueChange={(val) => {
+              console.log('Select group changed:', val)
+              setGroupFilter(val)
+            }}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Все группы" />
             </SelectTrigger>
