@@ -74,9 +74,6 @@ jobs:
             echo "Configuring git safe.directory..."
             git config --global --add safe.directory ${{ secrets.PRODUCTION_APP_DIR }}
 
-            echo "Resetting and cleaning local changes..."
-            git reset --hard HEAD
-            git clean -fd
 
             echo "Pulling latest changes from main branch..."
             git pull origin main
