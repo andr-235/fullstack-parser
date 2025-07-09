@@ -3,7 +3,7 @@ Pydantic схемы для VK комментариев
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from app.schemas.base import BaseSchema, IDMixin, TimestampMixin
 from app.schemas.vk_group import VKGroupResponse
@@ -11,7 +11,9 @@ from pydantic import BaseModel, Field
 
 
 class VKCommentBase(BaseModel):
-    """Базовая схема VK комментария"""
+    """
+    Базовая схема VK комментария
+    """
 
     text: str = Field(..., description="Текст комментария")
     author_id: int = Field(..., description="ID автора комментария")
@@ -20,10 +22,15 @@ class VKCommentBase(BaseModel):
 
 
 class VKCommentResponse(VKCommentBase, IDMixin, TimestampMixin, BaseSchema):
-    """Схема ответа VK комментария"""
+    """
+    Схема ответа VK комментария
+    """
 
     vk_id: int = Field(..., description="ID комментария в ВК")
     post_id: int = Field(..., description="ID поста")
+    post_vk_id: Optional[int] = Field(
+        None, description="ID поста в VK (для формирования ссылки)"
+    )
     author_screen_name: Optional[str] = Field(None, description="Короткое имя автора")
     author_photo_url: Optional[str] = Field(None, description="URL фото автора")
     likes_count: int = Field(default=0, description="Количество лайков")
@@ -40,7 +47,9 @@ class VKCommentResponse(VKCommentBase, IDMixin, TimestampMixin, BaseSchema):
 
 
 class CommentWithKeywords(VKCommentResponse):
-    """Комментарий с найденными ключевыми словами"""
+    """
+    Комментарий с найденными ключевыми словами
+    """
 
     matched_keywords: list[str] = Field(
         default=[], description="Найденные ключевые слова"
