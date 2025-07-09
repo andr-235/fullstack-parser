@@ -1,59 +1,59 @@
 services:
+  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: fullstack_postgres_prod
-    restart: unless-stopped
+    restart: always
     environment:
-      POSTGRES_DB: ${DB_NAME:-vk_parser}
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backup:/backup
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
+  # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: fullstack_redis_prod
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
+    restart: always
     volumes:
       - redis_data:/data
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
+  # FastAPI Backend
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: production
+    image: ${DOCKER_IMAGE_BACKEND}
     container_name: fullstack_backend_prod
-    restart: unless-stopped
+    restart: always
     environment:
       - ENV=production
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-vk_parser}
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
-      - CORS_ORIGINS=http://localhost:3000
-      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN:-your-vk-token}
-      - VK_API_VERSION=${VK_API_VERSION:-5.131}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    ports:
-      - "8000:8000"
+      - SECRET_KEY=${SECRET_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      - SERVER_IP=${SERVER_IP}
+      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN}
+    expose:
+      - "8000"
+    volumes:
+      - ./backend/logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,92 +61,70 @@ services:
         condition: service_healthy
     networks:
       - app-network
-    volumes:
-      - ./backend/logs:/app/logs
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
 
+  # Next.js Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://${SERVER_IP}
+    image: ${DOCKER_IMAGE_FRONTEND}
     container_name: fullstack_frontend_prod
-    restart: unless-stopped
+    restart: always
     environment:
       - NODE_ENV=production
-      - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_API_URL=http://backend:8000/api/v1
-      - NEXT_PUBLIC_APP_URL=http://localhost:3000
-    ports:
-      - "3000:3000"
+      - SERVER_IP=${SERVER_IP}
+    expose:
+      - "3000"
     depends_on:
-      backend:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    networks:
-      - app-network
-
-  arq-worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: production
-    command: python -m arq app.workers.arq_worker.WorkerSettings
-    environment:
-      - ENV=production
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-vk_parser}
-      - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
-      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN:-your-vk-token}
-      - VK_API_VERSION=${VK_API_VERSION:-5.131}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - app-network
-
-  nginx:
-    image: nginx:alpine
-    container_name: fullstack_nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.prod.ip.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl
-      - ./nginx/logs:/var/log/nginx
-    depends_on:
-      frontend:
-        condition: service_started
       backend:
         condition: service_healthy
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "nginx", "-t"]
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
 
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: fullstack_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.ip.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "nginx", "-t" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backup Service (optional)
   backup:
     image: postgres:15-alpine
     container_name: fullstack_backup
     restart: "no"
     environment:
-      PGPASSWORD: ${DB_PASSWORD:-postgres}
+      PGPASSWORD: ${DB_PASSWORD}
     volumes:
       - ./backup:/backup
       - ./scripts/backup.sh:/backup.sh
@@ -154,7 +132,7 @@ services:
       - app-network
     depends_on:
       - postgres
-    entrypoint: ["/bin/sh", "/backup.sh"]
+    entrypoint: [ "/bin/sh", "/backup.sh" ]
     profiles:
       - backup
 
