@@ -118,7 +118,7 @@ export default function CommentsPage() {
             onChange={(e) => setTextFilter(e.target.value)}
             className="md:col-span-2"
           />
-          <Select value={groupFilter ?? ""} onValueChange={setGroupFilter}>
+          <Select value={groupFilter ?? ''} onValueChange={setGroupFilter}>
             <SelectTrigger>
               <SelectValue placeholder="Все группы" />
             </SelectTrigger>
