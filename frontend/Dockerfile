@@ -1,6 +1,11 @@
 # Этап 1: Установка зависимостей и сборка
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# Добавляем build-аргумент для API URL
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 # Устанавливаем ENV, чтобы next.config.js включил 'output: standalone'
 ENV DOCKER=true
 
