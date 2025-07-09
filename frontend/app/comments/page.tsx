@@ -129,14 +129,10 @@ export default function CommentsPage() {
             onChange={(e) => setTextFilter(e.target.value)}
             className="md:col-span-2"
           />
-<<<<<<< HEAD
-          <Select value={groupFilter ?? ""} onValueChange={setGroupFilter}>
-=======
           <Select value={groupFilter} onValueChange={(val) => {
             console.log('Select group changed:', val)
             setGroupFilter(val)
           }}>
->>>>>>> f176674 (debug: добавлены console.log для диагностики работы фильтра по группам и useInfiniteComments)
             <SelectTrigger>
               <SelectValue placeholder="Все группы" />
             </SelectTrigger>
