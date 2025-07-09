@@ -71,6 +71,9 @@ jobs:
             echo "Changing to app directory..."
             cd ${{ secrets.PRODUCTION_APP_DIR }}
 
+            echo "Configuring git safe.directory..."
+            git config --global --add safe.directory ${{ secrets.PRODUCTION_APP_DIR }}
+
             echo "Pulling latest changes from main branch..."
             git pull origin main
 
