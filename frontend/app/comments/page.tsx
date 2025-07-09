@@ -71,7 +71,7 @@ const HighlightedText = ({
 
 export default function CommentsPage() {
   const [textFilter, setTextFilter] = useState('')
-  const [groupFilter, setGroupFilter] = useState<string | undefined>(undefined)
+  const [groupFilter, setGroupFilter] = useState<string>('all')
   const [keywordFilter, setKeywordFilter] = useState<string | undefined>(
     undefined
   )
@@ -86,7 +86,7 @@ export default function CommentsPage() {
     isFetchingNextPage,
   } = useInfiniteComments({
     text: debouncedText,
-    group_id: groupFilter ? Number(groupFilter) : undefined,
+    group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
     keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
     limit: 20,
   })
@@ -100,7 +100,7 @@ export default function CommentsPage() {
 
   const handleResetFilters = () => {
     setTextFilter('')
-    setGroupFilter(undefined)
+    setGroupFilter('all')
     setKeywordFilter(undefined)
   }
 
@@ -118,12 +118,12 @@ export default function CommentsPage() {
             onChange={(e) => setTextFilter(e.target.value)}
             className="md:col-span-2"
           />
-          <Select value={groupFilter ?? ''} onValueChange={setGroupFilter}>
+          <Select value={groupFilter ?? ""} onValueChange={setGroupFilter}>
             <SelectTrigger>
               <SelectValue placeholder="Все группы" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Все группы</SelectItem>
+              <SelectItem value="all">Все группы</SelectItem>
               {groupsData?.items?.map((group) => (
                 <SelectItem key={group.id} value={String(group.id)}>
                   {group.name}
