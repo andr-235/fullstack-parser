@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useInfiniteComments } from '@/hooks/use-comments'
 import { useGroups } from '@/hooks/use-groups'
 import { useKeywords } from '@/hooks/use-keywords'
@@ -71,11 +71,22 @@ const HighlightedText = ({
 
 export default function CommentsPage() {
   const [textFilter, setTextFilter] = useState('')
-  const [groupFilter, setGroupFilter] = useState<string | undefined>(undefined)
+  const [groupFilter, setGroupFilter] = useState<string>('all')
   const [keywordFilter, setKeywordFilter] = useState<string | undefined>(
     undefined
   )
   const debouncedText = useDebounce(textFilter, 500)
+
+  useEffect(() => {
+    console.log('CommentsPage rendered')
+    console.log('groupFilter:', groupFilter)
+    console.log('useInfiniteComments params:', {
+      text: debouncedText,
+      group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
+      keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
+      limit: 20,
+    })
+  }, [groupFilter, debouncedText, keywordFilter])
 
   const {
     data,
@@ -86,7 +97,7 @@ export default function CommentsPage() {
     isFetchingNextPage,
   } = useInfiniteComments({
     text: debouncedText,
-    group_id: groupFilter ? Number(groupFilter) : undefined,
+    group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
     keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
     limit: 20,
   })
@@ -100,7 +111,7 @@ export default function CommentsPage() {
 
   const handleResetFilters = () => {
     setTextFilter('')
-    setGroupFilter(undefined)
+    setGroupFilter('all')
     setKeywordFilter(undefined)
   }
 
@@ -118,12 +129,19 @@ export default function CommentsPage() {
             onChange={(e) => setTextFilter(e.target.value)}
             className="md:col-span-2"
           />
-          <Select value={groupFilter} onValueChange={setGroupFilter}>
+<<<<<<< HEAD
+          <Select value={groupFilter ?? ""} onValueChange={setGroupFilter}>
+=======
+          <Select value={groupFilter} onValueChange={(val) => {
+            console.log('Select group changed:', val)
+            setGroupFilter(val)
+          }}>
+>>>>>>> f176674 (debug: добавлены console.log для диагностики работы фильтра по группам и useInfiniteComments)
             <SelectTrigger>
               <SelectValue placeholder="Все группы" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="undefined">Все группы</SelectItem>
+              <SelectItem value="all">Все группы</SelectItem>
               {groupsData?.items?.map((group) => (
                 <SelectItem key={group.id} value={String(group.id)}>
                   {group.name}

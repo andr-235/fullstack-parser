@@ -146,12 +146,15 @@ async def get_comments(
     items = []
     for comment in comments:
         group = None
+        post_vk_id = None
         if comment.post and comment.post.group:
             from app.schemas.vk_group import VKGroupResponse
 
             group = VKGroupResponse.model_validate(comment.post.group)
+            post_vk_id = comment.post.vk_id
         comment_data = VKCommentResponse.model_validate(comment)
         comment_data.group = group
+        comment_data.post_vk_id = post_vk_id
         items.append(comment_data)
 
     return PaginatedResponse(

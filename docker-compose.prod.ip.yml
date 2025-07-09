@@ -49,6 +49,7 @@ services:
       - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
       - SERVER_IP=${SERVER_IP}
+      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN}
     expose:
       - "8000"
     volumes:
