@@ -36,7 +36,10 @@ services:
 
   # FastAPI Backend
   backend:
-    image: ${DOCKER_IMAGE_BACKEND}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ${DOCKER_IMAGE_BACKEND:-fullstack-backend:latest}
     container_name: fullstack_backend_prod
     restart: always
     environment:
