@@ -42,6 +42,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Устанавливаем переменные окружения
 ENV NODE_ENV=production
 
+# Устанавливаем переменные окружения
+ENV NODE_ENV=production
+
 USER nextjs
 
 EXPOSE 3000
