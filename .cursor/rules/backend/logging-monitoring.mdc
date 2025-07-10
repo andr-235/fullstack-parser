@@ -1,0 +1,632 @@
+---
+description: "Comprehensive logging and monitoring setup with structured logging"
+globs: **/logging.py, **/logs/**/*, **/monitoring.py, **/log_config.py
+alwaysApply: false
+---
+
+# 📊 Logging & Monitoring Guidelines
+
+## 🔍 Modern Logging Setup with MDC
+
+### Loguru + MDC Integration
+```python
+# app/core/logging.py
+import sys
+import json
+from pathlib import Path
+from typing import Dict, Any, Optional
+from contextvars import ContextVar
+
+from loguru import logger
+from mdc import MDC, with_mdc
+from app.core.config import settings
+
+# Context variables для request tracking
+request_id_var: ContextVar[str] = ContextVar("request_id", default="")
+user_id_var: ContextVar[str] = ContextVar("user_id", default="")
+trace_id_var: ContextVar[str] = ContextVar("trace_id", default="")
+
+def setup_logging():
+    """Настройка современного логирования с MDC"""
+    
+    # Удаляем стандартный handler
+    logger.remove()
+    
+    # Console logging для разработки
+    if settings.DEBUG:
+        logger.add(
+            sys.stderr,
+            format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
+                   "<level>{level: <8}</level> | "
+                   "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
+                   "<yellow>[{extra[request_id]}]</yellow> | "
+                   "<level>{message}</level>",
+            level="DEBUG",
+            colorize=True,
+            backtrace=True,
+            diagnose=True,
+            enqueue=True
+        )
+    
+    # Создаем директорию для логов
+    logs_dir = Path("logs")
+    logs_dir.mkdir(exist_ok=True)
+    
+    # Structured JSON logging для production
+    logger.add(
+        logs_dir / "app.jsonl",
+        format=format_json_log,
+        level="INFO",
+        rotation="100 MB",
+        retention="30 days",
+        compression="gz",
+        enqueue=True,
+        serialize=False
+    )
+    
+    # Отдельный файл для ошибок
+    logger.add(
+        logs_dir / "errors.jsonl",
+        format=format_json_log,
+        level="ERROR",
+        rotation="50 MB",
+        retention="60 days",
+        compression="gz",
+        backtrace=True,
+        diagnose=True,
+        enqueue=True,
+        serialize=False
+    )
+
+def format_json_log(record: dict) -> str:
+    """Форматирование логов в JSON с MDC контекстом"""
+    
+    # Извлекаем контекст из MDC и ContextVar
+    mdc_context = {}
+    if hasattr(record.get('extra', {}), 'get'):
+        mdc_context = record['extra'].get('mdc', {})
+    
+    log_entry = {
+        "timestamp": record["time"].isoformat(),
+        "level": record["level"].name,
+        "logger": record["name"],
+        "module": record["module"],
+        "function": record["function"],
+        "line": record["line"],
+        "message": record["message"],
+        "request_id": request_id_var.get(""),
+        "user_id": user_id_var.get(""),
+        "trace_id": trace_id_var.get(""),
+        "mdc": mdc_context,
+        "extra": {k: v for k, v in record.get("extra", {}).items() 
+                 if k not in ["request_id", "user_id", "trace_id", "mdc"]},
+        "process": {
+            "id": record["process"].id,
+            "name": record["process"].name
+        },
+        "thread": {
+            "id": record["thread"].id,
+            "name": record["thread"].name
+        }
+    }
+    
+    # Добавляем exception info если есть
+    if record.get("exception"):
+        log_entry["exception"] = {
+            "type": record["exception"].type.__name__,
+            "value": str(record["exception"].value),
+            "traceback": record["exception"].traceback
+        }
+    
+    return json.dumps(log_entry, ensure_ascii=False) + "\n"
+
+class StructuredLogger:
+    """Wrapper для логирования с MDC контекстом"""
+    
+    def __init__(self, name: str):
+        self.name = name
+        self.logger = logger.bind(module=name)
+    
+    def _enrich_context(self, **kwargs) -> Dict[str, Any]:
+        """Обогащение контекста логирования"""
+        context = {
+            "request_id": request_id_var.get(""),
+            "user_id": user_id_var.get(""),
+            "trace_id": trace_id_var.get(""),
+            "service": "vk-comments-monitor",
+            "environment": settings.ENVIRONMENT,
+            **kwargs
+        }
+        return {k: v for k, v in context.items() if v}
+    
+    def info(self, message: str, **kwargs):
+        context = self._enrich_context(**kwargs)
+        with MDC(**context):
+            self.logger.bind(**context).info(message)
+    
+    def error(self, message: str, **kwargs):
+        context = self._enrich_context(**kwargs)
+        with MDC(**context):
+            self.logger.bind(**context).error(message)
+    
+    def warning(self, message: str, **kwargs):
+        context = self._enrich_context(**kwargs)
+        with MDC(**context):
+            self.logger.bind(**context).warning(message)
+    
+    def debug(self, message: str, **kwargs):
+        context = self._enrich_context(**kwargs)
+        with MDC(**context):
+            self.logger.bind(**context).debug(message)
+    
+    @with_mdc
+    def log_operation(self, operation: str, **context):
+        """Декоратор для логирования операций"""
+        def decorator(func):
+            async def wrapper(*args, **kwargs):
+                start_time = time.time()
+                operation_id = str(uuid.uuid4())
+                
+                with MDC(operation=operation, operation_id=operation_id, **context):
+                    self.info(f"Starting {operation}", **context)
+                    
+                    try:
+                        result = await func(*args, **kwargs)
+                        duration = time.time() - start_time
+                        
+                        self.info(
+                            f"Completed {operation}",
+                            duration=duration,
+                            status="success",
+                            **context
+                        )
+                        return result
+                        
+                    except Exception as e:
+                        duration = time.time() - start_time
+                        self.error(
+                            f"Failed {operation}",
+                            duration=duration,
+                            status="error",
+                            error_type=type(e).__name__,
+                            error_message=str(e),
+                            **context
+                        )
+                        raise
+            return wrapper
+        return decorator
+
+# Использование
+log = StructuredLogger(__name__)
+```
+
+## 🌐 FastAPI Request Tracking Middleware
+
+### Enhanced Request Logging
+```python
+# app/middleware/logging.py
+import time
+import uuid
+from typing import Callable, Optional
+from fastapi import Request, Response
+from starlette.middleware.base import BaseHTTPMiddleware
+from mdc import MDC
+
+from app.core.logging import StructuredLogger, request_id_var, user_id_var, trace_id_var
+from app.core.auth import decode_access_token
+
+log = StructuredLogger(__name__)
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Middleware для логирования HTTP запросов с MDC контекстом"""
+    
+    def __init__(self, app, exclude_paths: Optional[list] = None):
+        super().__init__(app)
+        self.exclude_paths = exclude_paths or ["/health", "/metrics", "/docs", "/redoc"]
+    
+    async def dispatch(self, request: Request, call_next: Callable):
+        # Пропускаем служебные endpoints
+        if any(request.url.path.startswith(path) for path in self.exclude_paths):
+            return await call_next(request)
+        
+        # Генерируем уникальные идентификаторы
+        request_id = str(uuid.uuid4())
+        trace_id = request.headers.get("x-trace-id", str(uuid.uuid4()))
+        
+        # Устанавливаем контекст
+        request_id_var.set(request_id)
+        trace_id_var.set(trace_id)
+        
+        # Извлекаем user_id из JWT
+        user_id = await self._extract_user_id(request)
+        if user_id:
+            user_id_var.set(str(user_id))
+        
+        start_time = time.time()
+        
+        # Создаем MDC контекст для запроса
+        request_context = {
+            "request_id": request_id,
+            "trace_id": trace_id,
+            "method": request.method,
+            "path": request.url.path,
+            "query_params": str(request.query_params),
+            "client_ip": request.client.host,
+            "user_agent": request.headers.get("user-agent", ""),
+            "content_type": request.headers.get("content-type", ""),
+            "content_length": request.headers.get("content-length", 0),
+            "user_id": user_id
+        }
+        
+        with MDC(**request_context):
+            log.info("Request started")
+            
+            try:
+                response = await call_next(request)
+                duration = time.time() - start_time
+                
+                # Логируем успешный ответ
+                response_context = {
+                    "status_code": response.status_code,
+                    "duration": round(duration, 4),
+                    "response_size": response.headers.get("content-length", 0)
+                }
+                
+                with MDC(**response_context):
+                    if response.status_code >= 400:
+                        log.warning("Request completed with error")
+                    else:
+                        log.info("Request completed successfully")
+                
+                # Добавляем трейсинг заголовки
+                response.headers["X-Request-ID"] = request_id
+                response.headers["X-Trace-ID"] = trace_id
+                response.headers["X-Process-Time"] = str(round(duration, 4))
+                
+                return response
+                
+            except Exception as e:
+                duration = time.time() - start_time
+                
+                # Логируем ошибку
+                error_context = {
+                    "duration": round(duration, 4),
+                    "error_type": type(e).__name__,
+                    "error_message": str(e)
+                }
+                
+                with MDC(**error_context):
+                    log.error("Request failed with exception")
+                
+                raise
+    
+    async def _extract_user_id(self, request: Request) -> Optional[int]:
+        """Извлечение user_id из JWT токена"""
+        try:
+            authorization = request.headers.get("authorization")
+            if authorization and authorization.startswith("Bearer "):
+                token = authorization.split(" ")[1]
+                payload = decode_access_token(token)
+                return payload.get("sub")
+        except Exception:
+            pass
+        return None
+```
+
+## 📈 Performance & Business Metrics
+
+### Prometheus Integration
+```python
+# app/monitoring/metrics.py
+from prometheus_client import Counter, Histogram, Gauge, Info
+from prometheus_client.openmetrics.exposition import CONTENT_TYPE_LATEST, generate_latest
+from fastapi import Response
+from mdc import MDC
+
+from app.core.logging import StructuredLogger
+
+log = StructuredLogger(__name__)
+
+# HTTP метрики
+http_requests_total = Counter(
+    "http_requests_total",
+    "Total HTTP requests",
+    ["method", "endpoint", "status_code"]
+)
+
+http_request_duration_seconds = Histogram(
+    "http_request_duration_seconds",
+    "HTTP request duration in seconds",
+    ["method", "endpoint"],
+    buckets=[0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+)
+
+http_request_size_bytes = Histogram(
+    "http_request_size_bytes",
+    "HTTP request size in bytes",
+    ["method", "endpoint"]
+)
+
+http_response_size_bytes = Histogram(
+    "http_response_size_bytes",
+    "HTTP response size in bytes",
+    ["method", "endpoint"]
+)
+
+# Business метрики
+comments_processed_total = Counter(
+    "comments_processed_total",
+    "Total processed comments",
+    ["group_id", "status"]
+)
+
+vk_api_calls_total = Counter(
+    "vk_api_calls_total",
+    "Total VK API calls",
+    ["method", "status", "error_code"]
+)
+
+vk_api_rate_limit_remaining = Gauge(
+    "vk_api_rate_limit_remaining",
+    "Remaining VK API rate limit"
+)
+
+background_tasks_total = Counter(
+    "background_tasks_total",
+    "Total background tasks",
+    ["task_name", "status"]
+)
+
+background_task_duration_seconds = Histogram(
+    "background_task_duration_seconds",
+    "Background task duration in seconds",
+    ["task_name"],
+    buckets=[1, 5, 10, 30, 60, 300, 600]
+)
+
+# Database метрики
+database_connections_active = Gauge(
+    "database_connections_active",
+    "Active database connections"
+)
+
+database_query_duration_seconds = Histogram(
+    "database_query_duration_seconds",
+    "Database query duration in seconds",
+    ["operation"],
+    buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5]
+)
+
+# Application info
+app_info = Info(
+    "app_info",
+    "Application information"
+)
+
+class MetricsCollector:
+    """Сборщик метрик с логированием"""
+    
+    def __init__(self):
+        app_info.info({
+            "version": "1.0.0",
+            "environment": "production"
+        })
+    
+    def record_http_request(self, method: str, endpoint: str, status_code: int, 
+                          duration: float, request_size: int = 0, response_size: int = 0):
+        """Запись HTTP метрик"""
+        with MDC(method=method, endpoint=endpoint, status_code=status_code):
+            http_requests_total.labels(
+                method=method,
+                endpoint=endpoint,
+                status_code=status_code
+            ).inc()
+            
+            http_request_duration_seconds.labels(
+                method=method,
+                endpoint=endpoint
+            ).observe(duration)
+            
+            if request_size > 0:
+                http_request_size_bytes.labels(
+                    method=method,
+                    endpoint=endpoint
+                ).observe(request_size)
+            
+            if response_size > 0:
+                http_response_size_bytes.labels(
+                    method=method,
+                    endpoint=endpoint
+                ).observe(response_size)
+            
+            log.debug("HTTP metrics recorded")
+    
+    def record_comment_processed(self, group_id: str, status: str):
+        """Запись метрик обработки комментариев"""
+        with MDC(group_id=group_id, status=status):
+            comments_processed_total.labels(
+                group_id=group_id,
+                status=status
+            ).inc()
+            
+            log.debug("Comment processing metrics recorded")
+    
+    def record_vk_api_call(self, method: str, status: str, error_code: str = ""):
+        """Запись метрик VK API"""
+        with MDC(vk_method=method, status=status, error_code=error_code):
+            vk_api_calls_total.labels(
+                method=method,
+                status=status,
+                error_code=error_code
+            ).inc()
+            
+            log.debug("VK API metrics recorded")
+    
+    def record_background_task(self, task_name: str, status: str, duration: float):
+        """Запись метрик фоновых задач"""
+        with MDC(task_name=task_name, status=status, duration=duration):
+            background_tasks_total.labels(
+                task_name=task_name,
+                status=status
+            ).inc()
+            
+            background_task_duration_seconds.labels(
+                task_name=task_name
+            ).observe(duration)
+            
+            log.debug("Background task metrics recorded")
+
+# Глобальный экземпляр
+metrics_collector = MetricsCollector()
+
+async def metrics_endpoint() -> Response:
+    """Endpoint для Prometheus метрик"""
+    return Response(
+        content=generate_latest(),
+        media_type=CONTENT_TYPE_LATEST
+    )
+```
+
+## 🔍 Application Performance Monitoring
+
+### Database Query Monitoring
+```python
+# app/monitoring/database.py
+import time
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+from mdc import MDC
+
+from app.core.logging import StructuredLogger
+from app.monitoring.metrics import database_query_duration_seconds
+
+log = StructuredLogger(__name__)
+
+# Мониторинг медленных запросов
+@event.listens_for(Engine, "before_cursor_execute")
+def receive_before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    """Начало выполнения SQL запроса"""
+    context._query_start_time = time.time()
+    context._query_statement = statement[:200] + "..." if len(statement) > 200 else statement
+
+@event.listens_for(Engine, "after_cursor_execute")  
+def receive_after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    """Окончание выполнения SQL запроса"""
+    duration = time.time() - context._query_start_time
+    
+    # Определяем тип операции
+    operation = statement.strip().split()[0].upper()
+    
+    # Записываем метрики
+    database_query_duration_seconds.labels(operation=operation).observe(duration)
+    
+    # Логируем медленные запросы
+    if duration > 0.1:  # Медленнее 100ms
+        with MDC(
+            query_duration=round(duration, 4),
+            query_operation=operation,
+            query_statement=context._query_statement,
+            parameters_count=len(parameters) if parameters else 0
+        ):
+            log.warning("Slow database query detected")
+    
+    # Debug логирование всех запросов в development
+    elif settings.DEBUG:
+        with MDC(
+            query_duration=round(duration, 4),
+            query_operation=operation,
+            query_statement=context._query_statement
+        ):
+            log.debug("Database query executed")
+```
+
+## 🚨 Error Tracking & Alerting
+
+### Sentry Integration
+```python
+# app/monitoring/sentry.py
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+from sentry_sdk.integrations.celery import CeleryIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
+
+from app.core.config import settings
+from app.core.logging import request_id_var, user_id_var, trace_id_var
+
+def setup_sentry():
+    """Настройка Sentry для мониторинга ошибок"""
+    
+    if not settings.SENTRY_DSN:
+        return
+    
+    def add_context_processor(event, hint):
+        """Добавление контекста в события Sentry"""
+        event.setdefault("extra", {}).update({
+            "request_id": request_id_var.get(""),
+            "user_id": user_id_var.get(""),
+            "trace_id": trace_id_var.get(""),
+            "environment": settings.ENVIRONMENT,
+            "service": "vk-comments-monitor"
+        })
+        return event
+    
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.ENVIRONMENT,
+        release=settings.APP_VERSION,
+        integrations=[
+            FastApiIntegration(auto_enabling_integrations=False),
+            SqlalchemyIntegration(),
+            CeleryIntegration(),
+            RedisIntegration(),
+        ],
+        traces_sample_rate=0.1,
+        profiles_sample_rate=0.1,
+        before_send=add_context_processor,
+        max_breadcrumbs=50,
+        debug=settings.DEBUG,
+    )
+```
+
+## ✅ Monitoring Checklist
+
+### Logging Configuration
+- [ ] Structured JSON logging настроен
+- [ ] MDC контекст используется везде
+- [ ] Log rotation и retention настроены
+- [ ] Sensitive data фильтруется
+- [ ] Request tracking работает
+- [ ] Error tracking включен
+- [ ] Performance logging настроен
+
+### Metrics & Monitoring
+- [ ] Prometheus метрики собираются
+- [ ] Business метрики отслеживаются
+- [ ] Health check endpoints работают
+- [ ] Database monitoring настроен
+- [ ] VK API rate limiting отслеживается
+- [ ] Background tasks мониторятся
+- [ ] Resource usage tracking включен
+
+### Alerting
+- [ ] Critical error alerts настроены
+- [ ] Performance degradation alerts
+- [ ] Rate limit alerts для VK API
+- [ ] Database connection alerts
+- [ ] Disk space monitoring
+- [ ] Memory usage alerts
+- [ ] Failed deployment notifications
+
+### Observability
+- [ ] Distributed tracing настроен
+- [ ] Log correlation работает
+- [ ] Metrics dashboards созданы
+- [ ] SLA/SLO определены
+- [ ] Runbooks для инцидентов
+- [ ] On-call процедуры настроены
+
+---
+
+📚 **Документация**: [MDC for Python](mdc:https:/github.com/AFriemann/mdc) | [Loguru](mdc:https:/loguru.readthedocs.io) | [Prometheus Client](mdc:https:/prometheus.io/docs)
+

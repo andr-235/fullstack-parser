@@ -1,0 +1,521 @@
+---
+description: "Python code style guidelines with Ruff, Black and modern tools"
+globs: **/*.py, pyproject.toml, setup.cfg, .pre-commit-config.yaml
+alwaysApply: false
+---
+
+# 🎨 Python Code Style Guidelines
+
+Современные практики написания Python кода с использованием Ruff, Black и других инструментов 2025.
+
+## 🛠️ Современные инструменты форматирования
+
+### Ruff - Ultra-fast Python Linter (замена flake8, isort)
+```toml
+# pyproject.toml
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+# Enable rules
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings  
+    "F",   # pyflakes
+    "I",   # isort
+    "C90", # mccabe complexity
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "S",   # flake8-bandit
+    "C4",  # flake8-comprehensions
+    "DTZ", # flake8-datetimez
+    "FA",  # flake8-future-annotations
+    "PIE", # flake8-pie
+    "T20", # flake8-print
+    "SIM", # flake8-simplify
+    "ERA", # eradicate
+]
+
+ignore = [
+    "E501",  # line too long (handled by black)
+    "S101",  # use of assert in tests
+    "S603",  # subprocess without shell equals true
+    "S607",  # starting process with partial path
+]
+
+# Per-file ignores
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
+"tests/*" = ["S101", "S106", "S311"]
+"migrations/*" = ["ALL"]
+"alembic/versions/*" = ["ALL"]
+
+# Import sorting (replaces isort)
+[tool.ruff.isort]
+known-first-party = ["app", "tests"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+# McCabe complexity
+[tool.ruff.mccabe]
+max-complexity = 10
+
+# pyupgrade settings
+[tool.ruff.pyupgrade]
+keep-runtime-typing = true
+```
+
+### Black (Code Formatter)
+```toml
+# pyproject.toml
+[tool.black]
+line-length = 88
+target-version = ['py311', 'py312', 'py313']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.mypy_cache
+  | \.venv
+  | _build
+  | build
+  | dist
+  | migrations
+  | alembic/versions
+)/
+'''
+```
+
+### Bandit (Security Scanner)
+```toml
+# pyproject.toml
+[tool.bandit]
+exclude_dirs = ["tests", "migrations", "alembic"]
+skips = ["B101", "B601"]
+assert_used = {
+    skips = ["*_test.py", "*test_*.py"]
+}
+```
+
+### Pyupgrade (Python Version Upgrade)
+```toml
+# pyproject.toml  
+[tool.pyupgrade]
+py311-plus = true
+```
+
+### mypy (Type Checking)
+```toml
+# pyproject.toml
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+extra_checks = true
+
+# Plugins
+plugins = [
+    "pydantic.mypy",
+    "sqlalchemy.ext.mypy.plugin"
+]
+
+# Per-module configuration
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+strict = false
+
+[[tool.mypy.overrides]]
+module = [
+    "vk_api.*",
+    "celery.*",
+    "redis.*",
+    "alembic.*"
+]
+ignore_missing_imports = true
+
+# Pydantic plugin settings
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+```
+
+## 📝 Naming Conventions
+
+### Variables & Functions
+```python
+# ✅ Хорошо - snake_case
+user_name = "John Doe"
+comment_text = "Hello world"
+max_retry_count = 3
+
+def get_user_by_id(user_id: int) -> User:
+    pass
+
+def calculate_total_score(scores: list[int]) -> float:
+    pass
+
+# ❌ Плохо
+userName = "John Doe"  # camelCase
+CommentText = "Hello"  # PascalCase
+MAX_RETRY_COUNT = 3   # CONSTANT style для переменной
+
+def getUserById(userId: int) -> User:  # camelCase
+    pass
+```
+
+### Classes
+```python
+# ✅ Хорошо - PascalCase
+class UserService:
+    pass
+
+class CommentRepository:
+    pass
+
+class VKAPIClient:
+    pass
+
+# ❌ Плохо
+class user_service:  # snake_case
+    pass
+
+class commentRepository:  # camelCase
+    pass
+```
+
+### Constants
+```python
+# ✅ Хорошо - UPPER_SNAKE_CASE
+MAX_RETRIES = 3
+DEFAULT_TIMEOUT = 30
+VK_API_VERSION = "5.131"
+DATABASE_URL = "postgresql://..."
+
+# ❌ Плохо
+max_retries = 3  # snake_case для константы
+MaxRetries = 3   # PascalCase
+```
+
+### Files & Modules
+```python
+# ✅ Хорошо - snake_case
+user_service.py
+comment_repository.py
+vk_api_client.py
+database_config.py
+
+# ❌ Плохо
+UserService.py      # PascalCase
+commentRepository.py # camelCase
+VK-API-Client.py    # kebab-case
+```
+
+## 🏗️ Code Structure
+
+### Import Organization
+```python
+# Порядок импортов (isort автоматически)
+# 1. Standard library
+import asyncio
+import logging
+from datetime import datetime, timedelta
+from typing import Optional, List, Dict, Any
+
+# 2. Third-party packages
+import uvicorn
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, Field
+
+# 3. Local imports
+from app.core.config import settings
+from app.database import get_db
+from app.models.user import User
+from app.schemas.user import UserCreate, UserRead
+
+# 4. Relative imports (в конце)
+from .utils import generate_token
+from .exceptions import UserNotFoundException
+```
+
+### Function Signatures
+```python
+# ✅ Хорошо - с типами и документацией
+async def get_comments_by_group(
+    db: AsyncSession,
+    group_id: int,
+    *,
+    skip: int = 0,
+    limit: int = 100,
+    include_reviewed: bool = False
+) -> List[Comment]:
+    """
+    Получить комментарии группы с пагинацией.
+    
+    Args:
+        db: Сессия базы данных
+        group_id: ID группы ВКонтакте
+        skip: Количество пропускаемых записей
+        limit: Максимальное количество записей
+        include_reviewed: Включать ли проверенные комментарии
+        
+    Returns:
+        Список объектов Comment
+        
+    Raises:
+        GroupNotFoundException: Если группа не найдена
+    """
+    pass
+
+# ❌ Плохо - без типов и документации
+def get_comments(db, group_id, skip=0, limit=100):
+    pass
+```
+
+### Class Structure
+```python
+# ✅ Хорошо - структурированный класс
+class CommentService:
+    """Сервис для работы с комментариями."""
+    
+    def __init__(self, db: AsyncSession, vk_client: VKAPIClient) -> None:
+        self._db = db
+        self._vk_client = vk_client
+    
+    # Public methods
+    async def create_comment(self, comment_data: CommentCreate) -> Comment:
+        """Создать новый комментарий."""
+        pass
+    
+    async def get_comments_by_group(
+        self,
+        group_id: int,
+        *,
+        filters: Optional[CommentFilters] = None
+    ) -> List[Comment]:
+        """Получить комментарии группы."""
+        pass
+    
+    # Private methods
+    async def _validate_comment_data(self, data: CommentCreate) -> None:
+        """Валидация данных комментария."""
+        pass
+    
+    async def _check_duplicate(self, vk_comment_id: int) -> bool:
+        """Проверка на дублирование."""
+        pass
+```
+
+## 🔧 Error Handling
+
+### Exception Handling
+```python
+# ✅ Хорошо - специфичные исключения
+async def get_user_by_id(db: AsyncSession, user_id: int) -> User:
+    try:
+        result = await db.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if user is None:
+            raise UserNotFoundException(f"User with id {user_id} not found")
+            
+        return user
+        
+    except SQLAlchemyError as e:
+        logger.error(f"Database error while getting user {user_id}: {e}")
+        raise DatabaseException("Failed to retrieve user") from e
+    except Exception as e:
+        logger.error(f"Unexpected error while getting user {user_id}: {e}")
+        raise
+
+# ❌ Плохо - generic exception
+async def get_user_by_id(db, user_id):
+    try:
+        # ... код ...
+        return user
+    except Exception:
+        return None  # Теряем информацию об ошибке
+```
+
+### Logging
+```python
+# ✅ Хорошо - структурированное логирование
+import structlog
+
+logger = structlog.get_logger(__name__)
+
+async def process_comment(comment_data: dict) -> None:
+    logger.info(
+        "Processing comment",
+        comment_id=comment_data["id"],
+        group_id=comment_data["group_id"],
+        author_id=comment_data["author_id"]
+    )
+    
+    try:
+        # ... обработка ...
+        logger.info(
+            "Comment processed successfully",
+            comment_id=comment_data["id"],
+            processing_time=processing_time
+        )
+    except Exception as e:
+        logger.error(
+            "Failed to process comment",
+            comment_id=comment_data["id"],
+            error=str(e),
+            exc_info=True
+        )
+        raise
+
+# ❌ Плохо - неструктурированные логи
+async def process_comment(comment_data):
+    print(f"Processing comment {comment_data['id']}")  # print вместо logger
+    try:
+        # ... код ...
+        logger.info("Success")  # Нет контекста
+    except Exception as e:
+        logger.error(e)  # Только текст ошибки
+```
+
+## 📋 Docstrings
+
+### Google Style Docstrings
+```python
+def calculate_sentiment_score(
+    text: str,
+    *,
+    model_name: str = "default",
+    confidence_threshold: float = 0.7
+) -> tuple[str, float]:
+    """
+    Вычислить sentiment score для текста.
+    
+    Анализирует эмоциональную окраску текста и возвращает
+    категорию sentiment'а с оценкой уверенности.
+    
+    Args:
+        text: Анализируемый текст
+        model_name: Название модели для анализа
+        confidence_threshold: Порог уверенности для классификации
+        
+    Returns:
+        Кортеж из (sentiment_category, confidence_score)
+        где sentiment_category in ['positive', 'negative', 'neutral']
+        
+    Raises:
+        ValueError: Если text пустой или слишком длинный
+        ModelNotFoundError: Если модель не найдена
+        
+    Example:
+        >>> calculate_sentiment_score("Отличный продукт!")
+        ('positive', 0.85)
+        
+        >>> calculate_sentiment_score("Так себе", confidence_threshold=0.8)
+        ('neutral', 0.65)
+    """
+    pass
+```
+
+## ✅ Pre-commit Configuration
+
+### .pre-commit-config.yaml
+```yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        language_version: python3.13
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+```
+
+## 🚀 VS Code / Cursor Settings
+
+### .vscode/settings.json
+```json
+{
+  "python.formatting.provider": "black",
+  "python.linting.enabled": true,
+  "python.linting.flake8Enabled": true,
+  "python.linting.mypyEnabled": true,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": true
+  },
+  "python.sortImports.args": ["--profile", "black"],
+  "[python]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.rulers": [88]
+  }
+}
+```
+
+## ✅ Code Quality Checklist
+
+### Before Commit
+- [ ] `black .` - код отформатирован
+- [ ] `isort .` - импорты отсортированы
+- [ ] `flake8 .` - нет линтинг ошибок
+- [ ] `mypy .` - типы проверены
+- [ ] Все функции имеют типы аннотации
+- [ ] Все публичные функции имеют docstrings
+- [ ] Константы в UPPER_SNAKE_CASE
+- [ ] Классы в PascalCase
+- [ ] Переменные и функции в snake_case
+- [ ] Нет TODO комментариев в коммите
+- [ ] Логирование добавлено для важных операций
+
+### Code Review Points
+- [ ] Функции не длиннее 20-30 строк
+- [ ] Классы не длиннее 200 строк
+- [ ] Избегаем глубокой вложенности (>3 уровней)
+- [ ] Используем ранний return для упрощения логики
+- [ ] Исключения специфичны и информативны
+- [ ] Нет дублирования кода (DRY principle)
+- [ ] Имена переменных и функций описательные
+- [ ] Комментарии объясняют "почему", а не "что"
+
