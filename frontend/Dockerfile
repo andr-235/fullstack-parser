@@ -28,15 +28,15 @@ RUN pnpm build
 FROM node:20-alpine3.18 AS production
 WORKDIR /app
 
-# Устанавливаем curl для healthcheck
-RUN apk update && apk add --no-cache curl && rm -rf /var/cache/apk/*
-
 # Создаём non-root пользователя
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
 # Копируем standalone-вывод, статику и public из builder
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Устанавливаем curl для healthcheck (после COPY)
+RUN apk update && apk add --no-cache curl && rm -rf /var/cache/apk/*
 
 # Устанавливаем переменные окружения
 ENV NODE_ENV=production
