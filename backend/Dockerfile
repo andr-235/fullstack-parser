@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Устанавливаем poetry и uv с pin-версией
 RUN pip install --no-cache-dir poetry==2.1.3 poetry-plugin-export uv==0.1.39
 
+# Отключаем создание виртуального окружения poetry
+RUN poetry config virtualenvs.create false
+
 # Копируем только poetry-файлы для layer caching
 COPY pyproject.toml poetry.lock* ./
 
