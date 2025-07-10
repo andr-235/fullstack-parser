@@ -1,0 +1,87 @@
+---
+description: Next.js frontend development patterns and React best practices
+globs: frontend/**/*.{ts,tsx,js,jsx}, **/src/**/*.{ts,tsx,js,jsx}, **/components/**/*.{ts,tsx}, **/app/**/*.{ts,tsx}, **/pages/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# ⚛️ FRONTEND (Next.js) ПРАВИЛА
+
+## Стиль кода:
+- Используйте **TypeScript strict mode**
+- Применяйте **functional components** с hooks
+- Следуйте **React Server Components** patterns в Next.js 14
+- Используйте **TailwindCSS** для стилизации
+- Применяйте **ESLint + Prettier** конфигурацию
+
+## Структура Next.js:
+```typescript
+// Пример структуры src/
+src/
+├── app/                 # App Router (Next.js 14)
+├── components/
+│   ├── ui/             # Reusable UI components
+│   └── features/       # Feature-specific components
+├── hooks/              # Custom React hooks
+├── lib/                # Utilities и configurations
+├── types/              # TypeScript types
+└── services/           # API services
+```
+
+## State Management:
+- Используйте **React Query/TanStack Query** для server state
+- Применяйте **useState/useReducer** для local state
+- Используйте **Zustand** для global state если необходимо
+- Применяйте **Context** только для theme/auth
+
+## API Integration:
+- Создавайте **typed API clients** с автогенерацией из OpenAPI
+- Используйте **React Query** для caching и synchronization
+- Применяйте **optimistic updates** где уместно
+- Обрабатывайте **loading states** и **error boundaries**
+
+## Пример кода:
+```typescript
+// API service
+export const userService = {
+  async getUsers(): Promise<User[]> {
+    const response = await fetch('/api/v1/users');
+    if (!response.ok) throw new Error('Failed to fetch users');
+    return response.json();
+  }
+};
+
+// React Query hook
+export const useUsers = () => {
+  return useQuery({
+    queryKey: ['users'],
+    queryFn: userService.getUsers,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// Component
+export default function UsersList() {
+  const { data: users, isLoading, error } = useUsers();
+  
+  if (isLoading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+  
+  return (
+    <div className="grid gap-4">
+      {users?.map(user => (
+        <UserCard key={user.id} user={user} />
+      ))}
+    </div>
+  );
+}
+```
+
+## ⚡ Frontend Performance:
+- Применяйте **code splitting** и **lazy loading**
+- Используйте **Next.js optimizations** (Image, Font, etc.)
+- Применяйте **React.memo** для предотвращения re-renders
+- Используйте **virtual scrolling** для больших списков
+- Применяйте **web vitals** мониторинг
+
+
+

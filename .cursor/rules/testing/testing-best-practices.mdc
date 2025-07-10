@@ -1,0 +1,44 @@
+---
+description: Современные best practices для тестирования backend и frontend (pytest, coverage, async, user-centric)
+globs:
+  [
+    "/test_.py",
+    "/tests//.py",
+    "/conftest.py",
+    "pytest.ini",
+    "pyproject.toml",
+    "/.test.{ts,tsx,js,jsx}",
+    "/.spec.{ts,tsx,js,jsx}",
+  ]
+alwaysApply: false
+---
+
+# 🧪 Testing Best Practices (Объединённый гайд)
+
+## Общие стандарты и чеклист
+
+- Используйте **pytest** с async support для backend
+- Применяйте **test fixtures** для database setup
+- Создавайте **integration tests** для API endpoints
+- Используйте **pytest-mock** для mocking
+- Стремитесь к **80%+ coverage**
+- Используйте **Jest + React Testing Library** для frontend
+- Применяйте **user-centric** testing approach
+- Создавайте **component tests** и **integration tests**
+- Используйте **MSW** для API mocking
+- Применяйте **accessibility testing**
+- Arrange-Act-Assert pattern для структуры тестов
+- One assertion per test когда возможно
+- Descriptive test names на русском языке
+- Mock external dependencies (API, database, third-party services)
+- Test edge cases и error scenarios
+
+---
+
+# Подробные best practices, примеры и конфиги
+
+// ... вставить далее весь уникальный и не дублирующийся контент из testing-pytest-best-practices.mdc ...
+
+# Подробные best practices, примеры и конфиги
+
+// ... вставить далее весь уникальный и не дублирующийся контент из testing-pytest-best-practices.mdc ...

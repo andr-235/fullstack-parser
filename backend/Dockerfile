@@ -28,7 +28,6 @@ RUN uv pip install --system --no-deps --requirements requirements.txt
 COPY app/ ./app/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
-COPY migrations/ ./migrations/
 
 # Stage 2: Production
 FROM python:3.13-slim AS production

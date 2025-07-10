@@ -1,0 +1,648 @@
+---
+description: GitHub Actions security best practices and workflow hardening
+globs: .github/workflows/**/*.yml, .github/workflows/**/*.yaml, .github/actions/**/*
+alwaysApply: false
+---
+# GitHub Actions Security Best Practices
+
+Комплексное руководство по безопасности GitHub Actions для защиты CI/CD pipeline от атак и утечек данных.
+
+## 🚦 Permission Management
+
+### Minimal GITHUB_TOKEN Permissions
+```yaml
+name: Secure Workflow
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Явно определяем минимальные разрешения
+permissions:
+  contents: read
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Job-level permissions override workflow-level
+    permissions:
+      contents: read
+      checks: write        # Для публикации test results
+      pull-requests: write # Для комментариев в PR
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+```
+
+### Permission Matrix
+```yaml
+# Матрица разрешений для разных типов workflow
+permissions_matrix:
+  read_only:
+    contents: read
+    
+  testing:
+    contents: read
+    checks: write
+    pull-requests: write
+    
+  security_scanning:
+    contents: read
+    security-events: write
+    
+  deployment:
+    contents: read
+    deployments: write
+    packages: write
+    
+  release:
+    contents: write
+    packages: write
+    releases: write
+```
+
+## 🔐 Action Security Pinning
+
+### Secure Action References
+```yaml
+steps:
+  # ❌ НЕБЕЗОПАСНО - floating tags
+  - uses: actions/checkout@main
+  - uses: actions/setup-node@v3
+  
+  # ⚠️ РИСК - major version tags (могут обновляться)
+  - uses: actions/checkout@v4
+  
+  # ✅ БЕЗОПАСНО - pinning к commit SHA
+  - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+  - uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+    with:
+      node-version: '18'
+      
+  # ✅ АЛЬТЕРНАТИВА - конкретные теги с комментариями
+  - uses: actions/checkout@v4.1.1
+  - uses: actions/setup-node@v4.0.2
+```
+
+### Automated Pin Updates
+```yaml
+name: Update Action Pins
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Каждый понедельник
+  workflow_dispatch:
+
+jobs:
+  update-pins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Update action pins
+        run: |
+          # Скрипт для обновления SHA pins
+          ./scripts/update-action-pins.sh
+          
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: "chore: update GitHub Actions pins"
+          commit-message: "chore: update action SHA pins"
+```
+
+## 🔒 Secrets & Environment Management
+
+### Secure Secrets Handling
+```yaml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production  # Требует manual approval
+    
+    steps:
+      - name: Deploy application
+        env:
+          # ✅ Используем secrets
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          API_KEY: ${{ secrets.API_KEY }}
+        run: |
+          # ❌ НИКОГДА не выводим secrets
+          # echo "Database: $DATABASE_URL"
+          
+          # ✅ Безопасное использование
+          echo "Starting deployment..."
+          
+          # ✅ Маскирование в логах
+          echo "::add-mask::$API_KEY"
+```
+
+### Environment Protection Rules
+```yaml
+# Настройка через UI или API
+environment_config:
+  production:
+    protection_rules:
+      required_reviewers:
+        - security-team
+        - devops-lead
+      wait_timer: 5  # минут до деплоя
+    deployment_branch_policy:
+      protected_branches: true
+      custom_branch_policies:
+        - "releases/*"
+        - "hotfix/*"
+```
+
+### Secret Rotation Strategy
+```bash
+#!/bin/bash
+# secret-rotation.sh
+
+# Rotation secrets через GitHub CLI
+SECRETS=(
+  "DATABASE_PASSWORD"
+  "API_KEY"
+  "ENCRYPTION_KEY"
+)
+
+for secret in "${SECRETS[@]}"; do
+    # Генерация нового значения
+    NEW_VALUE=$(openssl rand -base64 32)
+    
+    # Обновление в GitHub
+    gh secret set "$secret" --body "$NEW_VALUE"
+    
+    echo "✅ Rotated: $secret"
+done
+```
+
+## 🛡️ Input Validation & Injection Prevention
+
+### Secure Input Handling
+```yaml
+name: Process User Input
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  process-comment:
+    if: github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Validate input
+        id: validate
+        run: |
+          # ✅ Валидация пользовательского ввода
+          COMMENT="${{ github.event.comment.body }}"
+          
+          # Проверка на инъекции
+          if [[ "$COMMENT" =~ ['\"\$\`\\] ]]; then
+            echo "❌ Invalid characters detected"
+            exit 1
+          fi
+          
+          # Ограничение длины
+          if [ ${#COMMENT} -gt 1000 ]; then
+            echo "❌ Comment too long"
+            exit 1
+          fi
+          
+          echo "comment=${COMMENT}" >> $GITHUB_OUTPUT
+      
+      - name: Process comment
+        run: |
+          # ✅ Используем validated input
+          echo "Processing: ${{ steps.validate.outputs.comment }}"
+```
+
+### Command Injection Prevention
+```yaml
+steps:
+  # ❌ ОПАСНО - прямая интерполяция
+  - name: Dangerous command
+    run: |
+      echo "User input: ${{ github.event.inputs.user_input }}"
+      
+  # ✅ БЕЗОПАСНО - через environment variables
+  - name: Safe command
+    env:
+      USER_INPUT: ${{ github.event.inputs.user_input }}
+    run: |
+      echo "User input: $USER_INPUT"
+      
+  # ✅ БЕЗОПАСНО - валидация через script
+  - name: Validated input
+    run: |
+      python3 -c "
+      import os
+      import re
+      user_input = os.environ['USER_INPUT']
+      if not re.match(r'^[a-zA-Z0-9_-]+$', user_input):
+          exit(1)
+      print(f'Valid input: {user_input}')
+      "
+    env:
+      USER_INPUT: ${{ github.event.inputs.user_input }}
+```
+
+## 🌐 Network Security
+
+### Secure Network Configuration
+```yaml
+jobs:
+  secure-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Configure secure networking
+        run: |
+          # ✅ Ограничиваем исходящие соединения
+          sudo iptables -A OUTPUT -d 127.0.0.0/8 -j ACCEPT
+          sudo iptables -A OUTPUT -d 10.0.0.0/8 -j REJECT
+          sudo iptables -A OUTPUT -d 172.16.0.0/12 -j REJECT
+          sudo iptables -A OUTPUT -d 192.168.0.0/16 -j REJECT
+          
+      - name: Verify external access
+        run: |
+          # ✅ Проверяем доступность только необходимых ресурсов
+          curl -f https://api.github.com || exit 1
+          curl -f https://registry.npmjs.org || exit 1
+```
+
+### Private Registry Access
+```yaml
+steps:
+  - name: Configure private registry
+    run: |
+      # ✅ Настройка доступа к private registry
+      echo "//registry.company.com/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+      echo "registry=https://registry.company.com/" >> ~/.npmrc
+      
+  - name: Install dependencies
+    run: |
+      # ✅ Проверяем integrity packages
+      npm ci --only=production
+      npm audit --audit-level=high
+```
+
+## 🔍 Monitoring & Logging
+
+### Security Event Logging
+```yaml
+name: Security Monitoring
+
+on:
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log security events
+        run: |
+          # Сбор метрик безопасности
+          cat << EOF > security-event.json
+          {
+            "timestamp": "$(date -Iseconds)",
+            "workflow": "${{ github.workflow }}",
+            "event": "${{ github.event_name }}",
+            "actor": "${{ github.actor }}",
+            "repository": "${{ github.repository }}",
+            "ref": "${{ github.ref }}",
+            "sha": "${{ github.sha }}"
+          }
+          EOF
+          
+      - name: Send to SIEM
+        env:
+          SIEM_ENDPOINT: ${{ secrets.SIEM_ENDPOINT }}
+          SIEM_TOKEN: ${{ secrets.SIEM_TOKEN }}
+        run: |
+          curl -X POST "$SIEM_ENDPOINT" \
+            -H "Authorization: Bearer $SIEM_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d @security-event.json
+```
+
+### Workflow Anomaly Detection
+```yaml
+name: Anomaly Detection
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Каждые 6 часов
+
+jobs:
+  detect-anomalies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check workflow patterns
+        run: |
+          # Анализ необычной активности
+          gh api repos/${{ github.repository }}/actions/runs \
+            --jq '.workflow_runs[] | select(.created_at > "'$(date -d '24 hours ago' -Iseconds)'")' \
+            | jq -s '. | group_by(.actor.login) | map({actor: .[0].actor.login, count: length})' \
+            > workflow_activity.json
+            
+      - name: Alert on anomalies
+        run: |
+          # Проверка на подозрительную активность
+          python3 << 'EOF'
+          import json
+          
+          with open('workflow_activity.json') as f:
+              activity = json.load(f)
+          
+          for user in activity:
+              if user['count'] > 50:  # Threshold
+                  print(f"🚨 Anomaly detected: {user['actor']} - {user['count']} runs")
+          EOF
+```
+
+## 🧪 Security Testing
+
+### SAST Integration
+```yaml
+name: Static Analysis
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  sast:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript, python
+          
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+        
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/owasp-top-ten
+```
+
+### Container Security Scanning
+```yaml
+name: Container Security
+
+on:
+  push:
+    paths: ['Dockerfile*', 'docker-compose*.yml']
+
+jobs:
+  container-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build image
+        run: docker build -t app:${{ github.sha }} .
+        
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'app:${{ github.sha }}'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+          
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: error
+```
+
+## 🚀 Supply Chain Security
+
+### Dependency Verification
+```yaml
+name: Supply Chain Security
+
+on:
+  pull_request:
+    paths: ['package*.json', 'requirements*.txt', 'go.mod', 'Cargo.toml']
+
+jobs:
+  verify-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Verify package integrity
+        run: |
+          # ✅ Проверка integrity при установке
+          npm ci
+          
+          # ✅ Audit для известных уязвимостей
+          npm audit --audit-level=high
+          
+          # ✅ Проверка лицензий
+          npx license-checker --onlyAllow 'MIT;Apache-2.0;BSD-3-Clause;ISC'
+          
+      - name: Generate SBOM
+        run: |
+          # ✅ Генерация Software Bill of Materials
+          npx @cyclonedx/cyclonedx-npm --output-file sbom.json
+          
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v3
+        with:
+          name: sbom
+          path: sbom.json
+```
+
+### Provenance Attestation
+```yaml
+name: Build Provenance
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+      
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build and push
+        id: build
+        run: |
+          # Build process
+          docker build -t myapp:latest .
+          
+          # Get digest
+          DIGEST=$(docker images --digests myapp:latest | awk 'NR==2 {print $3}')
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+          
+  provenance:
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      
+    steps:
+      - name: Generate provenance
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v1.9.0
+        with:
+          image: myapp
+          digest: ${{ needs.build.outputs.digest }}
+```
+
+## 🎯 Security Hardening Checklist
+
+### Workflow Security Audit
+- [ ] **Permissions** минимальны для каждого job
+- [ ] **Actions pinned** к commit SHA
+- [ ] **Secrets** не логируются
+- [ ] **Input validation** реализована
+- [ ] **Environment protection** настроена
+- [ ] **Network isolation** применена
+
+### Repository Configuration
+- [ ] **Branch protection** включена
+- [ ] **Required status checks** настроены
+- [ ] **Dependabot** активен
+- [ ] **Secret scanning** включен
+- [ ] **Code scanning** настроен
+- [ ] **Private vulnerability reporting** включен
+
+### Monitoring & Response
+- [ ] **Security event logging** настроено
+- [ ] **Anomaly detection** реализовано
+- [ ] **Incident response plan** создан
+- [ ] **Regular security audits** запланированы
+- [ ] **Team training** проводится
+
+## 🛠️ Security Tools Integration
+
+### Pre-commit Security Hooks
+```yaml
+name: Pre-commit Hooks
+
+on:
+  pull_request:
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+          
+      - name: Install pre-commit
+        run: pip install pre-commit
+        
+      - name: Run pre-commit hooks
+        run: |
+          pre-commit install
+          pre-commit run --all-files
+```
+
+### Security Dashboard
+```python
+# security-dashboard.py
+import requests
+import json
+from datetime import datetime, timedelta
+
+def get_security_metrics():
+    """Сбор метрик безопасности"""
+    
+    metrics = {
+        'timestamp': datetime.now().isoformat(),
+        'vulnerabilities': get_vulnerability_count(),
+        'secrets_exposed': get_secret_scanning_alerts(),
+        'actions_with_issues': get_workflow_security_issues(),
+        'compliance_score': calculate_compliance_score()
+    }
+    
+    return metrics
+
+def generate_security_report():
+    """Генерация отчета по безопасности"""
+    
+    metrics = get_security_metrics()
+    
+    report = f"""
+    # Security Report - {metrics['timestamp']}
+    
+    ## 📊 Security Metrics
+    - Vulnerabilities: {metrics['vulnerabilities']}
+    - Exposed Secrets: {metrics['secrets_exposed']}
+    - Actions Issues: {metrics['actions_with_issues']}
+    - Compliance Score: {metrics['compliance_score']}%
+    
+    ## 🎯 Recommendations
+    {generate_recommendations(metrics)}
+    """
+    
+    return report
+```
+
+## 🔗 Security Resources
+
+### GitHub Security Documentation
+- [GitHub Actions Security](mdc:https:/docs.github.com/en/actions/security-guides)
+- [OIDC in GitHub Actions](mdc:https:/docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect)
+- [Secret Scanning](mdc:https:/docs.github.com/en/code-security/secret-scanning)
+
+### Security Frameworks
+- [SLSA Framework](mdc:https:/slsa.dev)
+- [Supply Chain Levels for Software Artifacts](mdc:https:/github.com/slsa-framework/slsa)
+- [NIST SSDF](mdc:https:/csrc.nist.gov/publications/detail/sp/800-218/final)
+
+### Security Tools
+- [Trivy Scanner](mdc:https:/trivy.dev)
+- [Semgrep](mdc:https:/semgrep.dev)
+- [GitGuardian](mdc:https:/www.gitguardian.com)
+- [Snyk](mdc:https:/snyk.io)
