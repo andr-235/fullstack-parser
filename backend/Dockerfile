@@ -1,42 +1,53 @@
-# Stage 1: Build dependencies with uv
+# syntax=docker/dockerfile:1.6
+
+# Stage 1: Builder
 FROM python:3.13-slim AS builder
 WORKDIR /app
 
 # Системные зависимости для сборки
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential curl git libpq-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Устанавливаем uv только для build
-RUN pip install uv
+# Устанавливаем poetry и uv с pin-версией
+RUN pip install --no-cache-dir poetry==2.1.3 poetry-plugin-export uv==0.1.39
 
-# Копируем pyproject.toml и poetry.lock
+# Копируем только poetry-файлы для layer caching
 COPY pyproject.toml poetry.lock* ./
-
-# Устанавливаем poetry последней версии 2.1.3 и плагин poetry-plugin-export
-RUN pip install --no-cache-dir poetry==2.1.3 poetry-plugin-export
 
 # Экспортируем зависимости poetry в requirements.txt
 RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+
 # Устанавливаем зависимости через uv
 RUN uv pip install --system --no-deps --requirements requirements.txt
 
-# Копируем весь проект (для миграций, alembic и т.д.)
-COPY . .
+# Копируем только нужные директории (исключая тесты, .git и т.д.)
+COPY app/ ./app/
+COPY alembic/ ./alembic/
+COPY alembic.ini ./
+COPY migrations/ ./migrations/
 
-# Stage 2: Production image (без poetry/uv/pip)
+# Stage 2: Production
 FROM python:3.13-slim AS production
 WORKDIR /app
 
-# Системные зависимости для рантайма
-RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev git curl && rm -rf /var/lib/apt/lists/*
+# Устанавливаем только runtime зависимости
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Создаем non-root пользователя
+# Создаём non-root пользователя
 RUN groupadd -r appuser && useradd --no-log-init -r -g appuser appuser
 
-# Копируем установленные библиотеки из builder
+# Копируем установленные библиотеки и бинарники
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Копируем код приложения
+# Копируем только нужные файлы приложения
 COPY --from=builder /app /app
 
 USER appuser

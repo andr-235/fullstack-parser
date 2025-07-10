@@ -1,5 +1,4 @@
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: fullstack_postgres_prod
@@ -12,14 +11,17 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./backup:/backup
     networks:
-      - app-network
+      - db-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
       interval: 30s
       timeout: 10s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
-  # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: fullstack_redis_prod
@@ -34,7 +36,6 @@ services:
       timeout: 10s
       retries: 3
 
-  # FastAPI Backend
   backend:
     build:
       context: ./backend
@@ -44,7 +45,7 @@ services:
     restart: always
     environment:
       - ENV=production
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY}
       - CORS_ORIGINS=${CORS_ORIGINS}
@@ -69,8 +70,11 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
-  # Next.js Frontend
   frontend:
     build:
       context: ./frontend
@@ -91,12 +95,15 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:3000/api/health" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:3000" ]
       interval: 30s
       timeout: 10s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
-  # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
     container_name: fullstack_nginx
@@ -121,7 +128,6 @@ services:
       timeout: 10s
       retries: 3
 
-  # Backup Service (optional)
   backup:
     image: postgres:15-alpine
     container_name: fullstack_backup
@@ -142,6 +148,9 @@ services:
 networks:
   app-network:
     driver: bridge
+  db-network:
+    driver: bridge
+    internal: true
 
 volumes:
   postgres_data:
