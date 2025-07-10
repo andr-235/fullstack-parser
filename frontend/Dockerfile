@@ -9,8 +9,8 @@ ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV DOCKER=true
 
-# Устанавливаем pnpm с pin-версией
-RUN npm install -g pnpm@8.15.5
+# Устанавливаем pnpm той же версии, что и локально
+RUN npm install -g pnpm@10.12.4
 
 # Копируем только package.json и pnpm-lock.yaml для layer caching
 COPY package.json pnpm-lock.yaml ./
