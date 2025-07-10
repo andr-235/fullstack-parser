@@ -81,7 +81,6 @@ structlog = "^24.2.0"
 pre-commit = "^4.2.0"
 arq = "^0.26.3"
 vkbottle = {extras = ["http"], version = "^4.5.2"}
-psycopg2-binary = "^2.9"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.0.0"
