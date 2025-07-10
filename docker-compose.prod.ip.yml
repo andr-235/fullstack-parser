@@ -1,5 +1,7 @@
 services:
   postgres:
+    env_file:
+      - .env.prod
     image: postgres:15-alpine
     container_name: fullstack_postgres_prod
     restart: always
@@ -23,6 +25,8 @@ services:
           memory: 512M
 
   redis:
+    env_file:
+      - .env.prod
     image: redis:7-alpine
     container_name: fullstack_redis_prod
     restart: always
@@ -37,6 +41,8 @@ services:
       retries: 3
 
   backend:
+    env_file:
+      - .env.prod
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -76,6 +82,8 @@ services:
           memory: 512M
 
   frontend:
+    env_file:
+      - .env.prod
     build:
       context: ./frontend
       dockerfile: Dockerfile
