@@ -28,8 +28,8 @@ RUN pnpm build
 FROM node:20-alpine3.18 AS production
 WORKDIR /app
 
-# Устанавливаем wget для healthcheck
-RUN apk update && apk add --no-cache wget
+# Устанавливаем wget и curl для healthcheck
+RUN apk update && apk add --no-cache wget curl
 
 # Создаем пользователя без root прав
 RUN addgroup -g 1001 -S nodejs
