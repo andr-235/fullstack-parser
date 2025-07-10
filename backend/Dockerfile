@@ -22,7 +22,7 @@ COPY pyproject.toml poetry.lock* ./
 RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
 
 # Устанавливаем зависимости через uv
-RUN uv pip install --system --no-deps --requirements requirements.txt
+RUN uv pip install --system --no-deps --requirement requirements.txt
 
 # Копируем только нужные директории (исключая тесты, .git и т.д.)
 COPY app/ ./app/
