@@ -46,7 +46,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: ${DOCKER_IMAGE_BACKEND:-fullstack-backend:latest}
     container_name: fullstack_backend_prod
     restart: always
     environment:
@@ -88,7 +87,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: ${DOCKER_IMAGE_BACKEND:-fullstack-backend:latest}
     container_name: fullstack_arq_worker_prod
     restart: always
     command: ["python", "-m", "app.workers.arq_worker"]
@@ -124,7 +122,6 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: https://${SERVER_IP}
-    image: ${DOCKER_IMAGE_FRONTEND}
     container_name: fullstack_frontend_prod
     restart: always
     environment:
