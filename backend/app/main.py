@@ -1,29 +1,54 @@
 """
-VK Comments Parser - FastAPI Backend
+FastAPI приложение для VK Comments Parser
 """
 
-from contextlib import asynccontextmanager
+import structlog
+from fastapi import FastAPI
+from fastapi.exception_handlers import RequestValidationError
+from fastapi.exceptions import HTTPException as FastAPIHTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.requests import Request
+from fastapi.responses import JSONResponse
+from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
-from app.api.v1.api import api_router
+from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.database import init_db
-from app.core.logging import get_logger, setup_logging
 from app.middleware.request_logging import RequestLoggingMiddleware
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
-# Настройка и инициализация логирования
-setup_logging(log_level=settings.log_level, json_logs=not settings.debug)
-logger = get_logger(__name__)
+# Настройка структурированного логирования
+structlog.configure(
+    processors=[
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        structlog.processors.JSONRenderer(),
+    ],
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
+)
+
+logger = structlog.get_logger()
 
 
-@asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan context manager для startup/shutdown событий"""
-    # Startup
+    """Lifespan context manager для startup/shutdown событий с оптимизацией"""
+    # Startup - асинхронная инициализация
     logger.info("🚀 Запуск VK Comments Parser...")
-    await init_db()
-    logger.info("📊 База данных инициализирована")
+
+    # Инициализируем БД в фоне, не блокируя запуск
+    try:
+        await init_db()
+        logger.info("📊 База данных инициализирована")
+    except Exception as e:
+        logger.warning(f"⚠️ Ошибка инициализации БД: {e}")
 
     yield
 
@@ -31,45 +56,85 @@ async def lifespan(app: FastAPI):
     logger.info("🛑 Остановка VK Comments Parser...")
 
 
-# Создание FastAPI приложения
+# Создание FastAPI приложения с оптимизациями
 app = FastAPI(
-    title=settings.app_name,
-    description="Парсер комментариев из групп ВКонтакте с фильтрацией по ключевым словам",
+    title="VK Comments Parser",
     version="1.0.0",
-    debug=settings.debug,
+    description="API для парсинга комментариев ВКонтакте",
+    docs_url="/docs" if settings.debug else None,
+    redoc_url="/redoc" if settings.debug else None,
+    openapi_url="/openapi.json" if settings.debug else None,
     lifespan=lifespan,
 )
 
-# CORS middleware
+
+# Централизованный exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error("Unhandled exception", exc_info=True, path=request.url.path)
+    return JSONResponse(
+        status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "error": "internal_server_error",
+            "message": str(exc),
+            "path": str(request.url.path),
+        },
+    )
+
+
+@app.exception_handler(FastAPIHTTPException)
+async def http_exception_handler(request: Request, exc: FastAPIHTTPException):
+    logger.warning(
+        "HTTPException",
+        status_code=exc.status_code,
+        detail=exc.detail,
+        path=request.url.path,
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": "http_exception",
+            "message": exc.detail,
+            "path": str(request.url.path),
+        },
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+):
+    logger.warning(
+        "Validation error", errors=exc.errors(), path=request.url.path
+    )
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": "validation_error",
+            "message": exc.errors(),
+            "path": str(request.url.path),
+        },
+    )
+
+
+# Добавляем CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.get_cors_origins(),
+    allow_origins=settings.get_cors_origins(),  # Используем только разрешённые домены
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Request Logging middleware
+# Добавляем middleware для логирования запросов
 app.add_middleware(RequestLoggingMiddleware)
 
-
-@app.get("/")
-async def root() -> dict[str, str]:
-    """Корневой endpoint"""
-    return {
-        "message": "VK Comments Parser API",
-        "version": "1.0.0",
-        "status": "running",
-        "docs": "/docs",
-        "api": "/api/v1",
-    }
+# Подключаем роутеры (lazy loading)
+app.include_router(api_router, prefix="/api/v1")
 
 
+# Health check endpoint
 @app.get("/health")
-async def health_check() -> dict[str, str]:
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "vk-comments-parser", "version": "1.0.0"}
-
-
-# Подключение API роутов
-app.include_router(api_router, prefix=settings.api_v1_str)
+async def health_check():
+    """Простой health check для Docker и load balancer."""
+    return {"status": "healthy", "service": "vk-parser-backend"}

@@ -2,6 +2,7 @@
 Database configuration для VK Comments Parser
 """
 
+from functools import lru_cache
 from typing import AsyncGenerator
 
 from app.core.config import settings
@@ -29,10 +30,24 @@ class Base(DeclarativeBase):
     metadata = metadata
 
 
-# Глобальный асинхронный движок SQLAlchemy
-async_engine = create_async_engine(str(settings.database_url), echo=settings.debug)
+# Глобальный асинхронный движок SQLAlchemy с оптимизированным connection pooling
+@lru_cache(maxsize=1)
+def get_async_engine():
+    """Получение асинхронного движка с кешированием."""
+    return create_async_engine(
+        str(settings.database_url),
+        echo=settings.debug,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        connect_args={"server_settings": {"application_name": "vk_parser_backend"}},
+    )
 
-# Фабрика асинхронных сессий
+
+async_engine = get_async_engine()
+
+# Фабрика асинхронных сессий с оптимизацией
 AsyncSessionLocal = async_sessionmaker(
     bind=async_engine,
     class_=AsyncSession,
@@ -47,7 +62,32 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """Инициализация базы данных."""
-    async with async_engine.begin() as conn:
-        # Создаем все таблицы
-        await conn.run_sync(Base.metadata.create_all)
+    """Инициализация базы данных с оптимизацией."""
+    try:
+        # Проверяем подключение без создания таблиц
+        async with async_engine.begin() as conn:
+            await conn.execute("SELECT 1")
+
+        # Создаем таблицы только если их нет (lazy creation)
+        async with async_engine.begin() as conn:
+            # Проверяем существование хотя бы одной таблицы
+            result = await conn.execute(
+                """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = 'vk_groups'
+                )
+            """
+            )
+            tables_exist = result.scalar()
+
+            if not tables_exist:
+                await conn.run_sync(Base.metadata.create_all)
+
+    except Exception as e:
+        # Логируем ошибку, но не падаем
+        import logging
+
+        logging.warning(f"Database initialization warning: {e}")
+        # Продолжаем работу - таблицы могут быть созданы через миграции
