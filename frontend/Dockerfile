@@ -1,49 +1,54 @@
-# Этап 1: Установка зависимостей и сборка
+# syntax=docker/dockerfile:1.6
+
+# Stage 1: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Добавляем build-аргумент для API URL
+# Build args
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-
-# Устанавливаем ENV, чтобы next.config.js включил 'output: standalone'
 ENV DOCKER=true
 
-# Устанавливаем pnpm
-RUN npm install -g pnpm
+# Устанавливаем pnpm той же версии, что и локально
+RUN npm install -g pnpm@10.12.4
 
-# Копируем package.json и pnpm-lock.yaml
+# Копируем только package.json и pnpm-lock.yaml для layer caching
 COPY package.json pnpm-lock.yaml ./
 
-# Устанавливаем все зависимости (включая dev)
+# Устанавливаем зависимости
 RUN pnpm install --frozen-lockfile
 
-# Копируем исходники
+# Копируем исходники (исключая тесты, .git и т.д.)
 COPY . .
 
-# Собираем проект. `output: 'standalone'` в next.config.js создаст папку .next/standalone
+# Собираем проект (standalone)
 RUN pnpm build
 
-# Этап 2: Production-образ
+# Stage 2: Production
 FROM node:20-alpine3.18 AS production
 WORKDIR /app
 
-# Устанавливаем wget для healthcheck
-RUN apk update && apk add --no-cache wget
+# Устанавливаем curl для healthcheck
+RUN apk update && apk add --no-cache curl && rm -rf /var/cache/apk/*
 
-# Создаем пользователя без root прав
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
+# Создаём non-root пользователя
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
-# Копируем standalone-вывод, статику и публичные файлы из сборщика
-# Эта конфигурация использует 'output: standalone' из Next.js для создания
-# минимального, оптимизированного production-образа.
+# Копируем standalone-вывод, статику и public из builder
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Устанавливаем переменные окружения
+ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
 
 USER nextjs
 
 EXPOSE 3000
 
-# Запускаем приложение через server.js из standalone-сборки
+# Добавляем healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3000 || exit 1
+
+# Запуск standalone-сервера
 CMD ["node", "server.js"] 

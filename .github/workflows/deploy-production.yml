@@ -74,21 +74,28 @@ jobs:
             echo "Configuring git safe.directory..."
             git config --global --add safe.directory ${{ secrets.PRODUCTION_APP_DIR }}
 
-
             echo "Pulling latest changes from main branch..."
             git pull origin main
 
-            echo "Updating .env.prod file with new image tags..."
-            echo "DOCKER_IMAGE_BACKEND=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ needs.build.outputs.short_sha }}" > .env.prod
+            echo "Copying .env to .env.prod..."
+            cp .env .env.prod
+            if [ -z "${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}" ] || [ -z "${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}" ]; then
+              echo "❌ DOCKER_IMAGE_BACKEND или DOCKER_IMAGE_FRONTEND не определены! Останов деплоя." && exit 1
+            fi
+            echo "DOCKER_IMAGE_BACKEND=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ needs.build.outputs.short_sha }}" >> .env.prod
             echo "DOCKER_IMAGE_FRONTEND=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ needs.build.outputs.short_sha }}" >> .env.prod
 
-            echo "Pulling latest Docker images..."
-            docker-compose -f docker-compose.prod.ip.yml --env-file .env.prod pull
+            echo "Удаляем старые контейнеры, если остались..."
+            docker rm -f fullstack_postgres_prod fullstack_redis_prod fullstack_backend_prod fullstack_arq_worker_prod fullstack_frontend_prod fullstack_nginx || true
 
-            echo "Starting services with docker-compose..."
-            docker-compose -f docker-compose.prod.ip.yml --env-file .env.prod up -d --remove-orphans
+            echo "Pulling images and starting containers..."
+            docker-compose -f docker-compose.prod.ip.yml pull
+            docker-compose -f docker-compose.prod.ip.yml up -d --remove-orphans
+
+            echo "Применяем миграции Alembic..."
+            docker-compose -f docker-compose.prod.ip.yml exec backend alembic upgrade head
 
             echo "Cleaning up old Docker images..."
             docker image prune -af
 
-            echo "✅ Deployment successful!"  
+            echo "✅ Deployment successful!"

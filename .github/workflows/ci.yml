@@ -1,168 +1,51 @@
-name: 🔄 Continuous Integration
+name: CI/CD
 
 on:
   push:
-    branches: 
-      - main
-      - develop
-      - 'feature/*'
-      - 'fix/*'
-      - 'hotfix/*'
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
+    branches: [main, develop, "feature/*", "release/*", "hotfix/*"]
   pull_request:
-    branches: [ main, develop ]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-  workflow_dispatch:
-
-env:
-  PYTHON_VERSION_DEFAULT: '3.11'
-  NODE_VERSION_DEFAULT: '20'
-
-permissions:
-  contents: read
-  checks: write
-  pull-requests: write
+    branches: [main, develop]
 
 jobs:
-  changes:
-    name: 🔍 Detect Changes
+  test:
     runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      docker: ${{ steps.filter.outputs.docker }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          filters: |
-            backend:
-              - 'backend/**'
-              - 'pyproject.toml'
-            frontend:
-              - 'frontend/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-            docker:
-              - '**/Dockerfile'
-              - 'docker-compose.yml'
+          python-version: "3.11"
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-ansi
+      - name: Run tests
+        run: poetry run pytest
 
-  backend-test:
-    name: 🐍 Backend Tests
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
-    uses: ./.github/workflows/reusable-backend-test.yml
-    permissions:
-      contents: write
-    secrets: inherit
-
-  frontend-test:
-    name: ⚛️ Frontend Tests
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
-    uses: ./.github/workflows/reusable-frontend-test.yml
-    permissions:
-      contents: write
-    secrets: inherit
-
-  docker-test:
-    name: 🐳 Docker Build Test
-    needs: changes
-    if: needs.changes.outputs.docker == 'true'
+  lint:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Build image
-        uses: docker/build-push-action@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          context: ./${{ matrix.service }}
-          push: false
-          tags: ${{ matrix.service }}:test
+          python-version: "3.11"
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-ansi
+      - name: Run Ruff
+        run: poetry run ruff check .
+      - name: Run Black
+        run: poetry run black --check .
+      - name: Run isort
+        run: poetry run isort --check-only .
 
-  integration-test:
-    name: 🔗 Integration Test
-    needs: [backend-test, frontend-test]
-    if: |
-      (needs.backend-test.result == 'success' || needs.backend-test.result == 'skipped') &&
-      (needs.frontend-test.result == 'success' || needs.frontend-test.result == 'skipped')
+  deploy:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: [test, lint]
     steps:
       - uses: actions/checkout@v4
-      - name: Start services
-        run: |
-          cp env.example .env
-          docker compose up -d --build
-      - name: Wait for services
-        run: |
-          sleep 40
-          curl -f http://localhost:8000/api/v1/health/health || curl -f http://localhost:8000/api/v1/stats/health
-          curl -f http://localhost:3000 || true
-      - name: Cleanup
-        if: always()
-        run: docker compose down -v
-
-  security-scan:
-    name: 🛡️ Security Scan
-    needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
-    uses: ./.github/workflows/security.yml
-    permissions:
-      contents: read
-      security-events: write
-      pull-requests: write
-      actions: read
-    secrets: inherit
-
-  quality-gate:
-    name: quality-gate
-    runs-on: ubuntu-latest
-    needs: [backend-test, frontend-test, docker-test]
-    if: always()
-    steps:
-      - name: Check test statuses
-        if: |
-          (needs.backend-test.result != 'success' && needs.backend-test.result != 'skipped') ||
-          (needs.frontend-test.result != 'success' && needs.frontend-test.result != 'skipped') ||
-          (needs.docker-test.result != 'success' && needs.docker-test.result != 'skipped')
-        run: |
-          echo "❌ Quality gate failed due to test failures."
-          exit 1
-      - name: Report success
-        run: echo "✅ Quality gate passed."
-  
-  security-summary:
-    name: security-summary
-    runs-on: ubuntu-latest
-    needs: [security-scan]
-    if: always()
-    steps:
-      - name: Check security scan status
-        if: needs.security-scan.result != 'success'
-        run: |
-          echo "❌ Security summary failed."
-          exit 1
-      - name: Report success
-        run: echo "✅ Security summary passed."
-
-  ci-success:
-    name: ci-success
-    runs-on: ubuntu-latest
-    needs: [quality-gate, integration-test, security-summary]
-    if: |
-      always() &&
-      needs.quality-gate.result == 'success' &&
-      (needs.integration-test.result == 'success' || needs.integration-test.result == 'skipped') &&
-      needs.security-summary.result == 'success'
-    steps:
-      - name: Report success
-        run: echo "🎉 All CI checks passed successfully!" 
+      - name: Deploy to production
+        run: ./scripts/deploy.sh
