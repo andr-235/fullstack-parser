@@ -79,6 +79,9 @@ jobs:
 
             echo "Copying .env to .env.prod..."
             cp .env .env.prod
+            if [ -z "${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}" ] || [ -z "${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}" ]; then
+              echo "❌ DOCKER_IMAGE_BACKEND или DOCKER_IMAGE_FRONTEND не определены! Останов деплоя." && exit 1
+            fi
             echo "DOCKER_IMAGE_BACKEND=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ needs.build.outputs.short_sha }}" >> .env.prod
             echo "DOCKER_IMAGE_FRONTEND=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ needs.build.outputs.short_sha }}" >> .env.prod
 
