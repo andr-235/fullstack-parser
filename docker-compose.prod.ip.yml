@@ -1,3 +1,4 @@
+version: "3.9"
 services:
   postgres:
     env_file:
@@ -124,7 +125,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: https://${SERVER_IP}
-    image: ${DOCKER_IMAGE_FRONTEND}
+    image: fullstack-frontend:latest # Явно указываем image для frontend
     container_name: fullstack_frontend_prod
     restart: always
     environment:
