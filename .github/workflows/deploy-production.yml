@@ -85,6 +85,9 @@ jobs:
             echo "DOCKER_IMAGE_BACKEND=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ needs.build.outputs.short_sha }}" >> .env.prod
             echo "DOCKER_IMAGE_FRONTEND=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ needs.build.outputs.short_sha }}" >> .env.prod
 
+            echo "Удаляем старые контейнеры, если остались..."
+            docker rm -f fullstack_postgres_prod fullstack_redis_prod fullstack_backend_prod fullstack_arq_worker_prod fullstack_frontend_prod || true
+
             echo "Pulling images and starting containers..."
             docker-compose -f docker-compose.prod.ip.yml pull
             docker-compose -f docker-compose.prod.ip.yml up -d --remove-orphans
