@@ -146,7 +146,7 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://127.0.0.1:3000",
+          "http://172.19.0.5:3000",
         ]
       interval: 30s
       timeout: 10s
