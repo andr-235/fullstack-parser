@@ -13,6 +13,7 @@ from app.services.vkbottle_service import VKBottleService
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.config import settings
 
 router = APIRouter(tags=["Groups"])
 
@@ -41,7 +42,9 @@ async def create_group(
             detail="Не указан ID или короткое имя группы.",
         )
 
-    vk_service = VKBottleService(token=settings.vk_access_token, api_version=settings.vk_api_version)
+    vk_service = VKBottleService(
+        token=settings.vk_access_token, api_version=settings.vk_api_version
+    )
     vk_group_data = await vk_service.get_group_info(screen_name)
 
     if not vk_group_data:
@@ -62,7 +65,13 @@ async def create_group(
         )
 
     # TODO: Перенести логику в сервис
-    new_group = VKGroup(**vk_group_data)
+    # Фильтрация только нужных полей для VKGroup
+    vk_group_fields = {c.name for c in VKGroup.__table__.columns}
+    filtered_data = {k: v for k, v in vk_group_data.items() if k in vk_group_fields}
+    # Маппинг id -> vk_id
+    if "id" in vk_group_data:
+        filtered_data["vk_id"] = vk_group_data["id"]
+    new_group = VKGroup(**filtered_data)
     db.add(new_group)
     await db.commit()
     await db.refresh(new_group)
