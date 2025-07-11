@@ -1,10 +1,13 @@
-name: 🚀 Deploy to Production
+# 🚀 Deploy to Production
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: production
+  cancel-in-progress: true
 
 env:
   REGISTRY: ghcr.io
@@ -12,32 +15,51 @@ env:
   IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
 
 jobs:
+  test-backend:
+    name: Backend Tests
+    uses: ./.github/workflows/reusable-backend-test.yml
+    with:
+      python-versions: '["3.11", "3.12"]'
+      upload-coverage: 'false'
+
+  test-frontend:
+    name: Frontend Tests
+    uses: ./.github/workflows/reusable-frontend-test.yml
+    with:
+      node-versions: '["20"]'
+      upload-coverage: 'false'
+
+  security:
+    name: Security Scan
+    uses: ./.github/workflows/security.yml
+
   build:
-    name: 🏗️ Build and Push Docker Images
+    name: Build and Push Docker Images
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
+    needs: [test-backend, test-frontend, security]
     outputs:
       short_sha: ${{ steps.vars.outputs.sha }}
-
     steps:
       - name: ⬇️ Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.1
 
       - name: 🧮 Set reusable variables
         id: vars
         run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: 🔐 Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3.1.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🏗️ Build and push backend image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v5.3.0
         with:
           context: ./backend
           file: ./backend/Dockerfile
@@ -45,7 +67,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.vars.outputs.sha }}
 
       - name: 🏗️ Build and push frontend image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v5.3.0
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
@@ -53,30 +75,39 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.vars.outputs.sha }}
 
   deploy:
-    name: 🚚 Deploy to Production Server
+    name: Deploy to Production Server
     needs: build
-    runs-on: self-hosted # <-- Используется ваш self-hosted runner
-
+    runs-on: self-hosted
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://your-app.com # Укажи свой production URL
+    permissions:
+      contents: read
     steps:
+      - name: Проверка secrets
+        run: |
+          test -n "${{ secrets.PRODUCTION_HOST }}" || (echo "Нет PRODUCTION_HOST" && exit 1)
+          test -n "${{ secrets.PRODUCTION_USER }}" || (echo "Нет PRODUCTION_USER" && exit 1)
+          test -n "${{ secrets.PRODUCTION_SSH_KEY }}" || (echo "Нет PRODUCTION_SSH_KEY" && exit 1)
+          test -n "${{ secrets.PRODUCTION_PORT }}" || (echo "Нет PRODUCTION_PORT" && exit 1)
+          test -n "${{ secrets.PRODUCTION_APP_DIR }}" || (echo "Нет PRODUCTION_APP_DIR" && exit 1)
+
       - name: 🚀 Deploy to Production
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v0.1.10
         with:
-          host: ${{ secrets.PRODUCTION_HOST }} # <-- IP вашего сервера
+          host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           port: ${{ secrets.PRODUCTION_PORT }}
           script: |
-            set -e # Exit immediately if a command exits with a non-zero status.
-
+            set -euo pipefail
             echo "Changing to app directory..."
             cd ${{ secrets.PRODUCTION_APP_DIR }}
-
             echo "Configuring git safe.directory..."
             git config --global --add safe.directory ${{ secrets.PRODUCTION_APP_DIR }}
-
             echo "Pulling latest changes from main branch..."
             git pull origin main
-
             echo "Copying .env to .env.prod..."
             cp .env .env.prod
             if [ -z "${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}" ] || [ -z "${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}" ]; then
@@ -84,18 +115,36 @@ jobs:
             fi
             echo "DOCKER_IMAGE_BACKEND=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ needs.build.outputs.short_sha }}" >> .env.prod
             echo "DOCKER_IMAGE_FRONTEND=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ needs.build.outputs.short_sha }}" >> .env.prod
-
             echo "Удаляем старые контейнеры, если остались..."
             docker rm -f fullstack_postgres_prod fullstack_redis_prod fullstack_backend_prod fullstack_arq_worker_prod fullstack_frontend_prod fullstack_nginx || true
-
             echo "Pulling images and starting containers..."
             docker-compose -f docker-compose.prod.ip.yml pull
             docker-compose -f docker-compose.prod.ip.yml up -d --remove-orphans
-
             echo "Применяем миграции Alembic..."
             docker-compose -f docker-compose.prod.ip.yml exec backend alembic upgrade head
-
             echo "Cleaning up old Docker images..."
             docker image prune -af
-
             echo "✅ Deployment successful!"
+
+      - name: Healthcheck backend
+        run: |
+          for i in {1..10}; do
+            if curl -fsSL http://localhost:8000/health; then
+              echo "✅ Backend is healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "❌ Backend healthcheck failed"
+          exit 1
+
+      # - name: Slack/Telegram уведомление (опционально)
+      #   run: |
+      #     curl -X POST -H 'Content-type: application/json' --data '{"text":"Production deploy завершён успешно!"}' $SLACK_WEBHOOK_URL
+
+      # - name: Откат деплоя (manual workflow, инструкция в README)
+      #   run: |
+      #     # docker-compose -f docker-compose.prod.ip.yml up -d --remove-orphans <PREVIOUS_TAG>
+
+# Инструкция для README:
+# ![Deploy to Production](https://github.com/<owner>/<repo>/actions/workflows/deploy-production.yml/badge.svg?branch=main)
