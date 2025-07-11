@@ -28,8 +28,8 @@ RUN pnpm build
 FROM node:20-alpine3.18 AS production
 WORKDIR /app
 
-# Устанавливаем curl для healthcheck
-RUN apk update && apk add --no-cache curl && rm -rf /var/cache/apk/*
+# Устанавливаем wget для healthcheck
+RUN apk update && apk add --no-cache wget && rm -rf /var/cache/apk/*
 
 # Создаём non-root пользователя
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
@@ -41,16 +41,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Устанавливаем переменные окружения
 ENV NODE_ENV=production
 
-# Устанавливаем переменные окружения
-ENV NODE_ENV=production
-
 USER nextjs
 
 EXPOSE 3000
 
 # Добавляем healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:3000 || exit 1
+    CMD wget --spider -q http://localhost:3000 || exit 1
 
 # Запуск standalone-сервера
 CMD ["node", "server.js"] 
