@@ -92,6 +92,9 @@ jobs:
             docker-compose -f docker-compose.prod.ip.yml pull
             docker-compose -f docker-compose.prod.ip.yml up -d --remove-orphans
 
+            echo "Применяем миграции Alembic..."
+            docker-compose -f docker-compose.prod.ip.yml exec backend alembic upgrade head
+
             echo "Cleaning up old Docker images..."
             docker image prune -af
 
