@@ -40,9 +40,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Устанавливаем переменные окружения
 ENV NODE_ENV=production
-
-# Устанавливаем переменные окружения
-ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
 
 USER nextjs
 
