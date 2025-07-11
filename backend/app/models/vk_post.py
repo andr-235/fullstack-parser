@@ -3,6 +3,7 @@
 """
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Text
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -12,6 +13,9 @@ class VKPost(BaseModel):
     """Модель VK поста"""
 
     __tablename__ = "vk_posts"
+    __table_args__ = (
+        UniqueConstraint("vk_id", "group_id", name="uix_vkpost_vkid_groupid"),
+    )
 
     # Основная информация
     vk_id = Column(Integer, nullable=False, index=True, comment="ID поста в ВК")

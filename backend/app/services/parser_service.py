@@ -146,7 +146,9 @@ class ParserService:
     async def _get_or_create_post(self, group: VKGroup, post_data) -> VKPost:
         # Теперь post_data может быть объектом VKBottle, а не dict
         vk_id = getattr(post_data, "id", None)
-        result = await self.db.execute(select(VKPost).where(VKPost.vk_id == vk_id))
+        result = await self.db.execute(
+            select(VKPost).where(VKPost.vk_id == vk_id, VKPost.group_id == group.id)
+        )
         post = result.scalar_one_or_none()
         if post:
             for field in [
