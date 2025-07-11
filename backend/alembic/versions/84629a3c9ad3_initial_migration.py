@@ -1,8 +1,8 @@
-"""Initial migration
+"""initial migration
 
 Revision ID: 84629a3c9ad3
-Revises: 9078ccbec2e7
-Create Date: 2025-07-06 12:03:03.940240
+Revises: 
+Create Date: 2025-07-07 10:21:00.000000
 
 """
 
