@@ -1,5 +1,6 @@
 from arq import create_pool
 from arq.connections import RedisSettings
+
 from app.core.config import settings
 
 

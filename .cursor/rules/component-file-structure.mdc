@@ -1,0 +1,10 @@
+---
+description: 
+globs: components/**/*
+alwaysApply: false
+---
+- Structure files: exported component, subcomponents, helpers, static content, types
+- Use lowercase with dashes for directories (e.g., components/auth-wizard)
+- Favor named exports for components
+- Use functional components with TypeScript interfaces
+- Use declarative JSX

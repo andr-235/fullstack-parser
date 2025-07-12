@@ -24,6 +24,9 @@ COPY . .
 # Собираем проект (standalone)
 RUN pnpm build
 
+# Копируем .env.local (если есть) для локальной разработки и build-time env
+COPY .env.local .env.local
+
 # Stage 2: Production
 FROM node:20-alpine3.18 AS production
 WORKDIR /app
@@ -37,6 +40,9 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 # Копируем standalone-вывод, статику и public из builder
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Копируем .env.local в production (если есть)
+RUN [ -f .env.local ] && cp .env.local .env.local || true
 
 # Устанавливаем переменные окружения
 ENV NODE_ENV=production

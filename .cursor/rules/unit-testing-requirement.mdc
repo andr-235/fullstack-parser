@@ -1,0 +1,6 @@
+---
+description: 
+globs: **/tests/**/*.*
+alwaysApply: false
+---
+- Implement unit tests to ensure code reliability.

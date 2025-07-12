@@ -2,8 +2,15 @@
 Модель VK поста
 """
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Text
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel

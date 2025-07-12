@@ -1,21 +1,16 @@
 import asyncio
-import sys
 import os
+import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from logging.config import fileConfig
 
 from sqlalchemy.ext.asyncio import create_async_engine
+
 from alembic import context
 
 # Импортируем Base и все модели, чтобы Alembic видел их для автогенерации
 from app.models.base import Base
-from app.models.vk_post import VKPost
-from app.models.vk_group import VKGroup
-from app.models.vk_comment import VKComment
-from app.models.user import User
-from app.models.keyword import Keyword
-from app.models.comment_keyword_match import CommentKeywordMatch
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

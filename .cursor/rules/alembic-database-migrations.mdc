@@ -1,0 +1,6 @@
+---
+description: 
+globs: **/migrations/**/*.*
+alwaysApply: false
+---
+- Use alembic for database migrations.

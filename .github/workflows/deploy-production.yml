@@ -81,7 +81,7 @@ jobs:
     timeout-minutes: 15
     environment:
       name: production
-      url: https://your-app.com # Укажи свой production URL
+      url: https://192.168.88.12 # Укажи свой production URL
     permissions:
       contents: read
     steps:

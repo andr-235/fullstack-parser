@@ -1,11 +1,18 @@
 from __future__ import annotations
+
 import json
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
+
 import redis.asyncio as redis
 from redis.exceptions import ResponseError
+
 from app.core.config import settings
-from app.schemas.parser import ParseTaskResponse, ParserState, ParserStats, ParseStats
+from app.schemas.parser import (
+    ParserState,
+    ParserStats,
+    ParseTaskResponse,
+)
 
 
 class RedisParserManager:

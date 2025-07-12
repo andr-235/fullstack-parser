@@ -5,10 +5,8 @@ API endpoints для управления комментариями
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
 from app.schemas.base import PaginatedResponse, PaginationParams
 from app.schemas.vk_comment import VKCommentResponse

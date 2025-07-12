@@ -1,17 +1,34 @@
-name: Reusable Backend Tests
+# Reusable Backend Tests Workflow
+# Best practices: pin actions, timeouts, minimal permissions, concurrency, matrix, cache, upload coverage, DRY, comments
 
 on:
   workflow_call:
+    inputs:
+      python-versions:
+        description: 'Python versions to test against'
+        required: false
+        default: '["3.11", "3.12"]'
+        type: string                                                                                            
+      upload-coverage:
+        description: 'Upload coverage to Codecov and as artifact'
+        required: false
+        default: '"true"'
+        type: string
+    secrets:
+      CODECOV_TOKEN:
+        required: false
 
-env:
-  PYTHON_VERSION_DEFAULT: '3.11'
+concurrency:
+  group: backend-test-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend-lint:
-    name: 🐍 Backend Lint
+    name:  Backend Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
-      contents: write
+      contents: write # write нужен только если пушим автоформат
     steps:
       - name: Get branch name
         id: get_branch
@@ -83,14 +100,18 @@ jobs:
           git push --force-with-lease origin HEAD:"${{ steps.get_branch.outputs.branch_name }}" || true
 
   backend-test:
-    name: 🐍 Backend Tests (${{ matrix.python-version }})
+    name:  Backend Tests (${{ matrix.python-version }})
     runs-on: ubuntu-latest
     needs: backend-lint
+    timeout-minutes: 20
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.11', '3.12']
-    
+        python-version: ${{ fromJson(inputs.python-versions) }}
+    env:
+      PYTHON_VERSION_DEFAULT: '3.11'
     services:
       postgres:
         image: postgres:15
@@ -150,8 +171,14 @@ jobs:
           source .venv/bin/activate
           pytest --cov=app --cov-report=xml --cov-fail-under=0
 
+      - name: Upload coverage artifact
+        if: inputs.upload-coverage == '"true"' && matrix.python-version == env.PYTHON_VERSION_DEFAULT
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-xml
+          path: ./backend/coverage.xml
       - name: Upload coverage to Codecov
-        if: matrix.python-version == env.PYTHON_VERSION_DEFAULT
+        if: inputs.upload-coverage == '"true"' && matrix.python-version == env.PYTHON_VERSION_DEFAULT && (secrets.CODECOV_TOKEN != null && secrets.CODECOV_TOKEN != '')
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

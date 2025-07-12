@@ -1,5 +1,7 @@
 import os
+
 from arq.connections import RedisSettings
+
 from app.workers.arq_tasks import run_parsing_task
 
 
