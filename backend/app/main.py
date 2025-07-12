@@ -131,10 +131,3 @@ app.add_middleware(RequestLoggingMiddleware)
 
 # Подключаем роутеры (lazy loading)
 app.include_router(api_router, prefix="/api/v1")
-
-
-# Health check endpoint
-@app.get("/health")
-async def health_check():
-    """Простой health check для Docker и load balancer."""
-    return {"status": "healthy", "service": "vk-parser-backend"}
