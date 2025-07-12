@@ -6,9 +6,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, List, Optional
 
-from app.models.base import BaseModel
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import BaseModel
 
 if TYPE_CHECKING:
     from app.models.comment_keyword_match import CommentKeywordMatch

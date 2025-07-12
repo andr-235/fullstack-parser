@@ -3,7 +3,7 @@
 """
 
 from typing import Optional
-from pathlib import Path
+
 from pydantic import Field, PostgresDsn, validator
 from pydantic_settings import BaseSettings
 
@@ -20,7 +20,8 @@ class Settings(BaseSettings):
 
     # CORS - поддержка переменной окружения CORS_ORIGINS
     cors_origins: str = Field(
-        default="http://localhost:3000,http://127.0.0.1:3000", alias="CORS_ORIGINS"
+        default=("http://localhost:3000,http://127.0.0.1:3000"),
+        alias="CORS_ORIGINS",
     )
 
     # Database connection components from .env
@@ -34,6 +35,7 @@ class Settings(BaseSettings):
     database_url: Optional[PostgresDsn] = None
 
     @validator("database_url", pre=True, always=True)
+    @classmethod
     def assemble_db_connection(cls, v: Optional[str], values: dict) -> str:
         if isinstance(v, str):
             return v

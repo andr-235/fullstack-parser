@@ -1,10 +1,11 @@
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-import redis.asyncio as aioredis
+
+from app.core.config import settings
 from app.core.database import get_db
 from app.schemas.health import HealthCheck
-from app.core.config import settings
 
 router = APIRouter()
 

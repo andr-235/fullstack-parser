@@ -8,8 +8,9 @@ out
 dist
 
 # Environment and config
-.env*
+# .env*
 !.env.example
+# Удалено игнорирование .env.local для Docker
 
 # Development files
 .git

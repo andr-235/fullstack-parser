@@ -1,10 +1,11 @@
 import asyncio
 import logging
+
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.services.parser_service import ParserService
 from app.services.redis_parser_manager import get_redis_parser_manager
 from app.services.vkbottle_service import VKBottleService
-from app.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("arq.worker")

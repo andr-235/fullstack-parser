@@ -5,9 +5,10 @@ Pydantic схемы для VK комментариев
 from datetime import datetime
 from typing import Optional
 
+from pydantic import BaseModel, Field
+
 from app.schemas.base import BaseSchema, IDMixin, TimestampMixin
 from app.schemas.vk_group import VKGroupResponse
-from pydantic import BaseModel, Field
 
 
 class VKCommentBase(BaseModel):

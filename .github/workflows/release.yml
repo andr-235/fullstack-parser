@@ -11,71 +11,94 @@ permissions:
   id-token: write # Required for OIDC signing
 
 jobs:
-  # ================================
-  # BACKEND TEST
-  # ================================
   backend-test:
     name: 🐍 Backend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
-      postgres: { image: postgres:15, env: { POSTGRES_USER: test_user, POSTGRES_PASSWORD: test_password, POSTGRES_DB: test_db }, ports: ["5432:5432"], options: "--health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5" }
-      redis: { image: redis:7-alpine, ports: ["6379:6379"], options: "--health-cmd \"redis-cli ping\" --health-interval 10s --health-timeout 5s --health-retries 5" }
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
     defaults:
-      run: { working-directory: ./backend }
+      run:
+        working-directory: ./backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
       - uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
+        with:
+          python-version: '3.11'
       - uses: snok/install-poetry@v1
-        with: { virtualenvs-create: true, virtualenvs-in-project: true }
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
       - uses: actions/cache@v4
-        with: { path: backend/.venv, key: "venv-${{ runner.os }}-3.11-${{ hashFiles('**/poetry.lock') }}" }
+        with:
+          path: backend/.venv
+          key: venv-${{ runner.os }}-3.11-${{ hashFiles('**/poetry.lock') }}
       - run: poetry install --no-interaction
       - name: Run tests
-        env: { DATABASE_URL: "postgresql://test_user:test_password@localhost:5432/test_db", REDIS_URL: "redis://localhost:6379" }
+        env:
+          DATABASE_URL: "postgresql://test_user:test_password@localhost:5432/test_db"
+          REDIS_URL: "redis://localhost:6379"
         run: |
           source .venv/bin/activate
           pytest
 
-  # ================================
-  # FRONTEND TEST
-  # ================================
   frontend-test:
     name: ⚛️ Frontend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
-      run: { working-directory: ./frontend }
+      run:
+        working-directory: ./frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
       - uses: pnpm/action-setup@v4
-        with: { version: 10.12.4 }
+        with:
+          version: 10.12.4
       - uses: actions/setup-node@v4
-        with: { node-version: '20', cache: 'pnpm', cache-dependency-path: 'frontend/pnpm-lock.yaml' }
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: 'frontend/pnpm-lock.yaml'
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
       - run: pnpm test
 
-  # ================================
-  # PUBLISH DOCKER IMAGES
-  # ================================
   publish:
     name: 🐳 Publish Docker Images
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [backend-test, frontend-test]
     strategy:
       matrix:
         service: [backend, frontend]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
       - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with: { registry: ghcr.io, username: ${{ github.actor }}, password: ${{ secrets.GITHUB_TOKEN }} }
+      - uses: docker/login-action@v3.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository_owner }}/${{ matrix.service }}
-          tags: "type=semver,pattern={{version}}\ntype=semver,pattern={{major}}.{{minor}}\ntype=sha,prefix=,suffix=,format=short"
-      - uses: docker/build-push-action@v5
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=,suffix=,format=short
+      - uses: docker/build-push-action@v5.3.0
         with:
           context: ./${{ matrix.service }}
           push: true
@@ -84,19 +107,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ================================
-  # CREATE GITHUB RELEASE
-  # ================================
-  release:
+  create-release:
     name: 🎉 Create GitHub Release
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: publish
     steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+      - uses: actions/checkout@v4.1.1
+        with:
+          fetch-depth: 0
       - id: changelog
         uses: mikepenz/release-changelog-builder-action@v4
-        env: { GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: softprops/action-gh-release@v2
         with:
           body: ${{ steps.changelog.outputs.changelog }}
@@ -104,12 +127,10 @@ jobs:
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
           fail_on_unmatched_files: true
 
-  # ================================
-  # VALIDATE RELEASE
-  # ================================
   validate:
     name: 🛡️ Validate Release
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       version: ${{ steps.get_version.outputs.version }}
       tag: ${{ steps.get_version.outputs.tag }}
@@ -120,7 +141,6 @@ jobs:
         run: |
           TAG=${GITHUB_REF#refs/tags/}
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          # remove 'v' prefix
           VERSION=${TAG#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           if [[ $TAG == *"beta"* || $TAG == *"alpha"* || $TAG == *"rc"* ]]; then
@@ -129,98 +149,60 @@ jobs:
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
           fi
 
-  # ================================
-  # DEPLOY TO STAGING
-  # ================================
   deploy-staging:
     name: 🚀 Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [validate, release]
-    
+    timeout-minutes: 15
+    needs: [validate, create-release]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@v4.1.1
       - name: Deploy to staging
         run: |
           echo "🚀 Deploying version ${{ needs.validate.outputs.version }} to staging"
-          # Here you would add your actual deployment commands
-          # For example:
-          # - SSH to staging server
-          # - Pull new Docker images
-          # - Update docker-compose.yml
-          # - Restart services
-          # - Run health checks
-          
-          # Placeholder for actual deployment
+          # Здесь ваши реальные команды деплоя
           echo "✅ Deployment to staging completed"
-
       - name: Run deployment tests
         run: |
           echo "🧪 Running deployment tests on staging"
-          # Add your deployment verification tests here
-          # For example:
-          # - Health check endpoints
-          # - Basic functionality tests
-          # - Performance tests
-          
           echo "✅ Deployment tests passed"
 
-  # ================================
-  # NOTIFY TEAM
-  # ================================
   notify:
     name: 📢 Notify Team
     runs-on: ubuntu-latest
-    needs: [validate, release, deploy-staging]
+    timeout-minutes: 5
+    needs: [validate, create-release, deploy-staging]
     if: always()
-    
     steps:
       - name: Notify on success
-        if: needs.release.result == 'success' && needs.deploy-staging.result == 'success'
+        if: needs.create-release.result == 'success' && needs.deploy-staging.result == 'success'
         run: |
           echo "🎉 Release ${{ needs.validate.outputs.version }} completed successfully!"
           echo "📦 GitHub Release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}"
           echo "🚀 Staging deployment: successful"
-          echo "🐳 Docker images: available at ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          
-          # Here you can add notifications to:
-          # - Slack
-          # - Discord
-          # - Email
-          # - Teams
-          # etc.
-
+          # Здесь можно добавить интеграцию с Slack/Discord/Email
       - name: Notify on failure
-        if: needs.release.result == 'failure' || needs.deploy-staging.result == 'failure'
+        if: needs.create-release.result == 'failure' || needs.deploy-staging.result == 'failure'
         run: |
           echo "❌ Release ${{ needs.validate.outputs.version }} failed!"
           echo "🔍 Check the logs for details"
-          echo "📋 Release status: ${{ needs.release.result }}"
+          echo "📋 Release status: ${{ needs.create-release.result }}"
           echo "🚀 Staging deployment: ${{ needs.deploy-staging.result }}"
           
-          # Here you can add failure notifications
-
-  # ================================
-  # CLEANUP
-  # ================================
   cleanup:
     name: 🧹 Cleanup
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [notify]
     if: always()
-    
     steps:
       - name: Cleanup artifacts
         run: |
           echo "🧹 Cleaning up temporary artifacts"
-          # Add cleanup commands here if needed
-          
       - name: Summary
         run: |
           echo "## 📊 Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: ${{ needs.validate.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tag**: ${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Prerelease**: ${{ needs.validate.outputs.is_prerelease }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Docker Images**: Available at ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release URL**: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY 
+          # Добавьте сюда ссылки на Docker-образы, релиз и т.д. 

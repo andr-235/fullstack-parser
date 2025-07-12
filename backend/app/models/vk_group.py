@@ -3,13 +3,14 @@
 """
 
 from __future__ import annotations
-from datetime import datetime
 
+from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from app.models.base import BaseModel
 from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import BaseModel
 
 if TYPE_CHECKING:
     from app.models.vk_post import VKPost

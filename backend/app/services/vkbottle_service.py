@@ -1,7 +1,8 @@
-import structlog
-from typing import Any, Optional, Dict, List
-from vkbottle.api import API
+from typing import List, Optional
+
 import requests  # type: ignore
+import structlog
+from vkbottle.api import API
 
 VK_API_VERSION_DEFAULT = "5.199"
 SUPPORTED_SORT_VALUES = {"asc", "desc", "smart"}
@@ -22,37 +23,27 @@ class VKBottleService:
         api_version (str): Версия VK API
     """
 
-    def __init__(self, token: str, api_version: str = VK_API_VERSION_DEFAULT) -> None:
+    def __init__(
+        self, token: str, api_version: str = VK_API_VERSION_DEFAULT
+    ) -> None:
         if not token or token == "your-vk-app-id":
             raise ValueError(
                 "[VKBottleService] VK_ACCESS_TOKEN не передан или дефолтный! Проверь переменные окружения и .env."
             )
         self.logger = structlog.get_logger(__name__)
-        self.logger.warning(f"VKBottleService: создаём API с токеном: {repr(token)}")
+        # self.logger.warning(f"VKBottleService: создаём API с токеном: {repr(token)}")  # УДАЛЕНО: не логируем токен
         self.api = API(token)
-        self.logger.warning(
+        self.logger.info(
             f"VKBottleService: self.api создан, тип: {type(self.api)}, dir: {dir(self.api)}"
         )
-        # Логируем все возможные варианты хранения токена
+        # Логируем только структуру, не содержимое токена
         try:
-            self.logger.warning(
-                f"VKBottleService: self.api.__dict__ = {self.api.__dict__}"
+            self.logger.debug(
+                f"VKBottleService: self.api.__dict__ = {list(self.api.__dict__.keys())}"
             )
-            if hasattr(self.api, "_API__token"):
-                self.logger.warning(
-                    f"VKBottleService: self.api._API__token = {getattr(self.api, '_API__token')}"
-                )
-            if hasattr(self.api, "_token"):
-                self.logger.warning(
-                    f"VKBottleService: self.api._token = {getattr(self.api, '_token')}"
-                )
-            if hasattr(self.api, "token"):
-                self.logger.warning(
-                    f"VKBottleService: self.api.token = {getattr(self.api, 'token')}"
-                )
         except Exception as e:
             self.logger.error(
-                f"VKBottleService: Ошибка при логировании токена из self.api: {e}"
+                f"VKBottleService: Ошибка при логировании структуры self.api: {e}"
             )
         self.api_version = api_version
         self._token_preview = self._get_token_preview(token)
@@ -123,7 +114,9 @@ class VKBottleService:
                 error=str(e),
                 exc_info=True,
             )
-            raise VKAPIException(f"Ошибка VK API при получении постов: {e}") from e
+            raise VKAPIException(
+                f"Ошибка VK API при получении постов: {e}"
+            ) from e
 
     async def get_post_comments(
         self,
@@ -212,9 +205,15 @@ class VKBottleService:
         Выполняет прямой запрос к VK API через requests для отладки и логирует ответ.
         """
         try:
-            token = self.api._API__token if hasattr(self.api, "_API__token") else None
+            token = (
+                self.api._API__token
+                if hasattr(self.api, "_API__token")
+                else None
+            )
             if not token:
-                self.logger.warning("Не удалось получить токен для прямого запроса")
+                self.logger.warning(
+                    "Не удалось получить токен для прямого запроса"
+                )
                 return
             params = {
                 "owner_id": owner_id,
