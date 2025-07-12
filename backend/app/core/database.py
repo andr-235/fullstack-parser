@@ -41,6 +41,7 @@ def get_async_engine():
     """Получение асинхронного движка с кешированием."""
     return create_async_engine(
         str(settings.database.url),
+
         echo=settings.debug,
         pool_size=10,
         max_overflow=20,
