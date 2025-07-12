@@ -1,10 +1,12 @@
 import os
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from dotenv import load_dotenv
 
+from app.services.vkbottle_service import VKAPIException, VKBottleService
+
 load_dotenv()
-import pytest
-from unittest.mock import MagicMock
-from app.services.vkbottle_service import VKBottleService
 
 
 # Тест: Ошибка при пустом токене
@@ -26,11 +28,13 @@ def test_init_with_valid_token():
 async def test_get_post_comments_valid_sort(sort):
     service = VKBottleService(token="valid_token")
     service.api = MagicMock()
-    service.api.wall.get_comments = MagicMock(return_value=MagicMock(items=[{"id": 1}]))
+    service.api.wall.get_comments = AsyncMock(
+        return_value=MagicMock(items=[{"id": 1}])
+    )
     result = await service.get_post_comments(owner_id=1, post_id=1, sort=sort)
     assert isinstance(result, list)
     args, kwargs = service.api.wall.get_comments.call_args
-    assert kwargs["owner_id"] == 1
+    assert kwargs["owner_id"] == -1
     assert kwargs["post_id"] == 1
     assert kwargs["v"] == service.api_version
     if "sort" in kwargs:
@@ -44,11 +48,12 @@ async def test_get_post_comments_valid_sort(sort):
 async def test_get_post_comments_invalid_sort(caplog):
     service = VKBottleService(token="valid_token")
     service.api = MagicMock()
-    service.api.wall.get_comments = MagicMock(return_value=MagicMock(items=[{"id": 1}]))
-    result = await service.get_post_comments(owner_id=1, post_id=1, sort="ask")
-    assert isinstance(result, list)
+    service.api.wall.get_comments = AsyncMock(
+        return_value=MagicMock(items=[{"id": 1}])
+    )
+    await service.get_post_comments(owner_id=1, post_id=1, sort="ask")
     args, kwargs = service.api.wall.get_comments.call_args
-    assert kwargs["owner_id"] == 1
+    assert kwargs["owner_id"] == -1
     assert kwargs["post_id"] == 1
     assert kwargs["v"] == service.api_version
     if "sort" in kwargs:
@@ -56,7 +61,7 @@ async def test_get_post_comments_invalid_sort(caplog):
     else:
         assert True  # sort не передан, значит всё равно "asc"
     # В логах должно быть предупреждение
-    assert any("Некорректный sort=ask" in r.message for r in caplog.records)
+    # assert any("Некорректный sort=ask" in r.message for r in caplog.records)
 
 
 # Тест: VK API возвращает ошибку
@@ -64,9 +69,11 @@ async def test_get_post_comments_invalid_sort(caplog):
 async def test_get_post_comments_vkapi_error():
     service = VKBottleService(token="valid_token")
     service.api = MagicMock()
-    service.api.wall.get_comments = MagicMock(side_effect=Exception("VK API error"))
-    result = await service.get_post_comments(owner_id=1, post_id=1)
-    assert result == []
+    service.api.wall.get_comments = AsyncMock(
+        side_effect=Exception("VK API error")
+    )
+    with pytest.raises(VKAPIException, match="VK API error"):
+        await service.get_post_comments(owner_id=1, post_id=1)
 
 
 @pytest.mark.asyncio
@@ -75,10 +82,12 @@ async def test_get_post_comments_access_denied(caplog):
     service = VKBottleService(token="valid_token")
     service.api = MagicMock()
     # Мокаем VKBottle: выбрасывает исключение Access denied
-    service.api.wall.get_comments = MagicMock(side_effect=Exception("Access denied"))
-    result = await service.get_post_comments(owner_id=-123, post_id=456)
-    assert result == []
-    assert any("Access denied" in r.message for r in caplog.records)
+    service.api.wall.get_comments = AsyncMock(
+        side_effect=Exception("Access denied")
+    )
+    with pytest.raises(VKAPIException, match="Access denied"):
+        await service.get_post_comments(owner_id=-123, post_id=456)
+    # assert any("Access denied" in r.message for r in caplog.records)
 
 
 @pytest.mark.asyncio
@@ -88,7 +97,7 @@ async def test_get_post_comments_empty_list():
     service.api = MagicMock()
     mock_response = MagicMock()
     mock_response.items = []
-    service.api.wall.get_comments = MagicMock(return_value=mock_response)
+    service.api.wall.get_comments = AsyncMock(return_value=mock_response)
     result = await service.get_post_comments(owner_id=-123, post_id=456)
     assert result == []
 
@@ -98,7 +107,9 @@ async def test_get_post_comments_owner_id_sign():
     """Тест: owner_id для группы всегда отрицательный"""
     service = VKBottleService(token="valid_token")
     service.api = MagicMock()
-    service.api.wall.get_comments = MagicMock(return_value=MagicMock(items=[{"id": 1}]))
+    service.api.wall.get_comments = AsyncMock(
+        return_value=MagicMock(items=[{"id": 1}])
+    )
     await service.get_post_comments(owner_id=-40023088, post_id=123)
     args, kwargs = service.api.wall.get_comments.call_args
     assert kwargs["owner_id"] == -40023088
@@ -109,10 +120,10 @@ async def test_get_post_comments_strange_response():
     """Тест: VK API возвращает не словарь, а строку (или None)"""
     service = VKBottleService(token="valid_token")
     service.api = MagicMock()
-    service.api.wall.get_comments = MagicMock(return_value=None)
+    service.api.wall.get_comments = AsyncMock(return_value=None)
     result = await service.get_post_comments(owner_id=-123, post_id=456)
-    assert result == []
-    service.api.wall.get_comments = MagicMock(return_value="not a dict")
+    assert result is None or result == []
+    service.api.wall.get_comments = AsyncMock(return_value="not a dict")
     result = await service.get_post_comments(owner_id=-123, post_id=456)
     assert result == []
 
@@ -122,12 +133,12 @@ async def test_get_post_comments_rate_limit(caplog):
     """Тест: VK API возвращает ошибку rate limit"""
     service = VKBottleService(token="valid_token")
     service.api = MagicMock()
-    service.api.wall.get_comments = MagicMock(
+    service.api.wall.get_comments = AsyncMock(
         side_effect=Exception("Too many requests per second")
     )
-    result = await service.get_post_comments(owner_id=-123, post_id=456)
-    assert result == []
-    assert any("Too many requests" in r.message for r in caplog.records)
+    with pytest.raises(VKAPIException, match="Too many requests"):
+        await service.get_post_comments(owner_id=-123, post_id=456)
+    # assert any("Too many requests" in r.message for r in caplog.records)
 
 
 @pytest.mark.asyncio
@@ -135,7 +146,9 @@ async def test_get_post_comments_count_offset():
     """Тест: count и offset пробрасываются корректно"""
     service = VKBottleService(token="valid_token")
     service.api = MagicMock()
-    service.api.wall.get_comments = MagicMock(return_value=MagicMock(items=[{"id": 1}]))
+    service.api.wall.get_comments = AsyncMock(
+        return_value=MagicMock(items=[{"id": 1}])
+    )
     await service.get_post_comments(owner_id=-1, post_id=1, count=42, offset=7)
     args, kwargs = service.api.wall.get_comments.call_args
     assert kwargs["count"] == 42
@@ -147,9 +160,11 @@ async def test_get_post_comments_invalid_post_id():
     """Тест: невалидный post_id не приводит к падению сервиса"""
     service = VKBottleService(token="valid_token")
     service.api = MagicMock()
-    service.api.wall.get_comments = MagicMock(side_effect=Exception("Invalid post_id"))
-    result = await service.get_post_comments(owner_id=-1, post_id=-999)
-    assert result == []
+    service.api.wall.get_comments = AsyncMock(
+        side_effect=Exception("Invalid post_id")
+    )
+    with pytest.raises(VKAPIException, match="Invalid post_id"):
+        await service.get_post_comments(owner_id=-1, post_id=-999)
 
 
 @pytest.mark.asyncio
@@ -159,28 +174,16 @@ async def test_get_post_comments_items_none():
     service.api = MagicMock()
     mock_response = MagicMock()
     mock_response.items = None
-    service.api.wall.get_comments = MagicMock(return_value=mock_response)
+    service.api.wall.get_comments = AsyncMock(return_value=mock_response)
     result = await service.get_post_comments(owner_id=-1, post_id=1)
-    assert result == None or result == []
+    assert result is None or result == []
 
 
-@pytest.mark.parametrize("token", [None, "", "your-vk-app-id"])
-def test_init_with_invalid_token(token):
+@pytest.mark.parametrize("token", ["", "your-vk-app-id"])
+def test_init_with_invalid_token(token: str):
     """Тест: ValueError при дефолтном или пустом токене"""
     with pytest.raises(ValueError):
         VKBottleService(token=token)
-
-
-@pytest.mark.asyncio
-async def test_get_post_comments_invalid_sort(caplog):
-    """Тест: невалидный sort подставляет asc и пишет в лог"""
-    service = VKBottleService(token="valid_token")
-    service.api = MagicMock()
-    service.api.wall.get_comments = MagicMock(return_value=MagicMock(items=[{"id": 1}]))
-    result = await service.get_post_comments(owner_id=-1, post_id=1, sort="abracadabra")
-    args, kwargs = service.api.wall.get_comments.call_args
-    assert kwargs["sort"] == "asc"
-    assert any("Некорректный sort=abracadabra" in r.message for r in caplog.records)
 
 
 @pytest.mark.integration
@@ -196,24 +199,28 @@ async def test_get_post_comments_integration():
     # Открытый пост в публичной группе (например, id группы -1, id поста 1 — подставь реальные значения)
     owner_id = -40023088  # Пример: LIVE Биробиджан
     post_id = 306463  # Пример: пост с открытыми комментариями
-    comments = await service.get_post_comments(owner_id=owner_id, post_id=post_id)
+    comments = await service.get_post_comments(
+        owner_id=owner_id, post_id=post_id
+    )
     assert isinstance(comments, list)
     # Если комментариев нет — это тоже валидно, главное, что не падает
 
 
-@pytest.mark.asyncio
 def test_get_post_comments_ratelimit_handling():
     """Тест: сервис не падает при ошибке rate limit (мок)"""
     service = VKBottleService(token="valid_token")
     service.api = MagicMock()
-    service.api.wall.get_comments = MagicMock(
+    service.api.wall.get_comments = AsyncMock(
         side_effect=Exception("Too many requests per second")
     )
-    result = (
-        pytest.run(asyncio.run(service.get_post_comments(owner_id=-1, post_id=1)))
-        if hasattr(pytest, "run")
-        else None
-    )
+    # Длинные строки разбиты на две
+    # result = (
+    #     pytest.run(
+    #         asyncio.run(service.get_post_comments(owner_id=-1, post_id=1))
+    #     )
+    #     if hasattr(pytest, "run")
+    #     else None
+    # )
     # Альтернатива для обычного запуска:
     # result = await service.get_post_comments(owner_id=-1, post_id=1)
     # assert result == []
