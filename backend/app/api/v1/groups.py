@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.models import VKGroup
 from app.schemas.base import PaginatedResponse, PaginationParams
@@ -22,6 +23,7 @@ from app.schemas.vk_group import (
 # from app.core.config import settings  # Удалено как неиспользуемое
 # from app.services.vkbottle_service import VKBottleService  # Удалено как неиспользуемое
 from app.services.group_service import group_service
+from app.services.vkbottle_service import VKBottleService
 
 router = APIRouter(tags=["Groups"])
 
@@ -44,9 +46,56 @@ async def create_group(
     group_data: VKGroupCreate,
     db: AsyncSession = Depends(get_db),
 ) -> VKGroupRead:
-    """Добавить новую VK группу для мониторинга"""
-    group = await group_service.create_group_with_vk(db, group_data)
-    return VKGroupRead.model_validate(group)
+    """
+
+    Добавить новую VK группу для мониторинга
+    """
+    screen_name = _extract_screen_name(group_data.vk_id_or_screen_name)
+    if not screen_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Не указан ID или короткое имя группы.",
+        )
+
+    vk_service = VKBottleService(
+        token=settings.vk_access_token, api_version=settings.vk_api_version
+    )
+    vk_group_data = await vk_service.get_group_info(screen_name)
+
+    if not vk_group_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Группа ВКонтакте не найдена.",
+        )
+
+    # Проверка на существование группы в БД (case-insensitive)
+    existing_group_result = await db.execute(
+        select(VKGroup).where(
+            func.lower(VKGroup.screen_name) == screen_name.lower()
+        )
+    )
+    existing_group = existing_group_result.scalar_one_or_none()
+    if existing_group:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Группа '{existing_group.name}' ({screen_name}) уже существует в системе.",
+        )
+
+    # TODO: Перенести логику в сервис
+    # Фильтрация только нужных полей для VKGroup
+    vk_group_fields = {c.name for c in VKGroup.__table__.columns}
+    filtered_data = {
+        k: v for k, v in vk_group_data.items() if k in vk_group_fields
+    }
+    # Маппинг id -> vk_id
+    if "id" in vk_group_data:
+        filtered_data["vk_id"] = vk_group_data["id"]
+    new_group = VKGroup(**filtered_data)
+    db.add(new_group)
+    await db.commit()
+    await db.refresh(new_group)
+
+    return VKGroupRead.model_validate(new_group)
 
 
 @router.get("/", response_model=PaginatedResponse[VKGroupRead])

@@ -1,10 +1,18 @@
-"""initial migration"""
+"""initial migration
+
+Revision ID: 84629a3c9ad3
+Revises:
+Create Date: 2025-07-07 10:21:00.000000
+
+"""
+
+from typing import Sequence, Union
 
 # revision identifiers, used by Alembic.
-revision = "84629a3c9ad3"
-down_revision = None
-branch_labels = None
-depends_on = None
+revision: str = "84629a3c9ad3"
+down_revision: Union[str, None] = None
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
