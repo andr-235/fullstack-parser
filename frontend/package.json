@@ -40,7 +40,7 @@
     "sonner": "^2.0.6",
     "tailwind-merge": "^2.2.0",
     "zod": "^3.22.4",
-    "zustand": "^4.4.7"
+    "zustand": "^5.0.6"
   },
   "devDependencies": {
     "@svgr/webpack": "^8.1.0",
