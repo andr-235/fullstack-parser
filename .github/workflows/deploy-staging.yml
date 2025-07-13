@@ -30,10 +30,10 @@ jobs:
           test -n "${{ secrets.STAGING_APP_DIR }}" || (echo "Нет STAGING_APP_DIR" && exit 1)
 
       - name: Checkout repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v4
 
       - name: Deploy to Staging Server
-        uses: appleboy/ssh-action@v0.1.10
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}

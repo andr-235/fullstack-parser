@@ -45,34 +45,32 @@ jobs:
       short_sha: ${{ steps.vars.outputs.sha }}
     steps:
       - name: ⬇️ Check out code
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v4
 
       - name: 🧮 Set reusable variables
         id: vars
         run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: 🔐 Log in to GitHub Container Registry
-        uses: docker/login-action@v3.1.0
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: 🏗️ Build and push backend image
-        uses: docker/build-push-action@v5.3.0
+        uses: docker/build-push-action@v5
         with:
           context: ./backend
-          file: ./backend/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.vars.outputs.sha }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}
 
       - name: 🏗️ Build and push frontend image
-        uses: docker/build-push-action@v5.3.0
+        uses: docker/build-push-action@v5
         with:
           context: ./frontend
-          file: ./frontend/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.vars.outputs.sha }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}
 
   deploy:
     name: Deploy to Production Server
@@ -94,37 +92,13 @@ jobs:
           test -n "${{ secrets.PRODUCTION_APP_DIR }}" || (echo "Нет PRODUCTION_APP_DIR" && exit 1)
 
       - name: 🚀 Deploy to Production
-        uses: appleboy/ssh-action@v0.1.10
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          port: ${{ secrets.PRODUCTION_PORT }}
           script: |
-            set -euo pipefail
-            echo "Changing to app directory..."
-            cd ${{ secrets.PRODUCTION_APP_DIR }}
-            echo "Configuring git safe.directory..."
-            git config --global --add safe.directory ${{ secrets.PRODUCTION_APP_DIR }}
-            echo "Pulling latest changes from main branch..."
-            git pull origin main
-            echo "Copying .env to .env.prod..."
-            cp .env .env.prod
-            if [ -z "${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}" ] || [ -z "${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}" ]; then
-              echo "❌ DOCKER_IMAGE_BACKEND или DOCKER_IMAGE_FRONTEND не определены! Останов деплоя." && exit 1
-            fi
-            echo "DOCKER_IMAGE_BACKEND=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ needs.build.outputs.short_sha }}" >> .env.prod
-            echo "DOCKER_IMAGE_FRONTEND=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ needs.build.outputs.short_sha }}" >> .env.prod
-            echo "Удаляем старые контейнеры, если остались..."
-            docker rm -f fullstack_postgres_prod fullstack_redis_prod fullstack_backend_prod fullstack_arq_worker_prod fullstack_frontend_prod fullstack_nginx || true
-            echo "Pulling images and starting containers..."
-            docker-compose -f docker-compose.prod.ip.yml pull
-            docker-compose -f docker-compose.prod.ip.yml up -d --remove-orphans
-            echo "Применяем миграции Alembic..."
-            docker-compose -f docker-compose.prod.ip.yml exec backend alembic upgrade head
-            echo "Cleaning up old Docker images..."
-            docker image prune -af
-            echo "✅ Deployment successful!"
+            cd /srv/app && docker-compose pull && docker-compose up -d --build
 
       - name: Healthcheck backend
         run: |
