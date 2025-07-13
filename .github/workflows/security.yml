@@ -73,7 +73,7 @@ jobs:
           load: true
           tags: ${{ inputs.image_name }}:${{ github.sha }}
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@v0.19.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ inputs.image_name }}:${{ github.sha }}
           ignore-unfixed: true
