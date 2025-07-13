@@ -17,17 +17,19 @@ env:
 jobs:
   test-backend:
     name: Backend Tests
+    permissions:
+      contents: write
     uses: ./.github/workflows/reusable-backend-test.yml
     with:
       python-versions: '["3.11", "3.12"]'
-      upload-coverage: 'false'
+      upload-coverage: "false"
 
   test-frontend:
     name: Frontend Tests
     uses: ./.github/workflows/reusable-frontend-test.yml
     with:
       node-versions: '["20"]'
-      upload-coverage: 'false'
+      upload-coverage: "false"
 
   security:
     name: Security Scan
