@@ -38,7 +38,9 @@ export default function HomePage() {
     <div className="flex flex-col items-center justify-center min-h-full p-2 text-center">
       <div className="max-w-4xl w-full">
         <header className="mb-6">
-          <h1 className="text-4xl font-bold tracking-tight">VK Comments Parser</h1>
+          <h1 className="text-4xl font-bold tracking-tight">
+            VK Comments Parser
+          </h1>
           <p className="mt-2 text-base text-muted-foreground">
             Парсинг и анализ комментариев ВКонтакте на новом уровне.
           </p>
@@ -49,10 +51,14 @@ export default function HomePage() {
             <Card key={feature.title} className="text-left">
               <CardHeader>
                 {feature.icon}
-                <CardTitle className="mt-2 text-base font-bold">{feature.title}</CardTitle>
+                <CardTitle className="mt-2 text-base font-bold">
+                  {feature.title}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <CardDescription className="text-xs">{feature.description}</CardDescription>
+                <CardDescription className="text-xs">
+                  {feature.description}
+                </CardDescription>
               </CardContent>
             </Card>
           ))}

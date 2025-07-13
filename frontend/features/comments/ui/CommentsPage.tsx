@@ -120,7 +120,9 @@ export default function CommentsPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-bold">Лента комментариев</CardTitle>
+        <CardTitle className="text-base font-bold">
+          Лента комментариев
+        </CardTitle>
         <CardDescription className="text-xs">
           Просмотр и фильтрация всех найденных комментариев.
         </CardDescription>
@@ -198,7 +200,9 @@ export default function CommentsPage() {
                         keywords={comment.matched_keywords || []}
                       />
                     </TableCell>
-                    <TableCell className="text-xs">{comment.group?.name || 'N/A'}</TableCell>
+                    <TableCell className="text-xs">
+                      {comment.group?.name || 'N/A'}
+                    </TableCell>
                     <TableCell className="text-xs">
                       {formatDistanceToNow(new Date(comment.published_at), {
                         addSuffix: true,

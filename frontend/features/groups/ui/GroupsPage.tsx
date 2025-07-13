@@ -158,7 +158,9 @@ export default function GroupsPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-bold">Управление VK Группами</CardTitle>
+        <CardTitle className="text-base font-bold">
+          Управление VK Группами
+        </CardTitle>
         <CardDescription className="text-xs">
           Добавляйте, настраивайте и управляйте группами для парсинга.
         </CardDescription>

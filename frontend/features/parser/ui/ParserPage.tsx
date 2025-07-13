@@ -159,7 +159,8 @@ export default function ParserPage() {
               <Button
                 className={`w-full flex items-center justify-center gap-2 ${
                   isProcessing || startParserMutation.isPending
-                    ? 'bg-yellow-500 hover:bg-yellow-600 cursor-wait' : ''
+                    ? 'bg-yellow-500 hover:bg-yellow-600 cursor-wait'
+                    : ''
                 }`}
                 onClick={handleStart}
                 disabled={!selectedGroupId || isActionInProgress}
@@ -248,7 +249,9 @@ export default function ParserPage() {
                         <ParserStatus status={task.status} />
                       </TableCell>
                       <TableCell>
-                        {task.duration_seconds ? `${task.duration_seconds} сек` : '-'}
+                        {task.duration_seconds
+                          ? `${task.duration_seconds} сек`
+                          : '-'}
                       </TableCell>
                       <TableCell>
                         {task.completed_at

@@ -25,7 +25,8 @@ import type {
 /**
  * Конфигурация API клиента
  */
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.88.12:8000'
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://192.168.88.12:8000'
 
 class APIClient {
   private client: AxiosInstance
