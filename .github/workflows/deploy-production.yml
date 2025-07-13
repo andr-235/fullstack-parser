@@ -35,6 +35,9 @@ jobs:
 
   security:
     name: Security Scan
+    permissions:
+      actions: read
+      security-events: write
     uses: ./.github/workflows/security.yml
 
   build:
