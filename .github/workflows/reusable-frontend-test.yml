@@ -24,117 +24,29 @@ concurrency:
 
 jobs:
   frontend-lint:
-    name:  Frontend Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write # write нужен только если пушим автоформат
-    steps:
-      - name: Get branch name
-        id: get_branch
-        run: echo "branch_name=${{ github.head_ref || github.ref_name }}" >> $GITHUB_OUTPUT
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.get_branch.outputs.branch_name }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.12.4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: 'frontend/pnpm-lock.yaml'
-
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: pnpm install --frozen-lockfile
-
-      - name: Run linting and apply fixes
-        working-directory: ./frontend
-        id: lint
-        run: |
-          git status --porcelain > before.txt
-          pnpm lint --fix
-          pnpm format --write
-          git status --porcelain > after.txt
-          if ! cmp -s before.txt after.txt; then
-            echo "changes_detected=true" >> $GITHUB_OUTPUT
-          else
-            echo "changes_detected=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Commit changes
-        working-directory: ./frontend
-        if: steps.lint.outputs.changes_detected == 'true'
-        continue-on-error: true
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add .
-          git commit -m "style: auto-format frontend code" || true
-          git pull --rebase origin "${{ steps.get_branch.outputs.branch_name }}" || true
-          git push --force-with-lease origin HEAD:"${{ steps.get_branch.outputs.branch_name }}" || true
-
-  frontend-test:
-    name:  Frontend Tests (${{ matrix.node-version }})
-    runs-on: ubuntu-latest
-    needs: frontend-lint
-    timeout-minutes: 20
+    uses: ./.github/workflows/steps-lint.yml
+    with:
+      target: frontend
+      node-version: '20'
+    secrets: inherit
     permissions:
       contents: read
+    concurrency:
+      group: frontend-lint-${{ github.ref }}
+      cancel-in-progress: true
+
+  frontend-test:
+    needs: frontend-lint
+    uses: ./.github/workflows/steps-test.yml
+    with:
+      target: frontend
+      node-version: '20'
+      upload-coverage: 'true'
+    secrets: inherit
+    permissions:
+      contents: read
+    concurrency:
+      group: frontend-test-${{ github.ref }}
+      cancel-in-progress: true
     strategy:
-      fail-fast: false
-      matrix:
-        node-version: ${{ fromJson(inputs.node-versions) }}
-    env:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
-      CI: true
-      NODE_VERSION_DEFAULT: '20'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.12.4
-
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
-          cache-dependency-path: 'frontend/pnpm-lock.yaml'
-
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: pnpm install --frozen-lockfile
-
-      - name: Build application
-        working-directory: ./frontend
-        run: pnpm run build
-
-      - name: Run tests
-        working-directory: ./frontend
-        run: pnpm test --passWithNoTests --watchAll=false
-
-      - name: Upload coverage artifact
-        if: inputs.upload-coverage == '"true"' && matrix.node-version == env.NODE_VERSION_DEFAULT
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-coverage-lcov
-          path: ./frontend/coverage/lcov.info
-      - name: Upload coverage to Codecov
-        if: inputs.upload-coverage == '"true"' && matrix.node-version == env.NODE_VERSION_DEFAULT
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./frontend/coverage/lcov.info
-          flags: frontend
-          fail_ci_if_error: false 
+      fail-fast: false 

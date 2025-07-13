@@ -20,3 +20,51 @@ jobs:
       node-versions: '["20"]'
       upload-coverage: '"true"'
     secrets: inherit
+
+  dependency-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Backend: poetry check & pip-audit
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: poetry install --no-interaction --no-root
+      - name: Poetry check
+        working-directory: ./backend
+        run: poetry check
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Run pip-audit
+        working-directory: ./backend
+        run: pip-audit
+
+      # Frontend: pnpm audit
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: 'frontend/pnpm-lock.yaml'
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: pnpm install --frozen-lockfile
+      - name: Run pnpm audit
+        working-directory: ./frontend
+        run: pnpm audit --audit-level=moderate

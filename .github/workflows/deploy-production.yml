@@ -112,6 +112,15 @@ jobs:
           echo "❌ Backend healthcheck failed"
           exit 1
 
+      - name: Telegram уведомление о деплое
+        if: success()
+        env:
+          TELEGRAM_WEBHOOK_URL: ${{ secrets.TELEGRAM_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-Type: application/json' \
+            -d '{"text":"🚀 Production deploy завершён успешно!"}' \
+            "$TELEGRAM_WEBHOOK_URL"
+
       # - name: Slack/Telegram уведомление (опционально)
       #   run: |
       #     curl -X POST -H 'Content-type: application/json' --data '{"text":"Production deploy завершён успешно!"}' $SLACK_WEBHOOK_URL
