@@ -5,7 +5,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/react'
-import KeywordsPage from '../page'
+import KeywordsPage from './KeywordsPage'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import type { KeywordResponse } from '@/types/api'
