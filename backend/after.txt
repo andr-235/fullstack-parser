@@ -1,1 +1,23 @@
  M backend/after.txt
+ M backend/alembic/env.py
+ M "backend/alembic/versions/51fcd6f1165b_fix_server_default_now_\320\264\320\273\321\217_created_at_.py"
+ M backend/alembic/versions/bce7a0c9bf4a_fix_add_nullable_false_for_created_at_.py
+ M backend/alembic/versions/dde5a46a2918_fix_add_default_for_created_at_in_vk_.py
+ M backend/app/api/v1/api.py
+ M backend/app/api/v1/comments.py
+ M backend/app/api/v1/router.py
+ M backend/app/core/database.py
+ M backend/app/models/comment_keyword_match.py
+ M backend/app/models/vk_comment.py
+ M backend/app/models/vk_group.py
+ M backend/app/schemas/base.py
+ M backend/app/schemas/keyword.py
+ M backend/app/schemas/parser.py
+ M backend/app/schemas/user.py
+ M backend/app/schemas/vk_comment.py
+ M backend/app/schemas/vk_group.py
+ M backend/app/services/base.py
+ M backend/app/services/redis_parser_manager.py
+ M backend/app/services/user_service.py
+ M backend/app/workers/arq_tasks.py
+ M backend/app/workers/tasks.py

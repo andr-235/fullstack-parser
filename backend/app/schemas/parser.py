@@ -12,9 +12,12 @@ class ParseTaskCreate(BaseModel):
     """Схема для запуска задачи парсинга"""
 
     group_id: int = Field(..., description="ID группы для парсинга")
-    max_posts: Optional[int] = Field(None, description="Максимальное количество постов")
+    max_posts: Optional[int] = Field(
+        None, description="Максимальное количество постов"
+    )
     force_reparse: bool = Field(
-        default=False, description="Принудительно перепарсить уже обработанные посты"
+        default=False,
+        description="Принудительно перепарсить уже обработанные посты",
     )
 
 
@@ -35,9 +38,15 @@ class ParseTaskResponse(BaseModel):
         le=1,
     )
     started_at: datetime = Field(..., description="Время начала")
-    completed_at: Optional[datetime] = Field(None, description="Время завершения")
-    stats: Optional["ParseStats"] = Field(None, description="Статистика парсинга")
-    error_message: Optional[str] = Field(None, description="Сообщение об ошибке")
+    completed_at: Optional[datetime] = Field(
+        None, description="Время завершения"
+    )
+    stats: Optional["ParseStats"] = Field(
+        None, description="Статистика парсинга"
+    )
+    error_message: Optional[str] = Field(
+        None, description="Сообщение об ошибке"
+    )
 
 
 class ParseStats(BaseModel):
@@ -49,7 +58,9 @@ class ParseStats(BaseModel):
         default=0, description="Комментариев с ключевыми словами"
     )
     new_comments: int = Field(default=0, description="Новых комментариев")
-    keyword_matches: int = Field(default=0, description="Совпадений ключевых слов")
+    keyword_matches: int = Field(
+        default=0, description="Совпадений ключевых слов"
+    )
     duration_seconds: Optional[float] = Field(
         None, description="Продолжительность в секундах"
     )

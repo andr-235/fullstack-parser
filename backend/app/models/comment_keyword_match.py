@@ -26,9 +26,13 @@ class CommentKeywordMatch(BaseModel):
     comment_id: Mapped[int] = mapped_column(
         ForeignKey("vk_comments.id"), nullable=False
     )
-    comment: Mapped["VKComment"] = relationship(back_populates="keyword_matches")
+    comment: Mapped["VKComment"] = relationship(
+        back_populates="keyword_matches"
+    )
 
-    keyword_id: Mapped[int] = mapped_column(ForeignKey("keywords.id"), nullable=False)
+    keyword_id: Mapped[int] = mapped_column(
+        ForeignKey("keywords.id"), nullable=False
+    )
     keyword: Mapped["Keyword"] = relationship(back_populates="comment_matches")
 
     # Детали совпадения

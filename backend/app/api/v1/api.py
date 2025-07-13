@@ -10,9 +10,13 @@ api_router = APIRouter()
 
 # Подключение всех роутеров
 api_router.include_router(health.router, prefix="/health", tags=["Health"])
-api_router.include_router(comments.router, prefix="/comments", tags=["Comments"])
+api_router.include_router(
+    comments.router, prefix="/comments", tags=["Comments"]
+)
 api_router.include_router(groups.router, prefix="/groups", tags=["Groups"])
-api_router.include_router(keywords.router, prefix="/keywords", tags=["Keywords"])
+api_router.include_router(
+    keywords.router, prefix="/keywords", tags=["Keywords"]
+)
 api_router.include_router(parser.router, prefix="/parser", tags=["Parser"])
 api_router.include_router(stats.router, prefix="/stats", tags=["Stats"])
 

@@ -13,7 +13,9 @@ class UserBase(BaseSchema):
 
     email: EmailStr = Field(..., description="Email пользователя")
     full_name: str | None = Field(None, description="Полное имя")
-    is_active: bool = Field(default=True, description="Активен ли пользователь")
+    is_active: bool = Field(
+        default=True, description="Активен ли пользователь"
+    )
     is_superuser: bool = Field(
         default=False, description="Является ли суперпользователем"
     )
@@ -32,7 +34,9 @@ class UserUpdate(BaseSchema):
 
     email: EmailStr | None = Field(None, description="Email пользователя")
     full_name: str | None = Field(None, description="Полное имя")
-    password: str | None = Field(None, min_length=8, description="Новый пароль")
+    password: str | None = Field(
+        None, min_length=8, description="Новый пароль"
+    )
     is_active: bool | None = Field(None, description="Активен ли пользователь")
     is_superuser: bool | None = Field(
         None, description="Является ли суперпользователем"

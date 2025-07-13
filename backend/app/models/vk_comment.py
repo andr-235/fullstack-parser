@@ -22,7 +22,9 @@ class VKComment(BaseModel):
     __tablename__ = "vk_comments"
 
     # Основная информация
-    vk_id = Column(Integer, nullable=False, index=True, comment="ID комментария в ВК")
+    vk_id = Column(
+        Integer, nullable=False, index=True, comment="ID комментария в ВК"
+    )
     text = Column(Text, nullable=False, comment="Текст комментария")
 
     # Связи
@@ -30,7 +32,9 @@ class VKComment(BaseModel):
     post = relationship("VKPost", back_populates="comments")
 
     # Автор комментария
-    author_id = Column(Integer, nullable=False, comment="ID автора комментария")
+    author_id = Column(
+        Integer, nullable=False, comment="ID автора комментария"
+    )
     author_name = Column(String(200), comment="Имя автора")
     author_screen_name = Column(String(100), comment="Короткое имя автора")
     author_photo_url = Column(String(500), comment="URL фото автора")
@@ -43,16 +47,22 @@ class VKComment(BaseModel):
 
     # Иерархия комментариев
     parent_comment_id = Column(
-        Integer, ForeignKey("vk_comments.id"), comment="ID родительского комментария"
+        Integer,
+        ForeignKey("vk_comments.id"),
+        comment="ID родительского комментария",
     )
     parent_comment = relationship("VKComment", remote_side="VKComment.id")
 
     # Вложения (упрощённо)
-    has_attachments = Column(Boolean, default=False, comment="Есть ли вложения")
+    has_attachments = Column(
+        Boolean, default=False, comment="Есть ли вложения"
+    )
     attachments_info = Column(Text, comment="JSON с информацией о вложениях")
 
     # Состояние обработки
-    is_processed = Column(Boolean, default=False, comment="Обработан ли комментарий")
+    is_processed = Column(
+        Boolean, default=False, comment="Обработан ли комментарий"
+    )
     processed_at = Column(DateTime, comment="Когда был обработан")
 
     # Найденные ключевые слова
@@ -62,7 +72,9 @@ class VKComment(BaseModel):
 
     # Связи с ключевыми словами
     keyword_matches = relationship(
-        "CommentKeywordMatch", back_populates="comment", cascade="all, delete-orphan"
+        "CommentKeywordMatch",
+        back_populates="comment",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self):

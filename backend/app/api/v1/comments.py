@@ -41,7 +41,9 @@ async def get_comments(
         total=total,
         skip=pagination.skip,
         limit=pagination.limit,
-        items=[VKCommentResponse.model_validate(comment) for comment in comments],
+        items=[
+            VKCommentResponse.model_validate(comment) for comment in comments
+        ],
     )
 
 

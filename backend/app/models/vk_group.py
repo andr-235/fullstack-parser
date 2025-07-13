@@ -23,15 +23,23 @@ class VKGroup(BaseModel):
 
     # Основная информация
     vk_id: Mapped[int] = mapped_column(
-        Integer, unique=True, nullable=False, index=True, comment="ID группы в ВК"
+        Integer,
+        unique=True,
+        nullable=False,
+        index=True,
+        comment="ID группы в ВК",
     )
     screen_name: Mapped[str] = mapped_column(
-        String(100), nullable=False, comment="Короткое имя группы (@group_name)"
+        String(100),
+        nullable=False,
+        comment="Короткое имя группы (@group_name)",
     )
     name: Mapped[str] = mapped_column(
         String(200), nullable=False, comment="Название группы"
     )
-    description: Mapped[Optional[str]] = mapped_column(Text, comment="Описание группы")
+    description: Mapped[Optional[str]] = mapped_column(
+        Text, comment="Описание группы"
+    )
 
     # Настройки мониторинга
     is_active: Mapped[bool] = mapped_column(
@@ -69,6 +77,4 @@ class VKGroup(BaseModel):
     )
 
     def __repr__(self):
-        return (
-            f"<VKGroup(vk_id={self.vk_id}, name={self.name}, active={self.is_active})>"
-        )
+        return f"<VKGroup(vk_id={self.vk_id}, name={self.name}, active={self.is_active})>"
