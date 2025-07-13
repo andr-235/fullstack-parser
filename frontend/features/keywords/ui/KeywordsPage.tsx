@@ -185,29 +185,32 @@ export default function KeywordsPage() {
       )
     }
 
+    // Добавляем скроллируемый контейнер для таблицы
     return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Ключевое слово</TableHead>
-            <TableHead>Найдено комментариев</TableHead>
-            <TableHead>Статус</TableHead>
-            <TableHead className="text-right">Действия</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredKeywords.map((keyword) => (
-            <KeywordRow
-              key={keyword.id}
-              keyword={keyword}
-              onUpdate={handleUpdateKeyword}
-              onDelete={handleDeleteKeyword}
-              isUpdating={updateKeywordMutation.isPending}
-              isDeleting={deleteKeywordMutation.isPending}
-            />
-          ))}
-        </TableBody>
-      </Table>
+      <div className="max-h-[400px] overflow-y-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Ключевое слово</TableHead>
+              <TableHead>Найдено комментариев</TableHead>
+              <TableHead>Статус</TableHead>
+              <TableHead className="text-right">Действия</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredKeywords.map((keyword) => (
+              <KeywordRow
+                key={keyword.id}
+                keyword={keyword}
+                onUpdate={handleUpdateKeyword}
+                onDelete={handleDeleteKeyword}
+                isUpdating={updateKeywordMutation.isPending}
+                isDeleting={deleteKeywordMutation.isPending}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     )
   }
 
