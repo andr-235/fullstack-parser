@@ -5,8 +5,9 @@ Pydantic схемы для VK групп
 from datetime import datetime
 from typing import Optional
 
-from app.schemas.base import BaseSchema, IDMixin, TimestampMixin
 from pydantic import Field
+
+from app.schemas.base import BaseSchema, IDMixin, TimestampMixin
 
 
 # 1. Базовая схема с общими, валидируемыми полями

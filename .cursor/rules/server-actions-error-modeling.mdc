@@ -1,0 +1,7 @@
+---
+description: 
+globs: app/actions/**/*
+alwaysApply: false
+---
+- Model expected errors as return values in Server Actions
+- Use error boundaries for unexpected errors

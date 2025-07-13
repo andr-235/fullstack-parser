@@ -2,12 +2,13 @@
 
 import asyncio
 
+from celery.utils.log import get_task_logger
+
 from app.core.database import AsyncSessionLocal
 from app.services.parser_service import ParserService
 from app.services.redis_parser_manager import get_redis_parser_manager
 from app.services.vk_api_service import VKAPIService
 from app.workers.celery_app import celery_app
-from celery.utils.log import get_task_logger
 
 logger = get_task_logger(__name__)
 

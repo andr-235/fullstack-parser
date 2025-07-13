@@ -4,9 +4,10 @@
 
 from __future__ import annotations
 
-from app.models.base import BaseModel
 from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column
+
+from app.models.base import BaseModel
 
 
 class User(BaseModel):

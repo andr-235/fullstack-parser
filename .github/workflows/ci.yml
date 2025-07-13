@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI
 
 on:
   push:
@@ -7,45 +7,16 @@ on:
     branches: [main, develop]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install Poetry
-        run: pip install poetry
-      - name: Install dependencies
-        run: poetry install --no-interaction --no-ansi
-      - name: Run tests
-        run: poetry run pytest
+  backend:
+    uses: ./.github/workflows/reusable-backend-test.yml
+    with:
+      python-versions: '["3.11", "3.12"]'
+      upload-coverage: '"true"'
+    secrets: inherit
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install Poetry
-        run: pip install poetry
-      - name: Install dependencies
-        run: poetry install --no-interaction --no-ansi
-      - name: Run Ruff
-        run: poetry run ruff check .
-      - name: Run Black
-        run: poetry run black --check .
-      - name: Run isort
-        run: poetry run isort --check-only .
-
-  deploy:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    needs: [test, lint]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy to production
-        run: ./scripts/deploy.sh
+  frontend:
+    uses: ./.github/workflows/reusable-frontend-test.yml
+    with:
+      node-versions: '["20"]'
+      upload-coverage: '"true"'
+    secrets: inherit

@@ -7,9 +7,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from app.models.base import BaseModel
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import BaseModel
 
 if TYPE_CHECKING:
     from app.models.keyword import Keyword

@@ -5,10 +5,15 @@ Database configuration для VK Comments Parser
 from functools import lru_cache
 from typing import AsyncGenerator
 
-from app.core.config import settings
 from sqlalchemy import MetaData
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase
+
+from app.core.config import settings
 
 # Единая конвенция для именования индексов и ключей
 # https://alembic.sqlalchemy.org/en/latest/naming.html
@@ -35,13 +40,16 @@ class Base(DeclarativeBase):
 def get_async_engine():
     """Получение асинхронного движка с кешированием."""
     return create_async_engine(
-        str(settings.database_url),
+        str(settings.database.url),
+
         echo=settings.debug,
         pool_size=10,
         max_overflow=20,
         pool_pre_ping=True,
         pool_recycle=3600,
-        connect_args={"server_settings": {"application_name": "vk_parser_backend"}},
+        connect_args={
+            "server_settings": {"application_name": "vk_parser_backend"}
+        },
     )
 
 
@@ -74,8 +82,8 @@ async def init_db() -> None:
             result = await conn.execute(
                 """
                 SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_schema = 'public' 
+                    SELECT FROM information_schema.tables
+                    WHERE table_schema = 'public'
                     AND table_name = 'vk_groups'
                 )
             """
