@@ -26,6 +26,8 @@ jobs:
 
   test-frontend:
     name: Frontend Tests
+    permissions:
+      contents: write
     uses: ./.github/workflows/reusable-frontend-test.yml
     with:
       node-versions: '["20"]'
