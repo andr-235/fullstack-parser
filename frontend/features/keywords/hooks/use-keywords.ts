@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+} from '@tanstack/react-query'
 import { api, createQueryKey } from '@/lib/api'
 import type {
   KeywordResponse,
@@ -108,5 +113,43 @@ export function useDeleteKeyword() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['keywords'] })
     },
+  })
+}
+
+/**
+ * Хук для бесконечной загрузки ключевых слов (infinite scroll)
+ */
+export function useInfiniteKeywords(
+  params?: Omit<PaginationParams, 'page' | 'skip'> & {
+    active_only?: boolean
+    category?: string
+    q?: string
+    pageSize?: number
+    order_by?: string
+    order_dir?: 'asc' | 'desc'
+  }
+) {
+  const pageSize = params?.pageSize || 20
+  return useInfiniteQuery({
+    queryKey: createQueryKey.keywords({ ...params, pageSize }),
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await api.getKeywords({
+        ...params,
+        page: pageParam,
+        size: pageSize,
+        order_by: params?.order_by || 'word',
+        order_dir: params?.order_dir || 'asc',
+      })
+      return res
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce(
+        (acc, page) => acc + (page.items?.length || 0),
+        0
+      )
+      if (lastPage.items.length < pageSize) return undefined
+      return allPages.length + 1
+    },
+    staleTime: 10 * 60 * 1000,
   })
 }
