@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from pydantic import Field, PostgresDsn, RedisDsn, validator
+from pydantic import Field, PostgresDsn, RedisDsn, field_validator, ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -16,9 +16,10 @@ class DatabaseSettings(BaseSettings):
     name: str = Field(alias="DB_NAME", default="vk_parser")
     url: Optional[PostgresDsn] = None
 
-    @validator("url", pre=True, always=True)
+    @field_validator("url", mode="before")
     @classmethod
-    def assemble_db_connection(cls, v: Optional[str], values: dict) -> str:
+    def assemble_db_connection(cls, v, info):
+        values = info.data
         if isinstance(v, str):
             return v
         return str(
@@ -34,7 +35,7 @@ class DatabaseSettings(BaseSettings):
 
 
 class VKSettings(BaseSettings):
-    access_token: str = Field(alias="VK_ACCESS_TOKEN")
+    access_token: str = Field(default="stub_token", alias="VK_ACCESS_TOKEN")
     api_version: str = Field(default="5.131", alias="VK_API_VERSION")
     requests_per_second: int = Field(default=3, alias="VK_REQUESTS_PER_SECOND")
 
@@ -51,20 +52,12 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
     )
     database: DatabaseSettings = DatabaseSettings()
-    redis_url: RedisDsn = Field(
-        alias="REDIS_URL", default="redis://redis:6379/0"
-    )
+    redis_url: Optional[RedisDsn] = Field(default=None, alias="REDIS_URL")
     vk: VKSettings = VKSettings()
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
     def get_cors_origins(self) -> list[str]:
         return self.cors_origins
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        extra = "ignore"
 
 
 # Глобальный объект настроек
