@@ -111,7 +111,7 @@ jobs:
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
-            cd /srv/app && docker-compose pull && docker-compose up -d --build
+            cd ${{ secrets.PRODUCTION_APP_DIR }} && docker-compose pull && docker-compose up -d --build
 
       - name: Healthcheck backend
         run: |
