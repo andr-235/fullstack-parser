@@ -163,14 +163,14 @@ jobs:
         run: poetry install --no-interaction --no-root
 
       - name: Run tests
-        working-directory: ./backend
+        working-directory: backend
         env:
           DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
-          PYTHONPATH: ./app
+          PYTHONPATH: ${{ github.workspace }}/backend
         run: |
           source .venv/bin/activate
-          pytest --cov=app --cov-report=xml --cov-fail-under=0
+          poetry run pytest --cov=app --cov-report=xml --cov-fail-under=0
 
       - name: Upload coverage artifact
         if: inputs.upload-coverage == '"true"' && matrix.python-version == env.PYTHON_VERSION_DEFAULT
