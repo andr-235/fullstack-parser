@@ -102,41 +102,53 @@ describe('CommentsPage', () => {
     })
     mockUseGroups.mockReturnValue({ data: { items: mockGroups, total: 1 } })
     mockUseKeywords.mockReturnValue({ data: { items: mockKeywords, total: 1 } })
+    jest.useFakeTimers()
+  })
+  afterEach(() => {
+    jest.useRealTimers()
   })
 
   it('должна рендериться без ошибок', () => {
     renderWithProviders(<CommentsPage />)
     expect(
-      screen.getByRole('heading', { name: /Фильтры комментариев/i, level: 1 })
-      // @ts-expect-error jest-dom matcher
+      screen.getByRole('heading', {
+        name: /Фильтры комментариев/i,
+        level: 1,
+      }) as unknown as HTMLElement
     ).toBeInTheDocument()
   })
 
-  it('должна показывать спиннер загрузки', () => {
+  it('должна показывать спиннер загрузки', async () => {
     mockUseInfiniteComments.mockReturnValue({
       data: { pages: [], pageParams: [] },
       isLoading: true,
       isFetching: true,
       isFetchingNextPage: false,
     })
-    renderWithProviders(<CommentsPage />)
-    expect(screen.getByRole('status') as any).toBeInTheDocument()
+    await act(async () => {
+      renderWithProviders(<CommentsPage />)
+    })
+    expect(
+      screen.getByRole('status') as unknown as HTMLElement
+    ).toBeInTheDocument()
   })
 
-  it('должна показывать сообщение об ошибке', () => {
+  it('должна показывать сообщение об ошибке', async () => {
     const error = new Error('Failed to fetch comments')
     mockUseInfiniteComments.mockReturnValue({
       data: { pages: [], pageParams: [] },
       isLoading: false,
       error,
     })
-    renderWithProviders(<CommentsPage />)
+    await act(async () => {
+      renderWithProviders(<CommentsPage />)
+    })
     expect(
-      screen.getByText(`Ошибка: ${error.message}`) as any
+      screen.getByText(`Ошибка: ${error.message}`) as unknown as HTMLElement
     ).toBeInTheDocument()
   })
 
-  it('должна отображать список комментариев', () => {
+  it('должна отображать список комментариев', async () => {
     mockUseInfiniteComments.mockReturnValue({
       data: {
         pages: [
@@ -155,18 +167,23 @@ describe('CommentsPage', () => {
       isLoading: false,
       error: null,
     })
-
-    renderWithProviders(<CommentsPage />)
+    await act(async () => {
+      renderWithProviders(<CommentsPage />)
+    })
     expect(
-      screen.getByText('This is a test comment') as any
+      screen.getByText('This is a test comment') as unknown as HTMLElement
     ).toBeInTheDocument()
-    expect(screen.getByText('Another test comment') as any).toBeInTheDocument()
+    expect(
+      screen.getByText('Another test comment') as unknown as HTMLElement
+    ).toBeInTheDocument()
   })
 
-  it('должна показывать сообщение, когда комментарии не найдены', () => {
-    renderWithProviders(<CommentsPage />)
+  it('должна показывать сообщение, когда комментарии не найдены', async () => {
+    await act(async () => {
+      renderWithProviders(<CommentsPage />)
+    })
     expect(
-      screen.getByText('Комментарии не найдены.') as any
+      screen.getByText('Комментарии не найдены.') as unknown as HTMLElement
     ).toBeInTheDocument()
   })
 
@@ -176,6 +193,7 @@ describe('CommentsPage', () => {
     const searchInput = screen.getByPlaceholderText('Поиск по тексту...')
     await act(async () => {
       fireEvent.change(searchInput, { target: { value: 'filter' } })
+      jest.advanceTimersByTime(300)
     })
 
     await waitFor(() => {
@@ -219,7 +237,6 @@ describe('CommentsPage', () => {
   })
 
   it('должна фильтровать по группе', async () => {
-    jest.useFakeTimers()
     renderWithProviders(<CommentsPage />)
 
     // Используем aria-label для SelectTrigger
@@ -232,7 +249,6 @@ describe('CommentsPage', () => {
     await act(async () => {
       fireEvent.click(groupOption) // Явно кликаем по Item
     })
-    jest.advanceTimersByTime(500)
     await waitFor(() => {
       const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0])
       expect(calls).toEqual(
@@ -241,11 +257,9 @@ describe('CommentsPage', () => {
         ])
       )
     })
-    jest.useRealTimers()
   })
 
   it('должна фильтровать по ключевому слову', async () => {
-    jest.useFakeTimers()
     renderWithProviders(<CommentsPage />)
 
     // Используем aria-label для второго SelectTrigger
@@ -258,7 +272,6 @@ describe('CommentsPage', () => {
     await act(async () => {
       fireEvent.click(keywordOption) // Явно кликаем по Item
     })
-    jest.advanceTimersByTime(500)
     await waitFor(() => {
       const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0])
       expect(calls).toEqual(
@@ -267,6 +280,5 @@ describe('CommentsPage', () => {
         ])
       )
     })
-    jest.useRealTimers()
   })
 })
