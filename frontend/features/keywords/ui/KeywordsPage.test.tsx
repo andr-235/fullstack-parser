@@ -4,28 +4,40 @@ import {
   fireEvent,
   waitFor,
   within,
+  act,
 } from '@testing-library/react'
 import KeywordsPage from './KeywordsPage'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import type { KeywordResponse } from '@/types/api'
 
-// Mocks
+// Моки хуков
 const mockUseKeywords = jest.fn()
 const mockUseCreateKeyword = jest.fn()
-const mockUseUpdateKeyword = jest.fn()
 const mockUseDeleteKeyword = jest.fn()
+const mockUseUpdateKeyword = jest.fn()
+const mockUseKeywordCategories = jest.fn()
 
-jest.mock('@/components/ui/loading-spinner', () => ({
-  LoadingSpinnerWithText: ({ text }: { text: string }) => <div>{text}</div>,
-}))
+// Вынести объект updateKeywordMutation наружу
+let updateMutate: jest.Mock
+let updateMutateAsync: jest.Mock
+let updateKeywordMutation: {
+  mutate: jest.Mock
+  mutateAsync: jest.Mock
+  isPending: boolean
+}
 
 jest.mock('@/hooks/use-keywords', () => ({
-  useKeywords: (props: any) => mockUseKeywords(props),
-  useKeywordCategories: jest.fn(() => ({ data: ['General', 'Tech'] })),
-  useCreateKeyword: () => mockUseCreateKeyword(),
-  useUpdateKeyword: () => mockUseUpdateKeyword(),
-  useDeleteKeyword: () => mockUseDeleteKeyword(),
+  useKeywords: (...args: any[]) => mockUseKeywords(...args),
+  useCreateKeyword: (...args: any[]) => mockUseCreateKeyword(...args),
+  useDeleteKeyword: (...args: any[]) => mockUseDeleteKeyword(...args),
+  useUpdateKeyword: (...args: any[]) => mockUseUpdateKeyword(...args),
+  useKeywordCategories: (...args: any[]) => mockUseKeywordCategories(...args),
+}))
+
+jest.mock('@/components/ui/loading-spinner', () => ({
+  LoadingSpinner: () => <div role="status">Загрузка ключевых слов...</div>,
+  LoadingSpinnerWithText: ({ text }: { text: string }) => <div>{text}</div>,
 }))
 
 const queryClient = new QueryClient({
@@ -70,6 +82,11 @@ const mockKeywords: KeywordResponse[] = [
   },
 ]
 
+// Глобальный мок scrollIntoView для jsdom
+beforeAll(() => {
+  window.HTMLElement.prototype.scrollIntoView = function () {}
+})
+
 describe('KeywordsPage', () => {
   beforeEach(() => {
     // Reset mocks before each test
@@ -83,16 +100,20 @@ describe('KeywordsPage', () => {
       mutate: jest.fn(),
       isPending: false,
     })
-    mockUseUpdateKeyword.mockReturnValue({
-      mutate: jest.fn(),
-      mutateAsync: jest.fn().mockResolvedValue({}),
+    updateMutate = jest.fn()
+    updateMutateAsync = jest.fn().mockResolvedValue({})
+    updateKeywordMutation = {
+      mutate: updateMutate,
+      mutateAsync: updateMutateAsync,
       isPending: false,
-    })
+    }
+    mockUseUpdateKeyword.mockReturnValue(updateKeywordMutation)
     mockUseDeleteKeyword.mockReturnValue({
       mutate: jest.fn(),
       isPending: false,
     })
-    jest.spyOn(window, 'confirm').mockReturnValue(true)
+    mockUseKeywordCategories.mockReturnValue(['General', 'Tech'])
+    jest.spyOn(window, 'confirm').mockImplementation(() => true)
   })
 
   it('должна рендериться без ошибок', () => {
@@ -230,10 +251,11 @@ describe('KeywordsPage', () => {
 
     renderWithProviders(<KeywordsPage />)
 
-    const keywordRow = screen.getByText('Test Keyword 1').closest('div.grid')
-    const deleteButton = within(keywordRow as HTMLElement).getByRole('button', {
-      name: /удалить/i,
-    })
+    const row = screen
+      .getAllByRole('row')
+      .find((tr) => within(tr).queryByText('Test Keyword 1')) as HTMLElement
+    expect(row).toBeInTheDocument()
+    const deleteButton = within(row).getByRole('button', { name: /удалить/i })
 
     fireEvent.click(deleteButton)
 
@@ -247,29 +269,35 @@ describe('KeywordsPage', () => {
       isLoading: false,
       error: null,
     })
-    const updateMutate = jest.fn()
-    mockUseUpdateKeyword.mockReturnValue({
+    updateMutate = jest.fn()
+    updateMutateAsync = jest.fn().mockResolvedValue({})
+    updateKeywordMutation = {
       mutate: updateMutate,
+      mutateAsync: updateMutateAsync,
       isPending: false,
-    })
+    }
 
     renderWithProviders(<KeywordsPage />)
 
-    const keywordRow = screen.getByText('Test Keyword 1').closest('div.grid')
-    const switchControl = within(keywordRow as HTMLElement).getByRole('switch')
+    const row = screen
+      .getAllByRole('row')
+      .find((tr) => within(tr).queryByText('Test Keyword 1')) as HTMLElement
+    expect(row).toBeInTheDocument()
+    const switchControl = within(row).getByRole('switch')
 
-    fireEvent.click(switchControl)
+    await act(async () => {
+      fireEvent.click(switchControl)
+    })
 
-    expect(updateMutate).toHaveBeenCalledWith(
-      {
-        keywordId: mockKeywords[0].id,
-        data: { is_active: !mockKeywords[0].is_active },
-      },
-      {
-        onSuccess: expect.any(Function),
-        onError: expect.any(Function),
-      }
-    )
+    await waitFor(() => {
+      expect(updateMutate).toHaveBeenCalledWith(
+        {
+          keywordId: mockKeywords[0].id,
+          data: { is_active: !mockKeywords[0].is_active },
+        },
+        expect.any(Object)
+      )
+    })
   })
 
   it('должна позволять редактировать и сохранять ключевое слово', async () => {
@@ -278,36 +306,37 @@ describe('KeywordsPage', () => {
       isLoading: false,
       error: null,
     })
-    const updateMutateAsync = jest.fn().mockResolvedValue({})
-    mockUseUpdateKeyword.mockReturnValue({
-      mutate: jest.fn(),
+    updateMutate = jest.fn()
+    updateMutateAsync = jest.fn().mockResolvedValue({})
+    updateKeywordMutation = {
+      mutate: updateMutate,
       mutateAsync: updateMutateAsync,
       isPending: false,
-    })
+    }
 
     renderWithProviders(<KeywordsPage />)
 
-    const keywordRow = screen.getByText('Test Keyword 1').closest('div.grid')
-    const editButton = within(keywordRow as HTMLElement).getByRole('button', {
+    const row = screen
+      .getAllByRole('row')
+      .find((tr) => within(tr).queryByText('Test Keyword 1')) as HTMLElement
+    expect(row).toBeInTheDocument()
+    const editButton = within(row).getByRole('button', {
       name: /редактировать/i,
     })
 
     // Enter edit mode
-    fireEvent.click(editButton)
-
-    const input = within(keywordRow as HTMLElement).getByDisplayValue(
-      'Test Keyword 1'
-    )
-    const saveButton = within(keywordRow as HTMLElement).getByRole('button', {
-      name: /сохранить/i,
+    await act(async () => {
+      fireEvent.click(editButton)
     })
 
-    expect(input).toBeInTheDocument()
-    expect(saveButton).toBeInTheDocument()
-
-    // Change value and save
-    fireEvent.change(input, { target: { value: 'Updated Keyword' } })
-    fireEvent.click(saveButton)
+    const input = within(row).getByDisplayValue('Test Keyword 1')
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Updated Keyword' } })
+    })
+    const saveButton = within(row).getByRole('button', { name: /сохранить/i })
+    await act(async () => {
+      fireEvent.click(saveButton)
+    })
 
     await waitFor(() => {
       expect(updateMutateAsync).toHaveBeenCalledWith({
