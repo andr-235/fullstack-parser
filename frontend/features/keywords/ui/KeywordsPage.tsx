@@ -31,6 +31,16 @@ import { Plus, Trash2, Search, Check, X } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import type { KeywordResponse, KeywordUpdate } from '@/types/api'
 import useDebounce from '@/hooks/use-debounce'
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { useKeywordCategories } from '@/hooks/use-keywords'
+import { cn } from '@/lib/utils'
 
 const KeywordRow = ({
   keyword,
@@ -40,7 +50,11 @@ const KeywordRow = ({
   isDeleting,
 }: {
   keyword: KeywordResponse
-  onUpdate: (id: number, data: KeywordUpdate) => void
+  onUpdate: (
+    id: number,
+    data: KeywordUpdate,
+    callbacks?: { onSuccess?: () => void; onError?: () => void }
+  ) => void
   onDelete: (id: number) => void
   isUpdating: boolean
   isDeleting: boolean
@@ -57,22 +71,33 @@ const KeywordRow = ({
 
   const handleSave = () => {
     if (editedWord !== keyword.word) {
-      onUpdate(keyword.id, { word: editedWord })
+      onUpdate(
+        keyword.id,
+        { word: editedWord },
+        { onSuccess: () => {}, onError: () => {} }
+      )
     }
     setIsEditing(false)
   }
 
   return (
     <TableRow key={keyword.id}>
-      <TableCell>
+      <TableCell className="py-2 px-3">
         {isEditing ? (
           <div className="flex items-center gap-2">
             <Input
               value={editedWord}
               onChange={(e) => setEditedWord(e.target.value)}
-              className="h-8"
+              className="h-8 text-sm border-slate-300"
+              aria-label="Редактировать ключевое слово"
+              autoFocus
             />
-            <Button size="icon" className="h-8 w-8" onClick={handleSave}>
+            <Button
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleSave}
+              aria-label="Сохранить"
+            >
               <Check className="h-4 w-4" />
             </Button>
             <Button
@@ -80,39 +105,50 @@ const KeywordRow = ({
               variant="ghost"
               className="h-8 w-8"
               onClick={() => setIsEditing(false)}
+              aria-label="Отмена"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
         ) : (
           <span
-            className="cursor-pointer"
+            className="cursor-pointer group-hover:underline"
             onClick={() => setIsEditing(true)}
             title="Нажмите, чтобы редактировать"
+            tabIndex={0}
+            role="button"
+            aria-label="Редактировать ключевое слово"
           >
             {keyword.word}
           </span>
         )}
       </TableCell>
-      <TableCell>
-        <Badge variant="secondary">{keyword.total_matches}</Badge>
+      <TableCell className="py-2 px-3 text-center">
+        <Badge
+          variant="secondary"
+          className="font-mono text-xs bg-slate-100 text-slate-700 border border-slate-200"
+        >
+          {keyword.total_matches}
+        </Badge>
       </TableCell>
-      <TableCell>
+      <TableCell className="py-2 px-3 text-center">
         <Switch
           checked={keyword.is_active}
           onCheckedChange={(isActive) =>
             onUpdate(keyword.id, { is_active: isActive })
           }
           disabled={isUpdating}
+          aria-label="Статус активности"
         />
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="py-2 px-3 text-right">
         <Button
           variant="ghost"
           size="icon"
           className="text-red-500 hover:text-red-400"
           onClick={() => onDelete(keyword.id)}
           disabled={isDeleting}
+          aria-label="Удалить ключевое слово"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -124,8 +160,14 @@ const KeywordRow = ({
 export default function KeywordsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [newKeyword, setNewKeyword] = useState('')
+  const [activeOnly, setActiveOnly] = useState(true)
+  const [category, setCategory] = useState<string>('')
 
-  const { data: keywordsData, isLoading, error } = useKeywords()
+  // Для тестов: если категория не выбрана, не передавать параметр category
+  const keywordsParams: any = { q: searchTerm, active_only: activeOnly }
+  if (category && category !== 'all') keywordsParams.category = category
+  const { data: keywordsData, isLoading, error } = useKeywords(keywordsParams)
+  const { data: categoriesData } = useKeywordCategories()
   const createKeywordMutation = useCreateKeyword()
   const updateKeywordMutation = useUpdateKeyword()
   const deleteKeywordMutation = useDeleteKeyword()
@@ -133,40 +175,43 @@ export default function KeywordsPage() {
   const handleAddKeyword = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!newKeyword.trim()) return
-    toast.promise(
-      createKeywordMutation.mutateAsync({
+    createKeywordMutation.mutate(
+      {
         word: newKeyword,
         is_active: true,
         is_case_sensitive: false,
         is_whole_word: false,
-      }),
+        category: category || 'Без категории',
+      },
       {
-        loading: 'Добавляем слово...',
-        success: () => {
-          setNewKeyword('')
-          return 'Слово добавлено!'
-        },
-        error: 'Не удалось добавить слово.',
+        onSuccess: () => setNewKeyword(''),
       }
     )
   }
 
   const handleDeleteKeyword = (id: number) => {
-    toast.promise(deleteKeywordMutation.mutateAsync(id), {
-      loading: 'Удаляем слово...',
-      success: 'Слово удалено!',
-      error: 'Не удалось удалить слово.',
-    })
+    if (window.confirm('Удалить ключевое слово?')) {
+      deleteKeywordMutation.mutate(id)
+    }
   }
 
-  const handleUpdateKeyword = (id: number, data: KeywordUpdate) => {
-    updateKeywordMutation.mutate({ keywordId: id, data })
+  const handleUpdateKeyword = (
+    id: number,
+    data: KeywordUpdate,
+    callbacks?: { onSuccess?: () => void; onError?: () => void }
+  ) => {
+    if (callbacks) {
+      updateKeywordMutation.mutate({ keywordId: id, data }, callbacks)
+    } else {
+      updateKeywordMutation.mutateAsync({ keywordId: id, data })
+    }
   }
 
-  const filteredKeywords =
-    keywordsData?.items?.filter((keyword) =>
-      keyword.word.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || []
+  // Статистика
+  const total = keywordsData?.total || 0
+  const active = keywordsData?.items?.filter((k) => k.is_active).length || 0
+  const totalMatches =
+    keywordsData?.items?.reduce((sum, k) => sum + k.total_matches, 0) || 0
 
   const renderContent = () => {
     if (isLoading) {
@@ -176,16 +221,14 @@ export default function KeywordsPage() {
         </div>
       )
     }
-
     if (error) {
       return (
         <div className="text-center text-red-500 py-10">
-          <p>Ошибка при загрузке ключевых слов.</p>
+          <p>Ошибка загрузки</p>
+          <p>{error.message}</p>
         </div>
       )
     }
-
-    // Добавляем скроллируемый контейнер для таблицы
     return (
       <div className="max-h-[400px] overflow-y-auto">
         <Table>
@@ -198,7 +241,7 @@ export default function KeywordsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredKeywords.map((keyword) => (
+            {keywordsData?.items?.map((keyword) => (
               <KeywordRow
                 key={keyword.id}
                 keyword={keyword}
@@ -215,40 +258,173 @@ export default function KeywordsPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base font-bold">Ключевые слова</CardTitle>
-        <CardDescription className="text-xs">
-          Добавляйте и управляйте ключевыми словами для поиска в комментариях.
+    <Card className="border border-slate-200 shadow-none rounded-xl bg-white">
+      <CardHeader className="pb-2 border-b border-slate-100">
+        <h1 className="text-lg font-bold tracking-tight font-mono text-slate-800">
+          Ключевые слова
+        </h1>
+        <CardDescription className="text-xs text-slate-500">
+          Управляйте ключевыми словами для поиска в комментариях. Всё строго,
+          как на допросе.
         </CardDescription>
-        <div className="flex justify-between items-center pt-2 gap-2">
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Поиск по словам..."
-              className="pl-9"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        <div className="flex flex-wrap gap-3 pt-2 items-end">
+          <div className="flex flex-col gap-1 min-w-[180px]">
+            <Label htmlFor="search" className="text-xs font-medium">
+              Поиск
+            </Label>
+            <div className="relative">
+              <Input
+                id="search"
+                placeholder="Поиск по словам..."
+                className="pl-9 h-8 text-sm border-slate-300"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                aria-label="Поиск по ключевым словам"
+              />
+              <Search className="absolute left-2 top-2 h-4 w-4 text-slate-400" />
+            </div>
           </div>
+          <div className="flex flex-col gap-1 min-w-[140px]">
+            <Label htmlFor="category" className="text-xs font-medium">
+              Категория
+            </Label>
+            <Select
+              value={category || 'all'}
+              onValueChange={(v) => setCategory(v === 'all' ? '' : v)}
+            >
+              <SelectTrigger
+                id="category"
+                className="w-36 h-8 text-sm border-slate-300"
+              >
+                <SelectValue placeholder="Все категории" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все категории</SelectItem>
+                {(categoriesData || []).map((cat: string) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2 min-w-[120px]">
+            <Switch
+              id="activeOnly"
+              checked={activeOnly}
+              onCheckedChange={setActiveOnly}
+              aria-label="Только активные"
+            />
+            <Label htmlFor="activeOnly" className="text-xs font-medium">
+              Только активные
+            </Label>
+          </div>
+          <Button
+            variant="outline"
+            className="h-8 text-xs border-slate-300"
+            onClick={() => {
+              setSearchTerm('')
+              setCategory('')
+              setActiveOnly(true)
+            }}
+            aria-label="Сбросить фильтры"
+          >
+            Сбросить фильтры
+          </Button>
+        </div>
+        <div className="flex gap-4 pt-2 text-xs text-slate-400 font-mono">
+          <span>
+            Всего: <b className="text-slate-700">{total}</b>
+          </span>
+          <span>
+            Активных: <b className="text-slate-700">{active}</b>
+          </span>
+          <span>
+            Найдено: <b className="text-slate-700">{totalMatches}</b>
+          </span>
+        </div>
+        <div className="space-x-2 flex pt-2">
           <form
             onSubmit={handleAddKeyword}
-            className="flex w-full max-w-sm items-center gap-1"
+            className="flex items-center gap-2 w-full"
           >
             <Input
-              placeholder="Новое слово или фраза..."
+              placeholder="Новое ключевое слово"
               value={newKeyword}
               onChange={(e) => setNewKeyword(e.target.value)}
               disabled={createKeywordMutation.isPending}
+              className="h-8 text-sm border-slate-300"
+              aria-label="Новое ключевое слово"
             />
-            <Button type="submit" disabled={createKeywordMutation.isPending}>
-              <Plus className="mr-1 h-4 w-4" />
+            <Button
+              type="submit"
+              disabled={createKeywordMutation.isPending}
+              className="h-8 text-xs"
+            >
+              <Plus className="h-4 w-4 mr-1" />
               Добавить
             </Button>
           </form>
         </div>
       </CardHeader>
-      <CardContent className="pt-2">{renderContent()}</CardContent>
+      <CardContent className="pt-2">
+        <div className="max-h-[400px] overflow-y-auto border border-slate-100 rounded-lg">
+          <Table className="text-sm">
+            <TableHeader>
+              <TableRow className="bg-slate-50">
+                <TableHead className="py-2 px-3">Ключевое слово</TableHead>
+                <TableHead className="py-2 px-3 text-center">Найдено</TableHead>
+                <TableHead className="py-2 px-3 text-center">Статус</TableHead>
+                <TableHead className="py-2 px-3 text-right">Действия</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="text-center py-8"
+                    role="status"
+                  >
+                    <LoadingSpinner />
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="text-center text-red-500 py-8"
+                  >
+                    <div>Ошибка загрузки</div>
+                    <div className="text-xs">{error.message}</div>
+                  </TableCell>
+                </TableRow>
+              ) : keywordsData?.items?.length ? (
+                keywordsData.items.map((keyword) => (
+                  <KeywordRow
+                    key={keyword.id}
+                    keyword={keyword}
+                    onUpdate={handleUpdateKeyword}
+                    onDelete={handleDeleteKeyword}
+                    isUpdating={updateKeywordMutation.isPending}
+                    isDeleting={deleteKeywordMutation.isPending}
+                  />
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="text-center text-slate-400 py-8"
+                  >
+                    Нет ключевых слов. Добавь первое — и будет как в отделе по
+                    борьбе с преступностью: всё под контролем.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
     </Card>
   )
 }

@@ -120,24 +120,29 @@ export default function CommentsPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-bold">
-          Лента комментариев
-        </CardTitle>
-        <CardDescription className="text-xs">
+        <h1
+          className="text-lg font-bold tracking-tight font-mono text-slate-800"
+          role="heading"
+          aria-level={1}
+        >
+          Фильтры комментариев
+        </h1>
+        <p className="text-xs text-slate-500">
           Просмотр и фильтрация всех найденных комментариев.
-        </CardDescription>
+        </p>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2 pt-2">
           <Input
             placeholder="Поиск по тексту..."
             value={textFilter}
             onChange={(e) => setTextFilter(e.target.value)}
             className="md:col-span-2"
+            aria-label="Поиск по тексту"
           />
           <Select
             value={groupFilter}
             onValueChange={(val) => setGroupFilter(val)}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Группа">
               <SelectValue placeholder="Все группы" />
             </SelectTrigger>
             <SelectContent>
@@ -145,6 +150,24 @@ export default function CommentsPage() {
               {groupsData?.items?.map((group) => (
                 <SelectItem key={group.id} value={String(group.id)}>
                   {group.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={keywordFilter ? String(keywordFilter) : 'all'}
+            onValueChange={(val) =>
+              setKeywordFilter(val === 'all' ? undefined : val)
+            }
+          >
+            <SelectTrigger aria-label="Ключевое слово">
+              <SelectValue placeholder="Все ключевые слова" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все ключевые слова</SelectItem>
+              {keywordsData?.items?.map((keyword) => (
+                <SelectItem key={keyword.id} value={String(keyword.id)}>
+                  {keyword.word}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -161,14 +184,14 @@ export default function CommentsPage() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-2">
+      <CardContent className="p-6 pt-2">
         {isFetching && !isFetchingNextPage ? (
-          <div className="flex justify-center items-center h-48">
+          <div className="flex justify-center items-center h-48" role="status">
             <LoadingSpinner />
           </div>
         ) : error ? (
           <div className="text-center text-red-500 py-6">
-            <p>Ошибка при загрузке комментариев.</p>
+            <p>{`Ошибка: ${error.message}`}</p>
           </div>
         ) : (
           <>

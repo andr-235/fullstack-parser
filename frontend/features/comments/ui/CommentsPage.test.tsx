@@ -5,7 +5,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/react'
-import CommentsPage from '../page'
+import CommentsPage from '@/app/comments/page'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useInfiniteComments } from '@/hooks/use-comments'
 import { useGroups } from '@/hooks/use-groups'
@@ -105,7 +105,7 @@ describe('CommentsPage', () => {
   it('должна рендериться без ошибок', () => {
     renderWithProviders(<CommentsPage />)
     expect(
-      screen.getByRole('heading', { name: /Фильтры комментариев/i })
+      screen.getByRole('heading', { name: /Фильтры комментариев/i, level: 1 })
     ).toBeInTheDocument()
   })
 
@@ -113,9 +113,11 @@ describe('CommentsPage', () => {
     mockUseInfiniteComments.mockReturnValue({
       data: { pages: [], pageParams: [] },
       isLoading: true,
+      isFetching: true,
+      isFetchingNextPage: false,
     })
     renderWithProviders(<CommentsPage />)
-    expect(screen.getByRole('status')).toBeInTheDocument() // LoadingSpinner
+    expect(screen.getByRole('status')).toBeInTheDocument()
   })
 
   it('должна показывать сообщение об ошибке', () => {
@@ -162,7 +164,7 @@ describe('CommentsPage', () => {
   it('должна фильтровать комментарии по поисковому запросу', async () => {
     renderWithProviders(<CommentsPage />)
 
-    const searchInput = screen.getByPlaceholderText(/Поиск по тексту.../i)
+    const searchInput = screen.getByPlaceholderText('Поиск по тексту...')
     fireEvent.change(searchInput, { target: { value: 'filter' } })
 
     await waitFor(() => {
@@ -204,45 +206,46 @@ describe('CommentsPage', () => {
   })
 
   it('должна фильтровать по группе', async () => {
+    jest.useFakeTimers()
     renderWithProviders(<CommentsPage />)
 
-    // Use querySelector because Radix Select doesn't use standard button/role
-    const groupSelectTrigger = document.querySelector(
-      '[aria-haspopup="listbox"]'
-    )
-    fireEvent.mouseDown(groupSelectTrigger as Element)
+    // Используем aria-label для SelectTrigger
+    const groupSelectTrigger = screen.getByLabelText('Группа')
+    fireEvent.mouseDown(groupSelectTrigger)
 
     const groupOption = await screen.findByText('Test Group 1')
-    fireEvent.click(groupOption)
-
+    fireEvent.click(groupOption) // Явно кликаем по Item
+    jest.advanceTimersByTime(500)
     await waitFor(() => {
-      expect(mockUseInfiniteComments).toHaveBeenCalledWith(
-        expect.objectContaining({
-          group_id: mockGroups[0].id,
-        })
+      const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0])
+      expect(calls).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ group_id: mockGroups[0].id }),
+        ])
       )
     })
+    jest.useRealTimers()
   })
 
   it('должна фильтровать по ключевому слову', async () => {
+    jest.useFakeTimers()
     renderWithProviders(<CommentsPage />)
 
-    const selectTriggers = document.querySelectorAll(
-      '[aria-haspopup="listbox"]'
-    )
-    // The second select is for keywords
-    const keywordSelectTrigger = selectTriggers[1]
+    // Используем aria-label для второго SelectTrigger
+    const keywordSelectTrigger = screen.getByLabelText('Ключевое слово')
     fireEvent.mouseDown(keywordSelectTrigger)
 
     const keywordOption = await screen.findByText('Test Keyword 1')
-    fireEvent.click(keywordOption)
-
+    fireEvent.click(keywordOption) // Явно кликаем по Item
+    jest.advanceTimersByTime(500)
     await waitFor(() => {
-      expect(mockUseInfiniteComments).toHaveBeenCalledWith(
-        expect.objectContaining({
-          keyword_id: mockKeywords[0].id,
-        })
+      const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0])
+      expect(calls).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ keyword_id: mockKeywords[0].id }),
+        ])
       )
     })
+    jest.useRealTimers()
   })
 })
