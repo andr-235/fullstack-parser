@@ -73,6 +73,11 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}
 
+      - name: Generate .env.local for frontend
+        working-directory: ./frontend
+        run: |
+          echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" >> .env.local
+          # Добавь сюда остальные переменные, если нужно
       - name: 🏗️ Build and push frontend image
         uses: docker/build-push-action@v5
         with:
