@@ -95,7 +95,7 @@ ruff = "0.12.1"
 mypy = "1.8.0"
 bandit = {version = "1.7.6", extras = ["toml"]}
 python-dotenv = "1.0.0"
-watchdog = "3.0.0"
+watchdog = "6.0.0"
 types-passlib = "^1.7.7.20250602"
 psycopg2-binary = "^2.9.9"
 pytest-env = "^1.1.5"
