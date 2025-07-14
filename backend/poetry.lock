@@ -2358,23 +2358,24 @@ pygments = ">=2.7.2"
 dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "requests", "setuptools", "xmlschema"]
 
 [[package]]
-name = "pytest-asyncio"
-version = "0.23.2"
-description = "Pytest support for asyncio"
+name = "pytest-aio"
+version = "1.9.0"
+description = "Pytest plugin for testing async python code"
 optional = false
-python-versions = ">=3.8"
+python-versions = "<4.0,>=3.9"
 groups = ["dev"]
 files = [
-    {file = "pytest-asyncio-0.23.2.tar.gz", hash = "sha256:c16052382554c7b22d48782ab3438d5b10f8cf7a4bdcae7f0f67f097d95beecc"},
-    {file = "pytest_asyncio-0.23.2-py3-none-any.whl", hash = "sha256:ea9021364e32d58f0be43b91c6233fb8d2224ccef2398d6837559e587682808f"},
+    {file = "pytest_aio-1.9.0-py3-none-any.whl", hash = "sha256:12a72816224863d402921b325086b398df8a0f4ca767639968a8097d762ac548"},
+    {file = "pytest_aio-1.9.0.tar.gz", hash = "sha256:aa72e6ca4672b7f5a08ce44e7c6254dca988d3d578bf0c9485a47c3bff393ac1"},
 ]
 
 [package.dependencies]
-pytest = ">=7.0.0"
+pytest = "*"
 
 [package.extras]
-docs = ["sphinx (>=5.3)", "sphinx-rtd-theme (>=1.0)"]
-testing = ["coverage (>=6.2)", "hypothesis (>=5.7.1)"]
+curio = ["curio-compat"]
+trio = ["trio"]
+uvloop = ["uvloop"]
 
 [[package]]
 name = "pytest-cov"
@@ -3453,4 +3454,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "b1be0ef3bca26bc902a2338e734ec54bb3aab6be8fb492bdddfe6bae9f9c0d12"
+content-hash = "0f539c5199aa4ea7742b8b465b66fa0e9b0cb7d070abfa052ebddd59e0358a00"

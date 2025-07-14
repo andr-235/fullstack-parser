@@ -167,6 +167,7 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
+          PYTHONPATH: ./app
         run: |
           source .venv/bin/activate
           pytest --cov=app --cov-report=xml --cov-fail-under=0

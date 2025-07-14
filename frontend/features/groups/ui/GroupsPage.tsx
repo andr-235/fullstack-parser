@@ -152,7 +152,10 @@ export default function GroupsPage() {
                   aria-label="удалить"
                   className="text-red-500 hover:text-red-400"
                   disabled={deleteGroupMutation.isPending}
-                  onClick={() => deleteGroupMutation.mutate(group.id)}
+                  data-testid="delete-group"
+                  onClick={() => {
+                    deleteGroupMutation.mutate(group.id)
+                  }}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
