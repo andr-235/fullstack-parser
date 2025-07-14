@@ -5,7 +5,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/react'
-import GroupsPage from '../page'
+import GroupsPage from '@/app/groups/page'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import type { VKGroupResponse } from '@/types/api'
@@ -131,13 +131,17 @@ describe('GroupsPage', () => {
     renderWithProviders(<GroupsPage />)
 
     // Всего групп
-    expect(screen.getByText(mockGroups.length.toString())).toBeInTheDocument()
+    expect(screen.getByText(/Всего групп:/i).nextSibling?.textContent).toBe(
+      mockGroups.length.toString()
+    )
     // Активных
-    const activeCount = mockGroups.filter((g) => g.is_active).length
-    expect(screen.getByText(activeCount.toString())).toBeInTheDocument()
+    expect(screen.getByText(/Активных:/i).nextSibling?.textContent).toBe(
+      mockGroups.filter((g) => g.is_active).length.toString()
+    )
     // Неактивных
-    const inactiveCount = mockGroups.filter((g) => !g.is_active).length
-    expect(screen.getByText(inactiveCount.toString())).toBeInTheDocument()
+    expect(screen.getByText(/Неактивных:/i).nextSibling?.textContent).toBe(
+      mockGroups.filter((g) => !g.is_active).length.toString()
+    )
     // Всего комментариев
     const totalComments = mockGroups.reduce(
       (sum, g) => sum + g.total_comments_found,
@@ -146,7 +150,9 @@ describe('GroupsPage', () => {
     const formattedTotalComments = new Intl.NumberFormat('ru-RU').format(
       totalComments
     )
-    expect(screen.getByText(formattedTotalComments)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Всего комментариев:/i).nextSibling?.textContent
+    ).toBe(formattedTotalComments)
   })
 
   it('должна успешно добавлять новую группу', async () => {
@@ -183,13 +189,15 @@ describe('GroupsPage', () => {
     })
     const deleteMutate = jest.fn()
     mockUseDeleteGroup.mockReturnValue({ mutate: deleteMutate })
+    jest.spyOn(window, 'confirm').mockReturnValue(true)
 
     renderWithProviders(<GroupsPage />)
 
-    const groupCard = screen.getByText('Active Group').closest('div.grid')
-    const deleteButton = within(groupCard as HTMLElement).getByRole('button', {
-      name: /удалить/i,
-    })
+    const row = screen
+      .getAllByRole('row')
+      .find((tr) => within(tr).queryByText('Active Group')) as HTMLElement
+    expect(row).toBeInTheDocument()
+    const deleteButton = within(row).getByRole('button', { name: /удалить/i })
 
     fireEvent.click(deleteButton)
 
@@ -208,8 +216,11 @@ describe('GroupsPage', () => {
 
     renderWithProviders(<GroupsPage />)
 
-    const groupCard = screen.getByText('Active Group').closest('div.grid')
-    const switchButton = within(groupCard as HTMLElement).getByRole('button', {
+    const row = screen
+      .getAllByRole('row')
+      .find((tr) => within(tr).queryByText('Active Group')) as HTMLElement
+    expect(row).toBeInTheDocument()
+    const switchButton = within(row).getByRole('button', {
       name: /Приостановить/i,
     })
 
@@ -221,7 +232,7 @@ describe('GroupsPage', () => {
     })
   })
 
-  it('должна фильтровать группы по поисковому запросу', () => {
+  it('должна фильтровать группы по поисковому запросу', async () => {
     mockUseGroups.mockReturnValue({
       data: { items: mockGroups, total: mockGroups.length },
       isLoading: false,
@@ -237,11 +248,13 @@ describe('GroupsPage', () => {
 
     fireEvent.change(searchInput, { target: { value: 'Active' } })
 
-    expect(screen.getByText('Active Group')).toBeInTheDocument()
-    expect(screen.queryByText('Inactive Group')).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Active Group')).toBeInTheDocument()
+      expect(screen.queryByText('Inactive Group')).not.toBeInTheDocument()
+    })
   })
 
-  it('должна фильтровать группы по статусу "только активные"', () => {
+  it('должна фильтровать группы по статусу "только активные"', async () => {
     mockUseGroups.mockReturnValue({
       data: { items: mockGroups, total: mockGroups.length },
       isLoading: false,
@@ -255,7 +268,9 @@ describe('GroupsPage', () => {
 
     fireEvent.click(activeOnlyCheckbox)
 
-    expect(screen.getByText('Active Group')).toBeInTheDocument()
-    expect(screen.queryByText('Inactive Group')).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Active Group')).toBeInTheDocument()
+      expect(screen.queryByText('Inactive Group')).not.toBeInTheDocument()
+    })
   })
 })
