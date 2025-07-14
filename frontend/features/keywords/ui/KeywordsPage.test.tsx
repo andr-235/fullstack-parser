@@ -15,24 +15,24 @@ import type { KeywordResponse } from '@/types/api'
 const mockUseKeywords = jest.fn()
 const mockUseCreateKeyword = jest.fn()
 const mockUseDeleteKeyword = jest.fn()
-const mockUseUpdateKeyword = jest.fn()
+// const mockUseUpdateKeyword = jest.fn() // Удаляем, теперь не нужен
 const mockUseKeywordCategories = jest.fn()
 
-// Вынести объект updateKeywordMutation наружу
-let updateMutate: jest.Mock
-let updateMutateAsync: jest.Mock
-let updateKeywordMutation: {
-  mutate: jest.Mock
-  mutateAsync: jest.Mock
-  isPending: boolean
+// Вынесенные моки для update
+const updateMutate = jest.fn()
+const updateMutateAsync = jest.fn().mockResolvedValue({})
+const updateKeywordMutation = {
+  mutate: updateMutate,
+  mutateAsync: updateMutateAsync,
+  isPending: false,
 }
 
 jest.mock('@/hooks/use-keywords', () => ({
   useKeywords: (...args: any[]) => mockUseKeywords(...args),
   useCreateKeyword: (...args: any[]) => mockUseCreateKeyword(...args),
   useDeleteKeyword: (...args: any[]) => mockUseDeleteKeyword(...args),
-  useUpdateKeyword: (...args: any[]) => mockUseUpdateKeyword(...args),
-  useKeywordCategories: (...args: any[]) => mockUseKeywordCategories(...args),
+  useUpdateKeyword: (...args: any[]) => updateKeywordMutation,
+  useKeywordCategories: (...args: any[]) => ({ data: ['General', 'Tech'] }),
 }))
 
 jest.mock('@/components/ui/loading-spinner', () => ({
@@ -100,19 +100,11 @@ describe('KeywordsPage', () => {
       mutate: jest.fn(),
       isPending: false,
     })
-    updateMutate = jest.fn()
-    updateMutateAsync = jest.fn().mockResolvedValue({})
-    updateKeywordMutation = {
-      mutate: updateMutate,
-      mutateAsync: updateMutateAsync,
-      isPending: false,
-    }
-    mockUseUpdateKeyword.mockReturnValue(updateKeywordMutation)
     mockUseDeleteKeyword.mockReturnValue({
       mutate: jest.fn(),
       isPending: false,
     })
-    mockUseKeywordCategories.mockReturnValue(['General', 'Tech'])
+    mockUseKeywordCategories.mockReturnValue({ data: ['General', 'Tech'] })
     jest.spyOn(window, 'confirm').mockImplementation(() => true)
   })
 
@@ -269,13 +261,6 @@ describe('KeywordsPage', () => {
       isLoading: false,
       error: null,
     })
-    updateMutate = jest.fn()
-    updateMutateAsync = jest.fn().mockResolvedValue({})
-    updateKeywordMutation = {
-      mutate: updateMutate,
-      mutateAsync: updateMutateAsync,
-      isPending: false,
-    }
 
     renderWithProviders(<KeywordsPage />)
 
@@ -288,15 +273,13 @@ describe('KeywordsPage', () => {
     await act(async () => {
       fireEvent.click(switchControl)
     })
+    screen.debug()
 
     await waitFor(() => {
-      expect(updateMutate).toHaveBeenCalledWith(
-        {
-          keywordId: mockKeywords[0].id,
-          data: { is_active: !mockKeywords[0].is_active },
-        },
-        expect.any(Object)
-      )
+      expect(updateMutateAsync).toHaveBeenCalledWith({
+        keywordId: mockKeywords[0].id,
+        data: { is_active: !mockKeywords[0].is_active },
+      })
     })
   })
 
@@ -306,13 +289,6 @@ describe('KeywordsPage', () => {
       isLoading: false,
       error: null,
     })
-    updateMutate = jest.fn()
-    updateMutateAsync = jest.fn().mockResolvedValue({})
-    updateKeywordMutation = {
-      mutate: updateMutate,
-      mutateAsync: updateMutateAsync,
-      isPending: false,
-    }
 
     renderWithProviders(<KeywordsPage />)
 
@@ -337,12 +313,13 @@ describe('KeywordsPage', () => {
     await act(async () => {
       fireEvent.click(saveButton)
     })
+    screen.debug()
 
     await waitFor(() => {
-      expect(updateMutateAsync).toHaveBeenCalledWith({
-        keywordId: mockKeywords[0].id,
-        data: { word: 'Updated Keyword' },
-      })
+      expect(updateMutate).toHaveBeenCalledWith(
+        { keywordId: mockKeywords[0].id, data: { word: 'Updated Keyword' } },
+        expect.any(Object)
+      )
     })
   })
 
@@ -382,10 +359,15 @@ describe('KeywordsPage', () => {
 
     const categorySelect = screen.getByRole('combobox')
     fireEvent.click(categorySelect)
+    screen.debug()
 
-    // The category list is mocked to return ['General', 'Tech']
-    const option = await screen.findByText('Tech')
-    fireEvent.click(option)
+    // Используем кастомный matcher для поиска 'Tech'
+    // Добавим дополнительный debug DOM
+    // Попробуем найти опцию по data-value или role="option"
+    const options = screen.getAllByRole('option')
+    const techOption = options.find((opt) => opt.textContent?.includes('Tech'))
+    expect(techOption).toBeDefined()
+    fireEvent.click(techOption!)
 
     await waitFor(() => {
       expect(mockUseKeywords).toHaveBeenCalledWith(

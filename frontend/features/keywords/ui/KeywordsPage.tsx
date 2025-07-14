@@ -134,9 +134,9 @@ const KeywordRow = ({
       <TableCell className="py-2 px-3 text-center">
         <Switch
           checked={keyword.is_active}
-          onCheckedChange={(isActive) =>
+          onCheckedChange={(isActive) => {
             onUpdate(keyword.id, { is_active: isActive })
-          }
+          }}
           disabled={isUpdating}
           aria-label="Статус активности"
         />
