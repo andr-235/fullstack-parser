@@ -16,6 +16,9 @@ const inter = localFont({
 export const metadata: Metadata = {
   title: 'VK Comments Parser',
   description: 'Fullstack приложение для парсинга комментариев ВКонтакте',
+  icons: {
+    icon: '/app/favicon.png',
+  },
 }
 
 export default function RootLayout({

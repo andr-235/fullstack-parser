@@ -249,8 +249,8 @@ export default function ParserPage() {
                         <ParserStatus status={task.status} />
                       </TableCell>
                       <TableCell>
-                        {task.duration_seconds
-                          ? `${task.duration_seconds} сек`
+                        {task.stats?.duration_seconds
+                          ? `${task.stats.duration_seconds} сек`
                           : '-'}
                       </TableCell>
                       <TableCell>
