@@ -82,7 +82,10 @@ const KeywordRow = ({
   }
 
   return (
-    <TableRow key={keyword.id}>
+    <TableRow
+      key={keyword.id}
+      className={!keyword.is_active ? 'opacity-50 bg-slate-50' : ''}
+    >
       <TableCell className="py-2 px-3">
         {isEditing ? (
           <div className="flex items-center gap-2">
@@ -121,6 +124,14 @@ const KeywordRow = ({
             aria-label="Редактировать ключевое слово"
           >
             {keyword.word}
+            {!keyword.is_active && (
+              <span
+                className="ml-2 text-xs text-slate-400"
+                title="Ключевое слово неактивно"
+              >
+                (неактивно)
+              </span>
+            )}
           </span>
         )}
       </TableCell>
