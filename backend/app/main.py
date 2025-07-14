@@ -11,7 +11,7 @@ from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
-from app.api.v1.router import api_router
+from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.database import init_db
 from app.middleware.request_logging import RequestLoggingMiddleware
