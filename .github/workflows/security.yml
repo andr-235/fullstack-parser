@@ -59,6 +59,7 @@ jobs:
     needs: [codeql]
     permissions:
       contents: read
+      security-events: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4.1.1
