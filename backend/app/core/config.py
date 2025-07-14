@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from pydantic import Field, PostgresDsn, RedisDsn, field_validator, ConfigDict
+from pydantic import Field, PostgresDsn, RedisDsn, field_validator
 from pydantic_settings import BaseSettings
 
 
