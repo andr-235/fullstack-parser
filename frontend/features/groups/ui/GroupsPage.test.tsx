@@ -1,14 +1,17 @@
+import React from 'react'
 import {
   render,
   screen,
   fireEvent,
   waitFor,
   within,
+  act,
 } from '@testing-library/react'
-import GroupsPage from '@/app/groups/page'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
+import GroupsPage from '@/features/groups/ui/GroupsPage'
 import type { VKGroupResponse } from '@/types/api'
+import '@testing-library/jest-dom'
 
 // Mocks
 const mockUseGroups = jest.fn()
@@ -16,12 +19,10 @@ const mockUseCreateGroup = jest.fn()
 const mockUseUpdateGroup = jest.fn()
 const mockUseDeleteGroup = jest.fn()
 
-jest.mock('@/hooks/use-groups', () => ({
-  useGroups: (props?: any) => mockUseGroups(props),
-  useCreateGroup: () => mockUseCreateGroup(),
-  useUpdateGroup: () => mockUseUpdateGroup(),
-  useDeleteGroup: () => mockUseDeleteGroup(),
-}))
+jest.mock('@/features/groups/hooks/use-groups')
+jest.mock('@/features/groups/hooks/use-create-group')
+jest.mock('@/features/groups/hooks/use-update-group')
+jest.mock('@/features/groups/hooks/use-delete-group')
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -86,14 +87,14 @@ describe('GroupsPage', () => {
     jest.spyOn(window, 'confirm').mockReturnValue(true)
   })
 
-  it('должна рендериться без ошибок', () => {
+  it('должна рендериться без ошибок', async () => {
     renderWithProviders(<GroupsPage />)
     expect(
       screen.getByRole('heading', { name: /VK Группы/i, level: 1 })
     ).toBeInTheDocument()
   })
 
-  it('должна показывать спиннер загрузки', () => {
+  it('должна показывать спиннер загрузки', async () => {
     mockUseGroups.mockReturnValue({
       data: null,
       isLoading: true,
@@ -103,7 +104,7 @@ describe('GroupsPage', () => {
     expect(screen.getByText('Загрузка групп...')).toBeInTheDocument()
   })
 
-  it('должна показывать сообщение об ошибке', () => {
+  it('должна показывать сообщение об ошибке', async () => {
     mockUseGroups.mockReturnValue({
       data: null,
       isLoading: false,
@@ -113,7 +114,7 @@ describe('GroupsPage', () => {
     expect(screen.getByText('Ошибка загрузки групп')).toBeInTheDocument()
   })
 
-  it('должна отображать список групп', () => {
+  it('должна отображать список групп', async () => {
     mockUseGroups.mockReturnValue({
       data: { items: mockGroups, total: mockGroups.length },
       isLoading: false,
@@ -124,7 +125,7 @@ describe('GroupsPage', () => {
     expect(screen.getByText('Inactive Group')).toBeInTheDocument()
   })
 
-  it('должна правильно отображать статистику', () => {
+  it('должна правильно отображать статистику', async () => {
     mockUseGroups.mockReturnValue({
       data: { items: mockGroups, total: mockGroups.length },
       isLoading: false,
@@ -184,7 +185,6 @@ describe('GroupsPage', () => {
       mutate: createMutate,
       isPending: false,
     })
-
     renderWithProviders(<GroupsPage />)
     const urlInput = screen.getByPlaceholderText(
       /https:\/\/vk.com\/example или example/i
@@ -206,22 +206,8 @@ describe('GroupsPage', () => {
 
   it('должна удалять группу', async () => {
     const deleteMutate = jest.fn()
-    jest.doMock('@/hooks/use-groups', () => ({
-      ...jest.requireActual('@/hooks/use-groups'),
-      useGroups: () => ({
-        data: { items: mockGroups, total: mockGroups.length },
-        isLoading: false,
-        error: null,
-      }),
-      useDeleteGroup: () => ({ mutate: deleteMutate }),
-      useCreateGroup: () => ({ mutate: jest.fn(), isPending: false }),
-      useUpdateGroup: () => ({ mutate: jest.fn() }),
-    }))
-    jest.spyOn(window, 'confirm').mockReturnValue(true)
-
-    // Динамический импорт компонента после doMock
-    const { default: GroupsPage } = await import('./GroupsPage')
-    const { container } = renderWithProviders(<GroupsPage />)
+    mockUseDeleteGroup.mockReturnValue({ mutate: deleteMutate })
+    renderWithProviders(<GroupsPage />)
 
     const row = screen
       .getAllByRole('row')
@@ -244,7 +230,6 @@ describe('GroupsPage', () => {
     })
     const updateMutate = jest.fn()
     mockUseUpdateGroup.mockReturnValue({ mutate: updateMutate })
-
     renderWithProviders(<GroupsPage />)
 
     const row = screen
