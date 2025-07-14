@@ -115,6 +115,7 @@ describe('CommentsPage', () => {
         name: /Фильтры комментариев/i,
         level: 1,
       }) as unknown as HTMLElement
+
     ).toBeInTheDocument()
   })
 
@@ -139,7 +140,7 @@ describe('CommentsPage', () => {
       data: { pages: [], pageParams: [] },
       isLoading: false,
       error,
-    })
+    })D
     await act(async () => {
       renderWithProviders(<CommentsPage />)
     })
