@@ -1,3 +1,3 @@
 - **[ЗАВЕРШЕНО]** `VAN-01`: Стабилизация и рефакторинг UI фронтенда. [См. архив](docs/archive/archive-VAN-01.md)
 - **[ЗАВЕРШЕНО]** `DESIGN-01`: Полный редизайн UI. [См. архив](memory-bank/archive/archive-DESIGN-01.md)
-- **[ЗАВЕРШЕНО]** `REFACTOR-BACKEND-01`: Комплексный рефакторинг backend завершён — все этапы чек-листа выполнены, тесты и документация актуальны.
+- **[ЗАВЕРШЕНО]** `REFACTOR-BACKEND-01`: Комплексный рефакторинг backend завершён и заархивирован. [См. архив](memory-bank/archive/archive-REFACTOR-BACKEND-01.md)
