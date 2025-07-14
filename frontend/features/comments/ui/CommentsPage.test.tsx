@@ -4,6 +4,7 @@ import {
   fireEvent,
   waitFor,
   within,
+  act,
 } from '@testing-library/react'
 import CommentsPage from '@/app/comments/page'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -15,6 +16,7 @@ import type {
   VKGroupResponse,
   KeywordResponse,
 } from '@/types/api'
+import '@testing-library/jest-dom'
 
 jest.mock('@/hooks/use-comments', () => ({
   useInfiniteComments: jest.fn(),
@@ -106,6 +108,7 @@ describe('CommentsPage', () => {
     renderWithProviders(<CommentsPage />)
     expect(
       screen.getByRole('heading', { name: /Фильтры комментариев/i, level: 1 })
+      // @ts-expect-error jest-dom matcher
     ).toBeInTheDocument()
   })
 
@@ -117,7 +120,7 @@ describe('CommentsPage', () => {
       isFetchingNextPage: false,
     })
     renderWithProviders(<CommentsPage />)
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.getByRole('status') as any).toBeInTheDocument()
   })
 
   it('должна показывать сообщение об ошибке', () => {
@@ -128,7 +131,9 @@ describe('CommentsPage', () => {
       error,
     })
     renderWithProviders(<CommentsPage />)
-    expect(screen.getByText(`Ошибка: ${error.message}`)).toBeInTheDocument()
+    expect(
+      screen.getByText(`Ошибка: ${error.message}`) as any
+    ).toBeInTheDocument()
   })
 
   it('должна отображать список комментариев', () => {
@@ -152,20 +157,26 @@ describe('CommentsPage', () => {
     })
 
     renderWithProviders(<CommentsPage />)
-    expect(screen.getByText('This is a test comment')).toBeInTheDocument()
-    expect(screen.getByText('Another test comment')).toBeInTheDocument()
+    expect(
+      screen.getByText('This is a test comment') as any
+    ).toBeInTheDocument()
+    expect(screen.getByText('Another test comment') as any).toBeInTheDocument()
   })
 
   it('должна показывать сообщение, когда комментарии не найдены', () => {
     renderWithProviders(<CommentsPage />)
-    expect(screen.getByText('Комментарии не найдены.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Комментарии не найдены.') as any
+    ).toBeInTheDocument()
   })
 
   it('должна фильтровать комментарии по поисковому запросу', async () => {
     renderWithProviders(<CommentsPage />)
 
     const searchInput = screen.getByPlaceholderText('Поиск по тексту...')
-    fireEvent.change(searchInput, { target: { value: 'filter' } })
+    await act(async () => {
+      fireEvent.change(searchInput, { target: { value: 'filter' } })
+    })
 
     await waitFor(() => {
       expect(mockUseInfiniteComments).toHaveBeenCalledWith(
@@ -201,7 +212,9 @@ describe('CommentsPage', () => {
     const loadMoreButton = screen.getByRole('button', {
       name: /Загрузить еще/i,
     })
-    fireEvent.click(loadMoreButton)
+    await act(async () => {
+      fireEvent.click(loadMoreButton)
+    })
     expect(fetchNextPage).toHaveBeenCalled()
   })
 
@@ -211,10 +224,14 @@ describe('CommentsPage', () => {
 
     // Используем aria-label для SelectTrigger
     const groupSelectTrigger = screen.getByLabelText('Группа')
-    fireEvent.mouseDown(groupSelectTrigger)
+    await act(async () => {
+      fireEvent.mouseDown(groupSelectTrigger)
+    })
 
     const groupOption = await screen.findByText('Test Group 1')
-    fireEvent.click(groupOption) // Явно кликаем по Item
+    await act(async () => {
+      fireEvent.click(groupOption) // Явно кликаем по Item
+    })
     jest.advanceTimersByTime(500)
     await waitFor(() => {
       const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0])
@@ -233,10 +250,14 @@ describe('CommentsPage', () => {
 
     // Используем aria-label для второго SelectTrigger
     const keywordSelectTrigger = screen.getByLabelText('Ключевое слово')
-    fireEvent.mouseDown(keywordSelectTrigger)
+    await act(async () => {
+      fireEvent.mouseDown(keywordSelectTrigger)
+    })
 
     const keywordOption = await screen.findByText('Test Keyword 1')
-    fireEvent.click(keywordOption) // Явно кликаем по Item
+    await act(async () => {
+      fireEvent.click(keywordOption) // Явно кликаем по Item
+    })
     jest.advanceTimersByTime(500)
     await waitFor(() => {
       const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0])
