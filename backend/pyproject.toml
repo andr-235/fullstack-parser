@@ -91,7 +91,7 @@ pytest-mock = "3.12.0"
 httpx = "0.26.0"
 black = "25.1.0"
 isort = "5.13.2"
-ruff = "0.12.1"
+ruff = "0.12.3"
 mypy = "1.8.0"
 bandit = {version = "1.7.6", extras = ["toml"]}
 python-dotenv = "1.0.0"
