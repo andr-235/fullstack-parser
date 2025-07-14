@@ -1,6 +1,6 @@
 aiofiles==24.1.0 ; python_version >= "3.11" and python_version < "4.0"
 aiohappyeyeballs==2.6.1 ; python_version >= "3.11" and python_version < "4.0"
-aiohttp==3.12.13 ; python_version >= "3.11" and python_version < "4.0"
+aiohttp==3.12.14 ; python_version >= "3.11" and python_version < "4.0"
 aiosignal==1.4.0 ; python_version >= "3.11" and python_version < "4.0"
 alembic==1.16.2 ; python_version >= "3.11" and python_version < "4.0"
 annotated-types==0.7.0 ; python_version >= "3.11" and python_version < "4.0"
