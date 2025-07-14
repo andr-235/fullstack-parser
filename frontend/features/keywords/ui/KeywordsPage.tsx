@@ -6,6 +6,7 @@ import {
   useCreateKeyword,
   useUpdateKeyword,
   useDeleteKeyword,
+  useInfiniteKeywords,
 } from '@/hooks/use-keywords'
 import {
   Card,
@@ -164,9 +165,46 @@ export default function KeywordsPage() {
   const [category, setCategory] = useState<string>('')
 
   // Для тестов: если категория не выбрана, не передавать параметр category
-  const keywordsParams: any = { q: searchTerm, active_only: activeOnly }
-  if (category && category !== 'all') keywordsParams.category = category
-  const { data: keywordsData, isLoading, error } = useKeywords(keywordsParams)
+  const pageSize = 20
+  const {
+    data,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useInfiniteKeywords({
+    q: searchTerm,
+    active_only: activeOnly,
+    category: category || undefined,
+    pageSize,
+    order_by: 'word',
+    order_dir: 'asc',
+  })
+
+  const keywords = data?.pages.flatMap((page) => page.items) || []
+  const total = data?.pages[0]?.total || 0
+  const active = keywords.filter((k) => k.is_active).length || 0
+  const totalMatches =
+    keywords.reduce((sum, k) => sum + k.total_matches, 0) || 0
+
+  // Intersection Observer для бесконечного скролла
+  const loaderRef = React.useRef<HTMLTableRowElement | null>(null)
+  React.useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) fetchNextPage()
+      },
+      { root: null, rootMargin: '0px', threshold: 1.0 }
+    )
+    if (loaderRef.current) observer.observe(loaderRef.current)
+    return () => {
+      if (loaderRef.current) observer.unobserve(loaderRef.current)
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
   const { data: categoriesData } = useKeywordCategories()
   const createKeywordMutation = useCreateKeyword()
   const updateKeywordMutation = useUpdateKeyword()
@@ -207,12 +245,6 @@ export default function KeywordsPage() {
     }
   }
 
-  // Статистика
-  const total = keywordsData?.total || 0
-  const active = keywordsData?.items?.filter((k) => k.is_active).length || 0
-  const totalMatches =
-    keywordsData?.items?.reduce((sum, k) => sum + k.total_matches, 0) || 0
-
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -221,11 +253,11 @@ export default function KeywordsPage() {
         </div>
       )
     }
-    if (error) {
+    if (isError) {
       return (
         <div className="text-center text-red-500 py-10">
           <p>Ошибка загрузки</p>
-          <p>{error.message}</p>
+          <p>{isError.message}</p>
         </div>
       )
     }
@@ -241,7 +273,7 @@ export default function KeywordsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {keywordsData?.items?.map((keyword) => (
+            {keywords?.map((keyword) => (
               <KeywordRow
                 key={keyword.id}
                 keyword={keyword}
@@ -389,27 +421,34 @@ export default function KeywordsPage() {
                     <LoadingSpinner />
                   </TableCell>
                 </TableRow>
-              ) : error ? (
+              ) : isError ? (
                 <TableRow>
                   <TableCell
                     colSpan={4}
                     className="text-center text-red-500 py-8"
                   >
                     <div>Ошибка загрузки</div>
-                    <div className="text-xs">{error.message}</div>
                   </TableCell>
                 </TableRow>
-              ) : keywordsData?.items?.length ? (
-                keywordsData.items.map((keyword) => (
-                  <KeywordRow
-                    key={keyword.id}
-                    keyword={keyword}
-                    onUpdate={handleUpdateKeyword}
-                    onDelete={handleDeleteKeyword}
-                    isUpdating={updateKeywordMutation.isPending}
-                    isDeleting={deleteKeywordMutation.isPending}
-                  />
-                ))
+              ) : keywords.length ? (
+                <>
+                  {keywords.map((keyword, idx) => (
+                    <KeywordRow
+                      key={keyword.id}
+                      keyword={keyword}
+                      onUpdate={handleUpdateKeyword}
+                      onDelete={handleDeleteKeyword}
+                      isUpdating={updateKeywordMutation.isPending}
+                      isDeleting={deleteKeywordMutation.isPending}
+                    />
+                  ))}
+                  <TableRow ref={loaderRef}>
+                    <TableCell colSpan={4} className="text-center py-4">
+                      {isFetchingNextPage && <LoadingSpinner />}
+                      {!hasNextPage && 'Все ключевые слова загружены'}
+                    </TableCell>
+                  </TableRow>
+                </>
               ) : (
                 <TableRow>
                   <TableCell
