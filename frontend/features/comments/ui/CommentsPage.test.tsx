@@ -4,7 +4,6 @@ import {
   fireEvent,
   waitFor,
   within,
-  act,
 } from '@testing-library/react'
 import CommentsPage from '@/app/comments/page'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -16,7 +15,6 @@ import type {
   VKGroupResponse,
   KeywordResponse,
 } from '@/types/api'
-import '@testing-library/jest-dom'
 
 jest.mock('@/hooks/use-comments', () => ({
   useInfiniteComments: jest.fn(),
@@ -102,54 +100,38 @@ describe('CommentsPage', () => {
     })
     mockUseGroups.mockReturnValue({ data: { items: mockGroups, total: 1 } })
     mockUseKeywords.mockReturnValue({ data: { items: mockKeywords, total: 1 } })
-    jest.useFakeTimers()
-  })
-  afterEach(() => {
-    jest.useRealTimers()
   })
 
   it('должна рендериться без ошибок', () => {
     renderWithProviders(<CommentsPage />)
     expect(
-      screen.getByRole('heading', {
-        name: /Фильтры комментариев/i,
-        level: 1,
-      }) as unknown as HTMLElement
-
+      screen.getByRole('heading', { name: /Фильтры комментариев/i, level: 1 })
     ).toBeInTheDocument()
   })
 
-  it('должна показывать спиннер загрузки', async () => {
+  it('должна показывать спиннер загрузки', () => {
     mockUseInfiniteComments.mockReturnValue({
       data: { pages: [], pageParams: [] },
       isLoading: true,
       isFetching: true,
       isFetchingNextPage: false,
     })
-    await act(async () => {
-      renderWithProviders(<CommentsPage />)
-    })
-    expect(
-      screen.getByRole('status') as unknown as HTMLElement
-    ).toBeInTheDocument()
+    renderWithProviders(<CommentsPage />)
+    expect(screen.getByRole('status')).toBeInTheDocument()
   })
 
-  it('должна показывать сообщение об ошибке', async () => {
+  it('должна показывать сообщение об ошибке', () => {
     const error = new Error('Failed to fetch comments')
     mockUseInfiniteComments.mockReturnValue({
       data: { pages: [], pageParams: [] },
       isLoading: false,
       error,
-    })D
-    await act(async () => {
-      renderWithProviders(<CommentsPage />)
     })
-    expect(
-      screen.getByText(`Ошибка: ${error.message}`) as unknown as HTMLElement
-    ).toBeInTheDocument()
+    renderWithProviders(<CommentsPage />)
+    expect(screen.getByText(`Ошибка: ${error.message}`)).toBeInTheDocument()
   })
 
-  it('должна отображать список комментариев', async () => {
+  it('должна отображать список комментариев', () => {
     mockUseInfiniteComments.mockReturnValue({
       data: {
         pages: [
@@ -168,34 +150,22 @@ describe('CommentsPage', () => {
       isLoading: false,
       error: null,
     })
-    await act(async () => {
-      renderWithProviders(<CommentsPage />)
-    })
-    expect(
-      screen.getByText('This is a test comment') as unknown as HTMLElement
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText('Another test comment') as unknown as HTMLElement
-    ).toBeInTheDocument()
+
+    renderWithProviders(<CommentsPage />)
+    expect(screen.getByText('This is a test comment')).toBeInTheDocument()
+    expect(screen.getByText('Another test comment')).toBeInTheDocument()
   })
 
-  it('должна показывать сообщение, когда комментарии не найдены', async () => {
-    await act(async () => {
-      renderWithProviders(<CommentsPage />)
-    })
-    expect(
-      screen.getByText('Комментарии не найдены.') as unknown as HTMLElement
-    ).toBeInTheDocument()
+  it('должна показывать сообщение, когда комментарии не найдены', () => {
+    renderWithProviders(<CommentsPage />)
+    expect(screen.getByText('Комментарии не найдены.')).toBeInTheDocument()
   })
 
   it('должна фильтровать комментарии по поисковому запросу', async () => {
     renderWithProviders(<CommentsPage />)
 
     const searchInput = screen.getByPlaceholderText('Поиск по тексту...')
-    await act(async () => {
-      fireEvent.change(searchInput, { target: { value: 'filter' } })
-      jest.advanceTimersByTime(300)
-    })
+    fireEvent.change(searchInput, { target: { value: 'filter' } })
 
     await waitFor(() => {
       expect(mockUseInfiniteComments).toHaveBeenCalledWith(
@@ -231,25 +201,21 @@ describe('CommentsPage', () => {
     const loadMoreButton = screen.getByRole('button', {
       name: /Загрузить еще/i,
     })
-    await act(async () => {
-      fireEvent.click(loadMoreButton)
-    })
+    fireEvent.click(loadMoreButton)
     expect(fetchNextPage).toHaveBeenCalled()
   })
 
   it('должна фильтровать по группе', async () => {
+    jest.useFakeTimers()
     renderWithProviders(<CommentsPage />)
 
     // Используем aria-label для SelectTrigger
     const groupSelectTrigger = screen.getByLabelText('Группа')
-    await act(async () => {
-      fireEvent.mouseDown(groupSelectTrigger)
-    })
+    fireEvent.mouseDown(groupSelectTrigger)
 
     const groupOption = await screen.findByText('Test Group 1')
-    await act(async () => {
-      fireEvent.click(groupOption) // Явно кликаем по Item
-    })
+    fireEvent.click(groupOption) // Явно кликаем по Item
+    jest.advanceTimersByTime(500)
     await waitFor(() => {
       const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0])
       expect(calls).toEqual(
@@ -258,21 +224,20 @@ describe('CommentsPage', () => {
         ])
       )
     })
+    jest.useRealTimers()
   })
 
   it('должна фильтровать по ключевому слову', async () => {
+    jest.useFakeTimers()
     renderWithProviders(<CommentsPage />)
 
     // Используем aria-label для второго SelectTrigger
     const keywordSelectTrigger = screen.getByLabelText('Ключевое слово')
-    await act(async () => {
-      fireEvent.mouseDown(keywordSelectTrigger)
-    })
+    fireEvent.mouseDown(keywordSelectTrigger)
 
     const keywordOption = await screen.findByText('Test Keyword 1')
-    await act(async () => {
-      fireEvent.click(keywordOption) // Явно кликаем по Item
-    })
+    fireEvent.click(keywordOption) // Явно кликаем по Item
+    jest.advanceTimersByTime(500)
     await waitFor(() => {
       const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0])
       expect(calls).toEqual(
@@ -281,5 +246,6 @@ describe('CommentsPage', () => {
         ])
       )
     })
+    jest.useRealTimers()
   })
 })
