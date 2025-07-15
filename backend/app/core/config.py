@@ -2,6 +2,7 @@
 Конфигурация VK Comments Parser
 """
 
+import json
 from typing import Optional
 
 from pydantic import Field, PostgresDsn, RedisDsn, field_validator
@@ -55,6 +56,37 @@ class Settings(BaseSettings):
     redis_url: Optional[RedisDsn] = Field(default=None, alias="REDIS_URL")
     vk: VKSettings = VKSettings()
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v):
+        """Парсит CORS_ORIGINS из различных форматов"""
+        if isinstance(v, list):
+            return v
+        
+        if not isinstance(v, str):
+            return ["http://localhost:3000", "http://127.0.0.1:3000"]
+        
+        v = v.strip()
+        if not v:
+            return ["http://localhost:3000", "http://127.0.0.1:3000"]
+        
+        # Пробуем парсить как JSON
+        try:
+            if v.startswith("[") and v.endswith("]"):
+                return json.loads(v)
+        except (json.JSONDecodeError, ValueError):
+            pass
+        
+        # Парсим как строку с запятыми
+        try:
+            origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+            return origins if origins else ["http://localhost:3000", "http://127.0.0.1:3000"]
+        except Exception:
+            pass
+        
+        # Fallback к дефолтным значениям
+        return ["http://localhost:3000", "http://127.0.0.1:3000"]
 
     def get_cors_origins(self) -> list[str]:
         return self.cors_origins
