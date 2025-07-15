@@ -73,7 +73,7 @@ services:
       - app-network
       - db-network
     healthcheck:
-      test: ["CMD", "curl", "-fsSL", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-fsSL", "http://localhost:8000/api/v1/health"]
       interval: 20s
       timeout: 20s
       retries: 5
@@ -110,7 +110,7 @@ services:
       - app-network
       - db-network
     healthcheck:
-      test: ["CMD", "curl", "-fsSL", "http://backend:8000/health"]
+      test: ["CMD", "curl", "-fsSL", "http://backend:8000/api/v1/health"]
       interval: 30s
       timeout: 20s
       retries: 5
@@ -156,7 +156,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx/nginx.prod.ip.conf:/etc/nginx/nginx.conf
-      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/ssl:/etc/nginx/ssl/
       - ./nginx/logs:/var/log/nginx
     depends_on:
       frontend:
