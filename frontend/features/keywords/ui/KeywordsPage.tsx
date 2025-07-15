@@ -7,7 +7,7 @@ import {
   useUpdateKeyword,
   useDeleteKeyword,
   useInfiniteKeywords,
-} from '@/hooks/use-keywords'
+} from '@/features/keywords/hooks/use-keywords'
 import {
   Card,
   CardContent,
@@ -181,6 +181,7 @@ export default function KeywordsPage() {
     data,
     isLoading,
     isError,
+    error,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -268,7 +269,7 @@ export default function KeywordsPage() {
       return (
         <div className="text-center text-red-500 py-10">
           <p>Ошибка загрузки</p>
-          <p>{isError.message}</p>
+          <p>{(error as Error)?.message}</p>
         </div>
       )
     }
