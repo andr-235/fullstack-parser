@@ -5,11 +5,13 @@
 import json
 from typing import Optional
 
-from pydantic import Field, PostgresDsn, RedisDsn, field_validator
+from pydantic import Field, PostgresDsn, RedisDsn, field_validator, ConfigDict
 from pydantic_settings import BaseSettings
 
 
 class DatabaseSettings(BaseSettings):
+    model_config = ConfigDict(extra="allow")
+
     user: str = Field(alias="DB_USER", default="postgres")
     password: str = Field(alias="DB_PASSWORD", default="postgres")
     host: str = Field(alias="DB_HOST", default="postgres")
@@ -36,12 +38,16 @@ class DatabaseSettings(BaseSettings):
 
 
 class VKSettings(BaseSettings):
+    model_config = ConfigDict(extra="allow")
+
     access_token: str = Field(default="stub_token", alias="VK_ACCESS_TOKEN")
     api_version: str = Field(default="5.131", alias="VK_API_VERSION")
     requests_per_second: int = Field(default=3, alias="VK_REQUESTS_PER_SECOND")
 
 
 class Settings(BaseSettings):
+    model_config = ConfigDict(extra="allow")
+
     app_name: str = "VK Comments Parser"
     debug: bool = Field(default=False)
     api_v1_str: str = "/api/v1"
