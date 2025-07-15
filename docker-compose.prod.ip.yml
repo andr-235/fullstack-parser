@@ -123,12 +123,17 @@ services:
   frontend:
     env_file:
       - .env.prod
-    image: ghcr.io/andr-235/fullstack-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${DOMAIN}
     container_name: fullstack_frontend_prod
     restart: always
     environment:
       - NODE_ENV=production
       - SERVER_IP=${SERVER_IP}
+      - NEXT_PUBLIC_API_URL=${DOMAIN}
     expose:
       - "3000"
     depends_on:
