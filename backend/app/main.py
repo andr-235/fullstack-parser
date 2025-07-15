@@ -127,7 +127,6 @@ class ProxyHeadersMiddleware(BaseHTTPMiddleware):
         # Обрабатываем заголовки прокси
         forwarded_proto = request.headers.get("x-forwarded-proto")
         forwarded_host = request.headers.get("x-forwarded-host")
-        forwarded_for = request.headers.get("x-forwarded-for")
         
         # Если запрос пришел через HTTPS прокси, обновляем URL
         if forwarded_proto == "https":
