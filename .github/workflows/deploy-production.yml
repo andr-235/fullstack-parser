@@ -11,8 +11,9 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
-  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+  IMAGE_NAME_BACKEND: andr-235/fullstack-backend
+  IMAGE_NAME_FRONTEND: andr-235/fullstack-frontend
+  IMAGE_NAME_ARQ_WORKER: andr-235/fullstack-arq-worker
 
 jobs:
   test-backend:
@@ -71,19 +72,33 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}
+
+      - name: 🏗️ Build and push arq-worker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_ARQ_WORKER }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_ARQ_WORKER }}:${{ github.sha }}
 
       - name: Generate .env.local for frontend
         working-directory: ./frontend
         run: |
           echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" >> .env.local
-          # Добавь сюда остальные переменные, если нужно
+
       - name: 🏗️ Build and push frontend image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}
 
   deploy:
     name: Deploy to Production Server
