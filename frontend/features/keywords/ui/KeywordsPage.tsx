@@ -42,6 +42,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { useKeywordCategories } from '@/hooks/use-keywords'
 import { cn } from '@/lib/utils'
+import { UploadKeywordsModal } from './UploadKeywordsModal'
 
 const KeywordRow = ({
   keyword,
@@ -75,7 +76,7 @@ const KeywordRow = ({
       onUpdate(
         keyword.id,
         { word: editedWord },
-        { onSuccess: () => {}, onError: () => {} }
+        { onSuccess: () => { }, onError: () => { } }
       )
     }
     setIsEditing(false)
@@ -339,31 +340,34 @@ export default function KeywordsPage() {
             Найдено: <span className="font-bold">{totalMatches}</span>
           </div>
         </div>
-        <form
-          onSubmit={handleAddKeyword}
-          className="flex w-full max-w-sm items-center gap-1"
-        >
-          <Input
-            placeholder="Новое ключевое слово"
-            value={newKeyword}
-            onChange={(e) => setNewKeyword(e.target.value)}
-            disabled={createKeywordMutation.isPending}
-          />
-          <Button type="submit" disabled={createKeywordMutation.isPending}>
-            <Plus className="h-4 w-4" />
-            <span className="ml-1">Добавить</span>
-          </Button>
-        </form>
+        <div className="flex items-center gap-2">
+          <form
+            onSubmit={handleAddKeyword}
+            className="flex items-center gap-1"
+          >
+            <Input
+              placeholder="Новое ключевое слово"
+              value={newKeyword}
+              onChange={(e) => setNewKeyword(e.target.value)}
+              disabled={createKeywordMutation.isPending}
+            />
+            <Button type="submit" disabled={createKeywordMutation.isPending}>
+              <Plus className="h-4 w-4" />
+              <span className="ml-1">Добавить</span>
+            </Button>
+          </form>
+          <UploadKeywordsModal onSuccess={() => refetch()} />
+        </div>
       </CardHeader>
       <CardContent className="pt-2">
         <div className="max-h-[400px] overflow-y-auto">
           <Table>
             <TableHeader>
-                          <TableRow>
-              <TableHead>Ключевое слово</TableHead>
-              <TableHead>Найдено</TableHead>
-              <TableHead>Статус</TableHead>
-              <TableHead className="text-right">Действия</TableHead>
+              <TableRow>
+                <TableHead>Ключевое слово</TableHead>
+                <TableHead>Найдено</TableHead>
+                <TableHead>Статус</TableHead>
+                <TableHead className="text-right">Действия</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
