@@ -3,6 +3,7 @@
 """
 
 from fastapi import APIRouter
+
 from app.api.v1 import comments, groups, health, keywords, parser, stats
 
 api_router = APIRouter()

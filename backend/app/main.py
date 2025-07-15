@@ -122,12 +122,12 @@ async def validation_exception_handler(
 # Добавляем middleware для обработки заголовков прокси
 class ProxyHeadersMiddleware(BaseHTTPMiddleware):
     """Middleware для обработки заголовков прокси (X-Forwarded-*)"""
-    
+
     async def dispatch(self, request: Request, call_next):
         # Обрабатываем заголовки прокси
         forwarded_proto = request.headers.get("x-forwarded-proto")
         forwarded_host = request.headers.get("x-forwarded-host")
-        
+
         # Если запрос пришел через HTTPS прокси, обновляем URL
         if forwarded_proto == "https":
             # Создаем новый URL с HTTPS схемой
@@ -135,22 +135,24 @@ class ProxyHeadersMiddleware(BaseHTTPMiddleware):
             if forwarded_host:
                 url = url.replace(netloc=forwarded_host)
             request._url = url
-            
+
             # Также обновляем заголовки для правильной обработки
             request.scope["scheme"] = "https"
             if forwarded_host:
                 request.scope["headers"] = [
-                    (name, value) for name, value in request.scope["headers"]
+                    (name, value)
+                    for name, value in request.scope["headers"]
                     if name != b"host"
                 ] + [(b"host", forwarded_host.encode())]
-        
+
         response = await call_next(request)
         return response
+
 
 # Добавляем TrustedHostMiddleware для безопасности
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"]  # В production замените на конкретные домены
+    allowed_hosts=["*"],  # В production замените на конкретные домены
 )
 
 # Добавляем CORS middleware
