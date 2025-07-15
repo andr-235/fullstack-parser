@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.6
 
 # Stage 1: Builder
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 
 # Build args
@@ -30,7 +30,7 @@ RUN pnpm build
 COPY .env.local .env.local
 
 # Stage 2: Production
-FROM node:20-alpine3.18 AS production
+FROM node:22-alpine3.18 AS production
 WORKDIR /app
 
 # Устанавливаем curl для healthcheck
