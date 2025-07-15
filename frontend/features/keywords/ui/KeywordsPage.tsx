@@ -82,68 +82,50 @@ const KeywordRow = ({
   }
 
   return (
-    <TableRow
-      key={keyword.id}
-      className={!keyword.is_active ? 'opacity-50 bg-slate-50' : ''}
-    >
-      <TableCell className="py-2 px-3">
+    <TableRow key={keyword.id}>
+      <TableCell>
         {isEditing ? (
           <div className="flex items-center gap-2">
             <Input
               value={editedWord}
               onChange={(e) => setEditedWord(e.target.value)}
-              className="h-8 text-sm border-slate-300"
-              aria-label="Редактировать ключевое слово"
               autoFocus
             />
             <Button
               size="icon"
-              className="h-8 w-8"
               onClick={handleSave}
-              aria-label="Сохранить"
             >
               <Check className="h-4 w-4" />
             </Button>
             <Button
               size="icon"
               variant="ghost"
-              className="h-8 w-8"
               onClick={() => setIsEditing(false)}
-              aria-label="Отмена"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
         ) : (
           <span
-            className="cursor-pointer group-hover:underline"
+            className="cursor-pointer hover:underline"
             onClick={() => setIsEditing(true)}
             title="Нажмите, чтобы редактировать"
-            tabIndex={0}
-            role="button"
-            aria-label="Редактировать ключевое слово"
           >
             {keyword.word}
             {!keyword.is_active && (
-              <span
-                className="ml-2 text-xs text-slate-400"
-                title="Ключевое слово неактивно"
-              >
+              <span className="ml-2 text-xs text-slate-400">
                 (неактивно)
               </span>
             )}
           </span>
         )}
       </TableCell>
-      <TableCell className="py-2 px-3 text-center">
-        <Badge
-          variant="secondary"
-          className="font-mono text-xs bg-slate-100 text-slate-700 border border-slate-200"
-        >
+      <TableCell className="text-center">
+        <Badge variant="secondary">
           {keyword.total_matches}
         </Badge>
       </TableCell>
-      <TableCell className="py-2 px-3 text-center">
+      <TableCell className="text-center">
         <Switch
           checked={keyword.is_active}
           onCheckedChange={(isActive) => {
@@ -153,14 +135,13 @@ const KeywordRow = ({
           aria-label="Статус активности"
         />
       </TableCell>
-      <TableCell className="py-2 px-3 text-right">
+      <TableCell className="text-right">
         <Button
           variant="ghost"
           size="icon"
           className="text-red-500 hover:text-red-400"
           onClick={() => onDelete(keyword.id)}
           disabled={isDeleting}
-          aria-label="Удалить ключевое слово"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -302,8 +283,8 @@ export default function KeywordsPage() {
   }
 
   return (
-    <Card className="border border-slate-200 shadow-none rounded-xl bg-white">
-      <CardHeader className="pb-2 border-b border-slate-100">
+    <Card>
+      <CardHeader>
         <h1 className="text-lg font-bold tracking-tight font-mono text-slate-800">
           Ключевые слова
         </h1>
@@ -311,35 +292,29 @@ export default function KeywordsPage() {
           Управляйте ключевыми словами для поиска в комментариях. Всё строго,
           как на допросе.
         </CardDescription>
-        <div className="flex flex-wrap gap-3 pt-2 items-end">
-          <div className="flex flex-col gap-1 min-w-[180px]">
-            <Label htmlFor="search" className="text-xs font-medium">
-              Поиск
-            </Label>
-            <div className="relative">
-              <Input
-                id="search"
-                placeholder="Поиск по словам..."
-                className="pl-9 h-8 text-sm border-slate-300"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                aria-label="Поиск по ключевым словам"
-              />
-              <Search className="absolute left-2 top-2 h-4 w-4 text-slate-400" />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-2">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Поиск по словам..."
+              className="pl-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-          <div className="flex flex-col gap-1 min-w-[140px]">
-            <Label htmlFor="category" className="text-xs font-medium">
-              Категория
-            </Label>
+          <label className="flex items-center gap-2 text-xs">
+            <Switch
+              checked={activeOnly}
+              onCheckedChange={setActiveOnly}
+            />
+            Только активные
+          </label>
+          <div className="flex items-center gap-2">
             <Select
               value={category || 'all'}
               onValueChange={(v) => setCategory(v === 'all' ? '' : v)}
             >
-              <SelectTrigger
-                id="category"
-                className="w-36 h-8 text-sm border-slate-300"
-              >
+              <SelectTrigger className="w-36">
                 <SelectValue placeholder="Все категории" />
               </SelectTrigger>
               <SelectContent>
@@ -352,94 +327,56 @@ export default function KeywordsPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center gap-2 min-w-[120px]">
-            <Switch
-              id="activeOnly"
-              checked={activeOnly}
-              onCheckedChange={setActiveOnly}
-              aria-label="Только активные"
-            />
-            <Label htmlFor="activeOnly" className="text-xs font-medium">
-              Только активные
-            </Label>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pt-2 text-xs text-slate-500">
+          <div>
+            Всего: <span className="font-bold">{total}</span>
           </div>
-          <Button
-            variant="outline"
-            className="h-8 text-xs border-slate-300"
-            onClick={() => {
-              setSearchTerm('')
-              setCategory('')
-              setActiveOnly(true)
-            }}
-            aria-label="Сбросить фильтры"
-          >
-            Сбросить фильтры
+          <div>
+            Активных: <span className="font-bold">{active}</span>
+          </div>
+          <div>
+            Найдено: <span className="font-bold">{totalMatches}</span>
+          </div>
+        </div>
+        <form
+          onSubmit={handleAddKeyword}
+          className="flex w-full max-w-sm items-center gap-1"
+        >
+          <Input
+            placeholder="Новое ключевое слово"
+            value={newKeyword}
+            onChange={(e) => setNewKeyword(e.target.value)}
+            disabled={createKeywordMutation.isPending}
+          />
+          <Button type="submit" disabled={createKeywordMutation.isPending}>
+            <Plus className="h-4 w-4" />
+            <span className="ml-1">Добавить</span>
           </Button>
-        </div>
-        <div className="flex gap-4 pt-2 text-xs text-slate-400 font-mono">
-          <span>
-            Всего: <b className="text-slate-700">{total}</b>
-          </span>
-          <span>
-            Активных: <b className="text-slate-700">{active}</b>
-          </span>
-          <span>
-            Найдено: <b className="text-slate-700">{totalMatches}</b>
-          </span>
-        </div>
-        <div className="space-x-2 flex pt-2">
-          <form
-            onSubmit={handleAddKeyword}
-            className="flex items-center gap-2 w-full"
-          >
-            <Input
-              placeholder="Новое ключевое слово"
-              value={newKeyword}
-              onChange={(e) => setNewKeyword(e.target.value)}
-              disabled={createKeywordMutation.isPending}
-              className="h-8 text-sm border-slate-300"
-              aria-label="Новое ключевое слово"
-            />
-            <Button
-              type="submit"
-              disabled={createKeywordMutation.isPending}
-              className="h-8 text-xs"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Добавить
-            </Button>
-          </form>
-        </div>
+        </form>
       </CardHeader>
       <CardContent className="pt-2">
-        <div className="max-h-[400px] overflow-y-auto border border-slate-100 rounded-lg">
-          <Table className="text-sm">
+        <div className="max-h-[400px] overflow-y-auto">
+          <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50">
-                <TableHead className="py-2 px-3">Ключевое слово</TableHead>
-                <TableHead className="py-2 px-3 text-center">Найдено</TableHead>
-                <TableHead className="py-2 px-3 text-center">Статус</TableHead>
-                <TableHead className="py-2 px-3 text-right">Действия</TableHead>
+                          <TableRow>
+              <TableHead>Ключевое слово</TableHead>
+              <TableHead>Найдено</TableHead>
+              <TableHead>Статус</TableHead>
+              <TableHead className="text-right">Действия</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="text-center py-8"
-                    role="status"
-                  >
+                  <TableCell colSpan={4} className="text-center py-10">
                     <LoadingSpinner />
                   </TableCell>
                 </TableRow>
               ) : isError ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="text-center text-red-500 py-8"
-                  >
-                    <div>Ошибка загрузки</div>
+                  <TableCell colSpan={4} className="text-center py-10">
+                    <p className="text-red-500">Ошибка загрузки</p>
                   </TableCell>
                 </TableRow>
               ) : keywords.length ? (
@@ -457,18 +394,16 @@ export default function KeywordsPage() {
                   <TableRow ref={loaderRef}>
                     <TableCell colSpan={4} className="text-center py-4">
                       {isFetchingNextPage && <LoadingSpinner />}
-                      {!hasNextPage && 'Все ключевые слова загружены'}
+                      {!hasNextPage && <span className="text-slate-400">Все ключевые слова загружены</span>}
                     </TableCell>
                   </TableRow>
                 </>
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="text-center text-slate-400 py-8"
-                  >
-                    Нет ключевых слов. Добавь первое — и будет как в отделе по
-                    борьбе с преступностью: всё под контролем.
+                  <TableCell colSpan={4} className="text-center py-10">
+                    <p className="text-slate-400">
+                      Нет ключевых слов.
+                    </p>
                   </TableCell>
                 </TableRow>
               )}
