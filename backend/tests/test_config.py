@@ -2,7 +2,6 @@
 Тесты для конфигурации приложения
 """
 
-import pytest
 from app.core.config import Settings
 
 
