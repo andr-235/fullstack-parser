@@ -116,40 +116,44 @@ export function useDeleteKeyword() {
   })
 }
 
+// Добавим расширенный тип для пагинации
+export type InfiniteKeywordsParams = Omit<PaginationParams, 'page' | 'skip'> & {
+  page?: number
+  size?: number
+  active_only?: boolean
+  category?: string
+  q?: string
+  pageSize?: number
+  order_by?: string
+  order_dir?: 'asc' | 'desc'
+}
+
 /**
  * Хук для бесконечной загрузки ключевых слов (infinite scroll)
  */
-export function useInfiniteKeywords(
-  params?: Omit<PaginationParams, 'page' | 'skip'> & {
-    active_only?: boolean
-    category?: string
-    q?: string
-    pageSize?: number
-    order_by?: string
-    order_dir?: 'asc' | 'desc'
-  }
-) {
+export function useInfiniteKeywords(params?: InfiniteKeywordsParams) {
   const pageSize = params?.pageSize || 20
   return useInfiniteQuery({
     queryKey: createQueryKey.keywords({ ...params, pageSize }),
     queryFn: async ({ pageParam = 1 }) => {
+      const { pageSize, ...rest } = params ?? {}
       const res = await api.getKeywords({
-        ...params,
+        ...rest,
         page: pageParam,
         size: pageSize,
         order_by: params?.order_by || 'word',
         order_dir: params?.order_dir || 'asc',
-      })
+      } as any)
       return res
     },
     getNextPageParam: (lastPage, allPages) => {
-      const loaded = allPages.reduce(
-        (acc, page) => acc + (page.items?.length || 0),
-        0
-      )
-      if (lastPage.items.length < pageSize) return undefined
-      return allPages.length + 1
+      const loaded = allPages.reduce((acc, page) => acc + page.items.length, 0)
+      if (loaded < (lastPage?.total || 0)) {
+        return allPages.length + 1
+      }
+      return undefined
     },
+    initialPageParam: 1,
     staleTime: 10 * 60 * 1000,
   })
 }
