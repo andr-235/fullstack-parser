@@ -63,28 +63,34 @@ class Settings(BaseSettings):
         """Парсит CORS_ORIGINS из различных форматов"""
         if isinstance(v, list):
             return v
-        
+
         if not isinstance(v, str):
             return ["http://localhost:3000", "http://127.0.0.1:3000"]
-        
+
         v = v.strip()
         if not v:
             return ["http://localhost:3000", "http://127.0.0.1:3000"]
-        
+
         # Пробуем парсить как JSON
         try:
             if v.startswith("[") and v.endswith("]"):
                 return json.loads(v)
         except (json.JSONDecodeError, ValueError):
             pass
-        
+
         # Парсим как строку с запятыми
         try:
-            origins = [origin.strip() for origin in v.split(",") if origin.strip()]
-            return origins if origins else ["http://localhost:3000", "http://127.0.0.1:3000"]
+            origins = [
+                origin.strip() for origin in v.split(",") if origin.strip()
+            ]
+            return (
+                origins
+                if origins
+                else ["http://localhost:3000", "http://127.0.0.1:3000"]
+            )
         except Exception:
             pass
-        
+
         # Fallback к дефолтным значениям
         return ["http://localhost:3000", "http://127.0.0.1:3000"]
 

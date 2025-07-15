@@ -4,7 +4,7 @@ API endpoints для управления ключевыми словами
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, status, UploadFile, Form
+from fastapi import APIRouter, Depends, Form, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -13,7 +13,12 @@ from app.schemas.base import (
     PaginationParams,
     StatusResponse,
 )
-from app.schemas.keyword import KeywordCreate, KeywordResponse, KeywordUpdate, KeywordUploadResponse
+from app.schemas.keyword import (
+    KeywordCreate,
+    KeywordResponse,
+    KeywordUpdate,
+    KeywordUploadResponse,
+)
 from app.services.keyword_service import keyword_service
 
 router = APIRouter(tags=["Keywords"])
@@ -87,7 +92,9 @@ async def create_keywords_bulk(
 @router.post("/upload", response_model=KeywordUploadResponse)
 async def upload_keywords_from_file(
     file: UploadFile,
-    default_category: Optional[str] = Form(None, description="Категория по умолчанию"),
+    default_category: Optional[str] = Form(
+        None, description="Категория по умолчанию"
+    ),
     is_active: bool = Form(True, description="Активны ли ключевые слова"),
     is_case_sensitive: bool = Form(False, description="Учитывать регистр"),
     is_whole_word: bool = Form(False, description="Искать только целые слова"),
@@ -95,11 +102,11 @@ async def upload_keywords_from_file(
 ) -> KeywordUploadResponse:
     """
     Загружает ключевые слова из файла
-    
+
     Поддерживаемые форматы:
     - CSV: word,category,description
     - TXT: одно слово на строку
-    
+
     Параметры:
     - file: Файл с ключевыми словами (CSV или TXT)
     - default_category: Категория по умолчанию для ключевых слов

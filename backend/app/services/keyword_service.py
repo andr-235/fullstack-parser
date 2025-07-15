@@ -1,9 +1,9 @@
-from typing import List, Optional
 import csv
 import io
 from pathlib import Path
+from typing import List, Optional
 
-from fastapi import HTTPException, status, UploadFile
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +13,12 @@ from app.schemas.base import (
     PaginationParams,
     StatusResponse,
 )
-from app.schemas.keyword import KeywordCreate, KeywordResponse, KeywordUpdate, KeywordUploadResponse
+from app.schemas.keyword import (
+    KeywordCreate,
+    KeywordResponse,
+    KeywordUpdate,
+    KeywordUploadResponse,
+)
 
 
 class KeywordService:
@@ -172,7 +177,7 @@ class KeywordService:
     ) -> KeywordUploadResponse:
         """
         Загружает ключевые слова из файла (CSV или TXT)
-        
+
         Поддерживаемые форматы:
         - CSV: word,category,description
         - TXT: одно слово на строку
@@ -182,92 +187,108 @@ class KeywordService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Файл не выбран",
             )
-        
+
         file_extension = Path(file.filename).suffix.lower()
-        if file_extension not in ['.csv', '.txt']:
+        if file_extension not in [".csv", ".txt"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Поддерживаются только файлы CSV и TXT",
             )
-        
+
         try:
             content = await file.read()
-            content_str = content.decode('utf-8')
-        except UnicodeDecodeError:
+            content_str = content.decode("utf-8")
+        except UnicodeDecodeError as err:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Файл должен быть в кодировке UTF-8",
-            )
-        
+            ) from err
+
         keywords_data = []
         errors = []
         total_processed = 0
-        
-        if file_extension == '.csv':
+
+        if file_extension == ".csv":
             # Обработка CSV файла
             try:
                 csv_reader = csv.reader(io.StringIO(content_str))
                 for row_num, row in enumerate(csv_reader, 1):
                     total_processed += 1
-                    
+
                     if not row or not row[0].strip():
                         continue  # Пропускаем пустые строки
-                    
+
                     try:
                         word = row[0].strip()
-                        category = row[1].strip() if len(row) > 1 and row[1].strip() else default_category
-                        description = row[2].strip() if len(row) > 2 and row[2].strip() else None
-                        
+                        category = (
+                            row[1].strip()
+                            if len(row) > 1 and row[1].strip()
+                            else default_category
+                        )
+                        description = (
+                            row[2].strip()
+                            if len(row) > 2 and row[2].strip()
+                            else None
+                        )
+
                         if not word:
-                            errors.append(f"Строка {row_num}: пустое ключевое слово")
+                            errors.append(
+                                f"Строка {row_num}: пустое ключевое слово"
+                            )
                             continue
-                        
-                        keywords_data.append(KeywordCreate(
-                            word=word,
-                            category=category,
-                            description=description,
-                            is_active=is_active,
-                            is_case_sensitive=is_case_sensitive,
-                            is_whole_word=is_whole_word,
-                        ))
+
+                        keywords_data.append(
+                            KeywordCreate(
+                                word=word,
+                                category=category,
+                                description=description,
+                                is_active=is_active,
+                                is_case_sensitive=is_case_sensitive,
+                                is_whole_word=is_whole_word,
+                            )
+                        )
                     except Exception as e:
                         errors.append(f"Строка {row_num}: {str(e)}")
-                        
+
             except Exception as e:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Ошибка чтения CSV файла: {str(e)}",
-                )
-        
-        elif file_extension == '.txt':
+                ) from e
+
+        elif file_extension == ".txt":
             # Обработка TXT файла (одно слово на строку)
-            lines = content_str.split('\n')
-            for line_num, line in enumerate(lines, 1):
+            lines = content_str.split("\n")
+            for _line_num, line in enumerate(lines, 1):
                 total_processed += 1
-                
+
                 word = line.strip()
-                if not word or word.startswith('#'):  # Пропускаем пустые строки и комментарии
+                if not word or word.startswith(
+                    "#"
+                ):  # Пропускаем пустые строки и комментарии
                     continue
-                
-                keywords_data.append(KeywordCreate(
-                    word=word,
-                    category=default_category,
-                    description=None,
-                    is_active=is_active,
-                    is_case_sensitive=is_case_sensitive,
-                    is_whole_word=is_whole_word,
-                ))
-        
+
+                keywords_data.append(
+                    KeywordCreate(
+                        word=word,
+                        category=default_category,
+                        description=None,
+                        is_active=is_active,
+                        is_case_sensitive=is_case_sensitive,
+                        is_whole_word=is_whole_word,
+                    )
+                )
+
         if not keywords_data:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Файл не содержит валидных ключевых слов",
             )
-        
+
         # Создаем ключевые слова
         created_keywords = []
         skipped_count = 0
-        
+
         for keyword_data in keywords_data:
             try:
                 # Проверяем существование
@@ -279,19 +300,21 @@ class KeywordService:
                 if existing.scalar_one_or_none():
                     skipped_count += 1
                     continue
-                
+
                 new_keyword = Keyword(**keyword_data.model_dump())
                 db.add(new_keyword)
                 created_keywords.append(new_keyword)
-                
+
             except Exception as e:
-                errors.append(f"Ошибка создания '{keyword_data.word}': {str(e)}")
-        
+                errors.append(
+                    f"Ошибка создания '{keyword_data.word}': {str(e)}"
+                )
+
         if created_keywords:
             await db.commit()
             for keyword in created_keywords:
                 await db.refresh(keyword)
-        
+
         return KeywordUploadResponse(
             status="success",
             message=f"Загружено {len(created_keywords)} ключевых слов из {total_processed} строк",
@@ -299,7 +322,9 @@ class KeywordService:
             created=len(created_keywords),
             skipped=skipped_count,
             errors=errors,
-            created_keywords=[KeywordResponse.model_validate(kw) for kw in created_keywords],
+            created_keywords=[
+                KeywordResponse.model_validate(kw) for kw in created_keywords
+            ],
         )
 
 
