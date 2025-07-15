@@ -7,6 +7,7 @@ import type {
   KeywordResponse,
   KeywordCreate,
   KeywordUpdate,
+  KeywordUploadResponse,
   VKCommentResponse,
   CommentWithKeywords,
   CommentSearchParams,
@@ -163,6 +164,43 @@ class APIClient {
 
   async getKeywordCategories() {
     const { data } = await this.client.get<string[]>('/keywords/categories')
+    return data
+  }
+
+  async uploadKeywordsFromFile(
+    file: File,
+    options?: {
+      default_category?: string
+      is_active?: boolean
+      is_case_sensitive?: boolean
+      is_whole_word?: boolean
+    }
+  ) {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    if (options?.default_category) {
+      formData.append('default_category', options.default_category)
+    }
+    if (options?.is_active !== undefined) {
+      formData.append('is_active', options.is_active.toString())
+    }
+    if (options?.is_case_sensitive !== undefined) {
+      formData.append('is_case_sensitive', options.is_case_sensitive.toString())
+    }
+    if (options?.is_whole_word !== undefined) {
+      formData.append('is_whole_word', options.is_whole_word.toString())
+    }
+    
+    const { data } = await this.client.post<KeywordUploadResponse>(
+      '/keywords/upload/',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    )
     return data
   }
 

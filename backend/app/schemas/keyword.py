@@ -57,6 +57,20 @@ class KeywordResponse(KeywordBase, IDMixin, TimestampMixin, BaseSchema):
     )
 
 
+class KeywordUploadResponse(BaseModel):
+    """Схема ответа при загрузке ключевых слов из файла"""
+
+    status: str = Field(description="Статус операции")
+    message: str = Field(description="Сообщение о результате")
+    total_processed: int = Field(description="Общее количество обработанных строк")
+    created: int = Field(description="Количество созданных ключевых слов")
+    skipped: int = Field(description="Количество пропущенных (дубликатов)")
+    errors: list[str] = Field(default_factory=list, description="Список ошибок")
+    created_keywords: list[KeywordResponse] = Field(
+        default_factory=list, description="Созданные ключевые слова"
+    )
+
+
 class KeywordStats(BaseModel):
     """Статистика по ключевому слову"""
 
