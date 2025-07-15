@@ -129,6 +129,7 @@ services:
     environment:
       - NODE_ENV=production
       - SERVER_IP=${SERVER_IP}
+      - NEXT_PUBLIC_API_URL=${DOMAIN}
     expose:
       - "3000"
     depends_on:
