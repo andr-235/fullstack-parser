@@ -49,6 +49,22 @@ class VKGroup(BaseModel):
         Integer, default=100, comment="Максимум постов для проверки"
     )
 
+    # Настройки автоматического мониторинга
+    auto_monitoring_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, comment="Включен ли автоматический мониторинг"
+    )
+    monitoring_interval_minutes: Mapped[int] = mapped_column(
+        Integer, default=60, comment="Интервал мониторинга в минутах"
+    )
+    next_monitoring_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, comment="Когда следующий раз запускать мониторинг"
+    )
+    monitoring_priority: Mapped[int] = mapped_column(
+        Integer,
+        default=5,
+        comment="Приоритет мониторинга (1-10, где 10 - высший)",
+    )
+
     # Статистика
     last_parsed_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime, comment="Когда последний раз парсили группу"
@@ -58,6 +74,17 @@ class VKGroup(BaseModel):
     )
     total_comments_found: Mapped[int] = mapped_column(
         Integer, default=0, comment="Общее количество найденных комментариев"
+    )
+
+    # Статистика мониторинга
+    monitoring_runs_count: Mapped[int] = mapped_column(
+        Integer, default=0, comment="Количество запусков мониторинга"
+    )
+    last_monitoring_success: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, comment="Последний успешный запуск мониторинга"
+    )
+    last_monitoring_error: Mapped[Optional[str]] = mapped_column(
+        Text, comment="Последняя ошибка мониторинга"
     )
 
     # Метаданные VK

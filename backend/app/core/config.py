@@ -45,6 +45,31 @@ class VKSettings(BaseSettings):
     requests_per_second: int = Field(default=3, alias="VK_REQUESTS_PER_SECOND")
 
 
+class MonitoringSettings(BaseSettings):
+    model_config = ConfigDict(extra="allow")
+
+    # Интервал запуска планировщика в секундах
+    scheduler_interval_seconds: int = Field(
+        default=300,
+        alias="MONITORING_SCHEDULER_INTERVAL_SECONDS",  # 5 минут
+    )
+
+    # Максимальное количество групп для одновременного мониторинга
+    max_concurrent_groups: int = Field(
+        default=10, alias="MONITORING_MAX_CONCURRENT_GROUPS"
+    )
+
+    # Задержка между мониторингом групп в секундах
+    group_delay_seconds: int = Field(
+        default=1, alias="MONITORING_GROUP_DELAY_SECONDS"
+    )
+
+    # Включить автоматический запуск планировщика при старте приложения
+    auto_start_scheduler: bool = Field(
+        default=False, alias="MONITORING_AUTO_START_SCHEDULER"
+    )
+
+
 class Settings(BaseSettings):
     model_config = ConfigDict(extra="allow")
 
@@ -61,6 +86,7 @@ class Settings(BaseSettings):
     database: DatabaseSettings = DatabaseSettings()
     redis_url: Optional[RedisDsn] = Field(default=None, alias="REDIS_URL")
     vk: VKSettings = VKSettings()
+    monitoring: MonitoringSettings = MonitoringSettings()
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
     @field_validator("cors_origins", mode="before")

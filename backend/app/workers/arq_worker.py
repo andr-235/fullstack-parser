@@ -2,11 +2,11 @@ import os
 
 from arq.connections import RedisSettings
 
-from app.workers.arq_tasks import run_parsing_task
+from app.workers.arq_tasks import run_monitoring_cycle, run_parsing_task
 
 
 class WorkerSettings:
-    functions = [run_parsing_task]
+    functions = [run_parsing_task, run_monitoring_cycle]
     redis_settings = RedisSettings.from_dsn(
         os.environ.get("REDIS_URL", "redis://redis:6379/0")
     )
