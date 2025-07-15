@@ -76,7 +76,7 @@ const KeywordRow = ({
       onUpdate(
         keyword.id,
         { word: editedWord },
-        { onSuccess: () => { }, onError: () => { } }
+        { onSuccess: () => {}, onError: () => {} }
       )
     }
     setIsEditing(false)
@@ -92,10 +92,7 @@ const KeywordRow = ({
               onChange={(e) => setEditedWord(e.target.value)}
               autoFocus
             />
-            <Button
-              size="icon"
-              onClick={handleSave}
-            >
+            <Button size="icon" onClick={handleSave}>
               <Check className="h-4 w-4" />
             </Button>
             <Button
@@ -114,17 +111,13 @@ const KeywordRow = ({
           >
             {keyword.word}
             {!keyword.is_active && (
-              <span className="ml-2 text-xs text-slate-400">
-                (неактивно)
-              </span>
+              <span className="ml-2 text-xs text-slate-400">(неактивно)</span>
             )}
           </span>
         )}
       </TableCell>
       <TableCell className="text-center">
-        <Badge variant="secondary">
-          {keyword.total_matches}
-        </Badge>
+        <Badge variant="secondary">{keyword.total_matches}</Badge>
       </TableCell>
       <TableCell className="text-center">
         <Switch
@@ -304,10 +297,7 @@ export default function KeywordsPage() {
             />
           </div>
           <label className="flex items-center gap-2 text-xs">
-            <Switch
-              checked={activeOnly}
-              onCheckedChange={setActiveOnly}
-            />
+            <Switch checked={activeOnly} onCheckedChange={setActiveOnly} />
             Только активные
           </label>
           <div className="flex items-center gap-2">
@@ -341,10 +331,7 @@ export default function KeywordsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <form
-            onSubmit={handleAddKeyword}
-            className="flex items-center gap-1"
-          >
+          <form onSubmit={handleAddKeyword} className="flex items-center gap-1">
             <Input
               placeholder="Новое ключевое слово"
               value={newKeyword}
@@ -398,16 +385,18 @@ export default function KeywordsPage() {
                   <TableRow ref={loaderRef}>
                     <TableCell colSpan={4} className="text-center py-4">
                       {isFetchingNextPage && <LoadingSpinner />}
-                      {!hasNextPage && <span className="text-slate-400">Все ключевые слова загружены</span>}
+                      {!hasNextPage && (
+                        <span className="text-slate-400">
+                          Все ключевые слова загружены
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 </>
               ) : (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-10">
-                    <p className="text-slate-400">
-                      Нет ключевых слов.
-                    </p>
+                    <p className="text-slate-400">Нет ключевых слов.</p>
                   </TableCell>
                 </TableRow>
               )}

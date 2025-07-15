@@ -30,7 +30,8 @@ export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
   const [isActive, setIsActive] = useState(true)
   const [isCaseSensitive, setIsCaseSensitive] = useState(false)
   const [isWholeWord, setIsWholeWord] = useState(false)
-  const [uploadResult, setUploadResult] = useState<KeywordUploadResponse | null>(null)
+  const [uploadResult, setUploadResult] =
+    useState<KeywordUploadResponse | null>(null)
 
   const uploadMutation = useUploadKeywordsFromFile()
 
@@ -58,19 +59,20 @@ export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
 
       setUploadResult(result)
       toast.success(result.message)
-      
+
       if (onSuccess) {
         onSuccess()
       }
-      
+
       // Закрываем модальное окно через 2 секунды
       setTimeout(() => {
         setIsOpen(false)
         resetForm()
       }, 2000)
-      
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Ошибка загрузки файла')
+      toast.error(
+        error instanceof Error ? error.message : 'Ошибка загрузки файла'
+      )
     }
   }
 
@@ -102,11 +104,11 @@ export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
         <DialogHeader>
           <DialogTitle>Загрузка ключевых слов из файла</DialogTitle>
           <DialogDescription>
-            Загрузите ключевые слова из CSV или TXT файла. Поддерживаются форматы:
+            Загрузите ключевые слова из CSV или TXT файла. Поддерживаются
+            форматы:
             <br />
             • CSV: word,category,description
-            <br />
-            • TXT: одно слово на строку
+            <br />• TXT: одно слово на строку
           </DialogDescription>
         </DialogHeader>
 
@@ -169,12 +171,21 @@ export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
             <div className="border rounded-lg p-4 bg-gray-50">
               <div className="flex items-center gap-2 mb-3">
                 <CheckCircle className="h-5 w-5 text-green-500" />
-                <h4 className="font-medium text-green-700">Загрузка завершена</h4>
+                <h4 className="font-medium text-green-700">
+                  Загрузка завершена
+                </h4>
               </div>
               <div className="space-y-2 text-sm">
-                <p><strong>Обработано строк:</strong> {uploadResult.total_processed}</p>
-                <p><strong>Создано:</strong> {uploadResult.created}</p>
-                <p><strong>Пропущено (дубликаты):</strong> {uploadResult.skipped}</p>
+                <p>
+                  <strong>Обработано строк:</strong>{' '}
+                  {uploadResult.total_processed}
+                </p>
+                <p>
+                  <strong>Создано:</strong> {uploadResult.created}
+                </p>
+                <p>
+                  <strong>Пропущено (дубликаты):</strong> {uploadResult.skipped}
+                </p>
                 {uploadResult.errors.length > 0 && (
                   <div>
                     <p className="font-medium text-red-600">Ошибки:</p>
@@ -191,10 +202,7 @@ export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
 
           {/* Кнопки */}
           <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setIsOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
               Отмена
             </Button>
             <Button
@@ -208,4 +216,4 @@ export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
       </DialogContent>
     </Dialog>
   )
-} 
+}

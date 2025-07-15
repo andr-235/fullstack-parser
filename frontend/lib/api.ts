@@ -178,7 +178,7 @@ class APIClient {
   ) {
     const formData = new FormData()
     formData.append('file', file)
-    
+
     if (options?.default_category) {
       formData.append('default_category', options.default_category)
     }
@@ -191,7 +191,7 @@ class APIClient {
     if (options?.is_whole_word !== undefined) {
       formData.append('is_whole_word', options.is_whole_word.toString())
     }
-    
+
     const { data } = await this.client.post<KeywordUploadResponse>(
       '/keywords/upload/',
       formData,
