@@ -9,6 +9,8 @@ ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV DOCKER=true
 
+# force rebuild for latest tag push
+
 # Устанавливаем pnpm той же версии, что и локально
 RUN npm install -g pnpm@10.12.4
 
@@ -57,4 +59,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:3000 || exit 1
 
 # Запуск standalone-сервера
-CMD ["node", "server.js"] 
+CMD ["node", "server.js"]
