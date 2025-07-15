@@ -4,10 +4,10 @@
 
 from datetime import datetime
 
+import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import func
-import sqlalchemy as sa
 
 
 class Base(AsyncAttrs, DeclarativeBase):

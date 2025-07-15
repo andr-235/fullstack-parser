@@ -9,6 +9,8 @@ ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV DOCKER=true
 
+# force rebuild for latest tag push
+
 # Устанавливаем pnpm той же версии, что и локально
 RUN npm install -g pnpm@10.12.4
 
@@ -24,6 +26,9 @@ COPY . .
 # Собираем проект (standalone)
 RUN pnpm build
 
+# Копируем .env.local (если есть) для локальной разработки и build-time env
+COPY .env.local .env.local
+
 # Stage 2: Production
 FROM node:20-alpine3.18 AS production
 WORKDIR /app
@@ -38,6 +43,9 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Копируем .env.local в production (если есть)
+RUN [ -f .env.local ] && cp .env.local .env.local || true
+
 # Устанавливаем переменные окружения
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
@@ -51,4 +59,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:3000 || exit 1
 
 # Запуск standalone-сервера
-CMD ["node", "server.js"] 
+CMD ["node", "server.js"]

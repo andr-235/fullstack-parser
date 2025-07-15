@@ -5,18 +5,23 @@ Pydantic схемы для VK групп
 from datetime import datetime
 from typing import Optional
 
-from app.schemas.base import BaseSchema, IDMixin, TimestampMixin
 from pydantic import Field
+
+from app.schemas.base import BaseSchema, IDMixin, TimestampMixin
 
 
 # 1. Базовая схема с общими, валидируемыми полями
 class VKGroupBase(BaseSchema):
     """Базовая схема VK группы с полями, общими для создания и чтения."""
 
-    screen_name: str = Field(..., description="Короткое имя группы (@group_name)")
+    screen_name: str = Field(
+        ..., description="Короткое имя группы (@group_name)"
+    )
     name: str = Field(..., description="Название группы")
     description: Optional[str] = Field(None, description="Описание группы")
-    is_active: bool = Field(default=True, description="Активен ли мониторинг группы")
+    is_active: bool = Field(
+        default=True, description="Активен ли мониторинг группы"
+    )
     max_posts_to_check: int = Field(
         default=100,
         gte=1,
@@ -43,7 +48,10 @@ class VKGroupUpdate(BaseSchema):
     description: Optional[str] = None
     is_active: Optional[bool] = None
     max_posts_to_check: Optional[int] = Field(
-        default=None, gte=1, lte=1000, description="Максимум постов для проверки"
+        default=None,
+        gte=1,
+        lte=1000,
+        description="Максимум постов для проверки",
     )
 
 
@@ -61,7 +69,9 @@ class VKGroupRead(VKGroupBase, IDMixin, TimestampMixin):
     total_comments_found: int = Field(
         default=0, description="Общее количество найденных комментариев"
     )
-    members_count: Optional[int] = Field(None, description="Количество участников")
+    members_count: Optional[int] = Field(
+        None, description="Количество участников"
+    )
     is_closed: Optional[bool] = Field(None, description="Закрытая ли группа")
     photo_url: Optional[str] = Field(None, description="URL аватара группы")
 

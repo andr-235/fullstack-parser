@@ -1,17 +1,21 @@
 import asyncio
 import logging
+
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.services.parser_service import ParserService
 from app.services.redis_parser_manager import get_redis_parser_manager
 from app.services.vkbottle_service import VKBottleService
-from app.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("arq.worker")
 
 
 async def run_parsing_task(
-    ctx, group_id: int, max_posts: int | None = None, force_reparse: bool = False
+    ctx,
+    group_id: int,
+    max_posts: int | None = None,
+    force_reparse: bool = False,
 ):
     """
     Асинхронная задача Arq для парсинга постов группы.
@@ -36,7 +40,9 @@ async def run_parsing_task(
                     f"[ARQ] VK_ACCESS_TOKEN не передан или дефолтный: {vk_token}"
                 )
             else:
-                logger.info(f"[ARQ] VK_ACCESS_TOKEN начинается с: {vk_token[:8]}...")
+                logger.info(
+                    f"[ARQ] VK_ACCESS_TOKEN начинается с: {vk_token[:8]}..."
+                )
             logger.warning(
                 f"[ARQ] VK_ACCESS_TOKEN (repr): {repr(settings.vk_access_token)}"
             )
@@ -57,7 +63,9 @@ async def run_parsing_task(
                 task_id=task_id,
             )
             # Явно закрываем redis_manager, если есть метод close
-            if hasattr(redis_manager, "close") and callable(redis_manager.close):
+            if hasattr(redis_manager, "close") and callable(
+                redis_manager.close
+            ):
                 close_result = redis_manager.close()
                 if asyncio.iscoroutine(close_result):
                     await close_result

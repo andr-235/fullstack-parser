@@ -1,0 +1,7 @@
+---
+description: 
+globs: **/*.tsx
+alwaysApply: false
+---
+- Use Shadcn UI, Radix, and Tailwind Aria for components and styling
+- Implement responsive design with Tailwind CSS; use a mobile-first approach

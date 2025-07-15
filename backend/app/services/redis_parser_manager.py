@@ -1,11 +1,14 @@
 from __future__ import annotations
+
 import json
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
+
 import redis.asyncio as redis
 from redis.exceptions import ResponseError
+
 from app.core.config import settings
-from app.schemas.parser import ParseTaskResponse, ParserState, ParserStats, ParseStats
+from app.schemas.parser import ParserState, ParserStats, ParseTaskResponse
 
 
 class RedisParserManager:
@@ -91,12 +94,16 @@ class RedisParserManager:
             async with r.pipeline() as pipe:
                 pipe.hset(task_key, "status", "stopped")
                 pipe.hset(
-                    task_key, "completed_at", datetime.now(timezone.utc).isoformat()
+                    task_key,
+                    "completed_at",
+                    datetime.now(timezone.utc).isoformat(),
                 )
                 pipe.delete("parser:current_task_id")
                 await pipe.execute()
 
-    async def update_task_progress(self, task_id: str, progress: float) -> None:
+    async def update_task_progress(
+        self, task_id: str, progress: float
+    ) -> None:
         """Updates the progress of a running task."""
         r = await self._get_redis()
         task_key = f"parser:task:{task_id}"
@@ -149,7 +156,9 @@ class RedisParserManager:
                 "group_id": task.group_id,
                 "group_name": task.group_name,
                 "progress": task.progress,
-                "posts_processed": task.stats.posts_processed if task.stats else 0,
+                "posts_processed": (
+                    task.stats.posts_processed if task.stats else 0
+                ),
             },
         )
 
@@ -201,7 +210,9 @@ class RedisParserManager:
                     task_data[k] = None
 
             # Handle nested JSON for stats
-            if task_data.get("stats") and isinstance(task_data.get("stats"), str):
+            if task_data.get("stats") and isinstance(
+                task_data.get("stats"), str
+            ):
                 try:
                     task_data["stats"] = json.loads(task_data["stats"])
                 except (json.JSONDecodeError, TypeError):
@@ -240,7 +251,9 @@ class RedisParserManager:
             if t.stats and t.stats.posts_processed
         )
         total_comments_found = sum(
-            t.stats.comments_found for t in tasks if t.stats and t.stats.comments_found
+            t.stats.comments_found
+            for t in tasks
+            if t.stats and t.stats.comments_found
         )
         total_comments_with_keywords = sum(
             t.stats.comments_with_keywords

@@ -1,0 +1,7 @@
+---
+description: 
+globs: frontend/src/**/*.ts*
+alwaysApply: false
+---
+- Optimize Web Vitals (LCP, CLS, FID).
+- Limit `use client` hooks to small, specific components for Web API access.

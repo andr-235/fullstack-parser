@@ -1,0 +1,7 @@
+---
+description: 
+globs: **/pyproject.toml
+alwaysApply: false
+---
+- Use poetry for dependency management.
+- Use UV when installing depdendencies.

@@ -1,0 +1,6 @@
+---
+description: 
+globs: **/*
+alwaysApply: false
+---
+- Isolate project dependencies using virtual environments (e.g., `venv`).

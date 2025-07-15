@@ -71,11 +71,8 @@ services:
       dockerfile: Dockerfile
     container_name: fullstack_frontend
     restart: unless-stopped
-    environment:
-      - NODE_ENV=production
-      - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_API_URL=http://backend:8000/api/v1
-      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+    env_file:
+      - ./frontend/.env.prod
     ports:
       - "3000:3000"
     volumes: []

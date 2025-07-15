@@ -6,9 +6,10 @@ import time
 import uuid
 
 import structlog
-from app.core.logging import get_logger
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.core.logging import get_logger
 
 # Контекстные переменные для request_id
 request_id_var = structlog.contextvars.bind_contextvars

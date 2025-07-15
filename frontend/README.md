@@ -34,3 +34,19 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Переменные окружения (Next.js + Docker)
+
+- Для локальной разработки используй `.env.local` в папке frontend:
+  ```
+  NEXT_PUBLIC_API_URL=http://localhost:8000
+  ```
+- Для production/staging — переменные задаются через docker-compose или `.env.production`.
+- После изменения переменных всегда пересобирай контейнер:
+  ```
+  docker compose up -d --build frontend
+  ```
+- Все переменные с префиксом `NEXT_PUBLIC_` доступны на клиенте и "зашиваются" в js-бандл на этапе build.
+- Не храни секреты в переменных с этим префиксом!
+
+Подробнее: https://nextjs.org/docs/app/building-your-application/configuring/environment-variables

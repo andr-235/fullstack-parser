@@ -4,11 +4,12 @@
 
 from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 
-from app.models.base import Base
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.base import Base
 
 ModelType = TypeVar("ModelType", bound=Base)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
@@ -25,7 +26,9 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self.model = model
 
     async def get(self, db: AsyncSession, id: Any) -> Optional[ModelType]:
-        result = await db.execute(select(self.model).filter(self.model.id == id))
+        result = await db.execute(
+            select(self.model).filter(self.model.id == id)
+        )
         return result.scalar_one_or_none()
 
     async def get_multi(
@@ -34,7 +37,9 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await db.execute(select(self.model).offset(skip).limit(limit))
         return result.scalars().all()
 
-    async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
+    async def create(
+        self, db: AsyncSession, *, obj_in: CreateSchemaType
+    ) -> ModelType:
         obj_in_data = jsonable_encoder(obj_in)
         db_obj = self.model(**obj_in_data)
         db.add(db_obj)
@@ -62,7 +67,9 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await db.refresh(db_obj)
         return db_obj
 
-    async def remove(self, db: AsyncSession, *, id: int) -> Optional[ModelType]:
+    async def remove(
+        self, db: AsyncSession, *, id: int
+    ) -> Optional[ModelType]:
         obj = await self.get(db, id)
         if obj:
             await db.delete(obj)

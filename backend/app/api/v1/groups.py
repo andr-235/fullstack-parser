@@ -5,15 +5,25 @@ API endpoints для управления VK группами
 import re
 from typing import Optional
 
-from app.core.database import get_db
-from app.models import VKGroup
-from app.schemas.base import PaginatedResponse, PaginationParams
-from app.schemas.vk_group import VKGroupCreate, VKGroupRead, VKGroupStats, VKGroupUpdate
-from app.services.vkbottle_service import VKBottleService
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.config import settings
+from app.core.database import get_db
+from app.models import VKGroup
+from app.schemas.base import PaginatedResponse, PaginationParams
+from app.schemas.vk_group import (
+    VKGroupCreate,
+    VKGroupRead,
+    VKGroupStats,
+    VKGroupUpdate,
+)
+
+# from app.core.config import settings  # Удалено как неиспользуемое
+# from app.services.vkbottle_service import VKBottleService  # Удалено как неиспользуемое
+from app.services.group_service import group_service
+from app.services.vkbottle_service import VKBottleService
 
 router = APIRouter(tags=["Groups"])
 
@@ -29,12 +39,17 @@ def _extract_screen_name(url_or_name: str) -> Optional[str]:
     return match.group(1) if match else url_or_name
 
 
-@router.post("/", response_model=VKGroupRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", response_model=VKGroupRead, status_code=status.HTTP_201_CREATED
+)
 async def create_group(
     group_data: VKGroupCreate,
     db: AsyncSession = Depends(get_db),
 ) -> VKGroupRead:
-    """Добавить новую VK группу для мониторинга"""
+    """
+
+    Добавить новую VK группу для мониторинга
+    """
     screen_name = _extract_screen_name(group_data.vk_id_or_screen_name)
     if not screen_name:
         raise HTTPException(
@@ -55,7 +70,9 @@ async def create_group(
 
     # Проверка на существование группы в БД (case-insensitive)
     existing_group_result = await db.execute(
-        select(VKGroup).where(func.lower(VKGroup.screen_name) == screen_name.lower())
+        select(VKGroup).where(
+            func.lower(VKGroup.screen_name) == screen_name.lower()
+        )
     )
     existing_group = existing_group_result.scalar_one_or_none()
     if existing_group:
@@ -67,7 +84,9 @@ async def create_group(
     # TODO: Перенести логику в сервис
     # Фильтрация только нужных полей для VKGroup
     vk_group_fields = {c.name for c in VKGroup.__table__.columns}
-    filtered_data = {k: v for k, v in vk_group_data.items() if k in vk_group_fields}
+    filtered_data = {
+        k: v for k, v in vk_group_data.items() if k in vk_group_fields
+    }
     # Маппинг id -> vk_id
     if "id" in vk_group_data:
         filtered_data["vk_id"] = vk_group_data["id"]
@@ -91,7 +110,9 @@ async def get_groups(
         query = query.filter(VKGroup.is_active.is_(True))
 
     total = await db.scalar(select(func.count()).select_from(query.subquery()))
-    result = await db.execute(query.offset(pagination.skip).limit(pagination.size))
+    result = await db.execute(
+        query.offset(pagination.skip).limit(pagination.size)
+    )
     groups = result.scalars().all()
 
     return PaginatedResponse(
@@ -124,19 +145,7 @@ async def update_group(
     db: AsyncSession = Depends(get_db),
 ) -> VKGroupRead:
     """Обновить настройки группы"""
-    group = await db.get(VKGroup, group_id)
-    if not group:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Группа не найдена"
-        )
-
-    update_data = group_update.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(group, key, value)
-
-    await db.commit()
-    await db.refresh(group)
-
+    group = await group_service.update_group(db, group_id, group_update)
     return VKGroupRead.model_validate(group)
 
 
@@ -146,10 +155,7 @@ async def delete_group(
     db: AsyncSession = Depends(get_db),
 ):
     """Удалить группу"""
-    group = await db.get(VKGroup, group_id)
-    if group:
-        await db.delete(group)
-        await db.commit()
+    await group_service.delete_group(db, group_id)
     return
 
 

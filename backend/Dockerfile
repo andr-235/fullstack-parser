@@ -32,6 +32,8 @@ COPY app/ ./app/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
 
+# force rebuild for latest tag push
+
 # Stage 2: Production
 FROM python:3.13-slim AS production
 WORKDIR /app

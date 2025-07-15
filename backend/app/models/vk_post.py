@@ -2,8 +2,15 @@
 Модель VK поста
 """
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Text
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -18,7 +25,9 @@ class VKPost(BaseModel):
     )
 
     # Основная информация
-    vk_id = Column(Integer, nullable=False, index=True, comment="ID поста в ВК")
+    vk_id = Column(
+        Integer, nullable=False, index=True, comment="ID поста в ВК"
+    )
     vk_owner_id = Column(Integer, nullable=False, comment="ID владельца поста")
     text = Column(Text, comment="Текст поста")
 
@@ -27,10 +36,14 @@ class VKPost(BaseModel):
     group = relationship("VKGroup", back_populates="posts")
 
     # Метаданные
-    published_at = Column(DateTime, nullable=False, comment="Дата публикации поста")
+    published_at = Column(
+        DateTime, nullable=False, comment="Дата публикации поста"
+    )
     likes_count = Column(Integer, default=0, comment="Количество лайков")
     reposts_count = Column(Integer, default=0, comment="Количество репостов")
-    comments_count = Column(Integer, default=0, comment="Количество комментариев")
+    comments_count = Column(
+        Integer, default=0, comment="Количество комментариев"
+    )
     views_count = Column(Integer, default=0, comment="Количество просмотров")
 
     # Состояние обработки
@@ -38,7 +51,9 @@ class VKPost(BaseModel):
     parsed_at = Column(DateTime, comment="Когда был обработан")
 
     # Вложения (упрощённо)
-    has_attachments = Column(Boolean, default=False, comment="Есть ли вложения")
+    has_attachments = Column(
+        Boolean, default=False, comment="Есть ли вложения"
+    )
     attachments_info = Column(Text, comment="JSON с информацией о вложениях")
 
     # Связи

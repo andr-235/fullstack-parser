@@ -35,8 +35,13 @@ export interface ButtonProps
   asChild?: boolean
 }
 
+/**
+ * Кастомная кнопка с поддержкой asChild (shadcn/ui).
+ * Проп asChild не пробрасывается на DOM-элемент, чтобы не было warning React.
+ */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
+    // Убираем asChild из props, чтобы не пробрасывать его на DOM-элемент
     const Comp = asChild ? Slot : 'button'
     return (
       <Comp
