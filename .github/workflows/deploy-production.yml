@@ -118,9 +118,15 @@ jobs:
             echo "🔐 Логин в GitHub Container Registry..."
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
 
-            echo "🧹 Очистка старых образов..."
-            docker image prune -f || true
-            docker system prune -f || true
+            echo "🧹 Очистка Docker кэша перед деплоем..."
+            if [ -f "scripts/docker-cleanup.sh" ]; then
+              chmod +x scripts/docker-cleanup.sh
+              ./scripts/docker-cleanup.sh --aggressive
+            else
+              echo "⚠️ Скрипт очистки не найден, используем стандартную очистку"
+              docker image prune -f || true
+              docker system prune -f || true
+            fi
 
             echo "📦 Загрузка Docker образов..."
             docker-compose -f docker-compose.prod.ip.yml pull
@@ -128,8 +134,12 @@ jobs:
             echo "🚀 Запуск сервисов..."
             docker-compose -f docker-compose.prod.ip.yml up -d --build
 
-            echo "🧹 Очистка неиспользуемых образов после деплоя..."
-            docker image prune -f || true
+            echo "🧹 Очистка Docker кэша после деплоя..."
+            if [ -f "scripts/docker-cleanup.sh" ]; then
+              ./scripts/docker-cleanup.sh
+            else
+              docker image prune -f || true
+            fi
 
             echo "✅ Деплой завершен успешно!"
 
