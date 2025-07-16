@@ -1,11 +1,10 @@
-# version: "3.9"  # Устаревший атрибут, удален для избежания предупреждений
 services:
   postgres:
+    image: postgres:15-alpine
+    container_name: fullstack_prod_postgres
+    restart: always
     env_file:
       - .env.prod
-    image: postgres:15-alpine
-    container_name: fullstack_postgres_prod
-    restart: always
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
@@ -13,30 +12,24 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backup:/backup
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     networks:
-      - db-network
+      - prod-db-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${DB_NAME}"]
       interval: 30s
       timeout: 10s
       retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 512M
 
   redis:
-    env_file:
-      - .env.prod
     image: redis:7-alpine
-    container_name: fullstack_redis_prod
+    container_name: fullstack_prod_redis
     restart: always
     volumes:
       - redis_data:/data
     networks:
-      - app-network
+      - prod-app-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -44,11 +37,11 @@ services:
       retries: 3
 
   backend:
+    image: ghcr.io/andr-235/fullstack-backend:latest
+    container_name: fullstack_prod_backend
+    restart: always
     env_file:
       - .env.prod
-    image: ghcr.io/andr-235/fullstack-backend:latest
-    container_name: fullstack_backend_prod
-    restart: always
     environment:
       - ENV=production
       - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
@@ -70,26 +63,22 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - app-network
-      - db-network
+      - prod-app-network
+      - prod-db-network
     healthcheck:
       test: ["CMD", "curl", "-fsSL", "http://localhost:8000/api/v1/health/"]
       interval: 20s
       timeout: 20s
       retries: 5
       start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 512M
 
-  arq-worker:
-    env_file:
-      - .env.prod
+  arq_worker:
     image: ghcr.io/andr-235/fullstack-arq-worker:latest
-    container_name: fullstack_arq_worker_prod
+    container_name: fullstack_prod_arq_worker
     restart: always
     command: ["python", "-m", "app.workers.arq_worker"]
+    env_file:
+      - .env.prod
     environment:
       - ENV=production
       - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
@@ -107,29 +96,25 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - app-network
-      - db-network
+      - prod-app-network
+      - prod-db-network
     healthcheck:
       test: ["CMD", "curl", "-fsSL", "http://backend:8000/api/v1/health/"]
       interval: 30s
       timeout: 20s
       retries: 5
       start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 512M
 
   frontend:
-    env_file:
-      - .env.prod
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${DOMAIN}
-    container_name: fullstack_frontend_prod
+    container_name: fullstack_prod_frontend
     restart: always
+    env_file:
+      - .env.prod
     environment:
       - NODE_ENV=production
       - SERVER_IP=${SERVER_IP}
@@ -140,21 +125,17 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - app-network
+      - prod-app-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 20s
       timeout: 20s
       retries: 5
       start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 256M
 
   nginx:
     image: nginx:alpine
-    container_name: fullstack_nginx
+    container_name: fullstack_prod_nginx
     restart: always
     ports:
       - "80:80"
@@ -169,7 +150,7 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - app-network
+      - prod-app-network
     healthcheck:
       test: ["CMD", "curl", "-fsSL", "http://frontend:3000"]
       interval: 20s
@@ -179,7 +160,7 @@ services:
 
   backup:
     image: postgres:15-alpine
-    container_name: fullstack_backup
+    container_name: fullstack_prod_backup
     restart: "no"
     environment:
       PGPASSWORD: ${DB_PASSWORD}
@@ -187,7 +168,7 @@ services:
       - ./backup:/backup
       - ./scripts/backup.sh:/backup.sh
     networks:
-      - app-network
+      - prod-app-network
     depends_on:
       - postgres
     entrypoint: ["/bin/sh", "/backup.sh"]
@@ -195,9 +176,9 @@ services:
       - backup
 
 networks:
-  app-network:
+  prod-app-network:
     driver: bridge
-  db-network:
+  prod-db-network:
     driver: bridge
     internal: true
 

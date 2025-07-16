@@ -1,7 +1,0 @@
-[bandit]
-# Bandit configuration file
-# Исключаем ложные срабатывания для тестовых данных
-exclude_dirs = tests, .venv, __pycache__
-skips = B105, B106, B107
-# Исключаем конкретные файлы с тестовыми данными
-exclude = app/api/v1/monitoring.py, app/api/v1/parser.py

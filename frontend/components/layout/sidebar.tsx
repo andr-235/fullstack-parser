@@ -32,7 +32,7 @@ export function Sidebar() {
 
       <nav className="flex-1 p-4 space-y-1">
         {navigation.map((item) => {
-          const isActive = pathname.startsWith(item.href);
+          const isActive = (pathname ?? "").startsWith(item.href);
           const Icon = item.icon;
 
           return (
@@ -56,7 +56,7 @@ export function Sidebar() {
             href="/settings"
             className={cn(
               "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-              pathname.startsWith("/settings")
+              pathname?.startsWith("/settings")
                 ? "bg-slate-800 text-slate-50"
                 : "text-slate-400 hover:bg-slate-800 hover:text-slate-50",
             )}

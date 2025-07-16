@@ -23,7 +23,7 @@ const routeTitles: Record<string, string> = {
 export function Header({ className }: HeaderProps) {
   const pathname = usePathname();
 
-  const pathSegments = pathname.split("/").filter(Boolean);
+  const pathSegments = (pathname ?? "").split("/").filter(Boolean);
   const breadcrumbs = pathSegments.map((segment, index) => {
     const path = "/" + pathSegments.slice(0, index + 1).join("/");
     return {

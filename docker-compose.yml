@@ -1,9 +1,10 @@
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: fullstack_postgres
+    container_name: fullstack_dev_postgres
     restart: unless-stopped
+    env_file:
+      - ./frontend/.env.local
     environment:
       POSTGRES_DB: ${DB_NAME:-vk_parser}
       POSTGRES_USER: ${DB_USER:-postgres}
@@ -13,47 +14,46 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - app-network
+      - dev-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: fullstack_redis
+    container_name: fullstack_dev_redis
     restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
-      - app-network
+      - dev-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # FastAPI Backend
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: production
-    container_name: fullstack_backend
+      target: dev
+    container_name: fullstack_dev_backend
     restart: unless-stopped
+    env_file:
+      - ./frontend/.env.local
     environment:
-      - ENV=production
+      - ENV=development
       - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-vk_parser}
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
-      - CORS_ORIGINS=http://localhost:3000
-      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN:-your-vk-token}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
+      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN:-dev-vk-token}
       - VK_API_VERSION=${VK_API_VERSION:-5.131}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
     ports:
       - "8000:8000"
     depends_on:
@@ -62,46 +62,44 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - app-network
+      - dev-network
 
-  # Next.js Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: fullstack_frontend
+      target: dev
+    container_name: fullstack_dev_frontend
     restart: unless-stopped
     env_file:
-      - ./frontend/.env.prod
+      - ./frontend/.env.local
     ports:
       - "3000:3000"
-    volumes: []
+    volumes:
+      - ./frontend:/app
     depends_on:
       - backend
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
     networks:
-      - app-network
+      - dev-network
+    command: pnpm dev
 
-  # Arq Worker (async очередь)
-  arq-worker:
+  arq_worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: production
-    command: python -m arq app.workers.arq_worker.WorkerSettings
+      target: dev
+    container_name: fullstack_dev_arq_worker
+    command: python -m app.workers.arq_worker
+    env_file:
+      - ./frontend/.env.local
     environment:
-      - ENV=production
+      - ENV=development
       - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-vk_parser}
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
-      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN:-your-vk-token}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
+      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN:-dev-vk-token}
       - VK_API_VERSION=${VK_API_VERSION:-5.131}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
     depends_on:
       postgres:
         condition: service_healthy
@@ -109,10 +107,10 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - app-network
+      - dev-network
 
 networks:
-  app-network:
+  dev-network:
     driver: bridge
 
 volumes:
