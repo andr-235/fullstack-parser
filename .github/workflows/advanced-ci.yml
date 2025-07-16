@@ -24,7 +24,8 @@ jobs:
       - name: 🐍 Python линтинг
         working-directory: ./backend
         run: |
-          pipx install poetry
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
           poetry install --no-interaction
           poetry run ruff check .
           poetry run black --check .
@@ -51,7 +52,8 @@ jobs:
       - name: 🐍 Backend тесты
         working-directory: ./backend
         run: |
-          pipx install poetry
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
           poetry install --no-interaction
           poetry run pytest tests/ -v --tb=short --cov=app --cov-report=xml
 
@@ -90,7 +92,8 @@ jobs:
       - name: 🐍 Python security
         working-directory: ./backend
         run: |
-          pipx install poetry
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
           poetry install --no-interaction
           poetry run bandit -r app/ -f json -o bandit-report.json || true
 
