@@ -80,7 +80,7 @@ pytz = "2023.3"
 structlog = "^25.4.0"
 arq = "^0.26.3"
 vkbottle = {extras = ["http"], version = "^4.5.2"}
-starlette = "0.46.2"
+starlette = "0.47.1"
 httpx = "0.26.0"
 natasha = "^1.6.0"
 setuptools = "^78.1.1"
