@@ -1,3 +1,4 @@
+---
 # 🚀 Deploy to Production
 
 on:
@@ -58,7 +59,8 @@ jobs:
 
       - name: 🧮 Set reusable variables
         id: vars
-        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: |
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: 🔐 Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -114,11 +116,16 @@ jobs:
     steps:
       - name: Проверка secrets
         run: |
-          test -n "${{ secrets.PRODUCTION_HOST }}" || (echo "Нет PRODUCTION_HOST" && exit 1)
-          test -n "${{ secrets.PRODUCTION_USER }}" || (echo "Нет PRODUCTION_USER" && exit 1)
-          test -n "${{ secrets.PRODUCTION_SSH_KEY }}" || (echo "Нет PRODUCTION_SSH_KEY" && exit 1)
-          test -n "${{ secrets.PRODUCTION_PORT }}" || (echo "Нет PRODUCTION_PORT" && exit 1)
-          test -n "${{ secrets.PRODUCTION_APP_DIR }}" || (echo "Нет PRODUCTION_APP_DIR" && exit 1)
+          test -n "${{ secrets.PRODUCTION_HOST }}" || \
+            (echo "Нет PRODUCTION_HOST" && exit 1)
+          test -n "${{ secrets.PRODUCTION_USER }}" || \
+            (echo "Нет PRODUCTION_USER" && exit 1)
+          test -n "${{ secrets.PRODUCTION_SSH_KEY }}" || \
+            (echo "Нет PRODUCTION_SSH_KEY" && exit 1)
+          test -n "${{ secrets.PRODUCTION_PORT }}" || \
+            (echo "Нет PRODUCTION_PORT" && exit 1)
+          test -n "${{ secrets.PRODUCTION_APP_DIR }}" || \
+            (echo "Нет PRODUCTION_APP_DIR" && exit 1)
 
       - name: 🚀 Deploy to Production
         uses: appleboy/ssh-action@v1
@@ -127,7 +134,9 @@ jobs:
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
-            cd ${{ secrets.PRODUCTION_APP_DIR }} && docker-compose -f docker-compose.prod.ip.yml pull && docker-compose -f docker-compose.prod.ip.yml up -d --build
+            cd ${{ secrets.PRODUCTION_APP_DIR }} && \
+              docker-compose -f docker-compose.prod.ip.yml pull && \
+              docker-compose -f docker-compose.prod.ip.yml up -d --build
 
       - name: Healthcheck backend
         uses: appleboy/ssh-action@v1
@@ -158,7 +167,9 @@ jobs:
 
       # - name: Slack/Telegram уведомление (опционально)
       #   run: |
-      #     curl -X POST -H 'Content-type: application/json' --data '{"text":"Production deploy завершён успешно!"}' $SLACK_WEBHOOK_URL
+      #     curl -X POST -H 'Content-type: application/json' \
+      #       --data '{"text":"Production deploy завершён успешно!"}' \
+      #       $SLACK_WEBHOOK_URL
 
       # - name: Откат деплоя (manual workflow, инструкция в README)
       #   run: |

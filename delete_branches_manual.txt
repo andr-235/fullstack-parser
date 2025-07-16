@@ -1,0 +1,14 @@
+# Команды для удаления оставшихся веток после мержа
+
+# Удаляем feature ветки
+git push origin --delete feature/keywords-infinite-scroll-main
+git push origin --delete feature/ci-cd-refactor
+
+# Проверяем и удаляем любые другие ветки
+git branch -r | grep -v HEAD | grep -v main
+
+# Очищаем локальные ссылки
+git remote prune origin
+
+# Проверяем результат
+git branch -a
