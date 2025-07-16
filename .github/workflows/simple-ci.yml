@@ -24,7 +24,7 @@ jobs:
       - name: 📦 Backend - установка зависимостей
         working-directory: ./backend
         run: |
-          pip install poetry
+          pipx install poetry
           poetry install --no-interaction
 
       - name: 🧪 Backend - запуск тестов
