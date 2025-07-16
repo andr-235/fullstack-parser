@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir -r requirements-build.txt && poetry config virtua
 COPY pyproject.toml poetry.lock* ./
 
 # Устанавливаем зависимости напрямую через poetry
-RUN poetry install --no-dev --no-root
+RUN poetry install --only=main --no-root
 
 # Копируем только нужные директории (исключая тесты, .git и т.д.)
 COPY app/ ./app/
