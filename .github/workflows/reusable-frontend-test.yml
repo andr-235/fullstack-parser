@@ -18,9 +18,9 @@ on:
       CODECOV_TOKEN:
         required: false
 
-concurrency:
-  group: frontend-test-${{ github.ref }}
-  cancel-in-progress: true
+# concurrency:
+#   group: frontend-test-${{ github.ref }}
+#   cancel-in-progress: true
 
 jobs:
   frontend-lint:

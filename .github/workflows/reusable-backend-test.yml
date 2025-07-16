@@ -18,9 +18,9 @@ on:
       CODECOV_TOKEN:
         required: false
 
-concurrency:
-  group: backend-test-${{ github.ref }}
-  cancel-in-progress: true
+# concurrency:
+#   group: backend-test-${{ github.ref }}
+#   cancel-in-progress: true
 
 jobs:
   backend-lint:
