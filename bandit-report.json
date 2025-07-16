@@ -1,6 +1,6 @@
 {
   "errors": [],
-  "generated_at": "2025-07-16T02:23:44Z",
+  "generated_at": "2025-07-16T03:27:32Z",
   "metrics": {
     "_totals": {
       "CONFIDENCE.HIGH": 76,
@@ -11,7 +11,7 @@
       "SEVERITY.LOW": 100,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 5227,
+      "loc": 5666,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -180,7 +180,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 43,
+      "loc": 50,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -246,6 +246,19 @@
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
       "loc": 159,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "backend/app/api/v1/morphological.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 145,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -691,6 +704,19 @@
       "nosec": 0,
       "skipped_tests": 0
     },
+    "backend/app/services/morphological_service.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 143,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
     "backend/app/services/parser_service.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
@@ -700,7 +726,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 546,
+      "loc": 547,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -818,6 +844,19 @@
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
       "loc": 59,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "backend/test_morphological.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 143,
       "nosec": 0,
       "skipped_tests": 0
     },
