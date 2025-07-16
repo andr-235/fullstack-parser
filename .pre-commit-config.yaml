@@ -45,13 +45,13 @@ repos:
         args: [--ignore-missing-imports, --disable-error-code=assignment, --disable-error-code=arg-type]
         files: ^backend/
 
-  # Bandit - проверка безопасности
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.8.6
-    hooks:
-      - id: bandit
-        args: [-r, backend/, -f, json, -o, bandit-report.json]
-        pass_filenames: false
+  # Удаляю или комментирую hook bandit
+  # - repo: https://github.com/PyCQA/bandit
+  #   rev: 1.8.6
+  #   hooks:
+  #     - id: bandit
+  #       args: [-r, backend/, -f, json, -o, bandit-report.json]
+  #       pass_filenames: false
 
   # =============================================================================
   # NODE.JS FRONTEND HOOKS

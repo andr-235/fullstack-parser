@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1.6
 
 # Stage 1: Builder
-FROM python:3.13-slim AS builder
+FROM python:3.11-slim AS builder
 WORKDIR /app
 
-# Системные зависимости для сборки
+# Системные зависимости для сборки и установка poetry/uv
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
@@ -12,20 +12,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Устанавливаем poetry и uv с pin-версией
-RUN pip install --no-cache-dir poetry==2.1.3 poetry-plugin-export uv==0.1.39
-
-# Отключаем создание виртуального окружения poetry
-RUN poetry config virtualenvs.create false
+COPY requirements-build.txt ./
+RUN pip install --no-cache-dir -r requirements-build.txt && poetry config virtualenvs.create false
 
 # Копируем только poetry-файлы для layer caching
 COPY pyproject.toml poetry.lock* ./
 
-# Экспортируем зависимости poetry в requirements.txt
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
-
-# Устанавливаем зависимости через uv
-RUN uv pip install --system --no-deps --requirement requirements.txt
+# Экспортируем зависимости poetry в requirements.txt и устанавливаем их
+RUN poetry export -f requirements.txt --output requirements.txt --without-hashes \
+    && uv pip install --system --no-deps --requirement requirements.txt
 
 # Копируем только нужные директории (исключая тесты, .git и т.д.)
 COPY app/ ./app/
@@ -35,7 +30,7 @@ COPY alembic.ini ./
 # force rebuild for latest tag push
 
 # Stage 2: Production
-FROM python:3.13-slim AS production
+FROM python:3.11-slim AS production
 WORKDIR /app
 
 # Устанавливаем только runtime зависимости
@@ -48,7 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd -r appuser && useradd --no-log-init -r -g appuser appuser
 
 # Копируем установленные библиотеки и бинарники
-COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Копируем только нужные файлы приложения

@@ -5,19 +5,19 @@
 import re
 from typing import List, Set, Tuple
 
-import pymorphy2
+from natasha import MorphVocab
 
 
 class MorphologicalService:
     """
     Сервис для морфологического анализа русских слов.
 
-    Использует pymorphy2 для лемматизации и получения всех возможных
+    Использует natasha для лемматизации и получения всех возможных
     морфологических форм слова.
     """
 
     def __init__(self):
-        self.morph = pymorphy2.MorphAnalyzer()
+        self.morph = MorphVocab()
 
     def get_word_forms(self, word: str) -> Set[str]:
         """
@@ -34,16 +34,20 @@ class MorphologicalService:
         # Добавляем исходное слово
         forms.add(word.lower())
 
-        # Получаем все возможные формы через pymorphy2
+        # Получаем нормальную форму через natasha
+        normal_form = self.morph.normalize(word.lower())
+        if normal_form:
+            forms.add(normal_form)
+
+        # Для natasha получаем все возможные формы через морфологический анализ
+        # Это упрощенная версия, так как natasha работает немного иначе
         parsed_word = self.morph.parse(word.lower())
+        if parsed_word:
+            # Добавляем нормальную форму
+            forms.add(parsed_word.normal_form)
 
-        for parse in parsed_word:
-            # Добавляем нормальную форму (лемму)
-            forms.add(parse.normal_form)
-
-            # Добавляем все возможные формы слова
-            for form in parse.lexeme:
-                forms.add(form.word.lower())
+            # Добавляем исходную форму
+            forms.add(parsed_word.word)
 
         return forms
 
@@ -142,9 +146,9 @@ class MorphologicalService:
         if not self.is_russian_word(word):
             return word.lower()
 
-        parsed = self.morph.parse(word.lower())
-        if parsed:
-            return parsed[0].normal_form
+        normal_form = self.morph.normalize(word.lower())
+        if normal_form:
+            return normal_form
         return word.lower()
 
     def get_word_info(self, word: str) -> dict:
@@ -173,20 +177,20 @@ class MorphologicalService:
                 "analysis_failed": True,
             }
 
-        # Получаем все формы
+        # Получаем формы через natasha
         all_forms = set()
-        normal_form = parsed[0].normal_form
-
-        for parse in parsed:
-            for form in parse.lexeme:
-                all_forms.add(form.word.lower())
+        normal_form = parsed.normal_form if parsed else word.lower()
+        all_forms.add(word.lower())
+        all_forms.add(normal_form)
 
         return {
             "normal_form": normal_form,
             "forms": list(all_forms),
             "is_russian": True,
-            "part_of_speech": parsed[0].tag.POS if parsed[0].tag.POS else None,
-            "grammar_info": str(parsed[0].tag),
+            "part_of_speech": (
+                str(parsed.tag) if parsed and parsed.tag else None
+            ),
+            "grammar_info": str(parsed.tag) if parsed and parsed.tag else None,
         }
 
 
