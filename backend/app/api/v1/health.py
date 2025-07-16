@@ -1,3 +1,5 @@
+import logging
+
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
@@ -8,6 +10,7 @@ from app.core.database import get_db
 from app.schemas.health import HealthCheck
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get(
@@ -28,17 +31,21 @@ async def health_check(
     try:
         await db.execute(text("SELECT 1"))
         health_status.services["database"] = "ok"
-    except Exception:
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}")
         health_status.services["database"] = "error"
         health_status.status = "error"
 
     # Проверка Redis
     try:
-        redis = await aioredis.from_url(settings.REDIS_URL)
+        logger.info(f"Attempting Redis connection to: {settings.redis_url}")
+        redis = await aioredis.from_url(str(settings.redis_url))
         await redis.ping()
         health_status.services["redis"] = "ok"
         await redis.close()
-    except Exception:
+        logger.info("Redis health check successful")
+    except Exception as e:
+        logger.error(f"Redis health check failed: {e}")
         health_status.services["redis"] = "error"
         health_status.status = "error"
 
