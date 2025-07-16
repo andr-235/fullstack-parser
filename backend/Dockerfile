@@ -18,9 +18,8 @@ RUN pip install --no-cache-dir -r requirements-build.txt && poetry config virtua
 # Копируем только poetry-файлы для layer caching
 COPY pyproject.toml poetry.lock* ./
 
-# Экспортируем зависимости poetry в requirements.txt и устанавливаем их
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes \
-    && uv pip install --system --no-deps --requirement requirements.txt
+# Устанавливаем зависимости напрямую через poetry
+RUN poetry install --no-dev --no-root
 
 # Копируем только нужные директории (исключая тесты, .git и т.д.)
 COPY app/ ./app/
