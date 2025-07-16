@@ -70,7 +70,7 @@ pydantic-settings = "2.1.0"
 sqlalchemy = ">=2.0.25"
 alembic = ">=1.13.0"
 asyncpg = "0.30.0"
-requests = "2.31.0"
+requests = "2.32.4"
 redis = "5.3.0"
 python-jose = {version = "3.5.0", extras = ["cryptography"]}
 passlib = {version = "1.7.4", extras = ["bcrypt"]}
@@ -84,9 +84,10 @@ vkbottle = {extras = ["http"], version = "^4.5.2"}
 starlette = "0.46.2"
 httpx = "0.26.0"
 natasha = "^1.6.0"
+setuptools = "^78.1.1"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.4.1"
+pytest = ">=8.4.1"
 pytest-cov = "4.1.0"
 pytest-mock = "3.12.0"
 httpx = "0.26.0"
@@ -94,13 +95,14 @@ black = "25.1.0"
 isort = "5.13.2"
 ruff = "0.12.1"
 mypy = "1.8.0"
-bandit = {version = "1.7.6", extras = ["toml"]}
+bandit = {extras = ["toml"], version = ">=1.7.6"}
 python-dotenv = "1.0.0"
 watchdog = "3.0.0"
-types-passlib = "^1.7.7.20250602"
-psycopg2-binary = "^2.9.9"
-pytest-env = "^1.1.5"
-pytest-aio = "^1.9.0"
+types-passlib = ">=1.7.7.20250602"
+psycopg2-binary = ">=2.9.9"
+pytest-env = ">=1.1.5"
+pytest-aio = ">=1.9.0"
+pip-audit = "^2.9.0"
 
 [build-system]
 requires = ["poetry-core"]
