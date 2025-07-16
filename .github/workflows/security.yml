@@ -20,7 +20,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4.1.1
       - name: TruffleHog OSS
-        uses: trufflesecurity/trufflehog@v3.67.3
+        uses: trufflesecurity/trufflehog@v3.90.0
         with:
           path: ./
           base: ${{ github.event.pull_request.base.sha || 'main' }}
@@ -74,7 +74,7 @@ jobs:
           load: true
           tags: ${{ inputs.image_name }}:${{ github.sha }}
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.32.0
         with:
           image-ref: ${{ inputs.image_name }}:${{ github.sha }}
           ignore-unfixed: true
