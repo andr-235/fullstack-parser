@@ -20,7 +20,7 @@ def mock_vk_service():
 @pytest.fixture
 def mock_db():
     """Мок базы данных"""
-    db = MagicMock()
+    db = AsyncMock()
     db.commit = AsyncMock()
     return db
 
@@ -57,10 +57,12 @@ class TestMonitoringService:
         self, monitoring_service, mock_db, sample_group
     ):
         """Тест получения групп для мониторинга"""
-        # Настраиваем мок
-        mock_db.execute.return_value.scalars.return_value.all.return_value = [
-            sample_group
-        ]
+        # Настраиваем мок для async цепочки
+        mock_scalars = MagicMock()
+        mock_scalars.all = MagicMock(return_value=[sample_group])
+        mock_result = AsyncMock()
+        mock_result.scalars = MagicMock(return_value=mock_scalars)
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
         # Выполняем тест
         groups = await monitoring_service.get_groups_for_monitoring()
@@ -92,10 +94,11 @@ class TestMonitoringService:
         self, monitoring_service, mock_db, sample_group
     ):
         """Тест успешного запуска мониторинга группы"""
-        # Мокаем enqueue_run_parsing_task
+        # Мокаем глобальную функцию enqueue_run_parsing_task
         with pytest.MonkeyPatch().context() as m:
             m.setattr(
-                monitoring_service, "enqueue_run_parsing_task", AsyncMock()
+                "app.services.monitoring_service.enqueue_run_parsing_task",
+                AsyncMock(),
             )
 
             # Выполняем тест
@@ -114,11 +117,10 @@ class TestMonitoringService:
         self, monitoring_service, mock_db, sample_group
     ):
         """Тест неудачного запуска мониторинга группы"""
-        # Мокаем enqueue_run_parsing_task чтобы он выбрасывал исключение
+        # Мокаем глобальную функцию enqueue_run_parsing_task чтобы он выбрасывал исключение
         with pytest.MonkeyPatch().context() as m:
             m.setattr(
-                monitoring_service,
-                "enqueue_run_parsing_task",
+                "app.services.monitoring_service.enqueue_run_parsing_task",
                 AsyncMock(side_effect=Exception("Test error")),
             )
 
@@ -136,13 +138,13 @@ class TestMonitoringService:
         self, monitoring_service, mock_db
     ):
         """Тест цикла мониторинга без групп"""
-        # Настраиваем мок для пустого списка групп
-        mock_db.execute.return_value.scalars.return_value.all.return_value = []
+        mock_scalars = MagicMock()
+        mock_scalars.all = MagicMock(return_value=[])
+        mock_result = AsyncMock()
+        mock_result.scalars = MagicMock(return_value=mock_scalars)
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
-        # Выполняем тест
         stats = await monitoring_service.run_monitoring_cycle()
-
-        # Проверяем результат
         assert stats["total_groups"] == 0
         assert stats["monitored_groups"] == 0
         assert stats["successful_runs"] == 0
@@ -153,10 +155,11 @@ class TestMonitoringService:
         self, monitoring_service, mock_db, sample_group
     ):
         """Тест цикла мониторинга с группами"""
-        # Настраиваем моки
-        mock_db.execute.return_value.scalars.return_value.all.return_value = [
-            sample_group
-        ]
+        mock_scalars = MagicMock()
+        mock_scalars.all = MagicMock(return_value=[sample_group])
+        mock_result = AsyncMock()
+        mock_result.scalars = MagicMock(return_value=mock_scalars)
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
         with pytest.MonkeyPatch().context() as m:
             m.setattr(
@@ -164,11 +167,7 @@ class TestMonitoringService:
                 "start_group_monitoring",
                 AsyncMock(return_value=True),
             )
-
-            # Выполняем тест
             stats = await monitoring_service.run_monitoring_cycle()
-
-            # Проверяем результат
             assert stats["total_groups"] == 1
             assert stats["monitored_groups"] == 1
             assert stats["successful_runs"] == 1
@@ -179,17 +178,13 @@ class TestMonitoringService:
         self, monitoring_service, mock_db, sample_group
     ):
         """Тест включения мониторинга группы"""
-        # Настраиваем мок
-        mock_db.execute.return_value.scalar_one_or_none.return_value = (
-            sample_group
-        )
+        mock_result = AsyncMock()
+        mock_result.scalar_one_or_none = MagicMock(return_value=sample_group)
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
-        # Выполняем тест
         result = await monitoring_service.enable_group_monitoring(
             group_id=1, interval_minutes=30, priority=8
         )
-
-        # Проверяем результат
         assert result is True
         assert sample_group.auto_monitoring_enabled is True
         assert sample_group.monitoring_interval_minutes == 30
@@ -201,13 +196,11 @@ class TestMonitoringService:
         self, monitoring_service, mock_db
     ):
         """Тест включения мониторинга для несуществующей группы"""
-        # Настраиваем мок
-        mock_db.execute.return_value.scalar_one_or_none.return_value = None
+        mock_result = AsyncMock()
+        mock_result.scalar_one_or_none = MagicMock(return_value=None)
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
-        # Выполняем тест
         result = await monitoring_service.enable_group_monitoring(group_id=999)
-
-        # Проверяем результат
         assert result is False
 
     @pytest.mark.asyncio
@@ -215,15 +208,11 @@ class TestMonitoringService:
         self, monitoring_service, mock_db, sample_group
     ):
         """Тест отключения мониторинга группы"""
-        # Настраиваем мок
-        mock_db.execute.return_value.scalar_one_or_none.return_value = (
-            sample_group
-        )
+        mock_result = AsyncMock()
+        mock_result.scalar_one_or_none = MagicMock(return_value=sample_group)
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
-        # Выполняем тест
         result = await monitoring_service.disable_group_monitoring(group_id=1)
-
-        # Проверяем результат
         assert result is True
         assert sample_group.auto_monitoring_enabled is False
         assert sample_group.next_monitoring_at is None
@@ -232,20 +221,50 @@ class TestMonitoringService:
     async def test_get_monitoring_stats(self, monitoring_service, mock_db):
         """Тест получения статистики мониторинга"""
         # Настраиваем моки для разных запросов
-        mock_db.execute.return_value.scalars.return_value.all.side_effect = [
-            [MagicMock() for _ in range(100)],  # total_groups
-            [MagicMock() for _ in range(80)],  # active_groups
-            [MagicMock() for _ in range(25)],  # monitored_groups
-            [MagicMock() for _ in range(5)],  # ready_groups
-        ]
-        mock_db.execute.return_value.scalar.return_value = datetime.now(
-            timezone.utc
+        mock_scalars1 = MagicMock()
+        mock_scalars1.all = MagicMock(
+            return_value=[MagicMock() for _ in range(100)]
+        )
+        mock_result1 = AsyncMock()
+        mock_result1.scalars = MagicMock(return_value=mock_scalars1)
+
+        mock_scalars2 = MagicMock()
+        mock_scalars2.all = MagicMock(
+            return_value=[MagicMock() for _ in range(80)]
+        )
+        mock_result2 = AsyncMock()
+        mock_result2.scalars = MagicMock(return_value=mock_scalars2)
+
+        mock_scalars3 = MagicMock()
+        mock_scalars3.all = MagicMock(
+            return_value=[MagicMock() for _ in range(25)]
+        )
+        mock_result3 = AsyncMock()
+        mock_result3.scalars = MagicMock(return_value=mock_scalars3)
+
+        mock_scalars4 = MagicMock()
+        mock_scalars4.all = MagicMock(
+            return_value=[MagicMock() for _ in range(5)]
+        )
+        mock_result4 = AsyncMock()
+        mock_result4.scalars = MagicMock(return_value=mock_scalars4)
+
+        mock_result5 = AsyncMock()
+        mock_result5.scalar = MagicMock(
+            return_value=datetime.now(timezone.utc)
         )
 
-        # Выполняем тест
-        stats = await monitoring_service.get_monitoring_stats()
+        mock_db.execute = AsyncMock(
+            side_effect=[
+                mock_result1,
+                mock_result2,
+                mock_result3,
+                mock_result4,
+                mock_result5,
+            ]
+        )
 
-        # Проверяем результат
+        stats = await monitoring_service.get_monitoring_stats()
         assert stats["total_groups"] == 100
         assert stats["active_groups"] == 80
         assert stats["monitored_groups"] == 25
