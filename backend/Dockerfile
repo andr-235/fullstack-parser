@@ -13,13 +13,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements-build.txt ./
-RUN pip install --no-cache-dir -r requirements-build.txt && poetry config virtualenvs.create false
+RUN pip install --no-cache-dir -r requirements-build.txt
 
 # Копируем только poetry-файлы для layer caching
 COPY pyproject.toml poetry.lock* ./
 
-# Устанавливаем зависимости напрямую через poetry
-RUN poetry install --only=main --no-root
+# Устанавливаем зависимости напрямую через poetry в системные site-packages
+RUN poetry config virtualenvs.create false && poetry install --only=main --no-root
 
 # Копируем только нужные директории (исключая тесты, .git и т.д.)
 COPY app/ ./app/
