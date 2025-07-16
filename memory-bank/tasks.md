@@ -80,7 +80,7 @@
   - docker/build-push-action@v5.3.0
   - mikepenz/release-changelog-builder-action@v4
   - softprops/action-gh-release@v2
-=======
+
 # Задача: Рефакторинг Backend
 
 - **ID:** `REFACTOR-BACKEND-01`

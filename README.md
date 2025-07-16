@@ -213,6 +213,19 @@ cd frontend && npm run lint && npm run format
 - Security guidelines → По запросу AI
 - Database performance monitoring
 
+## CI/CD и автоматизация
+
+В проекте реализована современная система CI/CD на базе GitHub Actions:
+- Проверка кода (линтинг, автоформат, тесты) для backend и frontend
+- Кэширование зависимостей (Poetry, pnpm, Docker buildx)
+- Сканирование зависимостей (poetry check, pip-audit, pnpm audit)
+- Минимальные права для всех jobs (principle of least privilege)
+- Параллелизм и fail-fast для matrix jobs
+- Уведомления о деплое в Telegram
+- Автоматический деплой и публикация Docker-образов
+
+Подробнее: [docs/CI_FIXES.md](docs/CI_FIXES.md)
+
 ## 🔄 CI/CD
 
 GitHub Actions pipeline:

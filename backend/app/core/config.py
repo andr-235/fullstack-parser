@@ -39,7 +39,6 @@ class DatabaseSettings(BaseSettings):
 
 class VKSettings(BaseSettings):
     model_config = ConfigDict(extra="allow")
-
     access_token: str = Field(default="stub_token", alias="VK_ACCESS_TOKEN")
     api_version: str = Field(default="5.131", alias="VK_API_VERSION")
     requests_per_second: int = Field(default=3, alias="VK_REQUESTS_PER_SECOND")

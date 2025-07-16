@@ -15,6 +15,8 @@ jobs:
     name: 🐍 Backend Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     services:
       postgres:
         image: postgres:15
@@ -57,6 +59,8 @@ jobs:
     name: ⚛️ Frontend Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: ./frontend
@@ -131,6 +135,8 @@ jobs:
     name: 🛡️ Validate Release
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     outputs:
       version: ${{ steps.get_version.outputs.version }}
       tag: ${{ steps.get_version.outputs.tag }}
@@ -154,6 +160,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [validate, create-release]
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.1.1
@@ -172,6 +180,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [validate, create-release, deploy-staging]
+    permissions:
+      contents: read
     if: always()
     steps:
       - name: Notify on success
@@ -194,6 +204,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [notify]
+    permissions:
+      contents: read
     if: always()
     steps:
       - name: Cleanup artifacts

@@ -266,6 +266,7 @@ public
 docker-data/
 postgres-data/
 redis-data/
+.docker-cache/
 
 # =============================================================================
 # DATABASE
