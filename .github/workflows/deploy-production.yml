@@ -61,6 +61,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./backend
+          file: ./backend/Dockerfile.arq
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_ARQ_WORKER }}:latest
@@ -135,10 +136,10 @@ jobs:
             fi
 
             echo "📦 Загрузка Docker образов..."
-            docker-compose -f docker-compose.prod.ip.yml pull
+            docker compose -f docker-compose.prod.ip.yml pull
 
             echo "🚀 Запуск сервисов..."
-            docker-compose -f docker-compose.prod.ip.yml up -d --build
+            docker compose -f docker-compose.prod.ip.yml up -d --build
 
             echo "🧹 Очистка Docker кэша после деплоя..."
             if [ -f "scripts/docker-cleanup.sh" ]; then
@@ -158,9 +159,9 @@ jobs:
           script: |
             cd ${{ secrets.PRODUCTION_APP_DIR }}
             echo "📊 Статус контейнеров:"
-            docker-compose -f docker-compose.prod.ip.yml ps
+            docker compose -f docker-compose.prod.ip.yml ps
             echo "🔍 Проверка health checks:"
-            docker-compose -f docker-compose.prod.ip.yml ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+            docker compose -f docker-compose.prod.ip.yml ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
 
       # - name: Slack/Telegram уведомление (опционально)
       #   run: |
