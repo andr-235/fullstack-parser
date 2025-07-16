@@ -25,6 +25,8 @@ jobs:
     name: Backend Lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      PYTHON_VERSION_DEFAULT: "3.11"
     permissions:
       contents: write # write нужен только если пушим автоформат
     steps:
@@ -37,10 +39,10 @@ jobs:
         with:
           ref: ${{ steps.get_branch.outputs.branch_name }}
 
-      - name: Set up Python ${{ env.PYTHON_VERSION_DEFAULT }}
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION_DEFAULT }}
+          python-version: "3.11"
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
@@ -52,7 +54,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: backend/.venv
-          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION_DEFAULT }}-${{ hashFiles('**/poetry.lock') }}
+          key: venv-${{ runner.os }}-3.11-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install dependencies
         working-directory: ./backend
