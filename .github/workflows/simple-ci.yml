@@ -24,6 +24,7 @@ jobs:
       - name: 📦 Backend - установка зависимостей
         working-directory: ./backend
         run: |
+          sudo apt update && sudo apt install -y pipx
           pipx install poetry
           poetry install --no-interaction
 
