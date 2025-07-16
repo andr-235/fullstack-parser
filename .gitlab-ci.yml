@@ -116,10 +116,10 @@ deploy-production:
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
   script:
-    - ssh -o StrictHostKeyChecking=no $PROD_USER@$PROD_HOST "cd /opt/app && git pull origin main && docker-compose -f docker-compose.prod.yml up -d --build"
+    - ssh -o StrictHostKeyChecking=no $PROD_USER@$PROD_HOST "cd /opt/app && git pull origin main && docker-compose -f docker-compose.prod.ip.yml up -d --build"
   environment:
     name: production
-    url: https://yourdomain.com
+    url: https://parser.mysite.ru
   only:
     - main
   when: manual
