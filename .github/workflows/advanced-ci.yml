@@ -26,6 +26,8 @@ jobs:
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
           poetry install --no-interaction
           poetry run ruff check .
           poetry run black --check .
@@ -54,6 +56,8 @@ jobs:
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
           poetry install --no-interaction
           poetry run pytest tests/ -v --tb=short --cov=app --cov-report=xml
 
@@ -94,6 +98,8 @@ jobs:
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
           poetry install --no-interaction
           poetry run bandit -r app/ -f json -o bandit-report.json || true
 
