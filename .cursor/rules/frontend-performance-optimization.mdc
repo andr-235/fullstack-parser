@@ -1,7 +1,0 @@
----
-description:
-globs: frontend/src/**/*.ts*
-alwaysApply: false
----
-- Favor server-side rendering and avoid heavy client-side rendering where possible.
-- Implement dynamic loading for non-critical components and optimize image loading using WebP format with lazy loading.

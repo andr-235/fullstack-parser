@@ -1,6 +1,0 @@
----
-description:
-globs: **/*.ts
-alwaysApply: false
----
-- Use Zod for form validation

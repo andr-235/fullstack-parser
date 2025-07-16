@@ -1,6 +1,4 @@
 ---
-description:
-globs: Dockerfile*
 alwaysApply: false
 ---
 - Use Docker for containerization and ensure easy deployment.
