@@ -17,7 +17,7 @@ graph TD
     DetectOS --> Windows["Windows<br>Detection"]
     DetectOS --> Mac["macOS<br>Detection"]
     DetectOS --> Linux["Linux<br>Detection"]
-    
+
     Windows & Mac & Linux --> PathCheck["Path Separator<br>Detection"]
     PathCheck --> CmdAdapt["Command<br>Adaptation"]
     CmdAdapt --> ShellCheck["Shell Type<br>Detection"]
@@ -48,7 +48,7 @@ sequenceDiagram
     participant Detector as Format Detector
     participant Converter as Format Converter
     participant Output as Adapted Path
-    
+
     Input->>Detector: Raw Path
     Detector->>Detector: Detect Current Format
     Detector->>Converter: Path + Current Format
@@ -68,4 +68,4 @@ sequenceDiagram
 
 → If all YES: Platform adaptation complete
 → If any NO: Run additional detection steps
-``` 
+```

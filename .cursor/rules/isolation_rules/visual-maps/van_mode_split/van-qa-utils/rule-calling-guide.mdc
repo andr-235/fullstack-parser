@@ -62,5 +62,5 @@ Complete sequence for a QA validation process:
 4. Load third check: `isolation_rules/visual-maps/van-qa-checks/environment-check`
 5. Load fourth check: `isolation_rules/visual-maps/van-qa-checks/build-test`
 6. If pass, load: `isolation_rules/visual-maps/van-qa-utils/reports`
-7. If pass, load: `isolation_rules/visual-maps/van-qa-utils/mode-transitions` 
-8. If fail, load: `isolation_rules/visual-maps/van-qa-utils/common-fixes` 
+7. If pass, load: `isolation_rules/visual-maps/van-qa-utils/mode-transitions`
+8. If fail, load: `isolation_rules/visual-maps/van-qa-utils/common-fixes`

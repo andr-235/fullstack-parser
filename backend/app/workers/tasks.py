@@ -26,7 +26,7 @@ def run_parsing_task(
     чтобы избежать ошибок параллельного доступа (asyncpg InterfaceError).
     """
     task_id = self.request.id
-    logger.info(f"Starting parsing task {task_id} " f"for group {group_id}")
+    logger.info(f"Starting parsing task {task_id} for group {group_id}")
 
     redis_manager = get_redis_parser_manager()
 

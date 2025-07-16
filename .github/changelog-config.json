@@ -28,4 +28,4 @@
     "pr": "- {{name}} [{{text}}]({{url}})",
     "contributor": "- Thanks @{{name}} for your contribution! ([{{text}}]({{url}}))"
   }
-} 
+}

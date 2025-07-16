@@ -14,17 +14,17 @@ graph TD
     Start["Dependency Verification"] --> ReadDeps["Read Required Dependencies<br>from Creative Phase"]
     ReadDeps --> CheckInstalled["Check if Dependencies<br>are Installed"]
     CheckInstalled --> DepStatus{"All Dependencies<br>Installed?"}
-    
+
     DepStatus -->|"Yes"| VerifyVersions["Verify Versions<br>and Compatibility"]
     DepStatus -->|"No"| InstallMissing["Install Missing<br>Dependencies"]
     InstallMissing --> VerifyVersions
-    
+
     VerifyVersions --> VersionStatus{"Versions<br>Compatible?"}
     VersionStatus -->|"Yes"| DepSuccess["Dependencies Verified<br>✅ PASS"]
     VersionStatus -->|"No"| UpgradeVersions["Upgrade/Downgrade<br>as Needed"]
     UpgradeVersions --> RetryVerify["Retry Verification"]
     RetryVerify --> VersionStatus
-    
+
     style Start fill:#4da6ff,stroke:#0066cc,color:white
     style DepSuccess fill:#10b981,stroke:#059669,color:white
     style DepStatus fill:#f6546a,stroke:#c30052,color:white
@@ -37,9 +37,9 @@ graph TD
 function Verify-Dependencies {
     $requiredDeps = @{ "node" = ">=14.0.0"; "npm" = ">=6.0.0" }
     $missingDeps = @(); $incompatibleDeps = @()
-    
+
     # Check Node.js version
-    try { 
+    try {
         $nodeVersion = node -v
         if ($nodeVersion -match "v(\d+)\.(\d+)\.(\d+)") {
             $major = [int]$Matches[1]
@@ -50,9 +50,9 @@ function Verify-Dependencies {
     } catch {
         $missingDeps += "node"
     }
-    
+
     # Check npm version
-    try { 
+    try {
         $npmVersion = npm -v
         if ($npmVersion -match "(\d+)\.(\d+)\.(\d+)") {
             $major = [int]$Matches[1]
@@ -63,7 +63,7 @@ function Verify-Dependencies {
     } catch {
         $missingDeps += "npm"
     }
-    
+
     # Display results
     if ($missingDeps.Count -eq 0 -and $incompatibleDeps.Count -eq 0) {
         Write-Output "✅ All dependencies verified and compatible"
@@ -88,7 +88,7 @@ function Verify-Dependencies {
 verify_dependencies() {
     local missing_deps=()
     local incompatible_deps=()
-    
+
     # Check Node.js version
     if command -v node &> /dev/null; then
         local node_version=$(node -v)
@@ -101,7 +101,7 @@ verify_dependencies() {
     else
         missing_deps+=("node")
     fi
-    
+
     # Check npm version
     if command -v npm &> /dev/null; then
         local npm_version=$(npm -v)
@@ -114,7 +114,7 @@ verify_dependencies() {
     else
         missing_deps+=("npm")
     fi
-    
+
     # Display results
     if [ ${#missing_deps[@]} -eq 0 ] && [ ${#incompatible_deps[@]} -eq 0 ]; then
         echo "✅ All dependencies verified and compatible"
@@ -144,4 +144,4 @@ verify_dependencies() {
 ```
 
 **Next Step (on PASS):** Load `van-qa-checks/config-check.mdc`.
-**Next Step (on FAIL):** Check `van-qa-utils/common-fixes.mdc` for dependency fixes. 
+**Next Step (on FAIL):** Check `van-qa-utils/common-fixes.mdc` for dependency fixes.

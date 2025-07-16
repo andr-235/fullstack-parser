@@ -1,1 +1,1 @@
-export const useCreateGroup = () => ({ mutate: jest.fn(), isPending: false })
+export const useCreateGroup = () => ({ mutate: jest.fn(), isPending: false });

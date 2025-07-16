@@ -6,7 +6,7 @@
 
 **Локальные ветки до очистки:**
 - `feat/docker-pnpm-migration` - 2 дня назад
-- `feat/frontend-config-updates` - 2 дня назад  
+- `feat/frontend-config-updates` - 2 дня назад
 - `fix/dockerfile-pnpm-integration` - 2 дня назад
 - `fix/remove-custom-splitchunks` - 2 дня назад
 - `feature/frontend-testing` - активная работа
@@ -78,4 +78,4 @@ git remote prune origin
 - **Очищено удаленных ссылок:** 13
 - **Оставлено веток:** 1 (main)
 - **Экономия места:** ~100% от устаревших веток
-- **Время выполнения:** ~5 минут 
+- **Время выполнения:** ~5 минут

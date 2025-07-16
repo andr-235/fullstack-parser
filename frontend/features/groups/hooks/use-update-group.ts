@@ -1,1 +1,1 @@
-export const useUpdateGroup = () => ({ mutate: jest.fn() })
+export const useUpdateGroup = () => ({ mutate: jest.fn() });

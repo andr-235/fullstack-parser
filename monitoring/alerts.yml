@@ -9,7 +9,7 @@ groups:
         annotations:
           summary: "High error rate detected"
           description: "Error rate is {{ $value }} errors per second"
-      
+
       - alert: DatabaseDown
         expr: up{job="postgres"} == 0
         for: 1m
@@ -17,4 +17,4 @@ groups:
           severity: critical
         annotations:
           summary: "Database is down"
-          description: "PostgreSQL database is not responding" 
+          description: "PostgreSQL database is not responding"

@@ -57,7 +57,7 @@ graph TD
 
     L4Trigger --> L4Switch["Stop L3 Workflow.<br>Re-initialize task as Level 4 (VAN).<br>Preserve existing docs as input."]
     L2Trigger --> L2Switch["Adapt L3 Workflow:<br>Simplify remaining phases,<br>use L2 Reflection/Archive rules."]
-    
+
     style Assess fill:#ffe082,stroke:#ffca28
     style Up fill:#ef9a9a,stroke:#e57373
     style Down fill:#a5d6a7,stroke:#81c784

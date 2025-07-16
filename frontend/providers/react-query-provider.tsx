@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import dynamic from 'next/dynamic'
+import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 
 interface ReactQueryProviderProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export function ReactQueryProvider({ children }: ReactQueryProviderProps) {
@@ -20,27 +20,27 @@ export function ReactQueryProvider({ children }: ReactQueryProviderProps) {
             retry: 2,
           },
         },
-      })
-  )
+      }),
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      {process.env.NODE_ENV === 'development' && <DevtoolsLazy />}
+      {process.env.NODE_ENV === "development" && <DevtoolsLazy />}
     </QueryClientProvider>
-  )
+  );
 }
 
 // Динамическая загрузка DevTools только на клиенте, чтобы избежать ошибок
 const DevtoolsLazy = dynamic(
   () =>
-    import('@tanstack/react-query-devtools').then((m) => {
+    import("@tanstack/react-query-devtools").then((m) => {
       return {
         default: m.ReactQueryDevtools,
-      }
+      };
     }),
   {
     ssr: false,
     loading: () => null,
-  }
-)
+  },
+);

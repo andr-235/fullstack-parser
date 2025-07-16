@@ -10,4 +10,4 @@ openssl x509 -in /etc/ssl/certs/domain.crt -noout -dates
 
 # Performance review
 echo "Review performance metrics in Grafana"
-echo "Check error rates and response times" 
+echo "Check error rates and response times"

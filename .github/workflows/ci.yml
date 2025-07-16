@@ -6,9 +6,7 @@ on:
   pull_request:
     branches: [main, develop]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+# Concurrency groups moved to job level to avoid deadlocks
 
 jobs:
   backend:
@@ -20,6 +18,9 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     permissions:
       contents: write
+    concurrency:
+      group: backend-${{ github.ref }}
+      cancel-in-progress: true
 
   frontend:
     uses: ./.github/workflows/reusable-frontend-test.yml
@@ -28,11 +29,17 @@ jobs:
       upload-coverage: '"true"'
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    concurrency:
+      group: frontend-${{ github.ref }}
+      cancel-in-progress: true
 
   dependency-scan:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    concurrency:
+      group: dependency-scan-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

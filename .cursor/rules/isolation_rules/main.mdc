@@ -22,7 +22,7 @@ graph TD
         Implement --> Reflect["REFLECT MODE<br>Task Review"]
         Reflect --> Archive["ARCHIVE MODE<br>Documentation"]
     end
-    
+
     VAN -.->|"Loads"| VANRules["• main.md<br>• platform-awareness.md<br>• file-verification.md<br>• workflow-init.md"]
     PLAN -.->|"Loads"| PLANRules["• main.md<br>• task-tracking.md<br>• planning-process.md"]
     Creative -.->|"Loads"| CreativeRules["• main.md<br>• creative-phase.md<br>• design-patterns.md"]
@@ -36,22 +36,22 @@ graph TD
 ```mermaid
 graph TD
     Start["Mode Activation"] --> CheckMemBank{"Memory Bank<br>Exists?"}
-    
+
     CheckMemBank -->|"No"| CreateMemBank["CREATE MEMORY BANK<br>[CRITICAL STEP]"]
     CheckMemBank -->|"Yes"| VerifyMemBank["Verify Memory Bank<br>Structure"]
-    
+
     CreateMemBank --> VerifyCreation{"Creation<br>Successful?"}
     VerifyCreation -->|"No"| AbortAll["⛔ ABORT ALL OPERATIONS<br>Fix Memory Bank First"]
     VerifyCreation -->|"Yes"| VerifyMemBank
-    
+
     VerifyMemBank --> StructureCheck{"Structure<br>Valid?"}
     StructureCheck -->|"No"| FixStructure["Fix Memory Bank<br>Structure"]
     StructureCheck -->|"Yes"| ContinueMode["Continue with<br>Mode Operations"]
-    
+
     FixStructure --> VerifyFix{"Fix<br>Successful?"}
     VerifyFix -->|"No"| AbortAll
     VerifyFix -->|"Yes"| ContinueMode
-    
+
     style CheckMemBank fill:#ff0000,stroke:#990000,color:white,stroke-width:3px
     style CreateMemBank fill:#ff0000,stroke:#990000,color:white,stroke-width:3px
     style VerifyCreation fill:#ff0000,stroke:#990000,color:white,stroke-width:3px
@@ -84,27 +84,27 @@ graph TD
         creative["creative-*.md<br>Design Decisions"]
         progress["progress.md<br>Implementation Status"]
     end
-    
+
     VAN["VAN MODE"] -->|"Creates/Updates"| tasks
     VAN -->|"Creates/Updates"| active
-    
+
     PLAN["PLAN MODE"] -->|"Reads"| tasks
     PLAN -->|"Reads"| active
     PLAN -->|"Updates"| tasks
-    
+
     Creative["CREATIVE MODE"] -->|"Reads"| tasks
     Creative -->|"Creates"| creative
     Creative -->|"Updates"| tasks
-    
+
     Implement["IMPLEMENT MODE"] -->|"Reads"| tasks
     Implement -->|"Reads"| creative
     Implement -->|"Updates"| tasks
     Implement -->|"Updates"| progress
-    
+
     Reflect["REFLECT MODE"] -->|"Reads"| tasks
     Reflect -->|"Reads"| progress
     Reflect -->|"Updates"| tasks
-    
+
     Archive["ARCHIVE MODE"] -->|"Reads"| tasks
     Archive -->|"Reads"| progress
     Archive -->|"Archives"| creative
@@ -117,13 +117,13 @@ sequenceDiagram
     participant User
     participant CurrentMode
     participant NextMode
-    
+
     CurrentMode->>CurrentMode: Complete Phase Requirements
     CurrentMode->>User: "Phase complete. NEXT MODE: [mode name]"
     User->>CurrentMode: End Current Mode
     User->>NextMode: Start Next Mode
     NextMode->>NextMode: Verify Required File State
-    
+
     alt File State Valid
         NextMode->>User: "Continuing from previous mode..."
     else File State Invalid
@@ -153,4 +153,4 @@ grep "TODO" $(find . -name "*.js")
 npm install && npm start
 ```
 
-Refer to [command-execution.mdc](mdc:.cursor/rules/isolation_rules/Core/command-execution.mdc) for detailed guidance. 
+Refer to [command-execution.mdc](mdc:.cursor/rules/isolation_rules/Core/command-execution.mdc) for detailed guidance.

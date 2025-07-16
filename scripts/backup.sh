@@ -43,37 +43,37 @@ log_error() {
 
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     # Check if .env.prod exists
     if [[ ! -f "$ENV_FILE" ]]; then
         log_error "Production environment file ($ENV_FILE) not found"
         exit 1
     fi
-    
+
     # Source environment variables
     source "$ENV_FILE"
-    
+
     # Check if required variables are set
     if [[ -z "${DB_NAME:-}" ]] || [[ -z "${DB_USER:-}" ]] || [[ -z "${DB_PASSWORD:-}" ]]; then
         log_error "Database environment variables not set properly"
         exit 1
     fi
-    
+
     # Check if Docker is running
     if ! docker info > /dev/null 2>&1; then
         log_error "Docker is not running"
         exit 1
     fi
-    
+
     # Check if postgres container exists
     if ! docker-compose -f "$COMPOSE_FILE" ps postgres | grep -q "Up"; then
         log_error "PostgreSQL container is not running"
         exit 1
     fi
-    
+
     # Create backup directory
     mkdir -p "$BACKUP_DIR"
-    
+
     log_success "Prerequisites check passed"
 }
 
@@ -83,9 +83,9 @@ check_prerequisites() {
 create_sql_backup() {
     local timestamp=$(date +%Y%m%d_%H%M%S)
     local backup_file="$BACKUP_DIR/db_backup_${timestamp}.sql"
-    
+
     log_info "Creating SQL backup..."
-    
+
     # Create database dump
     docker-compose -f "$COMPOSE_FILE" exec -T postgres pg_dump \
         -U "$DB_USER" \
@@ -95,13 +95,13 @@ create_sql_backup() {
         --no-owner \
         --no-privileges \
         > "$backup_file"
-    
+
     # Compress backup
     gzip "$backup_file"
-    
+
     local compressed_file="${backup_file}.gz"
     local file_size=$(du -h "$compressed_file" | cut -f1)
-    
+
     log_success "SQL backup created: $compressed_file ($file_size)"
     echo "$compressed_file"
 }
@@ -109,9 +109,9 @@ create_sql_backup() {
 create_custom_backup() {
     local timestamp=$(date +%Y%m%d_%H%M%S)
     local backup_file="$BACKUP_DIR/db_backup_${timestamp}.dump"
-    
+
     log_info "Creating custom format backup..."
-    
+
     # Create custom format dump (smaller and faster)
     docker-compose -f "$COMPOSE_FILE" exec -T postgres pg_dump \
         -U "$DB_USER" \
@@ -122,9 +122,9 @@ create_custom_backup() {
         --no-owner \
         --no-privileges \
         > "$backup_file"
-    
+
     local file_size=$(du -h "$backup_file" | cut -f1)
-    
+
     log_success "Custom backup created: $backup_file ($file_size)"
     echo "$backup_file"
 }
@@ -132,9 +132,9 @@ create_custom_backup() {
 create_schema_backup() {
     local timestamp=$(date +%Y%m%d_%H%M%S)
     local backup_file="$BACKUP_DIR/schema_backup_${timestamp}.sql"
-    
+
     log_info "Creating schema-only backup..."
-    
+
     # Create schema-only dump
     docker-compose -f "$COMPOSE_FILE" exec -T postgres pg_dump \
         -U "$DB_USER" \
@@ -145,13 +145,13 @@ create_schema_backup() {
         --no-owner \
         --no-privileges \
         > "$backup_file"
-    
+
     # Compress backup
     gzip "$backup_file"
-    
+
     local compressed_file="${backup_file}.gz"
     local file_size=$(du -h "$compressed_file" | cut -f1)
-    
+
     log_success "Schema backup created: $compressed_file ($file_size)"
     echo "$compressed_file"
 }
@@ -159,9 +159,9 @@ create_schema_backup() {
 create_data_backup() {
     local timestamp=$(date +%Y%m%d_%H%M%S)
     local backup_file="$BACKUP_DIR/data_backup_${timestamp}.sql"
-    
+
     log_info "Creating data-only backup..."
-    
+
     # Create data-only dump
     docker-compose -f "$COMPOSE_FILE" exec -T postgres pg_dump \
         -U "$DB_USER" \
@@ -171,13 +171,13 @@ create_data_backup() {
         --no-owner \
         --no-privileges \
         > "$backup_file"
-    
+
     # Compress backup
     gzip "$backup_file"
-    
+
     local compressed_file="${backup_file}.gz"
     local file_size=$(du -h "$compressed_file" | cut -f1)
-    
+
     log_success "Data backup created: $compressed_file ($file_size)"
     echo "$compressed_file"
 }
@@ -187,15 +187,15 @@ create_data_backup() {
 # =============================================================================
 verify_backup() {
     local backup_file="$1"
-    
+
     log_info "Verifying backup integrity..."
-    
+
     # Check if file exists and is not empty
     if [[ ! -f "$backup_file" ]] || [[ ! -s "$backup_file" ]]; then
         log_error "Backup file is missing or empty"
         return 1
     fi
-    
+
     # For compressed files, test compression integrity
     if [[ "$backup_file" == *.gz ]]; then
         if gzip -t "$backup_file"; then
@@ -205,7 +205,7 @@ verify_backup() {
             return 1
         fi
     fi
-    
+
     # For custom format, test with pg_restore
     if [[ "$backup_file" == *.dump ]]; then
         if docker-compose -f "$COMPOSE_FILE" exec -T postgres pg_restore --list "$backup_file" > /dev/null 2>&1; then
@@ -215,7 +215,7 @@ verify_backup() {
             return 1
         fi
     fi
-    
+
     log_success "Backup verification completed"
     return 0
 }
@@ -225,16 +225,16 @@ verify_backup() {
 # =============================================================================
 cleanup_old_backups() {
     log_info "Cleaning up old backups (retention: $RETENTION_DAYS days)..."
-    
+
     # Find and remove old backups
     find "$BACKUP_DIR" -name "db_backup_*.sql.gz" -type f -mtime +$RETENTION_DAYS -delete
     find "$BACKUP_DIR" -name "db_backup_*.dump" -type f -mtime +$RETENTION_DAYS -delete
     find "$BACKUP_DIR" -name "schema_backup_*.sql.gz" -type f -mtime +$RETENTION_DAYS -delete
     find "$BACKUP_DIR" -name "data_backup_*.sql.gz" -type f -mtime +$RETENTION_DAYS -delete
-    
+
     # Count remaining backups
     local remaining_backups=$(find "$BACKUP_DIR" -name "*backup_*.sql.gz" -o -name "*backup_*.dump" | wc -l)
-    
+
     log_success "Cleanup completed. Remaining backups: $remaining_backups"
 }
 
@@ -243,18 +243,18 @@ cleanup_old_backups() {
 # =============================================================================
 log_backup_stats() {
     local backup_file="$1"
-    
+
     log_info "Backup statistics:"
     echo "File: $backup_file"
     echo "Size: $(du -h "$backup_file" | cut -f1)"
     echo "Created: $(date)"
     echo "Database: $DB_NAME"
     echo "User: $DB_USER"
-    
+
     # Get database size
     local db_size=$(docker-compose -f "$COMPOSE_FILE" exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT pg_size_pretty(pg_database_size('$DB_NAME'));" | xargs)
     echo "Database size: $db_size"
-    
+
     # Get table count
     local table_count=$(docker-compose -f "$COMPOSE_FILE" exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';" | xargs)
     echo "Tables: $table_count"
@@ -263,14 +263,14 @@ log_backup_stats() {
 send_notification() {
     local status="$1"
     local backup_file="$2"
-    
+
     # Simple notification (extend as needed)
     if [[ "$status" == "success" ]]; then
         log_success "Backup completed successfully: $backup_file"
     else
         log_error "Backup failed: $backup_file"
     fi
-    
+
     # Here you can add email/Slack/Discord notifications
     # Example:
     # curl -X POST -H 'Content-type: application/json' \
@@ -283,11 +283,11 @@ send_notification() {
 # =============================================================================
 perform_full_backup() {
     log_info "Starting full backup process..."
-    
+
     # Create both SQL and custom format backups
     local sql_backup=$(create_sql_backup)
     local custom_backup=$(create_custom_backup)
-    
+
     # Verify backups
     if verify_backup "$sql_backup" && verify_backup "$custom_backup"; then
         log_success "Full backup completed successfully"
@@ -303,9 +303,9 @@ perform_full_backup() {
 
 perform_schema_backup() {
     log_info "Starting schema backup process..."
-    
+
     local schema_backup=$(create_schema_backup)
-    
+
     if verify_backup "$schema_backup"; then
         log_success "Schema backup completed successfully"
         log_backup_stats "$schema_backup"
@@ -320,9 +320,9 @@ perform_schema_backup() {
 
 perform_data_backup() {
     log_info "Starting data backup process..."
-    
+
     local data_backup=$(create_data_backup)
-    
+
     if verify_backup "$data_backup"; then
         log_success "Data backup completed successfully"
         log_backup_stats "$data_backup"
@@ -388,4 +388,4 @@ main() {
 trap 'log_error "Backup process failed"' ERR
 
 # Run main function
-main "$@" 
+main "$@"

@@ -114,12 +114,23 @@ jobs:
           script: |
             set -e  # Остановка при ошибке
             cd ${{ secrets.PRODUCTION_APP_DIR }}
+
             echo "🔐 Логин в GitHub Container Registry..."
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+
+            echo "🧹 Очистка старых образов..."
+            docker image prune -f || true
+            docker system prune -f || true
+
             echo "📦 Загрузка Docker образов..."
             docker-compose -f docker-compose.prod.ip.yml pull
+
             echo "🚀 Запуск сервисов..."
             docker-compose -f docker-compose.prod.ip.yml up -d --build
+
+            echo "🧹 Очистка неиспользуемых образов после деплоя..."
+            docker image prune -f || true
+
             echo "✅ Деплой завершен успешно!"
 
       - name: 🔍 Проверка статуса сервисов

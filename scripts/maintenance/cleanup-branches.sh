@@ -17,4 +17,4 @@ for remote_branch in $(git branch -r --merged origin/main | grep -vE 'origin/(ma
   git push origin --delete "$remote_branch"
 done
 
-echo "[GIT CLEANUP] Очистка завершена!" 
+echo "[GIT CLEANUP] Очистка завершена!"

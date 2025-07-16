@@ -1,5 +1,5 @@
-import HomePage from '@/features/dashboard/ui/HomePage'
+import HomePage from "@/features/dashboard/ui/HomePage";
 
 export default function MainRoute() {
-  return <HomePage />
+  return <HomePage />;
 }

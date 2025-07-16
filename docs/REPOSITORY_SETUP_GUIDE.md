@@ -533,7 +533,7 @@ async def health_check():
         "timestamp": datetime.utcnow().isoformat(),
         "services": {}
     }
-    
+
     # Database check
     try:
         db = SessionLocal()
@@ -542,7 +542,7 @@ async def health_check():
     except Exception as e:
         health_status["services"]["database"] = "unhealthy"
         health_status["status"] = "unhealthy"
-    
+
     # Redis check
     try:
         r = redis.Redis(host="redis", port=6379, db=0)
@@ -551,10 +551,10 @@ async def health_check():
     except Exception as e:
         health_status["services"]["redis"] = "unhealthy"
         health_status["status"] = "unhealthy"
-    
+
     if health_status["status"] == "unhealthy":
         raise HTTPException(status_code=503, detail=health_status)
-    
+
     return health_status
 ```
 
@@ -570,7 +570,7 @@ scrape_configs:
     static_configs:
       - targets: ['backend:8000']
     metrics_path: '/metrics'
-    
+
   - job_name: 'frontend'
     static_configs:
       - targets: ['frontend:3000']
@@ -621,7 +621,7 @@ groups:
         annotations:
           summary: "High error rate detected"
           description: "Error rate is {{ $value }} errors per second"
-      
+
       - alert: DatabaseDown
         expr: up{job="postgres"} == 0
         for: 1m
@@ -734,6 +734,6 @@ docker-compose logs --tail=100           # Recent logs
 
 ---
 
-**📅 Last Updated**: January 2025  
-**👤 Maintained by**: @andr-235  
-**📧 Questions**: admin@your-domain.com 
+**📅 Last Updated**: January 2025
+**👤 Maintained by**: @andr-235
+**📧 Questions**: admin@your-domain.com

@@ -19,4 +19,4 @@ foreach ($remoteBranch in $remoteMerged) {
     git push origin --delete $branchName
 }
 
-Write-Host "[GIT CLEANUP] Очистка завершена!" 
+Write-Host "[GIT CLEANUP] Очистка завершена!"

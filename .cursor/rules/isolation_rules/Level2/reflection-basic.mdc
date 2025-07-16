@@ -159,7 +159,7 @@ graph TD
     Reflection["Enhancement<br>Reflection"] --> Archive["Add to<br>Archive"]
     Reflection --> ProgressUpdate["Update<br>progress.md"]
     Reflection --> ActionItems["Document<br>Action Items"]
-    
+
     ActionItems --> Tasks["Add to<br>tasks.md"]
     Archive & ProgressUpdate & Tasks --> CrossLinks["Create<br>Cross-Links"]
 ```
@@ -175,4 +175,4 @@ Remember:
 └─────────────────────────────────────────────────────┘
 ```
 
-This ensures that reflection directly contributes to ongoing improvement of both the product and the process. 
+This ensures that reflection directly contributes to ongoing improvement of both the product and the process.

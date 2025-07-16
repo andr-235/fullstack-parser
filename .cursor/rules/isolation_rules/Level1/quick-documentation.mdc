@@ -203,10 +203,10 @@ Quick documentation integrates with other systems:
 graph TD
     QuickDoc["Quick Fix<br>Documentation"] --> TasksMD["tasks.md<br>Update"]
     QuickDoc --> FixDetails["Fix Details<br>Documentation"]
-    
+
     TasksMD --> Tracking["Task<br>Tracking"]
     FixDetails --> Knowledge["Knowledge<br>Preservation"]
-    
+
     Tracking & Knowledge --> Future["Future<br>Reference"]
 ```
 

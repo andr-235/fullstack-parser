@@ -52,7 +52,7 @@ validate_inputs() {
         log_error "Domain is required. Usage: ./setup-server.sh yourdomain.com your-email@domain.com"
         exit 1
     fi
-    
+
     if [[ -z "$EMAIL" ]]; then
         log_error "Email is required. Usage: ./setup-server.sh yourdomain.com your-email@domain.com"
         exit 1
@@ -88,24 +88,24 @@ create_app_user() {
 # =============================================================================
 configure_firewall() {
     log_info "Configuring UFW firewall..."
-    
+
     # Reset UFW to defaults
     ufw --force reset
-    
+
     # Default policies
     ufw default deny incoming
     ufw default allow outgoing
-    
+
     # Allow SSH
     ufw allow ssh
-    
+
     # Allow HTTP and HTTPS
     ufw allow 80/tcp
     ufw allow 443/tcp
-    
+
     # Enable firewall
     ufw --force enable
-    
+
     log_success "Firewall configured successfully"
 }
 
@@ -114,7 +114,7 @@ configure_firewall() {
 # =============================================================================
 configure_fail2ban() {
     log_info "Configuring Fail2Ban..."
-    
+
     cat > /etc/fail2ban/jail.local << EOF
 [DEFAULT]
 bantime = 3600
@@ -142,7 +142,7 @@ EOF
 
     systemctl enable fail2ban
     systemctl restart fail2ban
-    
+
     log_success "Fail2Ban configured successfully"
 }
 
@@ -151,31 +151,31 @@ EOF
 # =============================================================================
 install_docker() {
     log_info "Installing Docker..."
-    
+
     # Remove old Docker versions
     apt remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
-    
+
     # Install prerequisites
     apt install -y ca-certificates curl gnupg lsb-release
-    
+
     # Add Docker's official GPG key
     mkdir -p /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    
+
     # Add Docker repository
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-    
+
     # Install Docker
     apt update
     apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    
+
     # Add app user to docker group
     usermod -aG docker "$APP_USER"
-    
+
     # Enable Docker service
     systemctl enable docker
     systemctl start docker
-    
+
     log_success "Docker installed successfully"
 }
 
@@ -184,17 +184,17 @@ install_docker() {
 # =============================================================================
 install_docker_compose() {
     log_info "Installing Docker Compose..."
-    
+
     # Download latest version
     COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep 'tag_name' | cut -d '"' -f 4)
     curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    
+
     # Make executable
     chmod +x /usr/local/bin/docker-compose
-    
+
     # Create symlink
     ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
-    
+
     log_success "Docker Compose installed successfully"
 }
 
@@ -203,12 +203,12 @@ install_docker_compose() {
 # =============================================================================
 install_certbot() {
     log_info "Installing Certbot for SSL certificates..."
-    
+
     apt install -y snapd
     snap install core; snap refresh core
     snap install --classic certbot
     ln -sf /snap/bin/certbot /usr/bin/certbot
-    
+
     log_success "Certbot installed successfully"
 }
 
@@ -217,19 +217,19 @@ install_certbot() {
 # =============================================================================
 setup_app_directory() {
     log_info "Setting up application directory..."
-    
+
     # Create app directory
     mkdir -p "$APP_DIR"
     chown "$APP_USER:$APP_USER" "$APP_DIR"
-    
+
     # Create necessary subdirectories
     mkdir -p "$APP_DIR"/{backup,logs,ssl}
     mkdir -p /var/www/{static,media,error}
-    
+
     # Set permissions
     chown -R "$APP_USER:$APP_USER" "$APP_DIR"
     chown -R www-data:www-data /var/www
-    
+
     log_success "Application directory setup completed"
 }
 
@@ -238,12 +238,12 @@ setup_app_directory() {
 # =============================================================================
 configure_nginx() {
     log_info "Installing and configuring Nginx..."
-    
+
     apt install -y nginx
-    
+
     # Remove default site
     rm -f /etc/nginx/sites-enabled/default
-    
+
     # Create basic configuration for SSL setup
     cat > /etc/nginx/sites-available/app << EOF
 server {
@@ -261,14 +261,14 @@ server {
 EOF
 
     ln -sf /etc/nginx/sites-available/app /etc/nginx/sites-enabled/app
-    
+
     # Test configuration
     nginx -t
-    
+
     # Start and enable Nginx
     systemctl enable nginx
     systemctl start nginx
-    
+
     log_success "Nginx configured successfully"
 }
 
@@ -277,16 +277,16 @@ EOF
 # =============================================================================
 setup_ssl() {
     log_info "Setting up SSL certificate for $DOMAIN..."
-    
+
     # Create webroot directory for certbot
     mkdir -p /var/www/certbot
-    
+
     # Get SSL certificate
     certbot certonly --webroot -w /var/www/certbot -d "$DOMAIN" -d "www.$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive
-    
+
     # Setup automatic renewal
     echo "0 12 * * * /usr/bin/certbot renew --quiet" | crontab -
-    
+
     log_success "SSL certificate setup completed"
 }
 
@@ -295,7 +295,7 @@ setup_ssl() {
 # =============================================================================
 optimize_system() {
     log_info "Optimizing system settings..."
-    
+
     # Increase file limits
     cat >> /etc/security/limits.conf << EOF
 * soft nofile 65535
@@ -318,7 +318,7 @@ vm.swappiness = 10
 EOF
 
     sysctl -p
-    
+
     log_success "System optimization completed"
 }
 
@@ -327,7 +327,7 @@ EOF
 # =============================================================================
 setup_monitoring() {
     log_info "Setting up basic monitoring..."
-    
+
     # Create log rotation for application logs
     cat > /etc/logrotate.d/app << EOF
 $APP_DIR/logs/*.log {
@@ -373,10 +373,10 @@ EOF
 
     chmod +x "$APP_DIR/scripts/monitor.sh"
     chown "$APP_USER:$APP_USER" "$APP_DIR/scripts/monitor.sh"
-    
+
     # Setup monitoring cron job
     echo "*/5 * * * * $APP_DIR/scripts/monitor.sh >> $APP_DIR/logs/monitor.log 2>&1" | crontab -u "$APP_USER" -
-    
+
     log_success "Basic monitoring setup completed"
 }
 
@@ -385,10 +385,10 @@ EOF
 # =============================================================================
 cleanup() {
     log_info "Performing cleanup..."
-    
+
     apt autoremove -y
     apt autoclean
-    
+
     log_success "Cleanup completed"
 }
 
@@ -425,10 +425,10 @@ print_summary() {
 # =============================================================================
 main() {
     log_info "Starting Debian 12 server setup..."
-    
+
     check_root
     validate_inputs
-    
+
     update_system
     create_app_user
     configure_firewall
@@ -442,9 +442,9 @@ main() {
     optimize_system
     setup_monitoring
     cleanup
-    
+
     print_summary
 }
 
 # Run main function
-main "$@" 
+main "$@"

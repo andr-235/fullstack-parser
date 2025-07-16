@@ -52,4 +52,4 @@ coverage
 # Lock files (except pnpm)
 yarn.lock
 package-lock.json
-bun.lock 
+bun.lock

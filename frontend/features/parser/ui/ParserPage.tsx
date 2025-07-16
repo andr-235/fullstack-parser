@@ -1,21 +1,21 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from "react";
 import {
   useParserState,
   useParserStats,
   useStartParser,
   useStopParser,
   useRecentRuns,
-} from '@/hooks/use-parser'
-import { useGroups } from '@/hooks/use-groups'
+} from "@/hooks/use-parser";
+import { useGroups } from "@/hooks/use-groups";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -23,17 +23,17 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
-import { Badge, BadgeProps } from '@/components/ui/badge'
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge, BadgeProps } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
+} from "@/components/ui/select";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
   Play,
   Pause,
@@ -42,63 +42,63 @@ import {
   CheckCircle2,
   XCircle,
   History,
-} from 'lucide-react'
-import { Progress } from '@/components/ui/progress'
-import { formatDistanceToNow } from 'date-fns'
-import { ru } from 'date-fns/locale'
-import type { ParseTaskResponse } from '@/types/api'
+} from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { formatDistanceToNow } from "date-fns";
+import { ru } from "date-fns/locale";
+import type { ParseTaskResponse } from "@/types/api";
 
 const statusConfig: Record<
   string,
-  { label: string; variant: BadgeProps['variant']; icon: React.ElementType }
+  { label: string; variant: BadgeProps["variant"]; icon: React.ElementType }
 > = {
-  running: { label: 'В работе', variant: 'success', icon: Play },
-  completed: { label: 'Завершен', variant: 'default', icon: CheckCircle2 },
-  failed: { label: 'Ошибка', variant: 'destructive', icon: XCircle },
-  stopped: { label: 'Остановлен', variant: 'secondary', icon: Pause },
-}
+  running: { label: "В работе", variant: "success", icon: Play },
+  completed: { label: "Завершен", variant: "default", icon: CheckCircle2 },
+  failed: { label: "Ошибка", variant: "destructive", icon: XCircle },
+  stopped: { label: "Остановлен", variant: "secondary", icon: Pause },
+};
 
 const ParserStatus = ({ status }: { status: string }) => {
-  const config = statusConfig[status] || statusConfig.stopped
+  const config = statusConfig[status] || statusConfig.stopped;
   return (
     <Badge variant={config.variant} className="flex items-center gap-1.5">
       <config.icon className="h-3 w-3" />
       <span>{config.label}</span>
     </Badge>
-  )
-}
+  );
+};
 
 export default function ParserPage() {
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('')
-  const [isProcessing, setIsProcessing] = useState(false)
-  const { data: state, isLoading: isLoadingState } = useParserState()
-  const { data: stats, isLoading: isLoadingStats } = useParserStats()
-  const { data: history, isLoading: isLoadingHistory } = useRecentRuns()
-  const { data: groupsData } = useGroups()
-  const startParserMutation = useStartParser()
-  const stopParserMutation = useStopParser()
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { data: state, isLoading: isLoadingState } = useParserState();
+  const { data: stats, isLoading: isLoadingStats } = useParserStats();
+  const { data: history, isLoading: isLoadingHistory } = useRecentRuns();
+  const { data: groupsData } = useGroups();
+  const startParserMutation = useStartParser();
+  const stopParserMutation = useStopParser();
 
   // Сброс состояния обработки после завершения мутации
   useEffect(() => {
     if (!startParserMutation.isPending && isProcessing) {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }, [startParserMutation.isPending, isProcessing])
+  }, [startParserMutation.isPending, isProcessing]);
 
   const handleStart = () => {
     if (selectedGroupId) {
-      setIsProcessing(true)
-      startParserMutation.mutate({ group_id: Number(selectedGroupId) })
+      setIsProcessing(true);
+      startParserMutation.mutate({ group_id: Number(selectedGroupId) });
     }
-  }
+  };
 
   const isActionInProgress =
     isLoadingState ||
     startParserMutation.isPending ||
     stopParserMutation.isPending ||
-    isProcessing
+    isProcessing;
 
-  const groups = groupsData?.items || []
+  const groups = groupsData?.items || [];
 
   return (
     <div className="grid gap-3 md:grid-cols-3">
@@ -114,10 +114,10 @@ export default function ParserPage() {
           <CardContent className="space-y-2">
             <div className="flex items-center justify-between p-2 bg-slate-800 border border-slate-700 rounded-sm">
               <span className="text-xs font-medium">Статус</span>
-              <ParserStatus status={state?.status || 'stopped'} />
+              <ParserStatus status={state?.status || "stopped"} />
             </div>
 
-            {state?.status === 'running' && state.task ? (
+            {state?.status === "running" && state.task ? (
               <div className="space-y-1">
                 <p className="text-xs font-medium">
                   Обработка: {state.task.group_name}
@@ -145,7 +145,7 @@ export default function ParserPage() {
               </Select>
             )}
 
-            {state?.status === 'running' ? (
+            {state?.status === "running" ? (
               <Button
                 className="w-full"
                 variant="destructive"
@@ -159,8 +159,8 @@ export default function ParserPage() {
               <Button
                 className={`w-full flex items-center justify-center gap-2 ${
                   isProcessing || startParserMutation.isPending
-                    ? 'bg-yellow-500 hover:bg-yellow-600 cursor-wait'
-                    : ''
+                    ? "bg-yellow-500 hover:bg-yellow-600 cursor-wait"
+                    : ""
                 }`}
                 onClick={handleStart}
                 disabled={!selectedGroupId || isActionInProgress}
@@ -173,7 +173,7 @@ export default function ParserPage() {
                 {isProcessing || startParserMutation.isPending ? (
                   <span className="animate-pulse">Запуск...</span>
                 ) : (
-                  'Запустить'
+                  "Запустить"
                 )}
               </Button>
             )}
@@ -251,7 +251,7 @@ export default function ParserPage() {
                       <TableCell>
                         {task.stats?.duration_seconds
                           ? `${task.stats.duration_seconds} сек`
-                          : '-'}
+                          : "-"}
                       </TableCell>
                       <TableCell>
                         {task.completed_at
@@ -259,7 +259,7 @@ export default function ParserPage() {
                               addSuffix: true,
                               locale: ru,
                             })
-                          : '-'}
+                          : "-"}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -270,5 +270,5 @@ export default function ParserPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

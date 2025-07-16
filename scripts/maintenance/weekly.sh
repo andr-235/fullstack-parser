@@ -11,4 +11,4 @@ trivy repo .
 k6 run tests/performance/load-test.js
 
 # Backup verification
-./scripts/verify-backup.sh 
+./scripts/verify-backup.sh

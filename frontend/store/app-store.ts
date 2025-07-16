@@ -1,118 +1,118 @@
-import { create } from 'zustand'
-import { devtools, persist } from 'zustand/middleware'
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
 
 /**
  * Типы для store
  */
 interface AppSettings {
-  theme: 'light' | 'dark' | 'system'
-  sidebarCollapsed: boolean
-  autoRefresh: boolean
-  refreshInterval: number // в секундах
-  itemsPerPage: number
-  dateFormat: string
-  showNotifications: boolean
+  theme: "light" | "dark" | "system";
+  sidebarCollapsed: boolean;
+  autoRefresh: boolean;
+  refreshInterval: number; // в секундах
+  itemsPerPage: number;
+  dateFormat: string;
+  showNotifications: boolean;
 }
 
 interface UIState {
   // Модальные окна
-  isCreateGroupModalOpen: boolean
-  isCreateKeywordModalOpen: boolean
-  isBulkKeywordModalOpen: boolean
+  isCreateGroupModalOpen: boolean;
+  isCreateKeywordModalOpen: boolean;
+  isBulkKeywordModalOpen: boolean;
 
   // Фильтры
   groupsFilter: {
-    activeOnly: boolean
-    searchTerm: string
-  }
+    activeOnly: boolean;
+    searchTerm: string;
+  };
   keywordsFilter: {
-    activeOnly: boolean
-    category?: string
-    searchTerm: string
-  }
+    activeOnly: boolean;
+    category?: string;
+    searchTerm: string;
+  };
   commentsFilter: {
-    groupId?: number
-    keywordId?: number
-    authorId?: number
-    dateFrom?: string
-    dateTo?: string
-    searchTerm: string
-  }
+    groupId?: number;
+    keywordId?: number;
+    authorId?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    searchTerm: string;
+  };
 
   // Выборка элементов
-  selectedGroups: number[]
-  selectedKeywords: number[]
-  selectedComments: number[]
+  selectedGroups: number[];
+  selectedKeywords: number[];
+  selectedComments: number[];
 }
 
 interface AppStore {
   // Настройки
-  settings: AppSettings
-  updateSettings: (settings: Partial<AppSettings>) => void
-  resetSettings: () => void
+  settings: AppSettings;
+  updateSettings: (settings: Partial<AppSettings>) => void;
+  resetSettings: () => void;
 
   // UI состояние
-  ui: UIState
-  updateUI: (ui: Partial<UIState>) => void
-  resetUI: () => void
+  ui: UIState;
+  updateUI: (ui: Partial<UIState>) => void;
+  resetUI: () => void;
 
   // Модальные окна
   openModal: (
     modal: keyof Pick<
       UIState,
-      | 'isCreateGroupModalOpen'
-      | 'isCreateKeywordModalOpen'
-      | 'isBulkKeywordModalOpen'
-    >
-  ) => void
+      | "isCreateGroupModalOpen"
+      | "isCreateKeywordModalOpen"
+      | "isBulkKeywordModalOpen"
+    >,
+  ) => void;
   closeModal: (
     modal: keyof Pick<
       UIState,
-      | 'isCreateGroupModalOpen'
-      | 'isCreateKeywordModalOpen'
-      | 'isBulkKeywordModalOpen'
-    >
-  ) => void
-  closeAllModals: () => void
+      | "isCreateGroupModalOpen"
+      | "isCreateKeywordModalOpen"
+      | "isBulkKeywordModalOpen"
+    >,
+  ) => void;
+  closeAllModals: () => void;
 
   // Фильтры
-  updateGroupsFilter: (filter: Partial<UIState['groupsFilter']>) => void
-  updateKeywordsFilter: (filter: Partial<UIState['keywordsFilter']>) => void
-  updateCommentsFilter: (filter: Partial<UIState['commentsFilter']>) => void
-  resetFilters: () => void
+  updateGroupsFilter: (filter: Partial<UIState["groupsFilter"]>) => void;
+  updateKeywordsFilter: (filter: Partial<UIState["keywordsFilter"]>) => void;
+  updateCommentsFilter: (filter: Partial<UIState["commentsFilter"]>) => void;
+  resetFilters: () => void;
 
   // Выборка
-  selectGroup: (id: number) => void
-  unselectGroup: (id: number) => void
-  selectAllGroups: (ids: number[]) => void
-  clearGroupSelection: () => void
+  selectGroup: (id: number) => void;
+  unselectGroup: (id: number) => void;
+  selectAllGroups: (ids: number[]) => void;
+  clearGroupSelection: () => void;
 
-  selectKeyword: (id: number) => void
-  unselectKeyword: (id: number) => void
-  selectAllKeywords: (ids: number[]) => void
-  clearKeywordSelection: () => void
+  selectKeyword: (id: number) => void;
+  unselectKeyword: (id: number) => void;
+  selectAllKeywords: (ids: number[]) => void;
+  clearKeywordSelection: () => void;
 
-  selectComment: (id: number) => void
-  unselectComment: (id: number) => void
-  selectAllComments: (ids: number[]) => void
-  clearCommentSelection: () => void
+  selectComment: (id: number) => void;
+  unselectComment: (id: number) => void;
+  selectAllComments: (ids: number[]) => void;
+  clearCommentSelection: () => void;
 
   // Утилиты
-  clearAllSelections: () => void
+  clearAllSelections: () => void;
 }
 
 /**
  * Дефолтные настройки
  */
 const defaultSettings: AppSettings = {
-  theme: 'system',
+  theme: "system",
   sidebarCollapsed: false,
   autoRefresh: true,
   refreshInterval: 30,
   itemsPerPage: 20,
-  dateFormat: 'dd.MM.yyyy HH:mm',
+  dateFormat: "dd.MM.yyyy HH:mm",
   showNotifications: true,
-}
+};
 
 const defaultUI: UIState = {
   isCreateGroupModalOpen: false,
@@ -121,20 +121,20 @@ const defaultUI: UIState = {
 
   groupsFilter: {
     activeOnly: true,
-    searchTerm: '',
+    searchTerm: "",
   },
   keywordsFilter: {
     activeOnly: true,
-    searchTerm: '',
+    searchTerm: "",
   },
   commentsFilter: {
-    searchTerm: '',
+    searchTerm: "",
   },
 
   selectedGroups: [],
   selectedKeywords: [],
   selectedComments: [],
-}
+};
 
 /**
  * Основной store приложения
@@ -154,11 +154,11 @@ export const useAppStore = create<AppStore>()(
               settings: { ...state.settings, ...newSettings },
             }),
             false,
-            'updateSettings'
+            "updateSettings",
           ),
 
         resetSettings: () =>
-          set({ settings: defaultSettings }, false, 'resetSettings'),
+          set({ settings: defaultSettings }, false, "resetSettings"),
 
         // UI состояние
         updateUI: (newUI) =>
@@ -167,10 +167,10 @@ export const useAppStore = create<AppStore>()(
               ui: { ...state.ui, ...newUI },
             }),
             false,
-            'updateUI'
+            "updateUI",
           ),
 
-        resetUI: () => set({ ui: defaultUI }, false, 'resetUI'),
+        resetUI: () => set({ ui: defaultUI }, false, "resetUI"),
 
         // Модальные окна
         openModal: (modal) =>
@@ -179,7 +179,7 @@ export const useAppStore = create<AppStore>()(
               ui: { ...state.ui, [modal]: true },
             }),
             false,
-            `openModal:${modal}`
+            `openModal:${modal}`,
           ),
 
         closeModal: (modal) =>
@@ -188,7 +188,7 @@ export const useAppStore = create<AppStore>()(
               ui: { ...state.ui, [modal]: false },
             }),
             false,
-            `closeModal:${modal}`
+            `closeModal:${modal}`,
           ),
 
         closeAllModals: () =>
@@ -202,7 +202,7 @@ export const useAppStore = create<AppStore>()(
               },
             }),
             false,
-            'closeAllModals'
+            "closeAllModals",
           ),
 
         // Фильтры
@@ -215,7 +215,7 @@ export const useAppStore = create<AppStore>()(
               },
             }),
             false,
-            'updateGroupsFilter'
+            "updateGroupsFilter",
           ),
 
         updateKeywordsFilter: (filter) =>
@@ -227,7 +227,7 @@ export const useAppStore = create<AppStore>()(
               },
             }),
             false,
-            'updateKeywordsFilter'
+            "updateKeywordsFilter",
           ),
 
         updateCommentsFilter: (filter) =>
@@ -239,7 +239,7 @@ export const useAppStore = create<AppStore>()(
               },
             }),
             false,
-            'updateCommentsFilter'
+            "updateCommentsFilter",
           ),
 
         resetFilters: () =>
@@ -253,7 +253,7 @@ export const useAppStore = create<AppStore>()(
               },
             }),
             false,
-            'resetFilters'
+            "resetFilters",
           ),
 
         // Выборка групп
@@ -266,7 +266,7 @@ export const useAppStore = create<AppStore>()(
               },
             }),
             false,
-            'selectGroup'
+            "selectGroup",
           ),
 
         unselectGroup: (id) =>
@@ -275,12 +275,12 @@ export const useAppStore = create<AppStore>()(
               ui: {
                 ...state.ui,
                 selectedGroups: state.ui.selectedGroups.filter(
-                  (gId) => gId !== id
+                  (gId) => gId !== id,
                 ),
               },
             }),
             false,
-            'unselectGroup'
+            "unselectGroup",
           ),
 
         selectAllGroups: (ids) =>
@@ -289,7 +289,7 @@ export const useAppStore = create<AppStore>()(
               ui: { ...state.ui, selectedGroups: ids },
             }),
             false,
-            'selectAllGroups'
+            "selectAllGroups",
           ),
 
         clearGroupSelection: () =>
@@ -298,7 +298,7 @@ export const useAppStore = create<AppStore>()(
               ui: { ...state.ui, selectedGroups: [] },
             }),
             false,
-            'clearGroupSelection'
+            "clearGroupSelection",
           ),
 
         // Выборка ключевых слов
@@ -311,7 +311,7 @@ export const useAppStore = create<AppStore>()(
               },
             }),
             false,
-            'selectKeyword'
+            "selectKeyword",
           ),
 
         unselectKeyword: (id) =>
@@ -320,12 +320,12 @@ export const useAppStore = create<AppStore>()(
               ui: {
                 ...state.ui,
                 selectedKeywords: state.ui.selectedKeywords.filter(
-                  (kId) => kId !== id
+                  (kId) => kId !== id,
                 ),
               },
             }),
             false,
-            'unselectKeyword'
+            "unselectKeyword",
           ),
 
         selectAllKeywords: (ids) =>
@@ -334,7 +334,7 @@ export const useAppStore = create<AppStore>()(
               ui: { ...state.ui, selectedKeywords: ids },
             }),
             false,
-            'selectAllKeywords'
+            "selectAllKeywords",
           ),
 
         clearKeywordSelection: () =>
@@ -343,7 +343,7 @@ export const useAppStore = create<AppStore>()(
               ui: { ...state.ui, selectedKeywords: [] },
             }),
             false,
-            'clearKeywordSelection'
+            "clearKeywordSelection",
           ),
 
         // Выборка комментариев
@@ -356,7 +356,7 @@ export const useAppStore = create<AppStore>()(
               },
             }),
             false,
-            'selectComment'
+            "selectComment",
           ),
 
         unselectComment: (id) =>
@@ -365,12 +365,12 @@ export const useAppStore = create<AppStore>()(
               ui: {
                 ...state.ui,
                 selectedComments: state.ui.selectedComments.filter(
-                  (cId) => cId !== id
+                  (cId) => cId !== id,
                 ),
               },
             }),
             false,
-            'unselectComment'
+            "unselectComment",
           ),
 
         selectAllComments: (ids) =>
@@ -379,7 +379,7 @@ export const useAppStore = create<AppStore>()(
               ui: { ...state.ui, selectedComments: ids },
             }),
             false,
-            'selectAllComments'
+            "selectAllComments",
           ),
 
         clearCommentSelection: () =>
@@ -388,7 +388,7 @@ export const useAppStore = create<AppStore>()(
               ui: { ...state.ui, selectedComments: [] },
             }),
             false,
-            'clearCommentSelection'
+            "clearCommentSelection",
           ),
 
         // Утилиты
@@ -403,30 +403,33 @@ export const useAppStore = create<AppStore>()(
               },
             }),
             false,
-            'clearAllSelections'
+            "clearAllSelections",
           ),
       }),
       {
-        name: 'vk-parser-store',
+        name: "vk-parser-store",
         partialize: (state) => ({ settings: state.settings }),
-      }
+      },
     ),
     {
-      name: 'app-store',
-    }
-  )
-)
+      name: "app-store",
+    },
+  ),
+);
 
 /**
  * Селекторы для оптимизации производительности
  */
-export const selectSettings = (state: AppStore) => state.settings
-export const selectUI = (state: AppStore) => state.ui
-export const selectGroupsFilter = (state: AppStore) => state.ui.groupsFilter
-export const selectKeywordsFilter = (state: AppStore) => state.ui.keywordsFilter
-export const selectCommentsFilter = (state: AppStore) => state.ui.commentsFilter
-export const selectSelectedGroups = (state: AppStore) => state.ui.selectedGroups
+export const selectSettings = (state: AppStore) => state.settings;
+export const selectUI = (state: AppStore) => state.ui;
+export const selectGroupsFilter = (state: AppStore) => state.ui.groupsFilter;
+export const selectKeywordsFilter = (state: AppStore) =>
+  state.ui.keywordsFilter;
+export const selectCommentsFilter = (state: AppStore) =>
+  state.ui.commentsFilter;
+export const selectSelectedGroups = (state: AppStore) =>
+  state.ui.selectedGroups;
 export const selectSelectedKeywords = (state: AppStore) =>
-  state.ui.selectedKeywords
+  state.ui.selectedKeywords;
 export const selectSelectedComments = (state: AppStore) =>
-  state.ui.selectedComments
+  state.ui.selectedComments;

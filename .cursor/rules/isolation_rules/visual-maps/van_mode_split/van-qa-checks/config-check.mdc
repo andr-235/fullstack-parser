@@ -15,18 +15,18 @@ graph TD
     IdentifyConfigs --> ReadConfigs["Read Configuration<br>Files"]
     ReadConfigs --> ValidateSyntax["Validate Syntax<br>and Format"]
     ValidateSyntax --> SyntaxStatus{"Syntax<br>Valid?"}
-    
+
     SyntaxStatus -->|"Yes"| CheckCompatibility["Check Compatibility<br>with Platform"]
     SyntaxStatus -->|"No"| FixSyntax["Fix Syntax<br>Errors"]
     FixSyntax --> RetryValidate["Retry Validation"]
     RetryValidate --> SyntaxStatus
-    
+
     CheckCompatibility --> CompatStatus{"Compatible with<br>Platform?"}
     CompatStatus -->|"Yes"| ConfigSuccess["Configurations Validated<br>✅ PASS"]
     CompatStatus -->|"No"| AdaptConfigs["Adapt Configurations<br>for Platform"]
     AdaptConfigs --> RetryCompat["Retry Compatibility<br>Check"]
     RetryCompat --> CompatStatus
-    
+
     style Start fill:#4da6ff,stroke:#0066cc,color:white
     style ConfigSuccess fill:#10b981,stroke:#059669,color:white
     style SyntaxStatus fill:#f6546a,stroke:#c30052,color:white
@@ -42,10 +42,10 @@ function Validate-Configurations {
         "tsconfig.json",
         "vite.config.js"
     )
-    
+
     $invalidConfigs = @()
     $incompatibleConfigs = @()
-    
+
     foreach ($configFile in $configFiles) {
         if (Test-Path $configFile) {
             # Check JSON syntax for JSON files
@@ -57,7 +57,7 @@ function Validate-Configurations {
                     continue
                 }
             }
-            
+
             # Specific configuration compatibility checks
             if ($configFile -eq "vite.config.js") {
                 $content = Get-Content $configFile -Raw
@@ -70,7 +70,7 @@ function Validate-Configurations {
             $invalidConfigs += "$configFile (file not found)"
         }
     }
-    
+
     # Display results
     if ($invalidConfigs.Count -eq 0 -and $incompatibleConfigs.Count -eq 0) {
         Write-Output "✅ All configurations validated and compatible"
@@ -100,4 +100,4 @@ function Validate-Configurations {
 ```
 
 **Next Step (on PASS):** Load `van-qa-checks/environment-check.mdc`.
-**Next Step (on FAIL):** Check `van-qa-utils/common-fixes.mdc` for configuration fixes. 
+**Next Step (on FAIL):** Check `van-qa-utils/common-fixes.mdc` for configuration fixes.

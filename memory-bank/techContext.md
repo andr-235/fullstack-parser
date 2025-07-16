@@ -4,7 +4,7 @@
 
 - **Framework**: FastAPI
 - **Language**: Python 3.11
-- **Dependency Management**: Poetry 1.8.2. Проект был мигрирован с 
+- **Dependency Management**: Poetry 1.8.2. Проект был мигрирован с
 equirements.txt.
 - **Dockerfile**: Многостадийный, с отдельными целями для разработки и продакшена. Production-образ использует non-root пользователя и health checks.
 

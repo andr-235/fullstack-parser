@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
-import { api, createQueryKey } from '@/lib/api'
-import type { DashboardStats, GlobalStats } from '@/types/api'
+import { useQuery } from "@tanstack/react-query";
+import { api, createQueryKey } from "@/lib/api";
+import type { DashboardStats, GlobalStats } from "@/types/api";
 
 /**
  * Хук для получения общей статистики для дашборда
@@ -10,7 +10,7 @@ export function useDashboardStats() {
     queryKey: createQueryKey.dashboardStats(),
     queryFn: () => api.getDashboardStats(),
     staleTime: 5 * 60 * 1000, // 5 минут
-  })
+  });
 }
 
 /**
@@ -21,7 +21,7 @@ export function useGlobalStats() {
     queryKey: createQueryKey.globalStats(),
     queryFn: () => api.getGlobalStats(),
     staleTime: 5 * 60 * 1000, // 5 минут
-  })
+  });
 }
 
 /**
@@ -29,10 +29,10 @@ export function useGlobalStats() {
  */
 export function useAPIHealth() {
   return useQuery({
-    queryKey: ['api', 'health'],
+    queryKey: ["api", "health"],
     queryFn: () => api.healthCheck(),
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
     retry: 3,
-  })
+  });
 }

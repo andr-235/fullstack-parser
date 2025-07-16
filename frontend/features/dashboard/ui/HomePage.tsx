@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import {
   Card,
@@ -6,32 +6,32 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { BarChart, Search, Zap, Code } from 'lucide-react'
-import Link from 'next/link'
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { BarChart, Search, Zap, Code } from "lucide-react";
+import Link from "next/link";
 
 const features = [
   {
     icon: <Search className="h-8 w-8 text-primary" />,
-    title: 'Поиск по ключевым словам',
+    title: "Поиск по ключевым словам",
     description:
-      'Настраиваемый поиск комментариев по заданным ключевым словам.',
-    href: '/keywords',
+      "Настраиваемый поиск комментариев по заданным ключевым словам.",
+    href: "/keywords",
   },
   {
     icon: <BarChart className="h-8 w-8 text-primary" />,
-    title: 'Аналитика',
-    description: 'Подробная статистика и визуализация найденных данных.',
-    href: '/dashboard',
+    title: "Аналитика",
+    description: "Подробная статистика и визуализация найденных данных.",
+    href: "/dashboard",
   },
   {
     icon: <Zap className="h-8 w-8 text-primary" />,
-    title: 'Высокая производительность',
-    description: 'Асинхронная обработка и кэширование для быстрого анализа.',
-    href: '/parser',
+    title: "Высокая производительность",
+    description: "Асинхронная обработка и кэширование для быстрого анализа.",
+    href: "/parser",
   },
-]
+];
 
 export default function HomePage() {
   return (
@@ -80,5 +80,5 @@ export default function HomePage() {
         </footer>
       </div>
     </div>
-  )
+  );
 }

@@ -38,8 +38,8 @@ graph TD
 mkdir memory-bank, docs, docs\archive -ErrorAction SilentlyContinue
 
 # Create all required files
-$files = @(".cursorrules", "tasks.md", 
-           "memory-bank\projectbrief.md", 
+$files = @(".cursorrules", "tasks.md",
+           "memory-bank\projectbrief.md",
            "memory-bank\productContext.md",
            "memory-bank\systemPatterns.md",
            "memory-bank\techContext.md",
@@ -76,12 +76,12 @@ Instead of checking each component separately, perform batch verification:
 # Windows - PowerShell
 $requiredDirs = @("memory-bank", "docs", "docs\archive")
 $requiredFiles = @(".cursorrules", "tasks.md")
-$mbFiles = @("projectbrief.md", "productContext.md", "systemPatterns.md", 
+$mbFiles = @("projectbrief.md", "productContext.md", "systemPatterns.md",
              "techContext.md", "activeContext.md", "progress.md")
 
 $missingDirs = $requiredDirs | Where-Object { -not (Test-Path $_) -or -not (Test-Path $_ -PathType Container) }
 $missingFiles = $requiredFiles | Where-Object { -not (Test-Path $_) -or (Test-Path $_ -PathType Container) }
-$missingMBFiles = $mbFiles | ForEach-Object { "memory-bank\$_" } | 
+$missingMBFiles = $mbFiles | ForEach-Object { "memory-bank\$_" } |
                   Where-Object { -not (Test-Path $_) -or (Test-Path $_ -PathType Container) }
 
 if ($missingDirs.Count -eq 0 -and $missingFiles.Count -eq 0 -and $missingMBFiles.Count -eq 0) {
@@ -150,7 +150,7 @@ foreach ($file in $templates.Keys) {
    ```
    # GOOD: Create all directories at once
    mkdir memory-bank docs docs\archive
-   
+
    # BAD: Create directories one at a time
    mkdir memory-bank
    mkdir docs
@@ -161,7 +161,7 @@ foreach ($file in $templates.Keys) {
    ```
    # First check what's missing
    $missingItems = ...
-   
+
    # Then create only what's missing
    if ($missingItems) { ... }
    ```
@@ -195,4 +195,4 @@ foreach ($file in $templates.Keys) {
 - All components verified
 
 Memory Bank system ready for use.
-``` 
+```

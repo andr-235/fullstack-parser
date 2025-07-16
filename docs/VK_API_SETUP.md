@@ -79,4 +79,4 @@ docker-compose restart backend
 
 - [VK API Documentation](https://dev.vk.com/api/getting-started)
 - [OAuth авторизация](https://dev.vk.com/api/access-token/implicit-flow-user)
-- [Список методов Groups API](https://dev.vk.com/method/groups) 
+- [Список методов Groups API](https://dev.vk.com/method/groups)

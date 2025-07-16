@@ -8,4 +8,4 @@ paths-ignore:
   - 'frontend/public'
 
 queries:
-  - uses: security-and-quality 
+  - uses: security-and-quality

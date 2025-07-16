@@ -1,10 +1,10 @@
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query'
-import { api, createQueryKey } from '@/lib/api'
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { api, createQueryKey } from "@/lib/api";
 import type {
   VKCommentResponse,
   CommentSearchParams,
   PaginationParams,
-} from '@/types/api'
+} from "@/types/api";
 
 /**
  * Хук для получения комментариев с пагинацией
@@ -14,7 +14,7 @@ export function useComments(params?: CommentSearchParams & PaginationParams) {
     queryKey: createQueryKey.comments(params),
     queryFn: () => api.getComments(params),
     staleTime: 2 * 60 * 1000, // 2 минуты
-  })
+  });
 }
 
 /**
@@ -22,7 +22,7 @@ export function useComments(params?: CommentSearchParams & PaginationParams) {
  */
 export function useInfiniteComments(filters?: CommentSearchParams) {
   return useInfiniteQuery({
-    queryKey: ['comments', 'infinite', filters],
+    queryKey: ["comments", "infinite", filters],
     queryFn: ({ pageParam = 0 }) =>
       api.getComments({
         ...filters,
@@ -30,12 +30,12 @@ export function useInfiniteComments(filters?: CommentSearchParams) {
         limit: 20,
       }),
     getNextPageParam: (lastPage, pages) => {
-      const totalLoaded = pages.length * 20
-      return lastPage.total > totalLoaded ? totalLoaded : undefined
+      const totalLoaded = pages.length * 20;
+      return lastPage.total > totalLoaded ? totalLoaded : undefined;
     },
     initialPageParam: 0,
     staleTime: 2 * 60 * 1000,
-  })
+  });
 }
 
 /**
@@ -47,5 +47,5 @@ export function useCommentWithKeywords(commentId: number) {
     queryFn: () => api.getCommentWithKeywords(commentId),
     enabled: !!commentId,
     staleTime: 5 * 60 * 1000,
-  })
+  });
 }

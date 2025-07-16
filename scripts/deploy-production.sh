@@ -14,6 +14,10 @@ if [ -z "$GHCR_USERNAME" ] || [ -z "$GHCR_TOKEN" ]; then
     exit 1
 fi
 
+# Очистка старых образов перед деплоем
+echo "🧹 Очистка старых образов..."
+./scripts/docker-cleanup.sh
+
 # Логин в GitHub Container Registry
 echo "🔐 Логин в GitHub Container Registry..."
 echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
@@ -25,6 +29,10 @@ docker-compose -f docker-compose.prod.ip.yml pull
 # Запуск сервисов
 echo "🚀 Запуск сервисов..."
 docker-compose -f docker-compose.prod.ip.yml up -d --build
+
+# Очистка после деплоя
+echo "🧹 Очистка после деплоя..."
+./scripts/docker-cleanup.sh
 
 # Проверка статуса
 echo "🔍 Проверка статуса сервисов..."

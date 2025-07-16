@@ -18,7 +18,7 @@ graph TD
     Transition --> Verify["Verify Context<br>Availability"]
     Verify --> Load["Load Relevant<br>Context Data"]
     Load --> Continue["Continue in<br>Mode B"]
-    
+
     style Start fill:#4da6ff,stroke:#0066cc,color:white
     style Create fill:#ffa64d,stroke:#cc7a30,color:white
     style Store fill:#4dbb5f,stroke:#36873f,color:white
@@ -120,14 +120,14 @@ const ruleCache = {
 function loadRule(rulePath) {
   const cacheKey = getCacheKey(rulePath);
   const category = getCategoryFromPath(rulePath);
-  
+
   if (ruleCache[category][cacheKey]) {
     return ruleCache[category][cacheKey];
   }
-  
+
   const ruleContent = readRuleFromFile(rulePath);
   ruleCache[category][cacheKey] = ruleContent;
-  
+
   return ruleContent;
 }
 
@@ -135,7 +135,7 @@ function loadRule(rulePath) {
 function invalidateRule(rulePath) {
   const cacheKey = getCacheKey(rulePath);
   const category = getCategoryFromPath(rulePath);
-  
+
   if (ruleCache[category][cacheKey]) {
     delete ruleCache[category][cacheKey];
   }
@@ -151,7 +151,7 @@ graph TD
     Check -->|"Yes"| Changed{"Specific<br>Section Changed?"}
     Changed -->|"No"| Full["Full File<br>Update"]
     Changed -->|"Yes"| Partial["Partial<br>Update Only"]
-    
+
     style Start fill:#4da6ff,stroke:#0066cc,color:white
     style Check fill:#ffa64d,stroke:#cc7a30,color:white
     style Skip fill:#4dbb5f,stroke:#36873f,color:white
@@ -167,19 +167,19 @@ Implement a more efficient update mechanism:
 function updateMemoryBankFile(filePath, newContent) {
   // Read existing content
   const currentContent = readFile(filePath);
-  
+
   // Skip if no changes
   if (currentContent === newContent) {
     return "No changes detected, update skipped";
   }
-  
+
   // Check if we can do a partial update
   const sections = parseIntoSections(currentContent);
   const newSections = parseIntoSections(newContent);
-  
+
   let updatedContent = currentContent;
   let updatedSections = 0;
-  
+
   // Only update changed sections
   for (const [sectionName, sectionContent] of Object.entries(newSections)) {
     if (!sections[sectionName] || sections[sectionName] !== sectionContent) {
@@ -187,10 +187,10 @@ function updateMemoryBankFile(filePath, newContent) {
       updatedSections++;
     }
   }
-  
+
   // Write updated content
   writeFile(filePath, updatedContent);
-  
+
   return `Updated ${updatedSections} section(s) in ${filePath}`;
 }
 ```
@@ -255,13 +255,13 @@ Implement progressive mode loading to optimize context:
 function loadMode(modeName, taskComplexity) {
   // Always load core rules
   loadCoreRules();
-  
+
   // Load complexity-appropriate rules
   loadComplexityRules(taskComplexity);
-  
+
   // Load mode-specific essential rules
   loadModeEssentialRules(modeName);
-  
+
   // Only load specialized rules as needed
   registerLazyLoadHandlers(modeName, taskComplexity);
 }
@@ -273,7 +273,7 @@ function registerLazyLoadHandlers(modeName, taskComplexity) {
     registerHandler("algorithm", () => loadRule("creative-phase-algorithm.mdc"));
     registerHandler("uiux", () => loadRule("creative-phase-uiux.mdc"));
   }
-  
+
   // Similar patterns for other specialized rule types
 }
 ```

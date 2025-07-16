@@ -52,7 +52,7 @@ create_ssl_directory() {
 
 generate_ssl_config() {
     log_info "Generating SSL configuration..."
-    
+
     cat > "$SSL_DIR/openssl.conf" << EOF
 [req]
 distinguished_name = req_distinguished_name
@@ -82,35 +82,35 @@ EOF
 
 generate_ssl_certificate() {
     log_info "Generating SSL certificate for $SERVER_IP..."
-    
+
     # Generate private key
     openssl genrsa -out "$KEY_FILE" 2048
-    
+
     # Generate certificate signing request and certificate
     openssl req -new -x509 -key "$KEY_FILE" -out "$CERT_FILE" \
         -days $CERT_VALID_DAYS -config "$SSL_DIR/openssl.conf" \
         -extensions v3_req
-    
+
     log_success "SSL certificate generated successfully"
 }
 
 set_permissions() {
     log_info "Setting proper permissions..."
-    
+
     # Set proper permissions for SSL files
     chmod 600 "$KEY_FILE"
     chmod 644 "$CERT_FILE"
-    
+
     log_success "Permissions set correctly"
 }
 
 verify_certificate() {
     log_info "Verifying certificate..."
-    
+
     # Verify certificate
     openssl x509 -in "$CERT_FILE" -text -noout | grep -A1 "Subject:"
     openssl x509 -in "$CERT_FILE" -text -noout | grep -A5 "Subject Alternative Name"
-    
+
     log_success "Certificate verification completed"
 }
 
@@ -125,13 +125,13 @@ cleanup() {
 # =============================================================================
 main() {
     log_info "Starting SSL certificate generation for $SERVER_IP"
-    
+
     # Check if openssl is installed
     if ! command -v openssl &> /dev/null; then
         log_error "OpenSSL is not installed. Please install it first."
         exit 1
     fi
-    
+
     # Check if certificates already exist
     if [[ -f "$CERT_FILE" ]] && [[ -f "$KEY_FILE" ]]; then
         log_warning "SSL certificates already exist!"
@@ -142,7 +142,7 @@ main() {
             exit 0
         fi
     fi
-    
+
     # Execute steps
     create_ssl_directory
     generate_ssl_config
@@ -150,7 +150,7 @@ main() {
     set_permissions
     verify_certificate
     cleanup
-    
+
     log_success "SSL certificates created successfully!"
     log_info "Certificate: $CERT_FILE"
     log_info "Private Key: $KEY_FILE"
@@ -159,4 +159,4 @@ main() {
 }
 
 # Run main function
-main "$@" 
+main "$@"

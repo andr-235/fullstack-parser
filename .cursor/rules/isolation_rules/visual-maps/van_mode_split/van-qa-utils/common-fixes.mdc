@@ -69,7 +69,7 @@ npm audit
 Get-ChildItem -Recurse -Include "*.json","*.config.js" | Select-Object FullName
 
 # Find missing references in tsconfig.json
-if (Test-Path "tsconfig.json") { 
+if (Test-Path "tsconfig.json") {
     $tsconfig = Get-Content "tsconfig.json" -Raw | ConvertFrom-Json
     if (-not $tsconfig.compilerOptions.jsx) {
         Write-Output "Missing jsx setting in tsconfig.json"
@@ -89,4 +89,4 @@ Get-ChildItem Env:
 Get-PSDrive C | Select-Object Used,Free
 ```
 
-**Next Step:** Return to the validation process or follow the specific fix recommendations provided above. 
+**Next Step:** Return to the validation process or follow the specific fix recommendations provided above.

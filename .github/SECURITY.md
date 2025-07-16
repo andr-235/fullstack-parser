@@ -201,8 +201,8 @@ This security policy is reviewed and updated:
 
 ---
 
-**Last Updated**: January 2025  
-**Next Review**: February 2025  
+**Last Updated**: January 2025
+**Next Review**: February 2025
 **Version**: 1.0
 
-For questions about this security policy, please contact `security@example.com`. 
+For questions about this security policy, please contact `security@example.com`.

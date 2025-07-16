@@ -168,7 +168,7 @@ Task tracking integrates with Memory Bank:
 graph TD
     TasksFile["tasks.md"] --> Active["activeContext.md"]
     TasksFile --> Progress["progress.md"]
-    
+
     Active -->|"Current focus"| TasksFile
     Progress -->|"Completion status"| TasksFile
 ```
@@ -185,4 +185,4 @@ Remember:
 └─────────────────────────────────────────────────────┘
 ```
 
-This ensures everyone has visibility into current task status at all times. 
+This ensures everyone has visibility into current task status at all times.

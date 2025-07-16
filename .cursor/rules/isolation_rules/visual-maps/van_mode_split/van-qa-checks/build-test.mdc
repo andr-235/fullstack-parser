@@ -14,18 +14,18 @@ graph TD
     Start["Minimal Build Test"] --> CreateTest["Create Minimal<br>Test Project"]
     CreateTest --> BuildTest["Attempt<br>Build"]
     BuildTest --> BuildStatus{"Build<br>Successful?"}
-    
+
     BuildStatus -->|"Yes"| RunTest["Run Basic<br>Functionality Test"]
     BuildStatus -->|"No"| FixBuild["Fix Build<br>Issues"]
     FixBuild --> RetryBuild["Retry Build"]
     RetryBuild --> BuildStatus
-    
+
     RunTest --> TestStatus{"Test<br>Passed?"}
     TestStatus -->|"Yes"| TestSuccess["Minimal Build Test<br>✅ PASS"]
     TestStatus -->|"No"| FixTest["Fix Test<br>Issues"]
     FixTest --> RetryTest["Retry Test"]
     RetryTest --> TestStatus
-    
+
     style Start fill:#4da6ff,stroke:#0066cc,color:white
     style TestSuccess fill:#10b981,stroke:#059669,color:white
     style BuildStatus fill:#f6546a,stroke:#c30052,color:white
@@ -38,18 +38,18 @@ graph TD
 function Perform-MinimalBuildTest {
     $buildSuccess = $false
     $testSuccess = $false
-    
+
     # Create minimal test project
     $testDir = ".__build_test"
     if (Test-Path $testDir) {
         Remove-Item -Path $testDir -Recurse -Force
     }
-    
+
     try {
         # Create minimal test directory
         New-Item -Path $testDir -ItemType Directory | Out-Null
         Push-Location $testDir
-        
+
         # Initialize minimal package.json
         @"
 {
@@ -62,20 +62,20 @@ function Perform-MinimalBuildTest {
   }
 }
 "@ | Set-Content -Path "package.json"
-        
+
         # Attempt build
         npm run build | Out-Null
         $buildSuccess = $true
-        
+
         # Create minimal test file
         @"
 console.log('Test successful');
 "@ | Set-Content -Path "index.js"
-        
+
         # Run basic test
         node index.js | Out-Null
         $testSuccess = $true
-        
+
     } catch {
         Write-Output "❌ Build test failed: $($_.Exception.Message)"
     } finally {
@@ -84,7 +84,7 @@ console.log('Test successful');
             Remove-Item -Path $testDir -Recurse -Force
         }
     }
-    
+
     # Display results
     if ($buildSuccess -and $testSuccess) {
         Write-Output "✅ Minimal build test passed successfully"
@@ -114,4 +114,4 @@ console.log('Test successful');
 ```
 
 **Next Step (on PASS):** Load `van-qa-utils/reports.mdc` to generate success report.
-**Next Step (on FAIL):** Check `van-qa-utils/common-fixes.mdc` for build test fixes. 
+**Next Step (on FAIL):** Check `van-qa-utils/common-fixes.mdc` for build test fixes.

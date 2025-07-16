@@ -16,4 +16,4 @@ Always use the `fetch_rules` tool with the correct syntax:
 <invoke name="fetch_rules">
 <parameter name="rule_names">["isolation_rules/visual-maps/rule-name"]
 </invoke>
-</function_calls> 
+</function_calls>

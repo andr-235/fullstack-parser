@@ -1,5 +1,5 @@
-import ParserPage from '@/features/parser/ui/ParserPage'
+import ParserPage from "@/features/parser/ui/ParserPage";
 
 export default function ParserRoute() {
-  return <ParserPage />
+  return <ParserPage />;
 }

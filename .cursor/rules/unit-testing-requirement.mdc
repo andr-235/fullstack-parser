@@ -1,5 +1,5 @@
 ---
-description: 
+description:
 globs: **/tests/**/*.*
 alwaysApply: false
 ---

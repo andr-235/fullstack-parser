@@ -11,4 +11,4 @@ docker system prune -f
 logrotate /etc/logrotate.d/vk-parser
 
 # Check disk space
-df -h | grep -E "8[0-9]%|9[0-9]%" && echo "Warning: Disk space low" 
+df -h | grep -E "8[0-9]%|9[0-9]%" && echo "Warning: Disk space low"

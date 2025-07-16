@@ -2,17 +2,17 @@
 // If you delete this file, remove `setupFilesAfterEnv` from `jest.config.js`
 
 // Learn more: https://jestjs.io/docs/configuration#setupfilesafterenv-array
-import '@testing-library/jest-dom'
+import "@testing-library/jest-dom";
 
 // Мок Radix UI Select для тестов (обход проблемы с jsdom)
-jest.mock('@radix-ui/react-select', () => {
-  const React = require('react')
+jest.mock("@radix-ui/react-select", () => {
+  const React = require("react");
 
   // Контекст для value/onValueChange
   const SelectContext = React.createContext({
     value: undefined,
     onValueChange: undefined,
-  })
+  });
 
   // Root (Select) — кладёт value/onValueChange в контекст
   const Root = React.forwardRef(
@@ -24,16 +24,16 @@ jest.mock('@radix-ui/react-select', () => {
         children,
         ...props
       },
-      ref
+      ref,
     ) => {
       const [uncontrolledValue, setUncontrolledValue] =
-        React.useState(defaultValue)
-      const isControlled = controlledValue !== undefined
-      const value = isControlled ? controlledValue : uncontrolledValue
+        React.useState(defaultValue);
+      const isControlled = controlledValue !== undefined;
+      const value = isControlled ? controlledValue : uncontrolledValue;
       const handleValueChange = (val) => {
-        if (!isControlled) setUncontrolledValue(val)
-        if (onValueChange) onValueChange(val)
-      }
+        if (!isControlled) setUncontrolledValue(val);
+        if (onValueChange) onValueChange(val);
+      };
       return (
         <SelectContext.Provider
           value={{ value, onValueChange: handleValueChange }}
@@ -42,13 +42,13 @@ jest.mock('@radix-ui/react-select', () => {
             {children}
           </div>
         </SelectContext.Provider>
-      )
-    }
-  )
+      );
+    },
+  );
 
   // Trigger с role="combobox" и aria-activedescendant
   const Trigger = React.forwardRef((props, ref) => {
-    const { value } = React.useContext(SelectContext)
+    const { value } = React.useContext(SelectContext);
     return (
       <button
         ref={ref}
@@ -60,19 +60,19 @@ jest.mock('@radix-ui/react-select', () => {
       >
         {props.children}
       </button>
-    )
-  })
+    );
+  });
 
   // Content с role="listbox"
   const Content = React.forwardRef((props, ref) => (
     <div ref={ref} role="listbox" {...props}>
       {props.children}
     </div>
-  ))
+  ));
 
   // Item с role="option" — вызывает onValueChange из контекста при клике
   const Item = React.forwardRef(({ value, children, ...props }, ref) => {
-    const { onValueChange } = React.useContext(SelectContext)
+    const { onValueChange } = React.useContext(SelectContext);
     return (
       <div
         ref={ref}
@@ -84,47 +84,47 @@ jest.mock('@radix-ui/react-select', () => {
       >
         {children}
       </div>
-    )
-  })
+    );
+  });
 
   // Остальные компоненты
   const Group = React.forwardRef((props, ref) => (
     <div ref={ref} {...props}>
       {props.children}
     </div>
-  ))
+  ));
   const Value = React.forwardRef((props, ref) => (
     <span ref={ref} {...props}>
       {props.children}
     </span>
-  ))
+  ));
   const Label = React.forwardRef((props, ref) => (
     <label ref={ref} {...props}>
       {props.children}
     </label>
-  ))
+  ));
   const Separator = React.forwardRef((props, ref) => (
     <div ref={ref} role="separator" {...props}>
       {props.children}
     </div>
-  ))
+  ));
   const Viewport = React.forwardRef((props, ref) => (
     <div ref={ref} {...props}>
       {props.children}
     </div>
-  ))
-  const Portal = ({ children }) => <>{children}</>
-  const Icon = (props) => <span {...props}>{props.children}</span>
+  ));
+  const Portal = ({ children }) => <>{children}</>;
+  const Icon = (props) => <span {...props}>{props.children}</span>;
   const ItemIndicator = React.forwardRef((props, ref) => (
     <span ref={ref} {...props}>
       {props.children}
     </span>
-  ))
+  ));
   const ItemText = React.forwardRef((props, ref) => (
     <span ref={ref} {...props}>
       {props.children}
     </span>
-  ))
+  ));
 
   // Экспортируем оба варианта имён
   return {
@@ -170,5 +170,5 @@ jest.mock('@radix-ui/react-select', () => {
       ItemIndicator,
       ItemText,
     },
-  }
-})
+  };
+});

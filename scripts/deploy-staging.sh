@@ -13,4 +13,4 @@ docker-compose -f docker-compose.yml up -d --remove-orphans
 timeout 60 bash -c 'until curl -f http://localhost:8001/api/v1/health > /dev/null 2>&1; do sleep 2; done'
 timeout 60 bash -c 'until curl -f http://localhost:3001 > /dev/null 2>&1; do sleep 2; done'
 
-echo "✅ Staging deployment completed" 
+echo "✅ Staging deployment completed"

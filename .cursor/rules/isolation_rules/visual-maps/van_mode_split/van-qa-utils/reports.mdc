@@ -31,9 +31,9 @@ function Generate-SuccessReport {
     param (
         [string]$ProjectName = "Current Project"
     )
-    
+
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    
+
     $report = @"
 ╔═════════════════════ 🔍 QA VALIDATION REPORT ══════════════════════╗
 │ PROJECT: $ProjectName | TIMESTAMP: $timestamp            │
@@ -47,10 +47,10 @@ function Generate-SuccessReport {
 │ ➡️ Clear to proceed to BUILD mode                                   │
 ╚═════════════════════════════════════════════════════════════════════╝
 "@
-    
+
     # Save validation status (used by BUILD mode prevention mechanism)
     "PASS" | Set-Content -Path "memory-bank\.qa_validation_status"
-    
+
     return $report
 }
 ```
@@ -93,14 +93,14 @@ function Generate-FailureReport {
         [string[]]$EnvironmentIssues = @(),
         [string[]]$BuildIssues = @()
     )
-    
+
     $report = @"
 ⚠️⚠️⚠️ QA VALIDATION FAILED ⚠️⚠️⚠️
 
 The following issues must be resolved before proceeding to BUILD mode:
 
 "@
-    
+
     if ($DependencyIssues.Count -gt 0) {
         $report += @"
 1️⃣ DEPENDENCY ISSUES:
@@ -108,7 +108,7 @@ $(($DependencyIssues | ForEach-Object { "- $_" }) -join "`n")
 
 "@
     }
-    
+
     if ($ConfigIssues.Count -gt 0) {
         $report += @"
 2️⃣ CONFIGURATION ISSUES:
@@ -116,7 +116,7 @@ $(($ConfigIssues | ForEach-Object { "- $_" }) -join "`n")
 
 "@
     }
-    
+
     if ($EnvironmentIssues.Count -gt 0) {
         $report += @"
 3️⃣ ENVIRONMENT ISSUES:
@@ -124,7 +124,7 @@ $(($EnvironmentIssues | ForEach-Object { "- $_" }) -join "`n")
 
 "@
     }
-    
+
     if ($BuildIssues.Count -gt 0) {
         $report += @"
 4️⃣ BUILD TEST ISSUES:
@@ -132,18 +132,18 @@ $(($BuildIssues | ForEach-Object { "- $_" }) -join "`n")
 
 "@
     }
-    
+
     $report += @"
 ⚠️ BUILD MODE IS BLOCKED until these issues are resolved.
 Type 'VAN QA' after fixing the issues to re-validate.
 "@
-    
+
     # Save validation status (used by BUILD mode prevention mechanism)
     "FAIL" | Set-Content -Path "memory-bank\.qa_validation_status"
-    
+
     return $report
 }
 ```
 
 **Next Step (on SUCCESS):** Load `van-qa-utils/mode-transitions.mdc` to handle BUILD mode transition.
-**Next Step (on FAILURE):** Load `van-qa-utils/common-fixes.mdc` for issue remediation guidance. 
+**Next Step (on FAILURE):** Load `van-qa-utils/common-fixes.mdc` for issue remediation guidance.

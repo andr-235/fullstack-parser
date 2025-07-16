@@ -26,7 +26,7 @@ cd frontend
 bun install
 bun dev
 
-# Backend (FastAPI) 
+# Backend (FastAPI)
 cd backend
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -50,4 +50,4 @@ docker stats
 # Проверка сети
 docker network ls
 docker network inspect fullstack-parser_app-network
-``` 
+```

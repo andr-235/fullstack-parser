@@ -152,4 +152,4 @@ body:
         - label: Я протестировал на последней версии
           required: true
         - label: Я приложил всю необходимую информацию
-          required: true 
+          required: true
