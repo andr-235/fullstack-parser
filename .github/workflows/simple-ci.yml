@@ -30,7 +30,7 @@ jobs:
       - name: 🧪 Backend - запуск тестов
         working-directory: ./backend
         run: |
-          poetry install --no-interaction --no-root
+          poetry install --no-interaction
           poetry run pytest tests/ -v --tb=short
 
       - name: 🟢 Frontend - тесты
