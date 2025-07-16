@@ -12,14 +12,16 @@ jobs:
     with:
       python-versions: '["3.11", "3.12"]'
       upload-coverage: '"true"'
-    secrets: inherit
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   frontend:
     uses: ./.github/workflows/reusable-frontend-test.yml
     with:
       node-versions: '["20"]'
       upload-coverage: '"true"'
-    secrets: inherit
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   dependency-scan:
     runs-on: ubuntu-latest

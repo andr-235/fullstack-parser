@@ -17,9 +17,7 @@ on:
         required: false
         default: "20"
         type: string
-    # secrets:
-    #   GITHUB_TOKEN:
-    #     required: true
+    # GITHUB_TOKEN is automatically available, no need to pass it explicitly
 
 jobs:
   lint:

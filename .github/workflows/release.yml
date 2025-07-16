@@ -1,3 +1,4 @@
+---
 name: 🚀 Release & Publish
 
 on:
@@ -9,6 +10,11 @@ permissions:
   contents: write
   packages: write
   id-token: write # Required for OIDC signing
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_BACKEND: andr-235/fullstack-backend
+  IMAGE_NAME_FRONTEND: andr-235/fullstack-frontend
 
 jobs:
   backend-test:
@@ -198,7 +204,7 @@ jobs:
           echo "🔍 Check the logs for details"
           echo "📋 Release status: ${{ needs.create-release.result }}"
           echo "🚀 Staging deployment: ${{ needs.deploy-staging.result }}"
-          
+
   cleanup:
     name: 🧹 Cleanup
     runs-on: ubuntu-latest
@@ -217,4 +223,4 @@ jobs:
           echo "- **Version**: ${{ needs.validate.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tag**: ${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Prerelease**: ${{ needs.validate.outputs.is_prerelease }}" >> $GITHUB_STEP_SUMMARY
-          # Добавьте сюда ссылки на Docker-образы, релиз и т.д. 
+          # Добавьте сюда ссылки на Docker-образы, релиз и т.д.

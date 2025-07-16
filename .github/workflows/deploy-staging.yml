@@ -1,3 +1,4 @@
+---
 # 🚀 Deploy to Staging
 
 on:
@@ -10,11 +11,39 @@ concurrency:
   group: staging
   cancel-in-progress: true
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_BACKEND: andr-235/fullstack-backend
+  IMAGE_NAME_FRONTEND: andr-235/fullstack-frontend
+
 jobs:
+  test-backend:
+    name: Backend Tests
+    permissions:
+      contents: write
+    uses: ./.github/workflows/reusable-backend-test.yml
+    with:
+      python-versions: '["3.11"]'
+      upload-coverage: "false"
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  test-frontend:
+    name: Frontend Tests
+    permissions:
+      contents: write
+    uses: ./.github/workflows/reusable-frontend-test.yml
+    with:
+      node-versions: '["20"]'
+      upload-coverage: "false"
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
   deploy:
     name: 🚚 Deploy to Staging
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: [test-backend, test-frontend]
     environment:
       name: staging
       url: https://staging.your-domain.com
@@ -23,11 +52,16 @@ jobs:
     steps:
       - name: Проверка secrets
         run: |
-          test -n "${{ secrets.STAGING_HOST }}" || (echo "Нет STAGING_HOST" && exit 1)
-          test -n "${{ secrets.STAGING_USER }}" || (echo "Нет STAGING_USER" && exit 1)
-          test -n "${{ secrets.STAGING_SSH_KEY }}" || (echo "Нет STAGING_SSH_KEY" && exit 1)
-          test -n "${{ secrets.STAGING_PORT }}" || (echo "Нет STAGING_PORT" && exit 1)
-          test -n "${{ secrets.STAGING_APP_DIR }}" || (echo "Нет STAGING_APP_DIR" && exit 1)
+          test -n "${{ secrets.STAGING_HOST }}" || \
+            (echo "Нет STAGING_HOST" && exit 1)
+          test -n "${{ secrets.STAGING_USER }}" || \
+            (echo "Нет STAGING_USER" && exit 1)
+          test -n "${{ secrets.STAGING_SSH_KEY }}" || \
+            (echo "Нет STAGING_SSH_KEY" && exit 1)
+          test -n "${{ secrets.STAGING_PORT }}" || \
+            (echo "Нет STAGING_PORT" && exit 1)
+          test -n "${{ secrets.STAGING_APP_DIR }}" || \
+            (echo "Нет STAGING_APP_DIR" && exit 1)
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -47,7 +81,7 @@ jobs:
             echo "DOCKER_PROD_IMAGE_BACKEND=ghcr.io/${{ github.repository_owner }}/backend:sha-${GITHUB_SHA::7}" >> .env
             echo "DOCKER_PROD_IMAGE_FRONTEND=ghcr.io/${{ github.repository_owner }}/frontend:sha-${GITHUB_SHA::7}" >> .env
             docker-compose -f docker-compose.prod.yml up -d --build
-            
+
       - name: Health Check
         run: |
           for i in {1..10}; do
@@ -66,4 +100,4 @@ jobs:
 
       # - name: Откат деплоя (manual workflow, инструкция в README)
       #   run: |
-      #     # docker-compose -f docker-compose.prod.yml up -d --remove-orphans <PREVIOUS_TAG> 
+      #     # docker-compose -f docker-compose.prod.yml up -d --remove-orphans <PREVIOUS_TAG>

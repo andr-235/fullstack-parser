@@ -25,6 +25,8 @@ jobs:
     with:
       python-versions: '["3.11", "3.12"]'
       upload-coverage: "false"
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   test-frontend:
     name: Frontend Tests
@@ -34,6 +36,8 @@ jobs:
     with:
       node-versions: '["20"]'
       upload-coverage: "false"
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   security:
     name: Security Scan
