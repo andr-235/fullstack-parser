@@ -1,4 +1,4 @@
-.PHONY: feature release hotfix cleanup sync
+.PHONY: feature release hotfix cleanup sync release-create release-deploy release-rollback
 
 feature:
 	@read -p "Feature name: " name; \
@@ -29,4 +29,25 @@ cleanup:
 sync:
 	@git checkout main && git pull origin main
 	@git checkout develop && git pull origin develop
-	@echo "✅ Synced main and develop" 
+	@echo "✅ Synced main and develop"
+
+# 🚀 Release commands
+release-create:
+	@echo "🚀 Creating new release..."
+	@./scripts/create-release.sh
+
+release-deploy:
+	@read -p "Version to deploy (e.g., 1.2.3): " version; \
+	echo "🚀 Deploying version $$version..."; \
+	docker-compose -f docker-compose.prod.ip.yml pull && \
+	docker-compose -f docker-compose.prod.ip.yml up -d --build
+
+release-rollback:
+	@echo "🔄 Rolling back release..."
+	@./scripts/rollback-release.sh
+
+release-status:
+	@echo "📊 Current release status:"; \
+	echo "Backend version: $$(grep '^version = ' backend/pyproject.toml | sed 's/version = "\(.*\)"/\1/')"; \
+	echo "Frontend version: $$(grep '"version":' frontend/package.json | sed 's/.*"version": "\(.*\)".*/\1/')"; \
+	echo "Latest tag: $$(git describe --tags --abbrev=0 2>/dev/null || echo 'No tags found')" 
