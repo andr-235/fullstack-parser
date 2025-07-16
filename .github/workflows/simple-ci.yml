@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     name: 🧪 Тесты
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 10
 
     steps:
@@ -55,7 +55,7 @@ jobs:
     name: 🏗️ Сборка образов
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 15
     permissions:
       contents: read
@@ -89,25 +89,20 @@ jobs:
           tags: ghcr.io/andr-235/fullstack-frontend:latest
 
       - name: 🚀 Деплой на сервер
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.PRODUCTION_HOST }}
-          username: ${{ secrets.PRODUCTION_USER }}
-          key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          script: |
-            set -e
-            cd ${{ secrets.PRODUCTION_APP_DIR }}
-
-            echo "🔐 Логин в GitHub Container Registry..."
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
-
-            echo "📦 Загрузка образов..."
-            docker compose -f docker-compose.prod.ip.yml pull
-
-            echo "🚀 Запуск сервисов..."
-            docker compose -f docker-compose.prod.ip.yml up -d --build
-
-            echo "🧹 Очистка..."
-            docker image prune -f || true
-
-            echo "✅ Деплой завершён!"
+        run: |
+          set -e
+          cd ${{ secrets.PRODUCTION_APP_DIR }}
+          
+          echo "🔐 Логин в GitHub Container Registry..."
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+          
+          echo "📦 Загрузка образов..."
+          docker compose -f docker-compose.prod.ip.yml pull
+          
+          echo "🚀 Запуск сервисов..."
+          docker compose -f docker-compose.prod.ip.yml up -d --build
+          
+          echo "🧹 Очистка..."
+          docker image prune -f || true
+          
+          echo "✅ Деплой завершён!"
