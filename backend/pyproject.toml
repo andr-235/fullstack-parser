@@ -84,7 +84,7 @@ vkbottle = {extras = ["http"], version = "^4.5.2"}
 starlette = "0.46.2"
 httpx = "0.26.0"
 natasha = "^1.6.0"
-setuptools = "^78.1.1"
+setuptools = "^80.9.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.4.1"
