@@ -1,4 +1,5 @@
 ---
+globs: **/*.*
 alwaysApply: false
 ---
 
@@ -8,19 +9,3 @@ alwaysApply: false
 - Обрабатывай ошибки в начале функций с ранними возвратами
 - Регулярно рефактори код для улучшения структуры
 - Используй систему контроля версий (Git) для отслеживания изменений
-
-- Prioritize clarity to make reading, understanding, and modifying code easier.
-- Adhere to established coding standards and write well-structured code to reduce errors.
-- Regularly review and refactor code to improve structure, readability, and maintainability. Always leave the codebase cleaner than you found it.
-- Use version control systems (e.g., Git) to track changes and collaborate effectively.
-- Пиши читаемый, понятный и поддерживаемый код
-- Следуй установленным стандартам кодирования
-- Используй описательные имена переменных и функций
-- Обрабатывай ошибки в начале функций с ранними возвратами
-- Регулярно рефактори код для улучшения структуры
-- Используй систему контроля версий (Git) для отслеживания изменений
-
-- Prioritize clarity to make reading, understanding, and modifying code easier.
-- Adhere to established coding standards and write well-structured code to reduce errors.
-- Regularly review and refactor code to improve structure, readability, and maintainability. Always leave the codebase cleaner than you found it.
-- Use version control systems (e.g., Git) to track changes and collaborate effectively.

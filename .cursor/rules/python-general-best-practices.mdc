@@ -1,13 +1,13 @@
 ---
-description:
 globs: **/*.py
 alwaysApply: false
 ---
-- Follow PEP 8 style guide for formatting.
-- Use docstrings to document functions and classes.
-- Write simple and clear code; avoid unnecessary complexity.
-- Prefer list comprehensions for creating lists when appropriate.
-- Use try-except blocks to handle exceptions gracefully.
-- Utilize type hints for better code clarity and type checking.
-- Limit the use of global variables to reduce side effects.
-- Choose descriptive variable, function, and class names.
+
+- Следуй PEP 8 для форматирования
+- Используй docstrings для функций и классов
+- Пиши простой и понятный код, избегай лишней сложности
+- Предпочитай list comprehensions для создания списков
+- Используй try-except для обработки ошибок
+- Применяй type hints для ясности и проверки типов
+- Минимизируй использование глобальных переменных
+- Давай осмысленные имена переменным, функциям и классам

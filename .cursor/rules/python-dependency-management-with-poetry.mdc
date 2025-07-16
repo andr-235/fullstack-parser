@@ -1,5 +1,9 @@
 ---
+globs: **/pyproject.toml
 alwaysApply: false
 ---
-- Use poetry for dependency management.
-- Use UV when installing depdendencies.
+
+- Используй Poetry для управления зависимостями
+- Используй UV для быстрой установки
+- Фиксируй версии зависимостей
+- Регулярно обновляй зависимости

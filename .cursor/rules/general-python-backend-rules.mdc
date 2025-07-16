@@ -1,4 +1,5 @@
 ---
+globs: backend/**/*.py
 alwaysApply: false
 ---
 
@@ -10,21 +11,3 @@ alwaysApply: false
 - Используй docstrings для документации функций
 - Обрабатывай исключения с помощью try-except
 - Используй функциональный подход, избегай классов без необходимости
-
-- Use the "Receive an Object, Return an Object" pattern.
-- Handle errors at the beginning of functions with early returns.
-- Use guard clauses and avoid deeply nested if statements.
-- Implement proper logging and custom error types.
-- Используй Python 3.11+, FastAPI, SQLAlchemy
-- Пиши асинхронные функции для операций ввода-вывода
-- Используй type hints для всех функций
-- Предпочитай Pydantic модели для валидации
-- Следуй PEP 8 для форматирования
-- Используй docstrings для документации функций
-- Обрабатывай исключения с помощью try-except
-- Используй функциональный подход, избегай классов без необходимости
-
-- Use the "Receive an Object, Return an Object" pattern.
-- Handle errors at the beginning of functions with early returns.
-- Use guard clauses and avoid deeply nested if statements.
-- Implement proper logging and custom error types.

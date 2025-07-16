@@ -1,4 +1,5 @@
 ---
+globs: frontend/**/*.ts*
 alwaysApply: false
 ---
 
@@ -10,21 +11,3 @@ alwaysApply: false
 - Используй асинхронные операции для API вызовов
 - Обрабатывай ошибки в начале функций
 - Используй Tailwind CSS для стилизации
-
-- Follow proper naming conventions: use lowercase with dashes for directories (e.g., `components/auth-wizard`).
-- Use TypeScript for all code. Prefer interfaces over types. Avoid enums; use maps instead.
-- Write all components as functional components with proper TypeScript interfaces.
-- Implement responsive design using Tailwind CSS with Shadcn UI, adopting a mobile-first approach.
-- Используй TypeScript, React, Next.js 14, TailwindCSS
-- Пиши функциональные компоненты с TypeScript интерфейсами
-- Предпочитай интерфейсы над типами, избегай enum
-- Используй описательные имена переменных
-- Следуй принципу единственной ответственности
-- Используй асинхронные операции для API вызовов
-- Обрабатывай ошибки в начале функций
-- Используй Tailwind CSS для стилизации
-
-- Follow proper naming conventions: use lowercase with dashes for directories (e.g., `components/auth-wizard`).
-- Use TypeScript for all code. Prefer interfaces over types. Avoid enums; use maps instead.
-- Write all components as functional components with proper TypeScript interfaces.
-- Implement responsive design using Tailwind CSS with Shadcn UI, adopting a mobile-first approach.

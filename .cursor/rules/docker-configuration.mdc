@@ -1,5 +1,10 @@
 ---
+globs: Dockerfile*
 alwaysApply: false
 ---
-- Use Docker for containerization and ensure easy deployment.
-- Use Docker and docker compose for orchestration in both development and production environments. Avoid using the obsolete `docker-compose` command.
+
+- Используй Docker для контейнеризации и деплоя
+- Используй docker compose для оркестрации (dev/prod)
+- Не используй устаревший docker-compose
+- Оптимизируй размер образов
+- Не включай секреты в образы

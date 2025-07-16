@@ -1,9 +1,8 @@
+---
+globs: **/migrations/**/*.*
+alwaysApply: false
+---
 - Используй Alembic для миграций базы данных
 - Создавай миграции для всех изменений схемы
 - Тестируй миграции перед применением
 - Документируй сложные миграции
-
-globs: **/migrations/**/*.*
-alwaysApply: false
----
-- Use alembic for database migrations.
