@@ -10,6 +10,7 @@ from app.api.v1 import (
     health,
     keywords,
     monitoring,
+    morphological,
     parser,
     stats,
 )
@@ -30,6 +31,11 @@ api_router.include_router(stats.router, prefix="/stats", tags=["Stats"])
 api_router.include_router(
     monitoring.router, prefix="/monitoring", tags=["Monitoring"]
 )
+api_router.include_router(
+    morphological.router,
+    prefix="/morphological",
+    tags=["Morphological Analysis"],
+)
 
 
 @api_router.get("/")
@@ -45,6 +51,7 @@ async def api_info() -> dict[str, str | dict[str, str]]:
             "parser": "/parser - Парсинг и поиск комментариев",
             "stats": "/stats - Статистика системы",
             "monitoring": "/monitoring - Автоматический мониторинг групп",
+            "morphological": "/morphological - Морфологический анализ слов",
             "health": "/health - Состояние сервиса",
         },
     }

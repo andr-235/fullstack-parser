@@ -4,7 +4,6 @@ Parser Service для обработки комментариев и поиск�
 
 import asyncio
 import logging
-import re
 from datetime import datetime, timezone
 from typing import Callable, Coroutine, List, Optional, Tuple
 
@@ -33,6 +32,7 @@ from app.schemas.vk_comment import (
 )
 from app.schemas.vk_group import VKGroupResponse
 from app.services.arq_enqueue import enqueue_run_parsing_task
+from app.services.morphological_service import morphological_service
 from app.services.redis_parser_manager import RedisParserManager
 from app.services.vkbottle_service import VKBottleService
 
@@ -463,25 +463,33 @@ class ParserService:
     def _find_keywords_in_text(
         self, text: str, keywords: list[Keyword]
     ) -> list[tuple[Keyword, str, int]]:
+        """
+        Найти ключевые слова в тексте с использованием морфологического анализа.
+
+        Args:
+            text: Текст для поиска
+            keywords: Список ключевых слов
+
+        Returns:
+            Список кортежей (ключевое_слово, найденный_текст, позиция)
+        """
         matches: List[Tuple[Keyword, str, int]] = []
-        text_lower = text.lower()
+
         for keyword in keywords:
-            search_text = text if keyword.is_case_sensitive else text_lower
-            search_word = (
-                keyword.word
-                if keyword.is_case_sensitive
-                else keyword.word.lower()
+            # Используем морфологический анализ для поиска всех форм слова
+            morphological_matches = (
+                morphological_service.find_morphological_matches(
+                    text=text,
+                    keyword=keyword.word,
+                    case_sensitive=keyword.is_case_sensitive,
+                    whole_word=keyword.is_whole_word,
+                )
             )
-            if keyword.is_whole_word:
-                pattern = r"\\b" + re.escape(search_word) + r"\\b"
-                flags = re.IGNORECASE if not keyword.is_case_sensitive else 0
-                for match in re.finditer(pattern, search_text, flags):
-                    matches.append((keyword, match.group(0), match.start()))
-            else:
-                pos = search_text.find(search_word, 0)
-                while pos != -1:
-                    matches.append((keyword, search_word, pos))
-                    pos = search_text.find(search_word, pos + 1)
+
+            # Добавляем найденные совпадения
+            for matched_text, position in morphological_matches:
+                matches.append((keyword, matched_text, position))
+
         return matches
 
     async def _get_author_info(self, author_id: int) -> tuple[str, str, str]:
@@ -489,7 +497,7 @@ class ParserService:
             f"Получаю данные об авторе VK: {author_id}"
         )
         if author_id is None:
-            return None, None, None
+            return "", "", ""
         if author_id > 0:
             users = await self.vk_service.api.users.get(
                 user_ids=[author_id], fields=["screen_name", "photo_100"]
@@ -497,8 +505,8 @@ class ParserService:
             if users:
                 user = users[0]
                 name = f"{user.first_name} {user.last_name}"
-                screen_name = getattr(user, "screen_name", None)
-                photo_url = getattr(user, "photo_100", None)
+                screen_name = getattr(user, "screen_name", "")
+                photo_url = getattr(user, "photo_100", "")
                 self.vk_service.logger.info(
                     f"User info: {name}, {screen_name}, {photo_url}"
                 )
@@ -511,8 +519,8 @@ class ParserService:
             if groups:
                 group = groups[0]
                 name = group.name
-                screen_name = getattr(group, "screen_name", None)
-                photo_url = getattr(group, "photo_100", None)
+                screen_name = getattr(group, "screen_name", "")
+                photo_url = getattr(group, "photo_100", "")
                 self.vk_service.logger.info(
                     f"Group info: {name}, {screen_name}, {photo_url}"
                 )
@@ -520,7 +528,7 @@ class ParserService:
         self.vk_service.logger.warning(
             f"Не удалось получить данные об авторе VK: {author_id}"
         )
-        return None, None, None
+        return "", "", ""
 
     async def _save_comment(
         self, post: VKPost, comment_data, matches: list
