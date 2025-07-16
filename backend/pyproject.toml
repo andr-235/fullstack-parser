@@ -77,7 +77,7 @@ passlib = {version = "1.7.4", extras = ["bcrypt"]}
 python-multipart = "0.0.20"
 python-dateutil = "2.8.2"
 pytz = "2023.3"
-structlog = "^24.2.0"
+structlog = "^25.4.0"
 pre-commit = "^4.2.0"
 arq = "^0.26.3"
 vkbottle = {extras = ["http"], version = "^4.5.2"}
