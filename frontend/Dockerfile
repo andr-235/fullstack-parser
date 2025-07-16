@@ -22,9 +22,9 @@ RUN pnpm config set network-timeout 300000 && \
 COPY package.json pnpm-lock.yaml ./
 
 # Устанавливаем зависимости с увеличенными таймаутами и retry логикой
-RUN pnpm install --frozen-lockfile --network-timeout=300000 --fetch-timeout=300000 || \
-    (echo "Retrying pnpm install..." && sleep 5 && pnpm install --frozen-lockfile --network-timeout=300000 --fetch-timeout=300000) || \
-    (echo "Second retry..." && sleep 10 && pnpm install --frozen-lockfile --network-timeout=300000 --fetch-timeout=300000)
+RUN pnpm install --frozen-lockfile --fetch-timeout=300000 || \
+    (echo "Retrying pnpm install..." && sleep 5 && pnpm install --frozen-lockfile --fetch-timeout=300000) || \
+    (echo "Second retry..." && sleep 10 && pnpm install --frozen-lockfile --fetch-timeout=300000)
 
 # Копируем исходники (исключая тесты, .git и т.д.)
 COPY . .
@@ -40,7 +40,7 @@ FROM node:20-alpine3.18 AS production
 WORKDIR /app
 
 # Устанавливаем curl для healthcheck с таймаутом
-RUN apk update && apk add --no-cache curl && rm -rf /var/cache/apk/*
+RUN apk update && apk add --no-cache curl=8.5.0-r0 && rm -rf /var/cache/apk/*
 
 # Создаём non-root пользователя
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
@@ -50,7 +50,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Копируем .env.local в production (если есть)
-RUN [ -f .env.local ] && cp .env.local .env.local || true
+RUN if [ -f .env.local ]; then cp .env.local .env.local; fi
 
 # Устанавливаем переменные окружения
 ENV NODE_ENV=production
