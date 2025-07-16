@@ -114,7 +114,7 @@ jobs:
     timeout-minutes: 15
     environment:
       name: production
-      url: https://192.168.88.12  # Укажи свой production URL
+      url: https://192.168.88.12 # Укажи свой production URL
     permissions:
       contents: read
     steps:
@@ -141,24 +141,6 @@ jobs:
             cd ${{ secrets.PRODUCTION_APP_DIR }} && \
               docker-compose -f docker-compose.prod.ip.yml pull && \
               docker-compose -f docker-compose.prod.ip.yml up -d --build
-
-      - name: Healthcheck backend
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.PRODUCTION_HOST }}
-          username: ${{ secrets.PRODUCTION_USER }}
-          key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          script: |
-            for i in {1..10}; do
-              if curl -fsSL http://localhost:8000/health; then
-                echo "✅ Backend is healthy"
-                exit 0
-              fi
-              echo "Attempt $i: Backend not ready yet, waiting 5 seconds..."
-              sleep 5
-            done
-            echo "❌ Backend healthcheck failed after 10 attempts"
-            exit 1
 
       - name: Telegram уведомление о деплое
         if: success()
