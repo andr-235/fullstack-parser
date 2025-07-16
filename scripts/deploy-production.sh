@@ -1,19 +1,36 @@
 #!/bin/bash
-set -e
 
-echo "🏭 Deploying to production..."
+# 🚀 Скрипт для деплоя на продакшн
+# Использование: ./scripts/deploy-production.sh
 
-# Backup current state
-./scripts/backup.sh
+set -e  # Остановка при ошибке
 
-# Pull latest images
-docker-compose -f docker-compose.prod.yml pull
+echo "🚀 Начинаем деплой на продакшн..."
 
-# Blue-green deployment
-docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+# Проверка наличия переменных окружения
+if [ -z "$GHCR_USERNAME" ] || [ -z "$GHCR_TOKEN" ]; then
+    echo "❌ Ошибка: Не установлены переменные GHCR_USERNAME или GHCR_TOKEN"
+    echo "Установите их в .env.prod или экспортируйте в текущей сессии"
+    exit 1
+fi
 
-# Health check
-timeout 120 bash -c 'until curl -f https://api.your-domain.com/health > /dev/null 2>&1; do sleep 5; done'
-timeout 120 bash -c 'until curl -f https://your-domain.com > /dev/null 2>&1; do sleep 5; done'
+# Логин в GitHub Container Registry
+echo "🔐 Логин в GitHub Container Registry..."
+echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 
-echo "✅ Production deployment completed" 
+# Загрузка образов
+echo "📦 Загрузка Docker образов..."
+docker-compose -f docker-compose.prod.ip.yml pull
+
+# Запуск сервисов
+echo "🚀 Запуск сервисов..."
+docker-compose -f docker-compose.prod.ip.yml up -d --build
+
+# Проверка статуса
+echo "🔍 Проверка статуса сервисов..."
+sleep 10  # Даем время на запуск
+docker-compose -f docker-compose.prod.ip.yml ps
+
+echo "✅ Деплой завершен успешно!"
+echo "📊 Статус контейнеров:"
+docker-compose -f docker-compose.prod.ip.yml ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"

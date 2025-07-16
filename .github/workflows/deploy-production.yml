@@ -2,9 +2,10 @@
 # 🚀 Deploy to Production
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
 
 concurrency:
   group: production
@@ -17,46 +18,14 @@ env:
   IMAGE_NAME_ARQ_WORKER: andr-235/fullstack-arq-worker
 
 jobs:
-  test-backend:
-    name: Backend Tests
-    permissions:
-      contents: write
-    uses: ./.github/workflows/reusable-backend-test.yml
-    with:
-      python-versions: '["3.11"]'
-      upload-coverage: "false"
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  test-frontend:
-    name: Frontend Tests
-    permissions:
-      contents: write
-    uses: ./.github/workflows/reusable-frontend-test.yml
-    with:
-      node-versions: '["20"]'
-      upload-coverage: "false"
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  security:
-    name: Security Scan
-    permissions:
-      contents: read
-      actions: read
-      security-events: write
-    uses: ./.github/workflows/security.yml
-
   build:
     name: Build and Push Docker Images
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
       packages: write
-    needs: [test-backend, test-frontend, security]
-    outputs:
-      short_sha: ${{ steps.vars.outputs.sha }}
     steps:
       - name: ⬇️ Check out code
         uses: actions/checkout@v4
@@ -110,6 +79,7 @@ jobs:
   deploy:
     name: Deploy to Production Server
     needs: build
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: self-hosted
     timeout-minutes: 15
     environment:
@@ -130,6 +100,10 @@ jobs:
             (echo "Нет PRODUCTION_PORT" && exit 1)
           test -n "${{ secrets.PRODUCTION_APP_DIR }}" || \
             (echo "Нет PRODUCTION_APP_DIR" && exit 1)
+          test -n "${{ secrets.GHCR_USERNAME }}" || \
+            (echo "Нет GHCR_USERNAME" && exit 1)
+          test -n "${{ secrets.GHCR_TOKEN }}" || \
+            (echo "Нет GHCR_TOKEN" && exit 1)
 
       - name: 🚀 Deploy to Production
         uses: appleboy/ssh-action@v1
@@ -138,9 +112,28 @@ jobs:
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
-            cd ${{ secrets.PRODUCTION_APP_DIR }} && \
-              docker-compose -f docker-compose.prod.ip.yml pull && \
-              docker-compose -f docker-compose.prod.ip.yml up -d --build
+            set -e  # Остановка при ошибке
+            cd ${{ secrets.PRODUCTION_APP_DIR }}
+            echo "🔐 Логин в GitHub Container Registry..."
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+            echo "📦 Загрузка Docker образов..."
+            docker-compose -f docker-compose.prod.ip.yml pull
+            echo "🚀 Запуск сервисов..."
+            docker-compose -f docker-compose.prod.ip.yml up -d --build
+            echo "✅ Деплой завершен успешно!"
+
+      - name: 🔍 Проверка статуса сервисов
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd ${{ secrets.PRODUCTION_APP_DIR }}
+            echo "📊 Статус контейнеров:"
+            docker-compose -f docker-compose.prod.ip.yml ps
+            echo "🔍 Проверка health checks:"
+            docker-compose -f docker-compose.prod.ip.yml ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
 
       # - name: Slack/Telegram уведомление (опционально)
       #   run: |

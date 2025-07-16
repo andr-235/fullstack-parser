@@ -1,4 +1,4 @@
-version: "3.9"
+# version: "3.9"  # Устаревший атрибут, удален для избежания предупреждений
 services:
   postgres:
     env_file:
