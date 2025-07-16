@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.6
 
 # Stage 1: Builder
-FROM python:3.11-slim AS builder
+FROM python:3.13-slim AS builder
 WORKDIR /app
 
 # Системные зависимости для сборки и установка poetry/uv
@@ -29,7 +29,7 @@ COPY alembic.ini ./
 # force rebuild for latest tag push
 
 # Stage 2: Production
-FROM python:3.11-slim AS production
+FROM python:3.13-slim AS production
 WORKDIR /app
 
 # Устанавливаем только runtime зависимости
