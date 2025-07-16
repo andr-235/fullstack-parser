@@ -20,17 +20,21 @@ jobs:
         run: |
           python3 --version
           which python3
+          echo "PATH: $PATH"
+          which poetry || echo "poetry не найден в PATH"
 
       - name: 📦 Backend - установка зависимостей
         working-directory: ./backend
         run: |
-          sudo apt update && sudo apt install -y pipx
-          pipx install poetry
+          # Убеждаемся, что poetry доступен
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry --version
           poetry install --no-interaction
 
       - name: 🧪 Backend - запуск тестов
         working-directory: ./backend
         run: |
+          export PATH="$HOME/.local/bin:$PATH"
           poetry run pytest tests/ -v --tb=short
 
       - name: 🟢 Frontend - тесты
