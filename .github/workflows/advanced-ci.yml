@@ -1,0 +1,194 @@
+name: 🚀 Продвинутый CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  lint:
+    name: 🔍 Линтинг и проверки
+    runs-on: self-hosted
+    timeout-minutes: 5
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Python линтинг
+        working-directory: ./backend
+        run: |
+          pipx install poetry
+          poetry install --no-interaction
+          poetry run ruff check .
+          poetry run black --check .
+          poetry run isort --check-only .
+
+      - name: 🟢 TypeScript линтинг
+        working-directory: ./frontend
+        run: |
+          npm install -g pnpm@10.12.4
+          pnpm install --frozen-lockfile
+          pnpm lint
+          pnpm type-check
+
+  test:
+    name: 🧪 Тесты
+    runs-on: self-hosted
+    timeout-minutes: 15
+    needs: lint
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Backend тесты
+        working-directory: ./backend
+        run: |
+          pipx install poetry
+          poetry install --no-interaction
+          poetry run pytest tests/ -v --tb=short --cov=app --cov-report=xml
+
+      - name: 🟢 Frontend тесты
+        working-directory: ./frontend
+        run: |
+          npm install -g pnpm@10.12.4
+          pnpm install --frozen-lockfile
+          pnpm test --passWithNoTests --watchAll=false --coverage
+
+      - name: 📊 Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./backend/coverage.xml,./frontend/coverage/lcov.info
+          flags: backend,frontend
+          name: codecov-umbrella
+
+  security:
+    name: 🔒 Безопасность
+    runs-on: self-hosted
+    timeout-minutes: 10
+    needs: lint
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔍 Security scan
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python, javascript
+
+      - name: 🔍 Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+      - name: 🐍 Python security
+        working-directory: ./backend
+        run: |
+          pipx install poetry
+          poetry install --no-interaction
+          poetry run bandit -r app/ -f json -o bandit-report.json || true
+
+  build:
+    name: 🏗️ Сборка образов
+    needs: [test, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: self-hosted
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Логин в GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🏗️ Сборка и пуш backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 🏗️ Сборка и пуш frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: 🚀 Деплой
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: self-hosted
+    timeout-minutes: 15
+    environment: production
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Логин в GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+      - name: 🚀 Деплой на сервер
+        run: |
+          set -e
+          cd ${{ secrets.PRODUCTION_APP_DIR }}
+
+          echo "📦 Загрузка образов..."
+          docker compose -f docker-compose.prod.ip.yml pull
+
+          echo "🚀 Запуск сервисов..."
+          docker compose -f docker-compose.prod.ip.yml up -d --build
+
+          echo "🧹 Очистка..."
+          docker image prune -f || true
+
+          echo "✅ Деплой завершён!"
+
+      - name: 📊 Health check
+        run: |
+          sleep 30
+          curl -f ${{ secrets.HEALTH_CHECK_URL }} || exit 1
+
+  notify:
+    name: 📢 Уведомления
+    needs: [deploy]
+    if: always()
+    runs-on: self-hosted
+    timeout-minutes: 5
+
+    steps:
+      - name: 📢 Slack notification
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: "#deployments"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
