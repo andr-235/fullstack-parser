@@ -4,22 +4,22 @@ on:
   workflow_call:
     inputs:
       target:
-        description: 'backend или frontend'
+        description: "backend или frontend"
         required: true
         type: string
       python-version:
-        description: 'Python version (для backend)'
+        description: "Python version (для backend)"
         required: false
-        default: '3.11'
+        default: "3.11"
         type: string
       node-version:
-        description: 'Node.js version (для frontend)'
+        description: "Node.js version (для frontend)"
         required: false
-        default: '20'
+        default: "20"
         type: string
-    secrets:
-      GITHUB_TOKEN:
-        required: true
+    # secrets:
+    #   GITHUB_TOKEN:
+    #     required: true
 
 jobs:
   lint:
@@ -68,8 +68,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node-version }}
-          cache: 'pnpm'
-          cache-dependency-path: 'frontend/pnpm-lock.yaml'
+          cache: "pnpm"
+          cache-dependency-path: "frontend/pnpm-lock.yaml"
       - name: Install dependencies (frontend)
         if: inputs.target == 'frontend'
         working-directory: ./frontend
@@ -79,4 +79,4 @@ jobs:
         working-directory: ./frontend
         run: |
           pnpm lint --fix
-          pnpm format --write 
+          pnpm format --write
