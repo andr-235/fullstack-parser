@@ -74,7 +74,7 @@ jobs:
           path: ./backend/coverage.xml
       - name: Upload coverage to Codecov (backend)
         if: inputs.target == 'backend' && inputs.upload-coverage == 'true'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./backend/coverage.xml
@@ -114,7 +114,7 @@ jobs:
           path: ./frontend/coverage/lcov.info
       - name: Upload coverage to Codecov (frontend)
         if: inputs.target == 'frontend' && inputs.upload-coverage == 'true'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./frontend/coverage/lcov.info
