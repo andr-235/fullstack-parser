@@ -186,8 +186,8 @@ install_docker_compose() {
     log_info "Installing Docker Compose..."
 
     # Download latest version
-    COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep 'tag_name' | cut -d '"' -f 4)
-    curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    COMPOSE_VERSION=$(curl -s https://api.docker.com/v1/repos/docker/compose/releases/latest | grep 'tag_name' | cut -d '"' -f 4)
+    curl -L "https://get.docker.com/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 
     # Make executable
     chmod +x /usr/local/bin/docker-compose

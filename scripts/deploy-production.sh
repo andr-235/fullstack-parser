@@ -18,8 +18,8 @@ fi
 echo "🧹 Очистка старых образов..."
 ./scripts/docker-cleanup.sh
 
-# Логин в GitHub Container Registry
-echo "🔐 Логин в GitHub Container Registry..."
+# Логин в Container Registry
+echo "🔐 Логин в Container Registry..."
 echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 
 # Загрузка образов

@@ -46,8 +46,8 @@ check_dependencies() {
     fi
 
     if ! command -v gh &> /dev/null; then
-        log_warning "GitHub CLI не установлен. Установите: https://cli.github.com/"
-        log_info "Можно создать релиз вручную через GitHub UI"
+        log_warning "Git CLI не установлен. Установите Git CLI"
+        log_info "Можно создать релиз вручную через Git UI"
     fi
 
     log_success "Зависимости проверены"
@@ -211,13 +211,13 @@ ${description}"
     log_success "Тег v${new_version} создан и отправлен"
 }
 
-# Создание GitHub Release
-create_github_release() {
+# Создание Git Release
+create_git_release() {
     local new_version=$1
     local description=$2
 
     if command -v gh &> /dev/null; then
-        log_step "Создание GitHub Release..."
+        log_step "Создание Git Release..."
 
         # Определение типа релиза
         if [[ $new_version == *"-"* ]]; then
@@ -226,16 +226,15 @@ create_github_release() {
             prerelease_flag=""
         fi
 
-        # Создание релиза через GitHub CLI
+        # Создание релиза через Git CLI
         gh release create "v${new_version}" \
             --title "Release v${new_version}" \
             --notes "${description}" \
             ${prerelease_flag}
 
-        log_success "GitHub Release создан"
+        log_success "Git Release создан"
     else
-        log_warning "GitHub CLI не установлен. Создайте релиз вручную:"
-        log_info "https://github.com/$(git config --get remote.origin.url | sed 's/.*github.com[:/]\([^/]*\/[^/]*\).*/\1/')/releases/new"
+        log_warning "Git CLI не установлен. Создайте релиз вручную"
     fi
 }
 
@@ -275,13 +274,13 @@ main() {
     # Создание тега и push
     create_tag_and_push "$new_version" "$description"
 
-    # Создание GitHub Release
-    create_github_release "$new_version" "$description"
+    # Создание Git Release
+    create_git_release "$new_version" "$description"
 
     echo
     log_success "🎉 Релиз v${new_version} успешно создан!"
-    log_info "GitHub Actions запустит автоматический процесс деплоя"
-    log_info "Отслеживайте прогресс: https://github.com/$(git config --get remote.origin.url | sed 's/.*github.com[:/]\([^/]*\/[^/]*\).*/\1/')/actions"
+    log_info "CI/CD pipeline запустит автоматический процесс деплоя"
+    log_info "Отслеживайте прогресс в CI/CD pipeline"
 }
 
 # Запуск скрипта

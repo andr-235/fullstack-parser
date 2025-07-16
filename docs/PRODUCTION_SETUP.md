@@ -31,7 +31,7 @@ ssh username@192.168.88.12
 
 ```bash
 # Загрузите проект на сервер
-git clone https://github.com/your-username/fullstack-parser.git /opt/app
+git clone https://git.example.com/your-username/fullstack-parser.git /opt/app
 cd /opt/app
 
 # Запустите скрипт настройки сервера (требует root права)

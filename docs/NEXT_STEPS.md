@@ -97,7 +97,7 @@ frontend/
 
    ```bash
    # На сервере
-   wget https://raw.githubusercontent.com/your-repo/arc/main/scripts/setup-server.sh
+   wget https://raw.githubusercontent.com/your-repo/main/scripts/setup-server.sh
    chmod +x setup-server.sh
    sudo ./setup-server.sh yourdomain.com your-email@domain.com
    ```
@@ -239,9 +239,9 @@ SMTP_PASSWORD=your-app-password
 - [ ] SQL injection protection
 - [ ] XSS protection headers
 
-## 🚀 CI/CD Setup (GitHub Actions)
+## 🚀 CI/CD Setup
 
-Создать `.github/workflows/deploy.yml`:
+Создать CI/CD pipeline:
 
 ```yaml
 name: Deploy to Production

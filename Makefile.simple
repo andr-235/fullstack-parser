@@ -23,7 +23,7 @@ deploy: ## Деплой в production
 	@read -p "Ты уверен? Это задеплоит в production! (y/N): " confirm; \
 	if [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ]; then \
 		git push origin main; \
-		echo "✅ Деплой запущен! Следи за GitHub Actions"; \
+		echo "✅ Деплой запущен! Следи за CI/CD pipeline"; \
 	else \
 		echo "❌ Деплой отменён"; \
 	fi

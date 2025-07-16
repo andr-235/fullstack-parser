@@ -124,7 +124,7 @@ sudo sh get-docker.sh
 sudo usermod -aG docker $USER
 
 # Установка Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo curl -L "https://get.docker.com/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
 ```
 
@@ -173,7 +173,7 @@ make deploy       # Деплой в production
 ./scripts/quick-deploy.sh  # Полный деплой с проверками
 
 # Переключение CI/CD
-./scripts/switch-cicd.sh   # Переключение между режимами
+
 ```
 
 📖 **Документация**: [docs/SINGLE_DEV_CICD.md](docs/SINGLE_DEV_CICD.md)
@@ -254,7 +254,7 @@ cd frontend && npm run lint && npm run format
 
 ## CI/CD и автоматизация
 
-В проекте реализована современная система CI/CD на базе GitHub Actions:
+В проекте реализована современная система CI/CD:
 - Проверка кода (линтинг, автоформат, тесты) для backend и frontend
 - Кэширование зависимостей (Poetry, pnpm, Docker buildx)
 - Сканирование зависимостей (poetry check, pip-audit, pnpm audit)
@@ -293,7 +293,7 @@ git tag -a v1.2.3 -m "Release v1.2.3"
 git push origin v1.2.3
 ```
 
-#### 🛠️ GitHub Actions Workflow
+#### 🛠️ CI/CD Workflow
 
 При создании тега автоматически запускается полный pipeline:
 
@@ -302,14 +302,14 @@ git push origin v1.2.3
 3. **📦 Зависимости** - Проверка обновлений и уязвимостей
 4. **🧪 Тестирование** - Backend и frontend тесты с покрытием
 5. **🐳 Сборка** - Docker образы для всех сервисов
-6. **📦 Публикация** - GitHub Container Registry
-7. **🎉 Release** - GitHub Release с автоматическим changelog
+6. **📦 Публикация** - Container Registry
+7. **🎉 Release** - Git Release с автоматическим changelog
 8. **🚀 Деплой** - Автоматический деплой на staging
 9. **📢 Уведомления** - Команда получает уведомления
 
 #### 📊 Мониторинг релизов
 
-- **GitHub Actions**: Отслеживание прогресса сборки
+- **CI/CD Pipeline**: Отслеживание прогресса сборки
 - **Docker Hub**: Публикация образов с тегами
 - **Coverage**: Отчеты о покрытии тестами
 - **Security**: Сканирование уязвимостей
@@ -358,4 +358,4 @@ make release-status
 
 ## ✅ Тестирование Branch Protection
 
-Этот проект настроен с GitHub branch protection rules для обеспечения качества кода.
+Этот проект настроен с branch protection rules для обеспечения качества кода.

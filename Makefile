@@ -1,4 +1,4 @@
-.PHONY: feature release hotfix cleanup sync release-create release-deploy release-rollback dev test build deploy status logs clean branch commit push pr switch-cicd
+.PHONY: feature release hotfix cleanup sync release-create release-deploy release-rollback dev test build deploy status logs clean branch commit push pr
 
 # 🚀 Упрощённые команды для одного разработчика
 dev: ## Запуск в режиме разработки
@@ -22,7 +22,7 @@ deploy: ## Деплой в production
 	@read -p "Ты уверен? Это задеплоит в production! (y/N): " confirm; \
 	if [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ]; then \
 		git push origin main; \
-		echo "✅ Деплой запущен! Следи за GitHub Actions"; \
+		echo "✅ Деплой запущен! Следи за CI/CD pipeline"; \
 	else \
 		echo "❌ Деплой отменён"; \
 	fi
@@ -66,9 +66,7 @@ pr: ## Создать Pull Request
 	@gh pr create --fill
 	@echo "✅ Pull Request создан!"
 
-switch-cicd: ## Переключение CI/CD режимов
-	@echo "🔄 Переключение CI/CD..."
-	@./scripts/switch-cicd.sh
+
 
 # 🎯 Классические команды для команды
 feature:
@@ -141,7 +139,7 @@ help: ## Показать справку
 	@echo "  make commit       - Коммит изменений"
 	@echo "  make push         - Пуш в репозиторий"
 	@echo "  make pr           - Создать Pull Request"
-	@echo "  make switch-cicd  - Переключение CI/CD режимов"
+
 	@echo ""
 	@echo "🎯 Классические команды (команда):"
 	@echo "  make feature      - Создать feature ветку"
