@@ -59,11 +59,11 @@ async def start_scheduler(interval_seconds: int = 300) -> StatusResponse:
             success=True,
             message=f"Планировщик запущен с интервалом {interval_seconds} секунд",
         )
-         except Exception as e:
-         raise HTTPException(
-             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-             detail=f"Ошибка запуска планировщика: {str(e)}",
-         ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка запуска планировщика: {str(e)}",
+        ) from e
 
 
 @router.post("/scheduler/stop", response_model=StatusResponse)
@@ -78,7 +78,7 @@ async def stop_scheduler() -> StatusResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка остановки планировщика: {str(e)}",
-        )
+        ) from e
 
 
 @router.post("/run-cycle", response_model=StatusResponse)
@@ -102,7 +102,7 @@ async def run_monitoring_cycle() -> StatusResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка запуска цикла мониторинга: {str(e)}",
-        )
+        ) from e
 
 
 @router.post("/groups/{group_id}/enable", response_model=StatusResponse)
