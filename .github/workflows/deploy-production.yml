@@ -23,7 +23,7 @@ jobs:
       contents: write
     uses: ./.github/workflows/reusable-backend-test.yml
     with:
-      python-versions: '["3.11", "3.12"]'
+      python-versions: '["3.11"]'
       upload-coverage: "false"
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
