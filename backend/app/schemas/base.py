@@ -12,7 +12,9 @@ class BaseSchema(BaseModel):
     """Базовая схема Pydantic с общей конфигурацией."""
 
     model_config = ConfigDict(
-        from_attributes=True, populate_by_name=True, arbitrary_types_allowed=True
+        from_attributes=True,
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
     )
 
 
@@ -20,7 +22,9 @@ class TimestampMixin(BaseModel):
     """Миксин для добавления временных меток created_at и updated_at."""
 
     created_at: datetime = Field(..., description="Время создания")
-    updated_at: datetime = Field(..., description="Время последнего обновления")
+    updated_at: datetime = Field(
+        ..., description="Время последнего обновления"
+    )
 
 
 class IDMixin(BaseModel):

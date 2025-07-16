@@ -63,13 +63,18 @@ async def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    # Используем переменную окружения DATABASE_URL, если она есть
+    url = os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
     if not url:
-        raise RuntimeError("sqlalchemy.url is not set in alembic.ini")
+        raise RuntimeError(
+            "DATABASE_URL environment variable or sqlalchemy.url in alembic.ini is not set"
+        )
     connectable = create_async_engine(url, pool_pre_ping=True)
 
     def do_run_migrations(connection):
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection, target_metadata=target_metadata
+        )
         with context.begin_transaction():
             context.run_migrations()
 

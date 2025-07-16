@@ -10,7 +10,7 @@ import {
   Play,
   Settings,
 } from 'lucide-react'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/lib/utils'
 
 const navigation = [
   { name: 'Дашборд', href: '/dashboard', icon: BarChart3 },

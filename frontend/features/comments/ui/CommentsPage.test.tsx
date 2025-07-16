@@ -4,8 +4,9 @@ import {
   fireEvent,
   waitFor,
   within,
+  act,
 } from '@testing-library/react'
-import CommentsPage from '../page'
+import CommentsPage from '@/app/comments/page'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useInfiniteComments } from '@/hooks/use-comments'
 import { useGroups } from '@/hooks/use-groups'
@@ -15,6 +16,7 @@ import type {
   VKGroupResponse,
   KeywordResponse,
 } from '@/types/api'
+import '@testing-library/jest-dom'
 
 jest.mock('@/hooks/use-comments', () => ({
   useInfiniteComments: jest.fn(),
@@ -105,7 +107,8 @@ describe('CommentsPage', () => {
   it('должна рендериться без ошибок', () => {
     renderWithProviders(<CommentsPage />)
     expect(
-      screen.getByRole('heading', { name: /Фильтры комментариев/i })
+      screen.getByRole('heading', { name: /Фильтры комментариев/i, level: 1 })
+      // @ts-expect-error jest-dom matcher
     ).toBeInTheDocument()
   })
 
@@ -113,9 +116,11 @@ describe('CommentsPage', () => {
     mockUseInfiniteComments.mockReturnValue({
       data: { pages: [], pageParams: [] },
       isLoading: true,
+      isFetching: true,
+      isFetchingNextPage: false,
     })
     renderWithProviders(<CommentsPage />)
-    expect(screen.getByRole('status')).toBeInTheDocument() // LoadingSpinner
+    expect(screen.getByRole('status') as any).toBeInTheDocument()
   })
 
   it('должна показывать сообщение об ошибке', () => {
@@ -126,7 +131,9 @@ describe('CommentsPage', () => {
       error,
     })
     renderWithProviders(<CommentsPage />)
-    expect(screen.getByText(`Ошибка: ${error.message}`)).toBeInTheDocument()
+    expect(
+      screen.getByText(`Ошибка: ${error.message}`) as any
+    ).toBeInTheDocument()
   })
 
   it('должна отображать список комментариев', () => {
@@ -150,20 +157,26 @@ describe('CommentsPage', () => {
     })
 
     renderWithProviders(<CommentsPage />)
-    expect(screen.getByText('This is a test comment')).toBeInTheDocument()
-    expect(screen.getByText('Another test comment')).toBeInTheDocument()
+    expect(
+      screen.getByText('This is a test comment') as any
+    ).toBeInTheDocument()
+    expect(screen.getByText('Another test comment') as any).toBeInTheDocument()
   })
 
   it('должна показывать сообщение, когда комментарии не найдены', () => {
     renderWithProviders(<CommentsPage />)
-    expect(screen.getByText('Комментарии не найдены.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Комментарии не найдены.') as any
+    ).toBeInTheDocument()
   })
 
   it('должна фильтровать комментарии по поисковому запросу', async () => {
     renderWithProviders(<CommentsPage />)
 
-    const searchInput = screen.getByPlaceholderText(/Поиск по тексту.../i)
-    fireEvent.change(searchInput, { target: { value: 'filter' } })
+    const searchInput = screen.getByPlaceholderText('Поиск по тексту...')
+    await act(async () => {
+      fireEvent.change(searchInput, { target: { value: 'filter' } })
+    })
 
     await waitFor(() => {
       expect(mockUseInfiniteComments).toHaveBeenCalledWith(
@@ -199,50 +212,61 @@ describe('CommentsPage', () => {
     const loadMoreButton = screen.getByRole('button', {
       name: /Загрузить еще/i,
     })
-    fireEvent.click(loadMoreButton)
+    await act(async () => {
+      fireEvent.click(loadMoreButton)
+    })
     expect(fetchNextPage).toHaveBeenCalled()
   })
 
   it('должна фильтровать по группе', async () => {
+    jest.useFakeTimers()
     renderWithProviders(<CommentsPage />)
 
-    // Use querySelector because Radix Select doesn't use standard button/role
-    const groupSelectTrigger = document.querySelector(
-      '[aria-haspopup="listbox"]'
-    )
-    fireEvent.mouseDown(groupSelectTrigger as Element)
+    // Используем aria-label для SelectTrigger
+    const groupSelectTrigger = screen.getByLabelText('Группа')
+    await act(async () => {
+      fireEvent.mouseDown(groupSelectTrigger)
+    })
 
     const groupOption = await screen.findByText('Test Group 1')
-    fireEvent.click(groupOption)
-
+    await act(async () => {
+      fireEvent.click(groupOption) // Явно кликаем по Item
+    })
+    jest.advanceTimersByTime(500)
     await waitFor(() => {
-      expect(mockUseInfiniteComments).toHaveBeenCalledWith(
-        expect.objectContaining({
-          group_id: mockGroups[0].id,
-        })
+      const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0])
+      expect(calls).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ group_id: mockGroups[0].id }),
+        ])
       )
     })
+    jest.useRealTimers()
   })
 
   it('должна фильтровать по ключевому слову', async () => {
+    jest.useFakeTimers()
     renderWithProviders(<CommentsPage />)
 
-    const selectTriggers = document.querySelectorAll(
-      '[aria-haspopup="listbox"]'
-    )
-    // The second select is for keywords
-    const keywordSelectTrigger = selectTriggers[1]
-    fireEvent.mouseDown(keywordSelectTrigger)
+    // Используем aria-label для второго SelectTrigger
+    const keywordSelectTrigger = screen.getByLabelText('Ключевое слово')
+    await act(async () => {
+      fireEvent.mouseDown(keywordSelectTrigger)
+    })
 
     const keywordOption = await screen.findByText('Test Keyword 1')
-    fireEvent.click(keywordOption)
-
+    await act(async () => {
+      fireEvent.click(keywordOption) // Явно кликаем по Item
+    })
+    jest.advanceTimersByTime(500)
     await waitFor(() => {
-      expect(mockUseInfiniteComments).toHaveBeenCalledWith(
-        expect.objectContaining({
-          keyword_id: mockKeywords[0].id,
-        })
+      const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0])
+      expect(calls).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ keyword_id: mockKeywords[0].id }),
+        ])
       )
     })
+    jest.useRealTimers()
   })
 })

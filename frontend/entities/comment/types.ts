@@ -45,4 +45,4 @@ export interface CommentSearchParams {
   date_to?: string
   skip?: number
   limit?: number
-} 
+}

@@ -15,7 +15,10 @@ logger = get_task_logger(__name__)
 
 @celery_app.task(bind=True)
 def run_parsing_task(
-    self, group_id: int, max_posts: int | None = None, force_reparse: bool = False
+    self,
+    group_id: int,
+    max_posts: int | None = None,
+    force_reparse: bool = False,
 ):
     """
     Синхронная задача Celery для парсинга постов группы.
@@ -44,7 +47,9 @@ def run_parsing_task(
                 )
 
                 # Явно закрываем redis_manager, если есть метод close
-                if hasattr(redis_manager, "close") and callable(redis_manager.close):
+                if hasattr(redis_manager, "close") and callable(
+                    redis_manager.close
+                ):
                     close_result = redis_manager.close()
                     if asyncio.iscoroutine(close_result):
                         await close_result

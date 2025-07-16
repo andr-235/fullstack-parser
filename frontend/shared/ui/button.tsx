@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
   // Строгие рамки, прямоугольная форма, минимум скруглений
@@ -11,9 +11,12 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-blue-700 text-white border-blue-800 hover:bg-blue-800',
         destructive: 'bg-red-700 text-white border-red-800 hover:bg-red-800',
-        outline: 'border border-slate-600 bg-transparent text-slate-100 hover:bg-slate-800',
-        secondary: 'bg-slate-800 text-slate-100 border-slate-700 hover:bg-slate-700',
-        ghost: 'bg-transparent text-slate-100 border-transparent hover:bg-slate-800',
+        outline:
+          'border border-slate-600 bg-transparent text-slate-100 hover:bg-slate-800',
+        secondary:
+          'bg-slate-800 text-slate-100 border-slate-700 hover:bg-slate-700',
+        ghost:
+          'bg-transparent text-slate-100 border-transparent hover:bg-slate-800',
         link: 'text-blue-400 border-none underline-offset-4 hover:underline',
       },
       size: {

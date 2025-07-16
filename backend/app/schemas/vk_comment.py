@@ -19,7 +19,9 @@ class VKCommentBase(BaseModel):
     text: str = Field(..., description="Текст комментария")
     author_id: int = Field(..., description="ID автора комментария")
     author_name: Optional[str] = Field(None, description="Имя автора")
-    published_at: datetime = Field(..., description="Дата публикации комментария")
+    published_at: datetime = Field(
+        ..., description="Дата публикации комментария"
+    )
 
 
 class VKCommentResponse(VKCommentBase, IDMixin, TimestampMixin, BaseSchema):
@@ -32,18 +34,28 @@ class VKCommentResponse(VKCommentBase, IDMixin, TimestampMixin, BaseSchema):
     post_vk_id: Optional[int] = Field(
         None, description="ID поста в VK (для формирования ссылки)"
     )
-    author_screen_name: Optional[str] = Field(None, description="Короткое имя автора")
-    author_photo_url: Optional[str] = Field(None, description="URL фото автора")
+    author_screen_name: Optional[str] = Field(
+        None, description="Короткое имя автора"
+    )
+    author_photo_url: Optional[str] = Field(
+        None, description="URL фото автора"
+    )
     likes_count: int = Field(default=0, description="Количество лайков")
     parent_comment_id: Optional[int] = Field(
         None, description="ID родительского комментария"
     )
-    has_attachments: bool = Field(default=False, description="Есть ли вложения")
+    has_attachments: bool = Field(
+        default=False, description="Есть ли вложения"
+    )
     matched_keywords_count: int = Field(
         default=0, description="Количество найденных ключевых слов"
     )
-    is_processed: bool = Field(default=False, description="Обработан ли комментарий")
-    processed_at: Optional[datetime] = Field(None, description="Когда был обработан")
+    is_processed: bool = Field(
+        default=False, description="Обработан ли комментарий"
+    )
+    processed_at: Optional[datetime] = Field(
+        None, description="Когда был обработан"
+    )
     group: Optional[VKGroupResponse] = None
 
 
@@ -55,7 +67,9 @@ class CommentWithKeywords(VKCommentResponse):
     matched_keywords: list[str] = Field(
         default=[], description="Найденные ключевые слова"
     )
-    keyword_matches: list[dict] = Field(default=[], description="Детали совпадений")
+    keyword_matches: list[dict] = Field(
+        default=[], description="Детали совпадений"
+    )
 
 
 class CommentSearchParams(BaseModel):

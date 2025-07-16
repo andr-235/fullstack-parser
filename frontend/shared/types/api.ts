@@ -29,4 +29,4 @@ export interface APIError {
 export interface PaginationParams {
   skip?: number
   limit?: number
-} 
+}

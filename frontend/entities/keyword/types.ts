@@ -31,4 +31,4 @@ export interface KeywordStats {
   total_matches: number
   recent_matches: number
   top_groups: string[]
-} 
+}

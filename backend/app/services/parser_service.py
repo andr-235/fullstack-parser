@@ -21,13 +21,16 @@ from app.models.vk_group import VKGroup
 from app.models.vk_post import VKPost
 from app.schemas.base import PaginatedResponse, PaginationParams
 from app.schemas.parser import (
-    CommentSearchParams,
     GlobalStats,
     ParseStats,
     ParseTaskCreate,
     ParseTaskResponse,
 )
-from app.schemas.vk_comment import CommentWithKeywords, VKCommentResponse
+from app.schemas.vk_comment import (
+    CommentSearchParams,
+    CommentWithKeywords,
+    VKCommentResponse,
+)
 from app.schemas.vk_group import VKGroupResponse
 from app.services.arq_enqueue import enqueue_run_parsing_task
 from app.services.redis_parser_manager import RedisParserManager

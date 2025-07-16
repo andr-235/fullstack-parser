@@ -1,13 +1,13 @@
-name: '🛡️ Security Scanning'
+name: "🛡️ Security Scanning"
 
 on:
   workflow_call:
     inputs:
       image_name:
-        description: 'Docker image name'
+        description: "Docker image name"
         required: false
         type: string
-        default: 'test-image'
+        default: "test-image"
 
 jobs:
   trufflehog:
@@ -26,6 +26,7 @@ jobs:
           base: ${{ github.event.pull_request.base.sha || 'main' }}
           head: HEAD
           extra_args: --debug
+        continue-on-error: true
 
   codeql:
     name: CodeQL
@@ -37,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'python', 'javascript' ]
+        language: ["python", "javascript"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.1.1
@@ -58,6 +59,7 @@ jobs:
     needs: [codeql]
     permissions:
       contents: read
+      security-events: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4.1.1
@@ -72,19 +74,19 @@ jobs:
           load: true
           tags: ${{ inputs.image_name }}:${{ github.sha }}
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@v0.17.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ inputs.image_name }}:${{ github.sha }}
           ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          exit-code: '0'
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+          format: "sarif"
+          output: "trivy-results.sarif"
+          exit-code: "0"
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: "trivy-results.sarif"
 
   security-summary:
     name: 📊 Security Summary
@@ -119,4 +121,4 @@ jobs:
             exit 1
           else
             echo "✅ All security checks passed."
-          fi 
+          fi

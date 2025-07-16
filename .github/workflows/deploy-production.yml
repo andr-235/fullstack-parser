@@ -11,26 +11,35 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
-  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+  IMAGE_NAME_BACKEND: andr-235/fullstack-backend
+  IMAGE_NAME_FRONTEND: andr-235/fullstack-frontend
+  IMAGE_NAME_ARQ_WORKER: andr-235/fullstack-arq-worker
 
 jobs:
   test-backend:
     name: Backend Tests
+    permissions:
+      contents: write
     uses: ./.github/workflows/reusable-backend-test.yml
     with:
       python-versions: '["3.11", "3.12"]'
-      upload-coverage: 'false'
+      upload-coverage: "false"
 
   test-frontend:
     name: Frontend Tests
+    permissions:
+      contents: write
     uses: ./.github/workflows/reusable-frontend-test.yml
     with:
       node-versions: '["20"]'
-      upload-coverage: 'false'
+      upload-coverage: "false"
 
   security:
     name: Security Scan
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
     uses: ./.github/workflows/security.yml
 
   build:
@@ -63,14 +72,34 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}
+
+      - name: 🏗️ Build and push arq-worker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_ARQ_WORKER }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_ARQ_WORKER }}:${{ github.sha }}
+
+      - name: Generate .env.local for frontend
+        working-directory: ./frontend
+        run: |
+          echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" >> .env.local
 
       - name: 🏗️ Build and push frontend image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}
 
   deploy:
     name: Deploy to Production Server
@@ -98,19 +127,25 @@ jobs:
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
-            cd /srv/app && docker-compose pull && docker-compose up -d --build
+            cd ${{ secrets.PRODUCTION_APP_DIR }} && docker-compose -f docker-compose.prod.ip.yml pull && docker-compose -f docker-compose.prod.ip.yml up -d --build
 
       - name: Healthcheck backend
-        run: |
-          for i in {1..10}; do
-            if curl -fsSL http://localhost:8000/health; then
-              echo "✅ Backend is healthy"
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "❌ Backend healthcheck failed"
-          exit 1
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            for i in {1..10}; do
+              if curl -fsSL http://localhost:8000/health; then
+                echo "✅ Backend is healthy"
+                exit 0
+              fi
+              echo "Attempt $i: Backend not ready yet, waiting 5 seconds..."
+              sleep 5
+            done
+            echo "❌ Backend healthcheck failed after 10 attempts"
+            exit 1
 
       - name: Telegram уведомление о деплое
         if: success()

@@ -85,6 +85,16 @@ export interface KeywordResponse extends KeywordBase, BaseEntity {
   total_matches: number
 }
 
+export interface KeywordUploadResponse {
+  status: string
+  message: string
+  total_processed: number
+  created: number
+  skipped: number
+  errors: string[]
+  created_keywords: KeywordResponse[]
+}
+
 export interface KeywordStats {
   keyword_id: number
   word: string

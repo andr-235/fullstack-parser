@@ -37,4 +37,4 @@ export interface VKGroupStats {
   comments_with_keywords: number
   last_activity?: string
   top_keywords: string[]
-} 
+}
