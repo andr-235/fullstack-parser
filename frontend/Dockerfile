@@ -40,7 +40,7 @@ FROM node:20-alpine3.18 AS production
 WORKDIR /app
 
 # Устанавливаем curl для healthcheck с таймаутом
-RUN apk update && apk add --no-cache curl=8.5.0-r0 && rm -rf /var/cache/apk/*
+RUN apk update && apk add --no-cache curl && rm -rf /var/cache/apk/*
 
 # Создаём non-root пользователя
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
