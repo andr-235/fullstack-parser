@@ -69,32 +69,38 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """Инициализация базы данных с оптимизацией."""
-    try:
-        # Проверяем подключение без создания таблиц
-        async with async_engine.begin() as conn:
-            await conn.execute("SELECT 1")
+    """Инициализация базы данных с оптимизацией и
+    повторными попытками подключения.
+    """
+    import asyncio
+    import logging
 
-        # Создаем таблицы только если их нет (lazy creation)
-        async with async_engine.begin() as conn:
-            # Проверяем существование хотя бы одной таблицы
-            result = await conn.execute(
-                """
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables
-                    WHERE table_schema = 'public'
-                    AND table_name = 'vk_groups'
+    max_retries = 10
+    delay = 2  # секунд между попытками
+    for attempt in range(1, max_retries + 1):
+        try:
+            # Проверяем подключение без создания таблиц
+            async with async_engine.begin() as conn:
+                await conn.execute("SELECT 1")
+            # Создаем таблицы только если их нет (lazy creation)
+            async with async_engine.begin() as conn:
+                result = await conn.execute(
+                    """
+                    SELECT EXISTS (SELECT FROM information_schema.tables\n"
+                    "WHERE table_schema = 'public' AND table_name = 'vk_groups')"
+                    """
                 )
-            """
+                tables_exist = result.scalar()
+                if not tables_exist:
+                    await conn.run_sync(Base.metadata.create_all)
+            break  # успех, выходим из цикла
+        except Exception as e:
+            logging.warning(
+                f"Database initialization attempt {attempt} failed: {e}"
             )
-            tables_exist = result.scalar()
-
-            if not tables_exist:
-                await conn.run_sync(Base.metadata.create_all)
-
-    except Exception as e:
-        # Логируем ошибку, но не падаем
-        import logging
-
-        logging.warning(f"Database initialization warning: {e}")
-        # Продолжаем работу - таблицы могут быть созданы через миграции
+            if attempt == max_retries:
+                logging.error(
+                    "Max retries reached. Could not connect to the database."
+                )
+                break
+            await asyncio.sleep(delay)
