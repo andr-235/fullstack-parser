@@ -8,9 +8,9 @@ COPY pyproject.toml poetry.lock* ./
 RUN poetry config virtualenvs.create false && poetry install --only=main --no-root
 
 # Stage 2 Builder (копируем код)
-FROM python:3.13im AS builder
+FROM python:3.13-slim AS builder
 WORKDIR /app
-COPY --from=deps /usr/local/lib/python313site-packages /usr/local/lib/python30.13site-packages
+COPY --from=deps /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=deps /usr/local/bin /usr/local/bin
 COPY app/ ./app/
 COPY alembic/ ./alembic/
@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     && rm -rf /var/lib/apt/lists/*
 RUN groupadd -r appuser && useradd --no-log-init -r -g appuser appuser
-COPY --from=builder /usr/local/lib/python313site-packages /usr/local/lib/python30.13site-packages
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app /app
 USER appuser

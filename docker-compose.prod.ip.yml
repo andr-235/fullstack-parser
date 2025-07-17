@@ -106,11 +106,7 @@ services:
       start_period: 40s
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${DOMAIN}
+    image: ghcr.io/andr-235/fullstack-parser/frontend:latest
     container_name: fullstack_prod_frontend
     restart: always
     env_file:
