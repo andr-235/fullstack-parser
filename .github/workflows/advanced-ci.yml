@@ -230,20 +230,3 @@ jobs:
         run: |
           sleep 30
           curl -f ${{ secrets.HEALTH_CHECK_URL }} || exit 1
-
-  notify:
-    name: 📢 Уведомления
-    needs: [deploy]
-    if: always()
-    runs-on: self-hosted
-    timeout-minutes: 5
-
-    steps:
-      - name: 📢 Slack notification
-        if: always()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          channel: "#deployments"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
