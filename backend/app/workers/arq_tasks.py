@@ -110,6 +110,9 @@ async def run_monitoring_cycle(ctx):
 
             logger.info("[ARQ] Цикл мониторинга завершён", **stats)
 
+            # Добавляем задержку чтобы не жрать CPU
+            await asyncio.sleep(1)
+
             return stats
 
     except Exception as e:

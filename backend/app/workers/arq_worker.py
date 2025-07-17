@@ -10,4 +10,9 @@ class WorkerSettings:
     redis_settings = RedisSettings.from_dsn(
         os.environ.get("REDIS_URL", "redis://redis:6379/0")
     )
-    # Можно добавить on_startup/on_shutdown если потребуется
+    # Ограничения для предотвращения высокого потребления CPU
+    max_jobs = 1  # Максимум 1 задача одновременно
+    job_timeout = 300  # Таймаут задачи 5 минут
+    keep_result = 60  # Хранить результат 1 минуту
+    poll_delay = 1.0  # Задержка между проверками задач
+    max_tries = 3  # Максимум 3 попытки для задачи
