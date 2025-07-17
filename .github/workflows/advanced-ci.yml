@@ -37,6 +37,16 @@ jobs:
           npm install -g pnpm@10.12.4
           pnpm --version
 
+      - name: 📦 Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            ~/.local/share/pnpm
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
   lint:
     name: 🔍 Линтинг и проверки
     runs-on: self-hosted
@@ -46,6 +56,26 @@ jobs:
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 🟢 Install pnpm
+        run: |
+          npm install -g pnpm@10.12.4
+          pnpm --version
+
+      - name: 📦 Restore pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            ~/.local/share/pnpm
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
 
       - name: 🐍 Poetry install & линтинг
         working-directory: ./backend
@@ -73,23 +103,40 @@ jobs:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
-      - name: 🐍 Poetry install & backend тесты
-        working-directory: ./backend
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          poetry install --no-interaction
-          poetry run pytest tests/ -v --tb=short --cov=app --cov-report=xml
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
       - name: 🟢 Install pnpm
         run: |
           npm install -g pnpm@10.12.4
           pnpm --version
 
+      - name: 📦 Restore pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            ~/.local/share/pnpm
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: 🐍 Poetry install & backend тесты
+        working-directory: ./backend
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry install --no-interaction
+          poetry run pytest tests/ -v --tb=short --cov=app \
+            --cov-report=xml
+
       - name: 🟢 pnpm install & frontend тесты
         working-directory: ./frontend
         run: |
           pnpm install --frozen-lockfile
-          pnpm test --passWithNoTests --watchAll=false --coverage
+          pnpm test --passWithNoTests --watchAll=false \
+            --coverage
 
       - name: 📊 Upload coverage
         uses: codecov/codecov-action@v4
@@ -108,17 +155,32 @@ jobs:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 🟢 Install pnpm
+        run: |
+          npm install -g pnpm@10.12.4
+          pnpm --version
+
+      - name: 📦 Restore pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            ~/.local/share/pnpm
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
       - name: 🐍 Poetry install & bandit
         working-directory: ./backend
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           poetry install --no-interaction
           poetry run bandit -r app/ -f json -o bandit-report.json || true
-
-      - name: 🟢 Install pnpm
-        run: |
-          npm install -g pnpm@10.12.4
-          pnpm --version
 
       - name: 🟢 pnpm install & npm audit
         working-directory: ./frontend
