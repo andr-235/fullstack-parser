@@ -23,22 +23,34 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 # Получаем все теги
 
       - name: 🔢 Bump version
         id: version
         run: |
+          set -e
+
           # Получаем текущую версию из git tags
           CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           echo "Current version: $CURRENT_VERSION"
 
-          # Увеличиваем patch версию
-          NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{print $1"."$2"."$3+1}')
+          # Увеличиваем patch версию правильно
+          NEW_VERSION=$(echo $CURRENT_VERSION | sed 's/v//' | awk -F. '{print $1"."$2"."$3+1}')
           echo "New version: $NEW_VERSION"
+
+          # Проверяем, существует ли тег
+          if git rev-parse $NEW_VERSION >/dev/null 2>&1; then
+            echo "Tag $NEW_VERSION already exists, skipping..."
+            exit 0
+          fi
 
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: 🏷️ Create tag
+        if: steps.version.outputs.new_version != ''
         run: |
+          set -e
+
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
