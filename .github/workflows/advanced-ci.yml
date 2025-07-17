@@ -192,12 +192,15 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 15
     environment: production
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
       - name: 🔐 Логин в GitHub Container Registry
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ secrets.GHCR_USERNAME }} --password-stdin
       - name: 🚀 Деплой на сервер
         run: |
           set -e
