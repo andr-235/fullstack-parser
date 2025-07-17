@@ -16,26 +16,33 @@ jobs:
     name: 🔍 Линтинг и проверки
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      matrix:
+        component: [backend, frontend]
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-      - name: 🐍 Setup Python
+      - name: 🐍 Setup Python (Backend)
+        if: matrix.component == 'backend'
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-      - name: 📦 Кэш poetry
+      - name: 📦 Кэш poetry (Backend)
+        if: matrix.component == 'backend'
         uses: actions/cache@v4
         with:
           path: ~/.cache/pypoetry
           key: poetry-${{ hashFiles('backend/poetry.lock') }}
           restore-keys: |
             poetry-
-      - name: 🐍 Install Poetry
+      - name: 🐍 Install Poetry (Backend)
+        if: matrix.component == 'backend'
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
           poetry --version
-      - name: 🐍 Poetry install & линтинг
+      - name: 🐍 Poetry install & линтинг (Backend)
+        if: matrix.component == 'backend'
         working-directory: ./backend
         run: |
           export PATH="$HOME/.local/bin:$PATH"
@@ -43,22 +50,26 @@ jobs:
           poetry run ruff check .
           poetry run black --check .
           poetry run isort --check-only .
-      - name: 🟢 Setup Node.js
+      - name: 🟢 Setup Node.js (Frontend)
+        if: matrix.component == 'frontend'
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: 📦 Кэш pnpm store
+      - name: 📦 Кэш pnpm store (Frontend)
+        if: matrix.component == 'frontend'
         uses: actions/cache@v4
         with:
           path: ~/.pnpm-store
           key: pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-store-
-      - name: 🟢 Install pnpm
+      - name: 🟢 Install pnpm (Frontend)
+        if: matrix.component == 'frontend'
         run: |
           npm install -g pnpm@10.12.4
           pnpm --version
-      - name: 🟢 pnpm install & TypeScript линтинг
+      - name: 🟢 pnpm install & TypeScript линтинг (Frontend)
+        if: matrix.component == 'frontend'
         working-directory: ./frontend
         run: |
           pnpm install --frozen-lockfile
@@ -70,104 +81,141 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: lint
+    strategy:
+      matrix:
+        component: [backend, frontend]
+        include:
+          - component: backend
+            working-dir: ./backend
+            cache-key: poetry-backend
+          - component: frontend
+            working-dir: ./frontend
+            cache-key: pnpm-frontend
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-      - name: 🐍 Setup Python
+      - name: 🐍 Setup Python (Backend)
+        if: matrix.component == 'backend'
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-      - name: 📦 Кэш poetry
+      - name: 📦 Кэш poetry (Backend)
+        if: matrix.component == 'backend'
         uses: actions/cache@v4
         with:
           path: ~/.cache/pypoetry
-          key: poetry-${{ hashFiles('backend/poetry.lock') }}
+          key: ${{ matrix.cache-key }}
           restore-keys: |
             poetry-
-      - name: 🐍 Install Poetry
+      - name: 🐍 Install Poetry (Backend)
+        if: matrix.component == 'backend'
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
           poetry --version
       - name: 🐍 Poetry install & backend тесты
-        working-directory: ./backend
+        if: matrix.component == 'backend'
+        working-directory: ${{ matrix.working-dir }}
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           poetry install --no-interaction
           poetry run pytest tests/ -v --tb=short --cov=app --cov-report=xml
-      - name: 🟢 Setup Node.js
+      - name: 🟢 Setup Node.js (Frontend)
+        if: matrix.component == 'frontend'
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: 📦 Кэш pnpm store
+      - name: 📦 Кэш pnpm store (Frontend)
+        if: matrix.component == 'frontend'
         uses: actions/cache@v4
         with:
           path: ~/.pnpm-store
-          key: pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          key: ${{ matrix.cache-key }}
           restore-keys: |
             pnpm-store-
-      - name: 🟢 Install pnpm
+      - name: 🟢 Install pnpm (Frontend)
+        if: matrix.component == 'frontend'
         run: |
           npm install -g pnpm@10.12.4
           pnpm --version
       - name: 🟢 pnpm install & frontend тесты
-        working-directory: ./frontend
+        if: matrix.component == 'frontend'
+        working-directory: ${{ matrix.working-dir }}
         run: |
           pnpm install --frozen-lockfile
           pnpm test --passWithNoTests --watchAll=false --coverage
-      - name: 📊 Upload coverage
+      - name: 📊 Upload coverage (Backend)
+        if: matrix.component == 'backend'
         uses: codecov/codecov-action@v4
         with:
-          file: ./backend/coverage.xml,./frontend/coverage/lcov.info
-          flags: backend,frontend
-          name: codecov-umbrella
+          file: ./backend/coverage.xml
+          flags: backend
+          name: codecov-backend
+      - name: 📊 Upload coverage (Frontend)
+        if: matrix.component == 'frontend'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./frontend/coverage/lcov.info
+          flags: frontend
+          name: codecov-frontend
 
   security:
     name: 🔒 Безопасность
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: lint
+    strategy:
+      matrix:
+        component: [backend, frontend]
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-      - name: 🐍 Setup Python
+      - name: 🐍 Setup Python (Backend)
+        if: matrix.component == 'backend'
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-      - name: 📦 Кэш poetry
+      - name: 📦 Кэш poetry (Backend)
+        if: matrix.component == 'backend'
         uses: actions/cache@v4
         with:
           path: ~/.cache/pypoetry
           key: poetry-${{ hashFiles('backend/poetry.lock') }}
           restore-keys: |
             poetry-
-      - name: 🐍 Install Poetry
+      - name: 🐍 Install Poetry (Backend)
+        if: matrix.component == 'backend'
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
           poetry --version
-      - name: 🐍 Poetry install & bandit
+      - name: 🐍 Poetry install & bandit (Backend)
+        if: matrix.component == 'backend'
         working-directory: ./backend
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           poetry install --no-interaction
           poetry run bandit -r app/ -f json -o bandit-report.json || true
-      - name: 🟢 Setup Node.js
+      - name: 🟢 Setup Node.js (Frontend)
+        if: matrix.component == 'frontend'
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: 📦 Кэш pnpm store
+      - name: 📦 Кэш pnpm store (Frontend)
+        if: matrix.component == 'frontend'
         uses: actions/cache@v4
         with:
           path: ~/.pnpm-store
           key: pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-store-
-      - name: 🟢 Install pnpm
+      - name: 🟢 Install pnpm (Frontend)
+        if: matrix.component == 'frontend'
         run: |
           npm install -g pnpm@10.12.4
           pnpm --version
-      - name: 🟢 pnpm install & npm audit
+      - name: 🟢 pnpm install & npm audit (Frontend)
+        if: matrix.component == 'frontend'
         working-directory: ./frontend
         run: |
           pnpm install --frozen-lockfile
@@ -182,6 +230,19 @@ jobs:
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        service: [backend, frontend, arq-worker]
+        include:
+          - service: backend
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+          - service: frontend
+            context: ./frontend
+            dockerfile: ./frontend/Dockerfile
+          - service: arq-worker
+            context: ./backend
+            dockerfile: ./backend/Dockerfile.arq
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
@@ -193,47 +254,20 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: 🏗️ Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: 🏗️ Сборка и пуш backend
+      - name: 🏗️ Сборка и пуш ${{ matrix.service }}
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+          build-args: ${{ matrix.service == 'frontend' && format('NEXT_PUBLIC_API_URL={0}', secrets.NEXT_PUBLIC_API_URL) || '' }}
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.run_number }}
-
-      - name: 🏗️ Сборка и пуш frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
-          build-args: |
-            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.run_number }}
-
-      - name: 🏗️ Сборка и пуш arq worker
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile.arq
-          push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/arq-worker:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/arq-worker:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/arq-worker:${{ github.run_number }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.run_number }}
 
   deploy:
     name: 🚀 Деплой
