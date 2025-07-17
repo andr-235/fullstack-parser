@@ -37,16 +37,6 @@ jobs:
           npm install -g pnpm@10.12.4
           pnpm --version
 
-      - name: 📦 Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pnpm-store
-            ~/.local/share/pnpm
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
-
   lint:
     name: 🔍 Линтинг и проверки
     runs-on: self-hosted
@@ -67,16 +57,6 @@ jobs:
           npm install -g pnpm@10.12.4
           pnpm --version
 
-      - name: 📦 Restore pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pnpm-store
-            ~/.local/share/pnpm
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
-
       - name: 🐍 Poetry install & линтинг
         working-directory: ./backend
         run: |
@@ -85,11 +65,6 @@ jobs:
           poetry run ruff check .
           poetry run black --check .
           poetry run isort --check-only .
-
-      - name: 🟢 Install pnpm
-        run: |
-          npm install -g pnpm@10.12.4
-          pnpm --version
 
       - name: 🟢 pnpm install & TypeScript линтинг
         working-directory: ./frontend
@@ -117,16 +92,6 @@ jobs:
         run: |
           npm install -g pnpm@10.12.4
           pnpm --version
-
-      - name: 📦 Restore pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pnpm-store
-            ~/.local/share/pnpm
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
 
       - name: 🐍 Poetry install & backend тесты
         working-directory: ./backend
@@ -169,16 +134,6 @@ jobs:
         run: |
           npm install -g pnpm@10.12.4
           pnpm --version
-
-      - name: 📦 Restore pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pnpm-store
-            ~/.local/share/pnpm
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
 
       - name: 🐍 Poetry install & bandit
         working-directory: ./backend
