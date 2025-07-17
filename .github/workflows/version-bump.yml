@@ -1,4 +1,4 @@
-name: 🔢 Version Bump
+name: 🔢 Semantic Version Bump
 
 on:
   push:
@@ -10,8 +10,8 @@ on:
       - "!**/*.txt"
 
 jobs:
-  version-bump:
-    name: 🔢 Bump version
+  semantic-version-bump:
+    name: 🔢 Semantic version bump
     runs-on: self-hosted
     if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
     permissions:
@@ -23,38 +23,98 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0 # Получаем все теги
+          fetch-depth: 0
 
-      - name: 🔢 Bump version
-        id: version
+      - name: 🔢 Determine version bump type
+        id: version-bump
         run: |
           set -e
-
-          # Получаем текущую версию из git tags
           CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           echo "Current version: $CURRENT_VERSION"
-
-          # Увеличиваем patch версию правильно
-          NEW_VERSION=$(echo $CURRENT_VERSION | sed 's/v//' | awk -F. '{print $1"."$2"."$3+1}')
-          echo "New version: $NEW_VERSION"
-
-          # Проверяем, существует ли тег
-          if git rev-parse $NEW_VERSION >/dev/null 2>&1; then
-            echo "Tag $NEW_VERSION already exists, skipping..."
-            exit 0
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS_TO_ANALYZE=$(git log --oneline --format="%s")
+          else
+            COMMITS_TO_ANALYZE=$(git log --oneline --format="%s" ${LAST_TAG}..HEAD)
           fi
-
+          echo "Commits to analyze:"
+          echo "$COMMITS_TO_ANALYZE"
+          MAJOR_BUMP=false
+          MINOR_BUMP=false
+          PATCH_BUMP=false
+          while IFS= read -r commit; do
+            if [[ $commit =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?!: ]] || [[ $commit =~ BREAKING[ ]CHANGE ]]; then
+              MAJOR_BUMP=true
+              echo "Found breaking change in commit: $commit"
+            elif [[ $commit =~ ^feat(\(.+\))?: ]]; then
+              MINOR_BUMP=true
+              echo "Found new feature in commit: $commit"
+            elif [[ $commit =~ ^(fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?: ]]; then
+              PATCH_BUMP=true
+              echo "Found patch change in commit: $commit"
+            fi
+          done <<< "$COMMITS_TO_ANALYZE"
+          if [ "$MAJOR_BUMP" = true ]; then
+            BUMP_TYPE=major
+            echo "Bump type: MAJOR (breaking changes detected)"
+          elif [ "$MINOR_BUMP" = true ]; then
+            BUMP_TYPE=minor
+            echo "Bump type: MINOR (new features detected)"
+          elif [ "$PATCH_BUMP" = true ]; then
+            BUMP_TYPE=patch
+            echo "Bump type: PATCH (fixes and improvements)"
+          else
+            BUMP_TYPE=none
+            echo "Bump type: NONE (no conventional commits found)"
+          fi
+          if [ "$BUMP_TYPE" != "none" ]; then
+            VERSION_PARTS=$(echo $CURRENT_VERSION | sed 's/v//' | tr '.' ' ')
+            read MAJOR MINOR PATCH <<< $VERSION_PARTS
+            case $BUMP_TYPE in
+              major)
+                NEW_MAJOR=$((MAJOR + 1))
+                NEW_MINOR=0
+                NEW_PATCH=0
+                ;;
+              minor)
+                NEW_MAJOR=$MAJOR
+                NEW_MINOR=$((MINOR + 1))
+                NEW_PATCH=0
+                ;;
+              patch)
+                NEW_MAJOR=$MAJOR
+                NEW_MINOR=$MINOR
+                NEW_PATCH=$((PATCH + 1))
+                ;;
+            esac
+            NEW_VERSION="v${NEW_MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
+            echo "New version: $NEW_VERSION"
+          else
+            NEW_VERSION=""
+            echo "No version bump needed"
+          fi
+          if [ -n "$NEW_VERSION" ] && git rev-parse "$NEW_VERSION" >/dev/null 2>&1; then
+            echo "Tag $NEW_VERSION already exists, skipping..."
+            NEW_VERSION=""
+          fi
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
-      - name: 🏷️ Create tag
-        if: steps.version.outputs.new_version != ''
+      - name: 🏷️ Create semantic version tag
+        if: steps.version-bump.outputs.new_version != ''
         run: |
           set -e
-
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
+          git tag ${{ steps.version-bump.outputs.new_version }}
+          git push origin ${{ steps.version-bump.outputs.new_version }}
+          echo "Created semantic version tag: ${{ steps.version-bump.outputs.new_version }}"
+          echo "Bump type: ${{ steps.version-bump.outputs.bump_type }}"
 
-          git tag ${{ steps.version.outputs.new_version }}
-          git push origin ${{ steps.version.outputs.new_version }}
-
-          echo "Created tag: ${{ steps.version.outputs.new_version }}"
+      - name: 📝 Log version info
+        if: steps.version-bump.outputs.new_version != ''
+        run: |
+          echo "🎉 Semantic versioning completed!"
+          echo "Previous version: $(git describe --tags --abbrev=0 2>/dev/null || echo 'v0.0.0')"
+          echo "New version: ${{ steps.version-bump.outputs.new_version }}"
+          echo "Bump type: ${{ steps.version-bump.outputs.bump_type }}"
