@@ -293,7 +293,7 @@ jobs:
         run: |
           set -e
           echo "🚀 Подключение к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} <<EOF
+          ssh -T -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} <<EOF
           cd ${{ secrets.PRODUCTION_APP_DIR }}
           echo "🚀 Запуск сервисов..."
           docker compose -f docker-compose.prod.ip.yml up -d --build --pull always
