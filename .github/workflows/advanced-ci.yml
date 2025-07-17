@@ -19,21 +19,6 @@ jobs:
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: 🟢 Install pnpm
-        run: |
-          npm install -g pnpm@10.12.4
-          pnpm --version
-      - name: 📦 Кэш pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-
       - name: 🐍 Setup Python
         uses: actions/setup-python@v4
         with:
@@ -58,6 +43,21 @@ jobs:
           poetry run ruff check .
           poetry run black --check .
           poetry run isort --check-only .
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 📦 Кэш pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-
+      - name: 🟢 Install pnpm
+        run: |
+          npm install -g pnpm@10.12.4
+          pnpm --version
       - name: 🟢 pnpm install & TypeScript линтинг
         working-directory: ./frontend
         run: |
@@ -73,18 +73,17 @@ jobs:
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: 🟢 Install pnpm
-        run: |
-          npm install -g pnpm@10.12.4
-          pnpm --version
       - name: 🐍 Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+      - name: 📦 Кэш poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-${{ hashFiles('backend/poetry.lock') }}
+          restore-keys: |
+            poetry-
       - name: 🐍 Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
@@ -95,14 +94,27 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           poetry install --no-interaction
-          poetry run pytest tests/ -v --tb=short --cov=app \
-            --cov-report=xml
+          poetry run pytest tests/ -v --tb=short --cov=app --cov-report=xml
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 📦 Кэш pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-
+      - name: 🟢 Install pnpm
+        run: |
+          npm install -g pnpm@10.12.4
+          pnpm --version
       - name: 🟢 pnpm install & frontend тесты
         working-directory: ./frontend
         run: |
           pnpm install --frozen-lockfile
-          pnpm test --passWithNoTests --watchAll=false \
-            --coverage
+          pnpm test --passWithNoTests --watchAll=false --coverage
       - name: 📊 Upload coverage
         uses: codecov/codecov-action@v4
         with:
@@ -118,18 +130,17 @@ jobs:
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: 🟢 Install pnpm
-        run: |
-          npm install -g pnpm@10.12.4
-          pnpm --version
       - name: 🐍 Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+      - name: 📦 Кэш poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-${{ hashFiles('backend/poetry.lock') }}
+          restore-keys: |
+            poetry-
       - name: 🐍 Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
@@ -141,6 +152,21 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           poetry install --no-interaction
           poetry run bandit -r app/ -f json -o bandit-report.json || true
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 📦 Кэш pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-
+      - name: 🟢 Install pnpm
+        run: |
+          npm install -g pnpm@10.12.4
+          pnpm --version
       - name: 🟢 pnpm install & npm audit
         working-directory: ./frontend
         run: |
