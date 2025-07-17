@@ -26,11 +26,8 @@ jobs:
 
       - name: 🐍 Install Poetry
         run: |
-          set -e
-          echo "📦 Установка Poetry..."
-          pip install poetry
-          poetry config virtualenvs.create true
-          poetry config virtualenvs.in-project true
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
           poetry --version
 
       - name: 🐍 Cache Poetry dependencies
