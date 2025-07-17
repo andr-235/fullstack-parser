@@ -173,8 +173,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+
       - name: 🏗️ Сборка и пуш frontend
         uses: docker/build-push-action@v5
         with:
@@ -185,8 +184,6 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   deploy:
     name: 🚀 Деплой
