@@ -56,6 +56,11 @@ jobs:
           poetry run black --check .
           poetry run isort --check-only .
 
+      - name: 🟢 Install pnpm
+        run: |
+          npm install -g pnpm@10.12.4
+          pnpm --version
+
       - name: 🟢 pnpm install & TypeScript линтинг
         working-directory: ./frontend
         run: |
@@ -182,6 +187,16 @@ jobs:
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 🟢 Install pnpm
+        run: |
+          npm install -g pnpm@10.12.4
+          pnpm --version
 
       - name: 🔐 Логин в GitHub Container Registry
         run: |
