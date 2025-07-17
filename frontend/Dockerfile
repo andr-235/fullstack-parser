@@ -24,7 +24,7 @@ RUN pnpm build
 FROM node:20-alpine AS runner
 RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 WORKDIR /app
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init curl
 RUN npm install -g pnpm@10.12.4
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static/
