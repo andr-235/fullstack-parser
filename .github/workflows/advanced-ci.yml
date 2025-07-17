@@ -167,9 +167,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: 🏗️ Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: |
-            image=moby/buildkit:v0.120
       - name: 🏗️ Сборка и пуш backend
         uses: docker/build-push-action@v5
         with:
@@ -229,7 +226,7 @@ jobs:
         run: |
           echo "${{ secrets.GHCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ secrets.GHCR_USERNAME }} --password-stdin
       - name: 🔑 Setup SSH
-        uses: webfactory/ssh-agent@v08
+        uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
       - name: 🚀 Деплой на сервер
