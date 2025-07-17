@@ -16,9 +16,6 @@ jobs:
     name: 🔧 Подготовка окружения
     runs-on: self-hosted
     timeout-minutes: 8
-    outputs:
-      poetry-cache-key: ${{ steps.poetry-cache.outputs.cache-key }}
-      pnpm-cache-key: ${{ steps.pnpm-cache.outputs.cache-key }}
 
     steps:
       - name: ⬇️ Checkout code
@@ -29,17 +26,6 @@ jobs:
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
           poetry --version
-
-      - name: 🐍 Cache Poetry dependencies
-        id: poetry-cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            backend/.venv
-            ~/.cache/pypoetry
-          key: poetry-${{ hashFiles('backend/poetry.lock') }}-${{ runner.os }}
-          restore-keys: |
-            poetry-${{ hashFiles('backend/poetry.lock') }}
 
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
@@ -52,17 +38,6 @@ jobs:
           echo "📦 Установка pnpm..."
           npm install -g pnpm@10.12.4
           pnpm --version
-
-      - name: 🟢 Cache pnpm dependencies
-        id: pnpm-cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            frontend/node_modules
-            ~/.pnpm-store
-          key: pnpm-${{ hashFiles('frontend/pnpm-lock.yaml') }}-${{ runner.os }}
-          restore-keys: |
-            pnpm-${{ hashFiles('frontend/pnpm-lock.yaml') }}
 
   lint:
     name: 🔍 Линтинг и проверки
