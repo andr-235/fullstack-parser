@@ -12,36 +12,89 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  lint:
-    name: 🔍 Линтинг и проверки
+  setup:
+    name: 🔧 Подготовка окружения
     runs-on: self-hosted
-    timeout-minutes: 5
+    timeout-minutes: 8
+    outputs:
+      poetry-cache-key: ${{ steps.poetry-cache.outputs.cache-key }}
+      pnpm-cache-key: ${{ steps.pnpm-cache.outputs.cache-key }}
 
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
-      - name: 🐍 Python линтинг
-        working-directory: ./backend
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 🐍 Install Poetry
         run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          export PATH="$HOME/.local/bin:$PATH"
+          set -e
+          echo "📦 Установка Poetry..."
+          pip install poetry
           poetry config virtualenvs.create true
           poetry config virtualenvs.in-project true
+          poetry --version
+
+      - name: 🐍 Cache Poetry dependencies
+        id: poetry-cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            backend/.venv
+            ~/.cache/pypoetry
+          key: poetry-${{ hashFiles('backend/poetry.lock') }}-${{ runner.os }}
+          restore-keys: |
+            poetry-${{ hashFiles('backend/poetry.lock') }}
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 🟢 Install pnpm
+        run: |
+          set -e
+          echo 📦 Установка pnpm..."
+          npm install -g pnpm@10.12.4
+          pnpm --version
+
+      - name: 🟢 Cache pnpm dependencies
+        id: pnpm-cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            frontend/node_modules
+            ~/.pnpm-store
+          key: pnpm-${{ hashFiles('frontend/pnpm-lock.yaml') }}-${{ runner.os }}
+          restore-keys: |
+            pnpm-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+
+  lint:
+    name: 🔍 Линтинг и проверки
+    runs-on: self-hosted
+    timeout-minutes: 5
+    needs: setup
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Poetry install & линтинг
+        working-directory: ./backend
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
           poetry install --no-interaction
           poetry run ruff check .
           poetry run black --check .
           poetry run isort --check-only .
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: 🟢 TypeScript линтинг
+      - name: 🟢 pnpm install & TypeScript линтинг
         working-directory: ./frontend
         run: |
-          npm install -g pnpm@10.12.4
           pnpm install --frozen-lockfile
           pnpm lint
           pnpm type-check
@@ -50,31 +103,22 @@ jobs:
     name: 🧪 Тесты
     runs-on: self-hosted
     timeout-minutes: 15
-    needs: lint
+    needs: [setup, lint]
 
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: 🐍 Backend тесты
+      - name: 🐍 Poetry install & backend тесты
         working-directory: ./backend
         run: |
-          curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
-          poetry config virtualenvs.create true
-          poetry config virtualenvs.in-project true
           poetry install --no-interaction
           poetry run pytest tests/ -v --tb=short --cov=app --cov-report=xml
 
-      - name: 🟢 Frontend тесты
+      - name: 🟢 pnpm install & frontend тесты
         working-directory: ./frontend
         run: |
-          npm install -g pnpm@10.12.4
           pnpm install --frozen-lockfile
           pnpm test --passWithNoTests --watchAll=false --coverage
 
@@ -89,31 +133,22 @@ jobs:
     name: 🔒 Безопасность
     runs-on: self-hosted
     timeout-minutes: 10
-    needs: lint
+    needs: [setup, lint]
 
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: 🐍 Python security (bandit)
+      - name: 🐍 Poetry install & bandit
         working-directory: ./backend
         run: |
-          curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
-          poetry config virtualenvs.create true
-          poetry config virtualenvs.in-project true
           poetry install --no-interaction
           poetry run bandit -r app/ -f json -o bandit-report.json || true
 
-      - name: 🟢 JavaScript security (npm audit)
+      - name: 🟢 pnpm install & npm audit
         working-directory: ./frontend
         run: |
-          npm install -g pnpm@10.12.4
           pnpm install --frozen-lockfile
           pnpm audit --audit-level moderate || true
 
