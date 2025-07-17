@@ -49,7 +49,7 @@ jobs:
       - name: 🟢 Install pnpm
         run: |
           set -e
-          echo 📦 Установка pnpm..."
+          echo "📦 Установка pnpm..."
           npm install -g pnpm@10.12.4
           pnpm --version
 
