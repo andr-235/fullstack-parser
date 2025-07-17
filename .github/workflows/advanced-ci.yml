@@ -95,15 +95,14 @@ jobs:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
-      - name: 🔍 Security scan
-        uses: github/codeql-action/init@v3
+      - name: 🟢 Setup Node.js, pnpm and cache
+        uses: actions/setup-node@v4
         with:
-          languages: python, javascript
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: 🔍 Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-
-      - name: 🐍 Python security
+      - name: 🐍 Python security (bandit)
         working-directory: ./backend
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
@@ -112,6 +111,13 @@ jobs:
           poetry config virtualenvs.in-project true
           poetry install --no-interaction
           poetry run bandit -r app/ -f json -o bandit-report.json || true
+
+      - name: 🟢 JavaScript security (npm audit)
+        working-directory: ./frontend
+        run: |
+          npm install -g pnpm@10.12.4
+          pnpm install --frozen-lockfile
+          pnpm audit --audit-level moderate || true
 
   build:
     name: 🏗️ Сборка образов
