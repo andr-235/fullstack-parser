@@ -27,10 +27,24 @@ jobs:
         run: |
           npm install -g pnpm@10.12.4
           pnpm --version
+      - name: 📦 Кэш pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-
       - name: 🐍 Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+      - name: 📦 Кэш poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-${{ hashFiles('backend/poetry.lock') }}
+          restore-keys: |
+            poetry-
       - name: 🐍 Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
@@ -159,8 +173,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+
       - name: 🏗️ Сборка и пуш frontend
         uses: docker/build-push-action@v5
         with:
@@ -171,8 +184,6 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   deploy:
     name: 🚀 Деплой
