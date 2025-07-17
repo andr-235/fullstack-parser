@@ -33,6 +33,12 @@ jobs:
           poetry run black --check .
           poetry run isort --check-only .
 
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
       - name: 🟢 TypeScript линтинг
         working-directory: ./frontend
         run: |
@@ -50,6 +56,12 @@ jobs:
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
       - name: 🐍 Backend тесты
         working-directory: ./backend
