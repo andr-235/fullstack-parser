@@ -33,7 +33,7 @@ jobs:
           poetry run black --check .
           poetry run isort --check-only .
 
-      - name: 🟢 Setup Node.js, pnpm and cache
+      - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -56,7 +56,7 @@ jobs:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js, pnpm and cache
+      - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -95,12 +95,10 @@ jobs:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js, pnpm and cache
+      - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: 🐍 Python security (bandit)
         working-directory: ./backend
