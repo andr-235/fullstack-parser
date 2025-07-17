@@ -34,8 +34,6 @@ jobs:
 
       - name: 🟢 Install pnpm
         run: |
-          set -e
-          echo "📦 Установка pnpm..."
           npm install -g pnpm@10.12.4
           pnpm --version
 
@@ -82,6 +80,11 @@ jobs:
           poetry install --no-interaction
           poetry run pytest tests/ -v --tb=short --cov=app --cov-report=xml
 
+      - name: 🟢 Install pnpm
+        run: |
+          npm install -g pnpm@10.12.4
+          pnpm --version
+
       - name: 🟢 pnpm install & frontend тесты
         working-directory: ./frontend
         run: |
@@ -111,6 +114,11 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           poetry install --no-interaction
           poetry run bandit -r app/ -f json -o bandit-report.json || true
+
+      - name: 🟢 Install pnpm
+        run: |
+          npm install -g pnpm@10.12.4
+          pnpm --version
 
       - name: 🟢 pnpm install & npm audit
         working-directory: ./frontend
