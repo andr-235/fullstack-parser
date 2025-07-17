@@ -273,7 +273,7 @@ jobs:
     name: 🚀 Деплой
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 15
     environment: production
     permissions:
@@ -285,23 +285,48 @@ jobs:
       - name: 🔐 Логин в GitHub Container Registry
         run: |
           echo "${{ secrets.GHCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ secrets.GHCR_USERNAME }} --password-stdin
-      - name: 🔑 Setup SSH
-        uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
       - name: 🚀 Деплой на сервер
         run: |
           set -e
-          echo "🚀 Подключение к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} <<EOF
-          cd ${{ secrets.PRODUCTION_APP_DIR }}
+          echo "🚀 Запуск деплоя на self-hosted раннере..."
+
+          # Проверяем, что мы в правильной директории
+          if [[ ! -f "docker-compose.prod.ip.yml" ]]; then
+            echo "❌ Ошибка: docker-compose.prod.ip.yml не найден"
+            exit 1
+          fi
+
+          # Проверяем наличие .env.prod
+          if [[ ! -f ".env.prod" ]]; then
+            echo "❌ Ошибка: .env.prod не найден"
+            exit 1
+          fi
+
           echo "🚀 Запуск сервисов..."
           docker compose -f docker-compose.prod.ip.yml up -d --build --pull always
+
           echo "🧹 Очистка..."
           docker image prune -f || true
+
           echo "✅ Деплой завершён!"
-          EOF
       - name: 📊 Health check
         run: |
+          echo "📊 Проверка здоровья сервисов..."
           sleep 30
-          curl -f ${{ secrets.HEALTH_CHECK_URL }} || exit 1
+
+          # Проверяем, что все контейнеры запущены
+          if docker compose -f docker-compose.prod.ip.yml ps | grep -q "Up"; then
+            echo "✅ Все сервисы запущены"
+          else
+            echo "❌ Не все сервисы запущены"
+            docker compose -f docker-compose.prod.ip.yml ps
+            exit 1
+          fi
+
+          # Проверяем доступность приложения
+          if curl -f -k https://localhost/health > /dev/null 2>&1; then
+            echo "✅ Приложение доступно"
+          else
+            echo "❌ Приложение недоступно"
+            exit 1
+          fi
