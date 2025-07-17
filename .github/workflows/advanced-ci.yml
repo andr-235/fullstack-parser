@@ -27,10 +27,24 @@ jobs:
         run: |
           npm install -g pnpm@10.12.4
           pnpm --version
+      - name: 📦 Кэш pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-
       - name: 🐍 Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+      - name: 📦 Кэш poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-${{ hashFiles('backend/poetry.lock') }}
+          restore-keys: |
+            poetry-
       - name: 🐍 Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
