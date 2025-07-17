@@ -25,8 +25,12 @@ FROM node:20-alpine AS runner
 RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 WORKDIR /app
 RUN apk add --no-cache dumb-init
+RUN npm install -g pnpm@10.12.4
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static/
+COPY --from=builder /app/package.json ./package.json
+# Для dev-режима копируем node_modules
+COPY --from=deps /app/node_modules ./node_modules
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000 \
@@ -34,4 +38,5 @@ ENV PORT=3000 \
     NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "server.js"] 
+# Запуск в зависимости от NODE_ENV
+CMD ["sh", "-c", "if [ \"$NODE_ENV\" = 'development' ]; then pnpm dev; else node server.js; fi"] 
