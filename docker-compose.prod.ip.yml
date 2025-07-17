@@ -123,11 +123,11 @@ services:
     networks:
       - prod-app-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 20s
-      timeout: 20s
-      retries: 5
-      start_period: 40s
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   nginx:
     image: nginx:alpine
@@ -148,11 +148,11 @@ services:
     networks:
       - prod-app-network
     healthcheck:
-      test: ["CMD", "curl", "-fsSL", "http://frontend:3000"]
-      interval: 20s
-      timeout: 20s
-      retries: 5
-      start_period: 40s
+      test: ["CMD", "curl", "-fsSL", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   backup:
     image: postgres:15-alpine
