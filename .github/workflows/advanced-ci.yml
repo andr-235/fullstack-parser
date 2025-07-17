@@ -179,11 +179,8 @@ jobs:
           set -e
           cd ${{ secrets.PRODUCTION_APP_DIR }}
 
-          echo "📦 Загрузка образов..."
-          docker compose -f docker-compose.prod.ip.yml pull
-
           echo "🚀 Запуск сервисов..."
-          docker compose -f docker-compose.prod.ip.yml up -d --build
+          docker compose -f docker-compose.prod.ip.yml up -d --build --pull always
 
           echo "🧹 Очистка..."
           docker image prune -f || true
