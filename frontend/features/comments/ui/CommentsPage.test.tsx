@@ -110,7 +110,6 @@ describe("CommentsPage", () => {
     renderWithProviders(<CommentsPage />);
     expect(
       screen.getByRole("heading", { name: /Фильтры комментариев/i, level: 1 }),
-      // @ts-expect-error jest-dom matcher
     ).toBeInTheDocument();
   });
 
