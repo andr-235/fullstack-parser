@@ -198,11 +198,25 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.run_number }}
 
+      - name: 🏗️ Сборка и пуш arq worker
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.arq
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/arq-worker:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/arq-worker:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/arq-worker:${{ github.run_number }}
+
   deploy:
     name: 🚀 Деплой
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
     permissions:
@@ -214,15 +228,22 @@ jobs:
       - name: 🔐 Логин в GitHub Container Registry
         run: |
           echo "${{ secrets.GHCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+      - name: 🔑 Setup SSH
+        uses: webfactory/ssh-agent@v08
+        with:
+          ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
       - name: 🚀 Деплой на сервер
         run: |
           set -e
+          echo "🚀 Подключение к серверу..."
+          ssh -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} <<EOF
           cd ${{ secrets.PRODUCTION_APP_DIR }}
           echo "🚀 Запуск сервисов..."
           docker compose -f docker-compose.prod.ip.yml up -d --build --pull always
           echo "🧹 Очистка..."
           docker image prune -f || true
           echo "✅ Деплой завершён!"
+          EOF
       - name: 📊 Health check
         run: |
           sleep 30
