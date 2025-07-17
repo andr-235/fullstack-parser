@@ -34,7 +34,6 @@ WORKDIR /app
 # Устанавливаем dumb-init для корректного завершения процессов
 RUN apk add --no-cache dumb-init
 # Копируем необходимые артефакты для запуска
-COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 # Копируем .env.production если нужен (раскомментируй если используешь)
