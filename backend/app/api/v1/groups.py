@@ -86,11 +86,11 @@ async def create_group(
     filtered_data = {
         k: v for k, v in vk_group_data.items() if k in vk_group_fields
     }
-    
+
     # Маппинг id -> vk_id
     if "id" in vk_group_data:
         filtered_data["vk_id"] = vk_group_data["id"]
-    
+
     # Переопределяем поля пользовательскими данными
     filtered_data.update({
         "screen_name": screen_name,
@@ -99,7 +99,7 @@ async def create_group(
         "is_active": group_data.is_active,
         "max_posts_to_check": group_data.max_posts_to_check,
     })
-    
+
     new_group = VKGroup(**filtered_data)
     db.add(new_group)
     await db.commit()

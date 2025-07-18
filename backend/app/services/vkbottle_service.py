@@ -265,7 +265,7 @@ class VKBottleService:
                     group_id=group_id_or_screen_name,
                     v=self.api_version,
                 )
-            
+
             if not response or not hasattr(response, "__getitem__"):
                 self.logger.warning(
                     "VK API вернул неожиданный ответ при получении информации о группе",
