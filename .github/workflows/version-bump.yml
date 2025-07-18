@@ -68,8 +68,8 @@ jobs:
               echo "Bump type: NONE (no conventional commits found)"
             fi
             if [ "$BUMP_TYPE" != "none" ]; then
-              VERSION_PARTS=$(echo $CURRENT_VERSION | sed 's/v//' | tr '.' ' ')
-              read MAJOR MINOR PATCH <<< $VERSION_PARTS
+              VERSION_PARTS=$(echo $CURRENT_VERSION | sed "s/v//" | tr '.' ' ')
+              read MAJOR MINOR PATCH <<< "$VERSION_PARTS"
               case $BUMP_TYPE in
                 major)
                   NEW_MAJOR=$((MAJOR + 1))
