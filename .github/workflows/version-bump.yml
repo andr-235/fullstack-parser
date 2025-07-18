@@ -43,7 +43,7 @@ jobs:
             MINOR_BUMP=false
             PATCH_BUMP=false
             while IFS= read -r commit; do
-              if [[ $commit =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?!: ]] || [[ $commit =~ BREAKING[ ]CHANGE ]]; then
+              if [[ $commit =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?\!: ]] || [[ $commit =~ BREAKING[[:space:]]CHANGE ]]; then
                 MAJOR_BUMP=true
                 echo "Found breaking change in commit: $commit"
               elif [[ $commit =~ ^feat(\(.+\))?: ]]; then
