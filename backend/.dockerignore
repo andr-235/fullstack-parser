@@ -21,8 +21,7 @@ dist/
 *.egg-info/
 
 # Исключаем файлы зависимостей
-# Оставляем только pyproject.toml и poetry.lock
-# requirements*.txt
+requirements*.txt
 
 # Исключаем файлы тестов и кеша
 .pytest_cache/
@@ -31,6 +30,7 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 tests/
+test_*.py
 
 # Исключаем git
 .git/
@@ -39,6 +39,10 @@ tests/
 # Исключаем логи
 *.log
 logs/
+
+# Исключаем большие файлы
+bandit-report.json
+coverage.xml
 
 # Не включаем .env файлы, кроме примера
 .env
