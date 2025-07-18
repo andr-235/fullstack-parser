@@ -6,9 +6,9 @@
 обработкой ошибок и логированием.
 """
 
-from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 
 import structlog
 from vkbottle import API
@@ -20,8 +20,8 @@ from vkbottle_types.objects import (
     WallWallpostFull,
 )
 from vkbottle_types.responses import (
-    WallGetResponseModel,
     WallGetCommentsResponseModel,
+    WallGetResponseModel,
 )
 
 # Константы
