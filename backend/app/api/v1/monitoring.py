@@ -3,11 +3,15 @@ API endpoints для управления автоматическим мони�
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
 
 from app.core.database import get_db
-from app.schemas.base import StatusResponse, PaginatedResponse, PaginationParams
+from app.schemas.base import (
+    PaginatedResponse,
+    PaginationParams,
+    StatusResponse,
+)
 from app.schemas.monitoring import (
     GroupMonitoringConfig,
     GroupMonitoringResponse,
@@ -35,7 +39,9 @@ async def get_monitoring_stats(
     return MonitoringStats(**stats)
 
 
-@router.get("/groups", response_model=PaginatedResponse[GroupMonitoringResponse])
+@router.get(
+    "/groups", response_model=PaginatedResponse[GroupMonitoringResponse]
+)
 async def get_monitoring_groups(
     pagination: PaginationParams = Depends(),
     active_only: bool = True,
@@ -47,14 +53,14 @@ async def get_monitoring_groups(
 
     # Базовый запрос
     query = select(VKGroup)
-    
+
     # Фильтры
     conditions = []
     if active_only:
         conditions.append(VKGroup.is_active.is_(True))
     if monitoring_enabled:
         conditions.append(VKGroup.auto_monitoring_enabled.is_(True))
-    
+
     if conditions:
         query = query.where(and_(*conditions))
 
@@ -71,17 +77,19 @@ async def get_monitoring_groups(
     # Преобразование в ответ
     items = []
     for group in groups:
-        items.append(GroupMonitoringResponse(
-            group_id=group.id,
-            group_name=group.name,
-            auto_monitoring_enabled=group.auto_monitoring_enabled,
-            monitoring_interval_minutes=group.monitoring_interval_minutes,
-            monitoring_priority=group.monitoring_priority,
-            next_monitoring_at=group.next_monitoring_at,
-            monitoring_runs_count=group.monitoring_runs_count,
-            last_monitoring_success=group.last_monitoring_success,
-            last_monitoring_error=group.last_monitoring_error,
-        ))
+        items.append(
+            GroupMonitoringResponse(
+                group_id=group.id,
+                group_name=group.name,
+                auto_monitoring_enabled=group.auto_monitoring_enabled,
+                monitoring_interval_minutes=group.monitoring_interval_minutes,
+                monitoring_priority=group.monitoring_priority,
+                next_monitoring_at=group.next_monitoring_at,
+                monitoring_runs_count=group.monitoring_runs_count,
+                last_monitoring_success=group.last_monitoring_success,
+                last_monitoring_error=group.last_monitoring_error,
+            )
+        )
 
     return PaginatedResponse(
         total=total,
@@ -245,7 +253,9 @@ async def update_group_monitoring_settings(
         )
 
     # Обновляем настройки
-    group.monitoring_interval_minutes = max(1, min(1440, config.interval_minutes))
+    group.monitoring_interval_minutes = max(
+        1, min(1440, config.interval_minutes)
+    )
     group.monitoring_priority = max(1, min(10, config.priority))
 
     await db.commit()
@@ -263,7 +273,7 @@ async def run_group_monitoring(
 ) -> StatusResponse:
     """Запустить мониторинг группы вручную"""
     from app.models.vk_group import VKGroup
-    
+
     vk_service = VKBottleService(
         token="stub", api_version="5.131"
     )  # TODO: заменить на settings
