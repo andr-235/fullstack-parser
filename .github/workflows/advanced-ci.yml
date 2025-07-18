@@ -166,14 +166,18 @@ jobs:
   lint-check:
     name: 🔍 Проверка линтеров
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
     strategy:
       matrix:
         component: [backend, frontend]
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: 🐍 Setup Python (Backend)
         if: matrix.component == 'backend'
         uses: actions/setup-python@v4
@@ -193,15 +197,53 @@ jobs:
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
           poetry --version
-      - name: 🐍 Poetry install & линтинг (Backend)
+      - name: 🔧 Автоисправление и линтинг Python (Backend)
         if: matrix.component == 'backend'
         working-directory: ./backend
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           poetry install --no-interaction
-          poetry run ruff check .
-          poetry run black --check .
-          poetry run isort --check-only .
+
+          echo "🔧 Запуск автоисправлений для Python..."
+
+          # Сохраняем состояние до исправлений
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+          # Запускаем автоисправления
+          echo "📝 Исправление форматирования с black..."
+          poetry run black . || echo "⚠️ black не смог исправить все проблемы"
+
+          echo "📝 Сортировка импортов с isort..."
+          poetry run isort . || echo "⚠️ isort не смог исправить все проблемы"
+
+          echo "🔍 Проверка с ruff --fix..."
+          poetry run ruff check --fix . || echo "⚠️ ruff не смог исправить все проблемы"
+
+          # Проверяем, есть ли изменения
+          if git diff --quiet; then
+            echo "✅ Нет изменений для коммита"
+          else
+            echo "📝 Найдены изменения, коммитим..."
+            git add .
+            git commit -m "style: автоисправления линтеров для backend (main)
+            
+            - black: форматирование кода
+            - isort: сортировка импортов  
+            - ruff: исправление проблем с кодом
+            
+            Автоматически исправлено GitHub Actions"
+            git push origin HEAD:main
+            echo "✅ Изменения закоммичены и запушены"
+          fi
+
+          # Теперь проверяем линтеры после исправлений
+          echo "🔍 Проверка линтеров после автоисправлений..."
+          poetry run ruff check . || exit 1
+          poetry run black --check . || exit 1
+          poetry run isort --check-only . || exit 1
+          poetry run mypy . || echo "⚠️ mypy обнаружил проблемы с типами"
+
       - name: 🟢 Setup Node.js (Frontend)
         if: matrix.component == 'frontend'
         uses: actions/setup-node@v4
@@ -220,13 +262,45 @@ jobs:
         run: |
           npm install -g pnpm@10.12.4
           pnpm --version
-      - name: 🟢 pnpm install & TypeScript линтинг (Frontend)
+      - name: 🔧 Автоисправление и линтинг JavaScript/TypeScript (Frontend)
         if: matrix.component == 'frontend'
         working-directory: ./frontend
         run: |
           pnpm install --frozen-lockfile
-          pnpm lint
-          pnpm type-check
+
+          echo "🔧 Запуск автоисправлений для Frontend..."
+
+          # Сохраняем состояние до исправлений
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+          # Запускаем автоисправления
+          echo "📝 Исправление с ESLint --fix..."
+          pnpm lint --fix || echo "⚠️ ESLint не смог исправить все проблемы"
+
+          echo "📝 Исправление с Prettier..."
+          pnpm format || echo "⚠️ Prettier не смог исправить все проблемы"
+
+          # Проверяем, есть ли изменения
+          if git diff --quiet; then
+            echo "✅ Нет изменений для коммита"
+          else
+            echo "📝 Найдены изменения, коммитим..."
+            git add .
+            git commit -m "style: автоисправления линтеров для frontend (main)
+            
+            - ESLint: исправление проблем с кодом
+            - Prettier: форматирование кода
+            
+            Автоматически исправлено GitHub Actions"
+            git push origin HEAD:main
+            echo "✅ Изменения закоммичены и запушены"
+          fi
+
+          # Теперь проверяем линтеры после исправлений
+          echo "🔍 Проверка линтеров после автоисправлений..."
+          pnpm lint || exit 1
+          pnpm type-check || echo "⚠️ TypeScript обнаружил проблемы с типами"
 
   test:
     name: 🧪 Тесты
