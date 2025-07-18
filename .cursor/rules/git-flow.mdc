@@ -1,0 +1,184 @@
+---
+description: Git workflow best practices for the project
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Git Flow Best Practices
+
+## Основные принципы
+
+### Защищенные ветки
+- `main` - основная ветка для продакшена и разработки
+- Ветка защищена от прямых push
+
+### Создание веток
+- Всегда создавай feature ветки от `main`
+- Используй префиксы для типов веток:
+  - `feature/` - новые функции
+  - `bugfix/` - исправления багов
+  - `hotfix/` - критические исправления для продакшена
+  - `release/` - подготовка релиза
+
+### Именование веток
+```
+feature/user-authentication
+bugfix/fix-login-validation
+hotfix/critical-security-patch
+release/v1.2.0
+```
+
+## Рабочий процесс
+
+### 1. Создание feature ветки
+```bash
+git checkout main
+git pull origin main
+git checkout -b feature/new-feature-name
+```
+
+### 2. Разработка
+- Делай частые коммиты с понятными сообщениями
+- Используй conventional commits:
+  - `feat:` - новые функции
+  - `fix:` - исправления багов
+  - `docs:` - документация
+  - `style:` - форматирование кода
+  - `refactor:` - рефакторинг
+  - `test:` - тесты
+  - `chore:` - служебные изменения
+
+### 3. Push и Pull Request
+```bash
+git push origin feature/new-feature-name
+```
+- Создавай Pull Request в `main`
+- Заполняй описание PR с деталями изменений
+- Добавляй теги и assignees
+
+### 4. Code Review
+- Обязательный review для всех PR
+- Исправляй замечания в той же ветке
+- Используй squash commits для чистоты истории
+
+### 5. Merge в main
+- Merge только после approval
+- Используй squash and merge для feature веток
+- Удаляй feature ветку после merge
+
+## Release процесс
+
+### Подготовка релиза
+```bash
+git checkout main
+git pull origin main
+git checkout -b release/v1.2.0
+```
+
+### В релизной ветке
+- Обновляй версии в файлах конфигурации
+- Обновляй CHANGELOG.md
+- Тестируй все изменения
+- Исправляй найденные проблемы
+
+### Завершение релиза
+```bash
+git checkout main
+git merge release/v1.2.0
+git tag -a v1.2.0 -m "Release version 1.2.0"
+git push origin main --tags
+git branch -d release/v1.2.0
+```
+
+## Hotfix процесс
+
+### Критические исправления
+```bash
+git checkout main
+git pull origin main
+git checkout -b hotfix/critical-fix
+```
+
+### После исправления
+```bash
+git checkout main
+git merge hotfix/critical-fix
+git tag -a v1.2.1 -m "Hotfix version 1.2.1"
+git push origin main --tags
+git branch -d hotfix/critical-fix
+```
+
+## Правила коммитов
+
+### Conventional Commits
+```
+feat(auth): add OAuth2 authentication
+fix(api): resolve user validation issue
+docs(readme): update installation instructions
+style(ui): format component code
+refactor(services): extract common logic
+test(parser): add unit tests for keyword matching
+chore(deps): update dependencies
+```
+
+### Структура сообщения
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+## Автоматизация
+
+### Pre-commit hooks
+- Проверка линтерами (Ruff, Black, isort для Python)
+- ESLint, Prettier для TypeScript/JavaScript
+- Проверка типов (mypy, TypeScript)
+- Запуск тестов
+
+### CI/CD Pipeline
+- Автоматические тесты при push
+- Проверка качества кода
+- Автоматическое развертывание при merge в main
+- Уведомления в Telegram
+
+## Очистка веток
+
+### Автоматическая очистка
+- Удаление feature веток после merge
+- Удаление release веток после релиза
+- Удаление hotfix веток после исправления
+
+### Ручная очистка
+```bash
+# Удаление локальных веток
+git branch -d feature/completed-feature
+
+# Удаление удаленных веток
+git push origin --delete feature/completed-feature
+```
+
+## Лучшие практики
+
+### Общие правила
+- Никогда не делай force push в защищенные ветки
+- Всегда делай pull перед началом работы
+- Используй meaningful commit messages
+- Держи ветки актуальными
+
+### Размер изменений
+- Один PR = одна логическая функция
+- Избегай больших PR (>500 строк)
+- Разбивай большие изменения на несколько PR
+
+### Конфликты
+- Решай конфликты в своей ветке
+- Используй rebase для обновления ветки
+- Тестируй после разрешения конфликтов
+
+### Безопасность
+- Не коммить чувствительные данные
+- Используй .gitignore для конфиденциальных файлов
+- Проверяй код на уязвимости перед merge

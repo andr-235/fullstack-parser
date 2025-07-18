@@ -1,0 +1,70 @@
+---
+description: Security guidelines and best practices for the project
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Security Guidelines
+
+## Authentication & Authorization
+- Use JWT tokens with short expiration times (15-30 minutes)
+- Implement refresh token rotation
+- Use secure session management
+- Implement proper role-based access control (RBAC)
+- Use OAuth 2.0 for third-party authentication
+
+## Data Validation
+- **ALWAYS** validate input data with Pydantic (backend) and Zod (frontend)
+- Use strict type checking
+- Implement input sanitization
+- Validate file uploads
+- Use parameterized queries for database operations
+
+## Secrets Management
+- **NEVER** hardcode secrets in code
+- Use environment variables for all sensitive data
+- Use GitHub Secrets for CI/CD
+- Rotate secrets every 90 days
+- Use secure secret storage services
+
+## API Security
+- Implement rate limiting
+- Use HTTPS in production
+- Configure proper CORS headers
+- Implement API versioning
+- Use API keys for external integrations
+
+## Database Security
+- Use connection pooling
+- Implement proper access controls
+- Use prepared statements
+- Encrypt sensitive data at rest
+- Regular security audits
+
+## Frontend Security
+- Implement Content Security Policy (CSP)
+- Use HTTPS for all requests
+- Sanitize user input
+- Implement proper error handling
+- Use secure cookie settings
+
+## Docker Security
+- Use non-root users in containers
+- Scan images for vulnerabilities
+- Use minimal base images
+- Implement proper network segmentation
+- Use secrets for sensitive data
+
+## Monitoring & Logging
+- Log security events
+- Monitor for suspicious activity
+- Implement alerting for security incidents
+- Use structured logging
+- Regular security audits
+
+## Code Security
+- Use security linters (bandit for Python)
+- Regular dependency updates
+- Code security reviews
+- Follow OWASP guidelines
+- Implement secure coding practices

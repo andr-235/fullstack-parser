@@ -1,0 +1,135 @@
+---
+description: Testing standards and best practices for the project
+globs: ["**/tests/**/*", "**/*.test.*", "**/*.spec.*"]
+alwaysApply: true
+---
+
+# Testing Standards
+
+## Backend Testing (Python/FastAPI)
+
+### Test Structure
+- Use pytest for testing framework
+- Place tests in [backend/tests/](mdc:backend/tests/) directory
+- Use descriptive test names
+- Group related tests in classes
+
+### API Testing
+```python
+import pytest
+from httpx import AsyncClient
+from fastapi.testclient import TestClient
+
+@pytest.mark.asyncio
+async def test_create_user():
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post("/users/", json={
+            "email": "test@example.com",
+            "password": "password123"
+        })
+    assert response.status_code == 201
+    assert response.json()["email"] == "test@example.com"
+```
+
+### Database Testing
+- Use test database
+- Clean up after each test
+- Use fixtures for common data
+- Test both success and error cases
+
+### Mocking
+```python
+from unittest.mock import patch
+
+@patch('app.services.user_service.create_user')
+async def test_user_creation_mocked(mock_create):
+    mock_create.return_value = User(id=1, email="test@example.com")
+    # Test implementation
+```
+
+## Frontend Testing (TypeScript/React)
+
+### Test Structure
+- Use Jest for testing framework
+- Use React Testing Library for component testing
+- Place tests alongside components or in [frontend/__tests__/](mdc:frontend/__tests__/)
+- Use `.test.tsx` or `.spec.tsx` extensions
+
+### Component Testing
+```typescript
+import { render, screen, fireEvent } from '@testing-library/react'
+import { UserForm } from './UserForm'
+
+test('submits form with valid data', () => {
+  const mockSubmit = jest.fn()
+  render(<UserForm onSubmit={mockSubmit} />)
+  
+  fireEvent.change(screen.getByLabelText(/email/i), {
+    target: { value: 'test@example.com' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: /submit/i }))
+  
+  expect(mockSubmit).toHaveBeenCalledWith({
+    email: 'test@example.com',
+  })
+})
+```
+
+### API Testing
+- Mock API calls using MSW (Mock Service Worker)
+- Test loading states
+- Test error states
+- Test success states
+
+### Hook Testing
+```typescript
+import { renderHook, waitFor } from '@testing-library/react'
+import { useUsers } from './useUsers'
+
+test('fetches users successfully', async () => {
+  const { result } = renderHook(() => useUsers())
+  
+  await waitFor(() => {
+    expect(result.current.isSuccess).toBe(true)
+  })
+  
+  expect(result.current.data).toHaveLength(2)
+})
+```
+
+## Test Coverage Requirements
+- Minimum 80% code coverage
+- Test all critical business logic
+- Test error handling paths
+- Test edge cases
+- Test integration points
+
+## Test Data Management
+- Use factories for test data
+- Use faker libraries for realistic data
+- Clean up test data after tests
+- Use isolated test databases
+
+## Performance Testing
+- Test API response times
+- Test database query performance
+- Test frontend rendering performance
+- Use load testing for critical endpoints
+
+## E2E Testing
+- Use Playwright or Cypress for E2E tests
+- Test critical user journeys
+- Test cross-browser compatibility
+- Test mobile responsiveness
+
+## Test Environment
+- Use separate test environment
+- Use test-specific configuration
+- Mock external services
+- Use test-specific secrets
+
+## Continuous Integration
+- Run tests on every commit
+- Block merges on test failures
+- Generate coverage reports
+- Use parallel test execution

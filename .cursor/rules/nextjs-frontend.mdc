@@ -1,0 +1,146 @@
+---
+description: Next.js Frontend Development Rules
+globs:
+alwaysApply: false
+---
+
+## Code Style & Formatting
+- Line length: 80 characters
+- Use Prettier for code formatting
+- Use ESLint for linting
+- Use single quotes for strings
+- Use strict TypeScript mode
+
+## Project Structure
+Follow this structure in [frontend/](mdc:frontend/):
+- [app/](mdc:frontend/app/) - Next.js App Router pages
+- [components/](mdc:frontend/components/) - Reusable components
+- [features/](mdc:frontend/features/) - Feature-based organization
+- [hooks/](mdc:frontend/hooks/) - Custom React hooks
+- [lib/](mdc:frontend/lib/) - Utilities and helpers
+- [types/](mdc:frontend/types/) - TypeScript type definitions
+
+## Dependencies Management
+- **ALWAYS** use pnpm: `pnpm add <package>`
+- **NEVER** use npm or yarn
+- Use `pnpm add -D <package>` for development dependencies
+- Lock versions in [pnpm-lock.yaml](mdc:frontend/pnpm-lock.yaml)
+
+## Code Patterns
+
+### Component Structure
+```typescript
+import { useState } from 'react'
+import { z } from 'zod'
+
+interface User {
+  id: string
+  email: string
+  name: string
+}
+
+const userSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1),
+})
+
+export function UserForm({ onSubmit }: { onSubmit: (user: User) => void }) {
+  const [formData, setFormData] = useState({ email: '', name: '' })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const validated = userSchema.parse(formData)
+    onSubmit(validated)
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* form fields */}
+    </form>
+  )
+}
+```
+
+### API Integration
+```typescript
+import { useQuery, useMutation } from '@tanstack/react-query'
+
+export function useUsers() {
+  return useQuery({
+    queryKey: ['users'],
+    queryFn: () => fetch('/api/users').then(res => res.json()),
+  })
+}
+
+export function useCreateUser() {
+  return useMutation({
+    mutationFn: (userData: UserCreate) => 
+      fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      }).then(res => res.json()),
+  })
+}
+```
+
+### Error Handling
+```typescript
+import { ErrorBoundary } from 'react-error-boundary'
+
+function ErrorFallback({ error }: { error: Error }) {
+  return (
+    <div role="alert">
+      <p>Something went wrong:</p>
+      <pre>{error.message}</pre>
+    </div>
+  )
+}
+
+export function App() {
+  return (
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <YourApp />
+    </ErrorBoundary>
+  )
+}
+```
+
+## Styling
+- Use TailwindCSS for styling
+- Follow utility-first approach
+- Use CSS modules for complex components
+- Implement responsive design
+- Use CSS custom properties for theming
+
+## Performance Optimization
+- Use React.memo for expensive components
+- Use useMemo and useCallback hooks
+- Implement lazy loading for components
+- Use Next.js Image component for images
+- Enable code splitting
+
+## Testing
+- Use Jest for unit testing
+- Use React Testing Library for component testing
+- Test user interactions, not implementation details
+- Mock API calls in tests
+- Test error states and loading states
+
+## State Management
+- Use React Query for server state
+- Use Zustand for client state
+- Avoid prop drilling
+- Use Context API sparingly
+- Implement proper error boundaries
+
+## Accessibility
+- Use semantic HTML elements
+- Add proper ARIA labels
+- Ensure keyboard navigation
+- Test with screen readers
+- Maintain color contrast ratios
+description:
+globs:
+alwaysApply: false
+---

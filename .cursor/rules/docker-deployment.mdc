@@ -1,0 +1,110 @@
+---
+description: Docker deployment rules and best practices for the project
+globs: ["docker-compose*", "Dockerfile*", "**/docker/**/*"]
+alwaysApply: true
+---
+
+# Docker Deployment Rules
+
+## Docker Compose Configuration
+- **ALWAYS** use environment variables from .env files
+- **NEVER** hardcode values in [docker-compose.yml](mdc:docker-compose.yml)
+- Use Docker Compose version 2 syntax
+- Use external images for production (ghcr.io/andr-235/*)
+- Use local builds for development
+
+## Dockerfile Best Practices
+
+### Backend Dockerfile
+```dockerfile
+# ✅ CORRECT
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy dependency files first for better caching
+COPY pyproject.toml poetry.lock ./
+RUN pip install poetry && poetry install --no-dev
+
+# Copy application code
+COPY . .
+RUN poetry run python -m pytest
+
+EXPOSE 8000
+CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0"]
+```
+
+### Frontend Dockerfile
+```dockerfile
+# ✅ CORRECT
+FROM node:18-alpine AS base
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Dependencies stage
+FROM base AS deps
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# Build stage
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN pnpm build
+
+# Production stage
+FROM nginx:alpine AS runner
+COPY --from=builder /app/out /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
+EXPOSE 80
+```
+
+## Environment Variables
+- Use [env.example](mdc:env.example) as template
+- Never commit .env files to version control
+- Use different .env files for different environments
+- Validate environment variables at startup
+
+## Nginx Configuration
+- Use [nginx/nginx.prod.conf](mdc:nginx/nginx.prod.conf) for production
+- Use [nginx/nginx.dev.conf](mdc:nginx/nginx.dev.conf) for development
+- Configure SSL/TLS properly
+- Set up proper CORS headers
+- Enable gzip compression
+
+## Production Deployment
+- Use external Docker images from ghcr.io/andr-235/*
+- Implement health checks
+- Use proper resource limits
+- Set up monitoring and logging
+- Use secrets management
+
+## Development Setup
+- Use [docker-compose.dev.yml](mdc:docker-compose.dev.yml) for local development
+- Mount source code as volumes for hot reload
+- Use local database for development
+- Enable debug mode
+
+## Security Considerations
+- Use non-root users in containers
+- Scan images for vulnerabilities
+- Use multi-stage builds to reduce image size
+- Implement proper network segmentation
+- Use secrets for sensitive data
+
+## Monitoring & Logging
+- Configure structured logging
+- Set up health check endpoints
+- Use proper log rotation
+- Monitor container resource usage
+- Set up alerting for failures
+
+## CI/CD Integration
+- Use GitHub Actions for automated builds
+- Implement automated testing in pipeline
+- Use semantic versioning for images
+- Implement rollback strategies
+- Monitor deployment status
