@@ -236,9 +236,7 @@ class VKBottleService:
                     posts.append(post.model_dump())
                 else:
                     # Fallback для старых версий
-                    posts.append(
-                        post.dict() if hasattr(post, "dict") else vars(post)
-                    )
+                    posts.append(vars(post))
             else:
                 # Если это уже словарь
                 posts.append(post)
@@ -362,11 +360,7 @@ class VKBottleService:
                     comments.append(comment.model_dump())
                 else:
                     # Fallback для старых версий
-                    comments.append(
-                        comment.dict()
-                        if hasattr(comment, "dict")
-                        else vars(comment)
-                    )
+                    comments.append(vars(comment))
             else:
                 # Если это уже словарь
                 comments.append(comment)
@@ -453,9 +447,7 @@ class VKBottleService:
                     return dict(group.model_dump())
                 else:
                     # Fallback для старых версий
-                    return dict(
-                        group.dict() if hasattr(group, "dict") else vars(group)
-                    )
+                    return dict(vars(group))
             else:
                 # Если это уже словарь
                 return dict(group) if isinstance(group, dict) else None
@@ -475,7 +467,10 @@ class VKBottleService:
                             else vars(group)
                         )
                 else:
-                    return dict(group) if isinstance(group, dict) else None
+
+                    return dict(vars(group))
+            else:
+                return dict(group) if isinstance(group, dict) else None
 
         return None
 
@@ -510,9 +505,7 @@ class VKBottleService:
                 if hasattr(user, "model_dump"):
                     user_info = user.model_dump()
                 else:
-                    user_info = (
-                        user.dict() if hasattr(user, "dict") else vars(user)
-                    )
+                    user_info = vars(user)
 
                 self.logger.info(
                     "Успешно получена информация о пользователе",
@@ -582,11 +575,7 @@ class VKBottleService:
                     if hasattr(group, "model_dump"):
                         groups.append(group.model_dump())
                     else:
-                        groups.append(
-                            group.dict()
-                            if hasattr(group, "dict")
-                            else vars(group)
-                        )
+                        groups.append(vars(group))
 
                 self.logger.info(
                     "Успешно найдены группы",
