@@ -92,13 +92,15 @@ async def create_group(
         filtered_data["vk_id"] = vk_group_data["id"]
 
     # Переопределяем поля пользовательскими данными
-    filtered_data.update({
-        "screen_name": screen_name,
-        "name": group_data.name,
-        "description": group_data.description,
-        "is_active": group_data.is_active,
-        "max_posts_to_check": group_data.max_posts_to_check,
-    })
+    filtered_data.update(
+        {
+            "screen_name": screen_name,
+            "name": group_data.name,
+            "description": group_data.description,
+            "is_active": group_data.is_active,
+            "max_posts_to_check": group_data.max_posts_to_check,
+        }
+    )
 
     new_group = VKGroup(**filtered_data)
     db.add(new_group)

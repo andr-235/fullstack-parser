@@ -241,7 +241,9 @@ class VKBottleService:
                 exc_info=True,
             )
 
-    async def get_group_info(self, group_id_or_screen_name: str | int) -> Optional[dict]:
+    async def get_group_info(
+        self, group_id_or_screen_name: str | int
+    ) -> Optional[dict]:
         """
         Получить информацию о группе ВКонтакте.
 

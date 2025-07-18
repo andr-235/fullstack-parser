@@ -1,6 +1,6 @@
 {
   "errors": [],
-  "generated_at": "2025-07-16T23:56:37Z",
+  "generated_at": "2025-07-18T01:14:01Z",
   "metrics": {
     "_totals": {
       "CONFIDENCE.HIGH": 2,
@@ -11,7 +11,7 @@
       "SEVERITY.LOW": 11,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 4577,
+      "loc": 4626,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -89,7 +89,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 143,
+      "loc": 152,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -128,7 +128,7 @@
       "SEVERITY.LOW": 3,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 159,
+      "loc": 163,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -193,7 +193,7 @@
       "SEVERITY.LOW": 1,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 99,
+      "loc": 94,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -206,7 +206,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 70,
+      "loc": 82,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -622,7 +622,7 @@
       "SEVERITY.LOW": 1,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 222,
+      "loc": 237,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -661,7 +661,7 @@
       "SEVERITY.LOW": 1,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 256,
+      "loc": 264,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -687,7 +687,7 @@
       "SEVERITY.LOW": 1,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 99,
+      "loc": 100,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -700,7 +700,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 8,
+      "loc": 13,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -755,7 +755,7 @@
       "test_name": "hardcoded_password_funcarg"
     },
     {
-      "code": "114     \"\"\"\u0412\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u043c\u043e\u043d\u0438\u0442\u043e\u0440\u0438\u043d\u0433 \u0434\u043b\u044f \u0433\u0440\u0443\u043f\u043f\u044b\"\"\"\n115     vk_service = VKBottleService(\n116         token=\"stub\", api_version=\"5.131\"\n117     )  # TODO: \u0437\u0430\u043c\u0435\u043d\u0438\u0442\u044c \u043d\u0430 settings\n118     monitoring_service = MonitoringService(db=db, vk_service=vk_service)\n",
+      "code": "116     \"\"\"\u0412\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u043c\u043e\u043d\u0438\u0442\u043e\u0440\u0438\u043d\u0433 \u0434\u043b\u044f \u0433\u0440\u0443\u043f\u043f\u044b\"\"\"\n117     vk_service = VKBottleService(\n118         token=\"stub\", api_version=\"5.131\"\n119     )  # TODO: \u0437\u0430\u043c\u0435\u043d\u0438\u0442\u044c \u043d\u0430 settings\n120     monitoring_service = MonitoringService(db=db, vk_service=vk_service)\n",
       "col_offset": 17,
       "end_col_offset": 5,
       "filename": "app/api/v1/monitoring.py",
@@ -766,18 +766,18 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Possible hardcoded password: 'stub'",
-      "line_number": 115,
+      "line_number": 117,
       "line_range": [
-        115,
-        116,
-        117
+        117,
+        118,
+        119
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html",
       "test_id": "B106",
       "test_name": "hardcoded_password_funcarg"
     },
     {
-      "code": "142     \"\"\"\u041e\u0442\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u043c\u043e\u043d\u0438\u0442\u043e\u0440\u0438\u043d\u0433 \u0434\u043b\u044f \u0433\u0440\u0443\u043f\u043f\u044b\"\"\"\n143     vk_service = VKBottleService(\n144         token=\"stub\", api_version=\"5.131\"\n145     )  # TODO: \u0437\u0430\u043c\u0435\u043d\u0438\u0442\u044c \u043d\u0430 settings\n146     monitoring_service = MonitoringService(db=db, vk_service=vk_service)\n",
+      "code": "145     \"\"\"\u041e\u0442\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u043c\u043e\u043d\u0438\u0442\u043e\u0440\u0438\u043d\u0433 \u0434\u043b\u044f \u0433\u0440\u0443\u043f\u043f\u044b\"\"\"\n146     vk_service = VKBottleService(\n147         token=\"stub\", api_version=\"5.131\"\n148     )  # TODO: \u0437\u0430\u043c\u0435\u043d\u0438\u0442\u044c \u043d\u0430 settings\n149     monitoring_service = MonitoringService(db=db, vk_service=vk_service)\n",
       "col_offset": 17,
       "end_col_offset": 5,
       "filename": "app/api/v1/monitoring.py",
@@ -788,11 +788,11 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Possible hardcoded password: 'stub'",
-      "line_number": 143,
+      "line_number": 146,
       "line_range": [
-        143,
-        144,
-        145
+        146,
+        147,
+        148
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b106_hardcoded_password_funcarg.html",
       "test_id": "B106",
@@ -881,7 +881,7 @@
       "test_name": "hardcoded_password_funcarg"
     },
     {
-      "code": "121             )\n122         except Exception:\n123             pass\n124 \n",
+      "code": "116             return origins if origins else [\"https://parser.mysite.ru\"]\n117         except Exception:\n118             pass\n119 \n",
       "col_offset": 8,
       "end_col_offset": 16,
       "filename": "app/core/config.py",
@@ -892,17 +892,17 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Pass detected.",
-      "line_number": 122,
+      "line_number": 117,
       "line_range": [
-        122,
-        123
+        117,
+        118
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b110_try_except_pass.html",
       "test_id": "B110",
       "test_name": "try_except_pass"
     },
     {
-      "code": "221                 tasks.append(ParseTaskResponse(**task_data))\n222             except Exception:\n223                 # NOTE: Skipping task with potentially invalid data due to migration\n224                 continue\n225 \n",
+      "code": "236                 tasks.append(ParseTaskResponse(**task_data))\n237             except Exception:\n238                 # NOTE: Skipping task with potentially invalid data due to migration\n239                 continue\n240 \n",
       "col_offset": 12,
       "end_col_offset": 24,
       "filename": "app/services/redis_parser_manager.py",
@@ -913,11 +913,11 @@
       },
       "issue_severity": "LOW",
       "issue_text": "Try, Except, Continue detected.",
-      "line_number": 222,
+      "line_number": 237,
       "line_range": [
-        222,
-        223,
-        224
+        237,
+        238,
+        239
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b112_try_except_continue.html",
       "test_id": "B112",
@@ -944,7 +944,7 @@
       "test_name": "hardcoded_password_string"
     },
     {
-      "code": "36             vk_token = settings.vk_access_token\n37             if not vk_token or vk_token == \"your-vk-app-id\":\n38                 logger.warning(\n",
+      "code": "36             vk_token = settings.vk.access_token\n37             if not vk_token or vk_token == \"your-vk-app-id\":\n38                 logger.warning(\n",
       "col_offset": 43,
       "end_col_offset": 59,
       "filename": "app/workers/arq_tasks.py",
