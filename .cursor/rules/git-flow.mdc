@@ -1,10 +1,7 @@
 ---
-description:
-globs:
-alwaysApply: false
----
----
-title: Git Flow Best Practices
+description: Git workflow best practices for the project
+globs: ["**/*"]
+alwaysApply: true
 ---
 
 # Git Flow Best Practices
@@ -185,7 +182,3 @@ git push origin --delete feature/completed-feature
 - Не коммить чувствительные данные
 - Используй .gitignore для конфиденциальных файлов
 - Проверяй код на уязвимости перед merge
-description:
-globs:
-alwaysApply: false
----

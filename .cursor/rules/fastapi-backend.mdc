@@ -1,7 +1,7 @@
 ---
-description:
-globs:
-alwaysApply: false
+description: FastAPI backend development rules and best practices
+globs: ["backend/**/*", "**/*.py"]
+alwaysApply: true
 ---
 # FastAPI Backend Development Rules
 
@@ -96,7 +96,3 @@ logger.info("user_action",
 - Implement proper CORS configuration
 - Use JWT tokens with short expiration
 - Hash passwords with bcrypt
-description:
-globs:
-alwaysApply: false
----

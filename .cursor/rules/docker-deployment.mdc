@@ -1,9 +1,10 @@
 ---
-description:
-globs:
-alwaysApply: false
+description: Docker deployment rules and best practices for the project
+globs: ["docker-compose*", "Dockerfile*", "**/docker/**/*"]
+alwaysApply: true
 ---
-# Docker & Deployment Rules
+
+# Docker Deployment Rules
 
 ## Docker Compose Configuration
 - **ALWAYS** use environment variables from .env files
@@ -107,7 +108,3 @@ EXPOSE 80
 - Use semantic versioning for images
 - Implement rollback strategies
 - Monitor deployment status
-description:
-globs:
-alwaysApply: false
----

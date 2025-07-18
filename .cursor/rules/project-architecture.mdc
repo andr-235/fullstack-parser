@@ -1,7 +1,7 @@
 ---
-description:
-globs:
-alwaysApply: false
+description: Project architecture and file structure guidelines
+globs: ["**/*"]
+alwaysApply: true
 ---
 # Project Architecture - Fullstack Parser
 
@@ -42,7 +42,3 @@ This is a fullstack application with FastAPI backend and Next.js frontend, desig
 - Write tests for critical functionality
 - Use structured logging (JSON format)
 - Add health check endpoints
-description:
-globs:
-alwaysApply: false
----

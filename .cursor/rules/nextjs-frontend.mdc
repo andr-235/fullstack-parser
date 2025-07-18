@@ -1,9 +1,8 @@
 ---
-description:
+description: Next.js Frontend Development Rules
 globs:
 alwaysApply: false
 ---
-# Next.js Frontend Development Rules
 
 ## Code Style & Formatting
 - Line length: 80 characters
