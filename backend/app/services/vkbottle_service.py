@@ -6,9 +6,9 @@
 обработкой ошибок и логированием.
 """
 
-from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 
 import structlog
 from vkbottle import API
@@ -20,8 +20,8 @@ from vkbottle_types.objects import (
     WallWallpostFull,
 )
 from vkbottle_types.responses import (
-    WallGetResponseModel,
     WallGetCommentsResponseModel,
+    WallGetResponseModel,
 )
 
 # Константы
@@ -198,7 +198,9 @@ class VKBottleService:
             return posts
 
         except VKAPIError as e:
-            raise self._handle_vk_api_error(e, "получении постов группы")
+            raise self._handle_vk_api_error(
+                e, "получении постов группы"
+            ) from e
         except Exception as e:
             self.logger.error(
                 "Неожиданная ошибка при получении постов группы",
@@ -323,7 +325,7 @@ class VKBottleService:
         except VKAPIError as e:
             raise self._handle_vk_api_error(
                 e, "получении комментариев к посту"
-            )
+            ) from e
         except Exception as e:
             self.logger.error(
                 "Неожиданная ошибка при получении комментариев",
@@ -416,7 +418,9 @@ class VKBottleService:
             return group_info
 
         except VKAPIError as e:
-            raise self._handle_vk_api_error(e, "получении информации о группе")
+            raise self._handle_vk_api_error(
+                e, "получении информации о группе"
+            ) from e
         except Exception as e:
             self.logger.error(
                 "Неожиданная ошибка при получении информации о группе",
@@ -456,22 +460,22 @@ class VKBottleService:
                 # Если это уже словарь
                 return dict(group) if isinstance(group, dict) else None
 
-        # Проверяем альтернативные форматы ответа
-        if (
-            hasattr(response, "response")
-            and isinstance(response.response, list)
-            and len(response.response) > 0
-        ):
-            group = response.response[0]
-            if isinstance(group, GroupsGroupFull):
-                if hasattr(group, "model_dump"):
-                    return dict(group.model_dump())
+        # Проверяем альтернативные форматы ответа для совместимости
+        if hasattr(response, "response"):
+            response_data = response.response
+            if isinstance(response_data, list) and len(response_data) > 0:
+                group = response_data[0]
+                if isinstance(group, GroupsGroupFull):
+                    if hasattr(group, "model_dump"):
+                        return dict(group.model_dump())
+                    else:
+                        return dict(
+                            group.dict()
+                            if hasattr(group, "dict")
+                            else vars(group)
+                        )
                 else:
-                    return dict(
-                        group.dict() if hasattr(group, "dict") else vars(group)
-                    )
-            else:
-                return dict(group) if isinstance(group, dict) else None
+                    return dict(group) if isinstance(group, dict) else None
 
         return None
 
@@ -527,7 +531,7 @@ class VKBottleService:
         except VKAPIError as e:
             raise self._handle_vk_api_error(
                 e, "получении информации о пользователе"
-            )
+            ) from e
         except Exception as e:
             self.logger.error(
                 "Неожиданная ошибка при получении информации о пользователе",
@@ -599,7 +603,7 @@ class VKBottleService:
                 return []
 
         except VKAPIError as e:
-            raise self._handle_vk_api_error(e, "поиске групп")
+            raise self._handle_vk_api_error(e, "поиске групп") from e
         except Exception as e:
             self.logger.error(
                 "Неожиданная ошибка при поиске групп",
@@ -614,8 +618,7 @@ class VKBottleService:
     async def close(self) -> None:
         """Закрывает соединения и освобождает ресурсы."""
         try:
-            if hasattr(self.api, "close"):
-                await self.api.close()
+            # VKBottle API не требует явного закрытия, но оставляем для совместимости
             self.logger.info("VKBottleService закрыт")
         except Exception as e:
             self.logger.error(
