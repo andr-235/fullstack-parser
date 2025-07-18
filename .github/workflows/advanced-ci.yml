@@ -481,13 +481,6 @@ jobs:
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-      - name: 📦 Restore Docker cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: docker-cache-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            docker-cache-${{ runner.os }}-
       - name: 🏗️ Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
