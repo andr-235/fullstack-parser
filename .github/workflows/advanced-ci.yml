@@ -478,6 +478,7 @@ jobs:
     permissions:
       contents: read
       packages: read
+    continue-on-error: false
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
@@ -491,11 +492,31 @@ jobs:
           set -e
           echo "🏗️ Начинаем умную сборку образов..."
 
+          # Проверяем доступность Docker
+          if ! command -v docker &> /dev/null; then
+            echo "❌ Docker не найден"
+            exit 1
+          fi
+
+          # Проверяем Docker Buildx
+          if ! docker buildx version &> /dev/null; then
+            echo "❌ Docker Buildx не доступен"
+            exit 1
+          fi
+
           # Определяем измененные сервисы
           echo "🔍 Определение измененных сервисов для сборки..."
 
-          # Получаем список измененных файлов
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD || echo "")
+          # Получаем список измененных файлов (с обработкой первого коммита)
+          echo "🔍 Определение измененных сервисов для сборки..."
+
+          # Проверяем, есть ли предыдущий коммит
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          else
+            echo "📝 Первый коммит - собираем все образы"
+            CHANGED_FILES=""
+          fi
 
           # Определяем какие сервисы затронуты
           BACKEND_CHANGED=false
@@ -524,7 +545,7 @@ jobs:
               echo "⚙️ ARQ Worker изменен - будет собран"
             fi
           else
-            echo "⚠️ Не удалось определить изменения, собираем все образы"
+            echo "⚠️ Не удалось определить изменения или первый коммит, собираем все образы"
             BACKEND_CHANGED=true
             FRONTEND_CHANGED=true
             ARQ_WORKER_CHANGED=true
@@ -534,7 +555,7 @@ jobs:
           echo "📦 Инициализация кэша..."
           mkdir -p /tmp/.buildx-cache
 
-          # Собираем только измененные образы
+          # Собираем только измененные образы (убираем --parallel, он не поддерживается)
           if [[ "$BACKEND_CHANGED" == "true" ]]; then
             echo "🐍 Сборка backend образа с кэшированием..."
             docker buildx build \
@@ -542,7 +563,6 @@ jobs:
               --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
               --tag fullstack-backend:latest \
               --load \
-              --parallel \
               ./backend &
           else
             echo "⏭️ Backend не изменен - пропускаем сборку"
@@ -555,7 +575,6 @@ jobs:
               --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
               --tag fullstack-frontend:latest \
               --load \
-              --parallel \
               ./frontend &
           else
             echo "⏭️ Frontend не изменен - пропускаем сборку"
@@ -569,26 +588,57 @@ jobs:
               --tag fullstack-arq-worker:latest \
               --file ./backend/Dockerfile.arq \
               --load \
-              --parallel \
               ./backend &
           else
             echo "⏭️ ARQ Worker не изменен - пропускаем сборку"
           fi
 
-          # Ждем завершения всех сборок
+          # Ждем завершения всех сборок и проверяем статус
           echo "⏳ Ожидание завершения сборки образов..."
           wait
 
-          # Обновляем кэш
+          # Проверяем, что все образы собрались успешно
+          echo "🔍 Проверка результатов сборки..."
+          if [[ "$BACKEND_CHANGED" == "true" ]] && ! docker images | grep -q "fullstack-backend"; then
+            echo "❌ Backend образ не собран"
+            exit 1
+          fi
+
+          if [[ "$FRONTEND_CHANGED" == "true" ]] && ! docker images | grep -q "fullstack-frontend"; then
+            echo "❌ Frontend образ не собран"
+            exit 1
+          fi
+
+          if [[ "$ARQ_WORKER_CHANGED" == "true" ]] && ! docker images | grep -q "fullstack-arq-worker"; then
+            echo "❌ ARQ Worker образ не собран"
+            exit 1
+          fi
+
+          # Обновляем кэш (с проверкой существования)
           echo "🔄 Обновление кэша..."
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          if [[ -d "/tmp/.buildx-cache-new" ]]; then
+            rm -rf /tmp/.buildx-cache
+            mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+            echo "✅ Кэш обновлен"
+          else
+            echo "⚠️ Новый кэш не найден, оставляем старый"
+          fi
 
           echo "✅ Умная сборка завершена!"
           echo "📊 Статистика сборки:"
           echo "   Backend: $BACKEND_CHANGED"
           echo "   Frontend: $FRONTEND_CHANGED"
           echo "   ARQ Worker: $ARQ_WORKER_CHANGED"
+
+          echo "📦 Информация о собранных образах:"
+          docker images | grep "fullstack" || echo "   Нет образов fullstack"
+
+          echo "💾 Размер кэша:"
+          if [[ -d "/tmp/.buildx-cache" ]]; then
+            du -sh /tmp/.buildx-cache || echo "   Не удалось определить размер кэша"
+          else
+            echo "   Кэш не найден"
+          fi
 
       - name: 🚀 Деплой на сервер
         run: |
