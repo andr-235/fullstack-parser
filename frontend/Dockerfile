@@ -36,7 +36,8 @@ EXPOSE 3000
 ENV PORT=3000 \
     HOSTNAME=0.0.0.0 \
     NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1
+    NEXT_TELEMETRY_DISABLED=1 \
+    NODE_OPTIONS="--max-old-space-size=512"
 ENTRYPOINT ["dumb-init", "--"]
 # Запуск в зависимости от NODE_ENV
 CMD ["sh", "-c", "if [ \"$NODE_ENV\" = 'development' ]; then pnpm dev; else node server.js; fi"] 

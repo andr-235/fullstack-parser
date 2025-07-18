@@ -90,6 +90,9 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
       - SERVER_IP=${SERVER_IP}
       - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN}
+      - ARQ_MAX_JOBS=10
+      - ARQ_POLL_DELAY=1.0
+      - ARQ_MAX_TRIES=3
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,6 +101,14 @@ services:
     networks:
       - prod-app-network
       - prod-db-network
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
     healthcheck:
       test: ["CMD", "curl", "-fsSL", "http://backend:8000/api/v1/health/"]
       interval: 30s
