@@ -21,6 +21,10 @@ import type {
   APIError,
   ParserState,
   ParserStats,
+  MonitoringStats,
+  VKGroupMonitoring,
+  MonitoringGroupUpdate,
+  MonitoringRunResult,
 } from '@/types/api'
 
 /**
@@ -207,26 +211,26 @@ class APIClient {
       )
       return data
     } catch (error: any) {
-      console.error('Upload error details:', error);
-      
+      console.error('Upload error details:', error)
+
       // Улучшенная обработка ошибок
       if (error.code === 'ECONNABORTED') {
-        throw new Error('Превышено время ожидания загрузки файла');
+        throw new Error('Превышено время ожидания загрузки файла')
       }
-      
+
       if (error.response?.status === 413) {
-        throw new Error('Файл слишком большой. Максимальный размер: 5MB');
+        throw new Error('Файл слишком большой. Максимальный размер: 5MB')
       }
-      
+
       if (error.response?.status === 404) {
-        throw new Error('Эндпоинт загрузки файлов недоступен');
+        throw new Error('Эндпоинт загрузки файлов недоступен')
       }
-      
+
       if (error.response?.status === 500) {
-        throw new Error('Ошибка сервера при обработке файла');
+        throw new Error('Ошибка сервера при обработке файла')
       }
-      
-      throw error;
+
+      throw error
     }
   }
 
@@ -314,6 +318,67 @@ class APIClient {
       throw new Error('API недоступно')
     }
   }
+
+  // Monitoring API
+  async getMonitoringStats() {
+    const { data } = await this.client.get<MonitoringStats>('/monitoring/stats')
+    return data
+  }
+
+  async getMonitoringGroups(params?: PaginationParams & { 
+    active_only?: boolean 
+    monitoring_enabled?: boolean 
+  }) {
+    const { data } = await this.client.get<PaginatedResponse<VKGroupMonitoring>>(
+      '/monitoring/groups',
+      { params }
+    )
+    return data
+  }
+
+  async enableGroupMonitoring(
+    groupId: number, 
+    intervalMinutes: number = 60, 
+    priority: number = 5
+  ) {
+    const { data } = await this.client.post<StatusResponse>(
+      `/monitoring/groups/${groupId}/enable`,
+      { interval_minutes: intervalMinutes, priority }
+    )
+    return data
+  }
+
+  async disableGroupMonitoring(groupId: number) {
+    const { data } = await this.client.post<StatusResponse>(
+      `/monitoring/groups/${groupId}/disable`
+    )
+    return data
+  }
+
+  async updateGroupMonitoring(
+    groupId: number, 
+    updateData: MonitoringGroupUpdate
+  ) {
+    const { data } = await this.client.put<StatusResponse>(
+      `/monitoring/groups/${groupId}/settings`,
+      updateData
+    )
+    return data
+  }
+
+  async runGroupMonitoring(groupId: number) {
+    const { data } = await this.client.post<StatusResponse>(
+      `/monitoring/groups/${groupId}/run`
+    )
+    return data
+  }
+
+  async runMonitoringCycle() {
+    const { data } = await this.client.post<MonitoringRunResult>(
+      '/monitoring/run-cycle'
+    )
+    return data
+  }
 }
 
 // Экспортируем единственный экземпляр
@@ -350,4 +415,8 @@ export const createQueryKey = {
 
   globalStats: () => ['stats', 'global'] as const,
   dashboardStats: () => ['stats', 'dashboard'] as const,
+
+  monitoringStats: () => ['monitoring', 'stats'] as const,
+  monitoringGroups: (params?: any) => ['monitoring', 'groups', params] as const,
+  monitoringGroup: (id: number) => ['monitoring', 'groups', id] as const,
 }
