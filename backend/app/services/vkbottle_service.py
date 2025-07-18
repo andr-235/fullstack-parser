@@ -461,16 +461,9 @@ class VKBottleService:
                     if hasattr(group, "model_dump"):
                         return dict(group.model_dump())
                     else:
-                        return dict(
-                            group.dict()
-                            if hasattr(group, "dict")
-                            else vars(group)
-                        )
+                        return dict(vars(group))
                 else:
-
-                    return dict(vars(group))
-            else:
-                return dict(group) if isinstance(group, dict) else None
+                    return dict(group) if isinstance(group, dict) else None
 
         return None
 
