@@ -16,7 +16,7 @@ COPY . .
 # Stage 3: Production
 FROM python:3.13-slim AS production
 WORKDIR /app
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
     && rm -rf /var/lib/apt/lists/*
