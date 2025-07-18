@@ -1,2 +1,2 @@
 // Comments hooks exports
-export * from "./use-comments";
+export * from './use-comments'

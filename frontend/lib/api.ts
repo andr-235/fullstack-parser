@@ -325,20 +325,21 @@ class APIClient {
     return data
   }
 
-  async getMonitoringGroups(params?: PaginationParams & { 
-    active_only?: boolean 
-    monitoring_enabled?: boolean 
-  }) {
-    const { data } = await this.client.get<PaginatedResponse<VKGroupMonitoring>>(
-      '/monitoring/groups',
-      { params }
-    )
+  async getMonitoringGroups(
+    params?: PaginationParams & {
+      active_only?: boolean
+      monitoring_enabled?: boolean
+    }
+  ) {
+    const { data } = await this.client.get<
+      PaginatedResponse<VKGroupMonitoring>
+    >('/monitoring/groups', { params })
     return data
   }
 
   async enableGroupMonitoring(
-    groupId: number, 
-    intervalMinutes: number = 60, 
+    groupId: number,
+    intervalMinutes: number = 60,
     priority: number = 5
   ) {
     const { data } = await this.client.post<StatusResponse>(
@@ -356,7 +357,7 @@ class APIClient {
   }
 
   async updateGroupMonitoring(
-    groupId: number, 
+    groupId: number,
     updateData: MonitoringGroupUpdate
   ) {
     const { data } = await this.client.put<StatusResponse>(

@@ -1,2 +1,2 @@
 // Keywords hooks exports
-export * from "./use-keywords";
+export * from './use-keywords'

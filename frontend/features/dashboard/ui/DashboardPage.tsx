@@ -1,19 +1,19 @@
-"use client";
+'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useGlobalStats } from "@/hooks/use-stats";
-import { Users, MessageSquare, KeyRound, Activity } from "lucide-react";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useGlobalStats } from '@/hooks/use-stats'
+import { Users, MessageSquare, KeyRound, Activity } from 'lucide-react'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 export default function DashboardPage() {
-  const { data: stats, isLoading, error } = useGlobalStats();
+  const { data: stats, isLoading, error } = useGlobalStats()
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-full">
         <LoadingSpinner />
       </div>
-    );
+    )
   }
 
   if (error) {
@@ -33,7 +33,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-    );
+    )
   }
 
   return (
@@ -84,5 +84,5 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

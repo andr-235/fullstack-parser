@@ -1,20 +1,20 @@
-"use client";
+'use client'
 
-import React, { useState } from "react";
+import React, { useState } from 'react'
 import {
   useKeywords,
   useCreateKeyword,
   useUpdateKeyword,
   useDeleteKeyword,
   useInfiniteKeywords,
-} from "@/features/keywords/hooks/use-keywords";
+} from '@/features/keywords/hooks/use-keywords'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -22,27 +22,27 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Plus, Trash2, Search, Check, X } from "lucide-react";
-import { toast } from "react-hot-toast";
-import type { KeywordResponse, KeywordUpdate } from "@/types/api";
-import useDebounce from "@/hooks/use-debounce";
+} from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { Plus, Trash2, Search, Check, X } from 'lucide-react'
+import { toast } from 'react-hot-toast'
+import type { KeywordResponse, KeywordUpdate } from '@/types/api'
+import useDebounce from '@/hooks/use-debounce'
 import {
   Select,
   SelectTrigger,
   SelectContent,
   SelectItem,
   SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { useKeywordCategories } from "@/hooks/use-keywords";
-import { cn } from "@/lib/utils";
-import { UploadKeywordsModal } from "./UploadKeywordsModal";
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { useKeywordCategories } from '@/hooks/use-keywords'
+import { cn } from '@/lib/utils'
+import { UploadKeywordsModal } from './UploadKeywordsModal'
 
 const KeywordRow = ({
   keyword,
@@ -51,36 +51,36 @@ const KeywordRow = ({
   isUpdating,
   isDeleting,
 }: {
-  keyword: KeywordResponse;
+  keyword: KeywordResponse
   onUpdate: (
     id: number,
     data: KeywordUpdate,
-    callbacks?: { onSuccess?: () => void; onError?: () => void },
-  ) => void;
-  onDelete: (id: number) => void;
-  isUpdating: boolean;
-  isDeleting: boolean;
+    callbacks?: { onSuccess?: () => void; onError?: () => void }
+  ) => void
+  onDelete: (id: number) => void
+  isUpdating: boolean
+  isDeleting: boolean
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedWord, setEditedWord] = useState(keyword.word);
-  const debouncedWord = useDebounce(editedWord, 500);
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedWord, setEditedWord] = useState(keyword.word)
+  const debouncedWord = useDebounce(editedWord, 500)
 
   React.useEffect(() => {
     if (isEditing && debouncedWord !== keyword.word) {
-      onUpdate(keyword.id, { word: debouncedWord });
+      onUpdate(keyword.id, { word: debouncedWord })
     }
-  }, [debouncedWord, isEditing, keyword.id, keyword.word, onUpdate]);
+  }, [debouncedWord, isEditing, keyword.id, keyword.word, onUpdate])
 
   const handleSave = () => {
     if (editedWord !== keyword.word) {
       onUpdate(
         keyword.id,
         { word: editedWord },
-        { onSuccess: () => {}, onError: () => {} },
-      );
+        { onSuccess: () => {}, onError: () => {} }
+      )
     }
-    setIsEditing(false);
-  };
+    setIsEditing(false)
+  }
 
   return (
     <TableRow key={keyword.id}>
@@ -123,7 +123,7 @@ const KeywordRow = ({
         <Switch
           checked={keyword.is_active}
           onCheckedChange={(isActive) => {
-            onUpdate(keyword.id, { is_active: isActive });
+            onUpdate(keyword.id, { is_active: isActive })
           }}
           disabled={isUpdating}
           aria-label="Статус активности"
@@ -141,17 +141,17 @@ const KeywordRow = ({
         </Button>
       </TableCell>
     </TableRow>
-  );
-};
+  )
+}
 
 export default function KeywordsPage() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [newKeyword, setNewKeyword] = useState("");
-  const [activeOnly, setActiveOnly] = useState(true);
-  const [category, setCategory] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState('')
+  const [newKeyword, setNewKeyword] = useState('')
+  const [activeOnly, setActiveOnly] = useState(true)
+  const [category, setCategory] = useState<string>('')
 
   // Для тестов: если категория не выбрана, не передавать параметр category
-  const pageSize = 20;
+  const pageSize = 20
   const {
     data,
     isLoading,
@@ -166,71 +166,71 @@ export default function KeywordsPage() {
     active_only: activeOnly,
     category: category || undefined,
     pageSize,
-    order_by: "word",
-    order_dir: "asc",
-  });
+    order_by: 'word',
+    order_dir: 'asc',
+  })
 
-  const keywords = data?.pages.flatMap((page) => page.items) || [];
-  const total = data?.pages[0]?.total || 0;
-  const active = keywords.filter((k) => k.is_active).length || 0;
+  const keywords = data?.pages.flatMap((page) => page.items) || []
+  const total = data?.pages[0]?.total || 0
+  const active = keywords.filter((k) => k.is_active).length || 0
   const totalMatches =
-    keywords.reduce((sum, k) => sum + k.total_matches, 0) || 0;
+    keywords.reduce((sum, k) => sum + k.total_matches, 0) || 0
 
   // Intersection Observer для бесконечного скролла
-  const loaderRef = React.useRef<HTMLTableRowElement | null>(null);
+  const loaderRef = React.useRef<HTMLTableRowElement | null>(null)
   React.useEffect(() => {
-    if (!hasNextPage || isFetchingNextPage) return;
+    if (!hasNextPage || isFetchingNextPage) return
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) fetchNextPage();
+        if (entries[0].isIntersecting) fetchNextPage()
       },
-      { root: null, rootMargin: "0px", threshold: 1.0 },
-    );
-    if (loaderRef.current) observer.observe(loaderRef.current);
+      { root: null, rootMargin: '0px', threshold: 1.0 }
+    )
+    if (loaderRef.current) observer.observe(loaderRef.current)
     return () => {
-      if (loaderRef.current) observer.unobserve(loaderRef.current);
-    };
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+      if (loaderRef.current) observer.unobserve(loaderRef.current)
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  const { data: categoriesData } = useKeywordCategories();
-  const createKeywordMutation = useCreateKeyword();
-  const updateKeywordMutation = useUpdateKeyword();
-  const deleteKeywordMutation = useDeleteKeyword();
+  const { data: categoriesData } = useKeywordCategories()
+  const createKeywordMutation = useCreateKeyword()
+  const updateKeywordMutation = useUpdateKeyword()
+  const deleteKeywordMutation = useDeleteKeyword()
 
   const handleAddKeyword = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!newKeyword.trim()) return;
+    e.preventDefault()
+    if (!newKeyword.trim()) return
     createKeywordMutation.mutate(
       {
         word: newKeyword,
         is_active: true,
         is_case_sensitive: false,
         is_whole_word: false,
-        category: category || "Без категории",
+        category: category || 'Без категории',
       },
       {
-        onSuccess: () => setNewKeyword(""),
-      },
-    );
-  };
+        onSuccess: () => setNewKeyword(''),
+      }
+    )
+  }
 
   const handleDeleteKeyword = (id: number) => {
-    if (window.confirm("Удалить ключевое слово?")) {
-      deleteKeywordMutation.mutate(id);
+    if (window.confirm('Удалить ключевое слово?')) {
+      deleteKeywordMutation.mutate(id)
     }
-  };
+  }
 
   const handleUpdateKeyword = (
     id: number,
     data: KeywordUpdate,
-    callbacks?: { onSuccess?: () => void; onError?: () => void },
+    callbacks?: { onSuccess?: () => void; onError?: () => void }
   ) => {
     if (callbacks) {
-      updateKeywordMutation.mutate({ keywordId: id, data }, callbacks);
+      updateKeywordMutation.mutate({ keywordId: id, data }, callbacks)
     } else {
-      updateKeywordMutation.mutateAsync({ keywordId: id, data });
+      updateKeywordMutation.mutateAsync({ keywordId: id, data })
     }
-  };
+  }
 
   const renderContent = () => {
     if (isLoading) {
@@ -238,7 +238,7 @@ export default function KeywordsPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <LoadingSpinner />
         </div>
-      );
+      )
     }
     if (isError) {
       return (
@@ -246,7 +246,7 @@ export default function KeywordsPage() {
           <p>Ошибка загрузки</p>
           <p>{(error as Error)?.message}</p>
         </div>
-      );
+      )
     }
     return (
       <div className="max-h-[400px] overflow-y-auto">
@@ -273,8 +273,8 @@ export default function KeywordsPage() {
           </TableBody>
         </Table>
       </div>
-    );
-  };
+    )
+  }
 
   return (
     <Card>
@@ -302,8 +302,8 @@ export default function KeywordsPage() {
           </label>
           <div className="flex items-center gap-2">
             <Select
-              value={category || "all"}
-              onValueChange={(v) => setCategory(v === "all" ? "" : v)}
+              value={category || 'all'}
+              onValueChange={(v) => setCategory(v === 'all' ? '' : v)}
             >
               <SelectTrigger className="w-36">
                 <SelectValue placeholder="Все категории" />
@@ -405,5 +405,5 @@ export default function KeywordsPage() {
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }

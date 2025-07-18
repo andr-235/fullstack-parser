@@ -1,16 +1,16 @@
-"use client";
+'use client'
 
-import React, { useState, useMemo, useEffect } from "react";
-import { useInfiniteComments } from "@/hooks/use-comments";
-import { useGroups } from "@/hooks/use-groups";
-import { useKeywords } from "@/hooks/use-keywords";
+import React, { useState, useMemo, useEffect } from 'react'
+import { useInfiniteComments } from '@/hooks/use-comments'
+import { useGroups } from '@/hooks/use-groups'
+import { useKeywords } from '@/hooks/use-keywords'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -18,76 +18,76 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { formatDistanceToNow } from "date-fns";
-import { ru } from "date-fns/locale";
-import { Search, ExternalLink, XCircle } from "lucide-react";
-import useDebounce from "@/hooks/use-debounce";
-import Link from "next/link";
-import type { VKCommentResponse, KeywordResponse } from "@/types/api";
+} from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { formatDistanceToNow } from 'date-fns'
+import { ru } from 'date-fns/locale'
+import { Search, ExternalLink, XCircle } from 'lucide-react'
+import useDebounce from '@/hooks/use-debounce'
+import Link from 'next/link'
+import type { VKCommentResponse, KeywordResponse } from '@/types/api'
 
 // Helper to highlight keywords in text
 const HighlightedText = ({
   text,
   keywords,
 }: {
-  text: string;
-  keywords: KeywordResponse[];
+  text: string
+  keywords: KeywordResponse[]
 }) => {
   if (!keywords || keywords.length === 0) {
-    return <span>{text}</span>;
+    return <span>{text}</span>
   }
 
-  const keywordNames = keywords.map((k) => k.word);
-  const regex = new RegExp(`(${keywordNames.join("|")})`, "gi");
-  const parts = text.split(regex);
+  const keywordNames = keywords.map((k) => k.word)
+  const regex = new RegExp(`(${keywordNames.join('|')})`, 'gi')
+  const parts = text.split(regex)
 
   return (
     <span>
       {parts.map((part, i) =>
-        keywordNames.some((kw) => new RegExp(`^${kw}$`, "i").test(part)) ? (
+        keywordNames.some((kw) => new RegExp(`^${kw}$`, 'i').test(part)) ? (
           <Badge key={i} variant="success" className="mx-1">
             {part}
           </Badge>
         ) : (
           part
-        ),
+        )
       )}
     </span>
-  );
-};
+  )
+}
 
 export default function CommentsPage() {
-  const [textFilter, setTextFilter] = useState("");
-  const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [textFilter, setTextFilter] = useState('')
+  const [groupFilter, setGroupFilter] = useState<string>('all')
   const [keywordFilter, setKeywordFilter] = useState<string | undefined>(
-    undefined,
-  );
-  const debouncedText = useDebounce(textFilter, 500);
+    undefined
+  )
+  const debouncedText = useDebounce(textFilter, 500)
 
   useEffect(() => {
-    console.log("CommentsPage rendered");
-    console.log("groupFilter:", groupFilter);
-    console.log("useInfiniteComments params:", {
+    console.log('CommentsPage rendered')
+    console.log('groupFilter:', groupFilter)
+    console.log('useInfiniteComments params:', {
       text: debouncedText,
       group_id:
-        groupFilter && groupFilter !== "all" ? Number(groupFilter) : undefined,
+        groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
       keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
       limit: 20,
-    });
-  }, [groupFilter, debouncedText, keywordFilter]);
+    })
+  }, [groupFilter, debouncedText, keywordFilter])
 
   const {
     data,
@@ -99,23 +99,23 @@ export default function CommentsPage() {
   } = useInfiniteComments({
     text: debouncedText,
     group_id:
-      groupFilter && groupFilter !== "all" ? Number(groupFilter) : undefined,
+      groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
     keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
     limit: 20,
-  });
+  })
 
-  const { data: groupsData } = useGroups();
-  const { data: keywordsData } = useKeywords();
+  const { data: groupsData } = useGroups()
+  const { data: keywordsData } = useKeywords()
   const comments = useMemo(
     () => data?.pages.flatMap((page) => page.items) ?? [],
-    [data],
-  );
+    [data]
+  )
 
   const handleResetFilters = () => {
-    setTextFilter("");
-    setGroupFilter("all");
-    setKeywordFilter(undefined);
-  };
+    setTextFilter('')
+    setGroupFilter('all')
+    setKeywordFilter(undefined)
+  }
 
   return (
     <Card>
@@ -155,9 +155,9 @@ export default function CommentsPage() {
             </SelectContent>
           </Select>
           <Select
-            value={keywordFilter ? String(keywordFilter) : "all"}
+            value={keywordFilter ? String(keywordFilter) : 'all'}
             onValueChange={(val) =>
-              setKeywordFilter(val === "all" ? undefined : val)
+              setKeywordFilter(val === 'all' ? undefined : val)
             }
           >
             <SelectTrigger aria-label="Ключевое слово">
@@ -212,7 +212,7 @@ export default function CommentsPage() {
                       <Avatar>
                         <AvatarImage src={comment.author_photo_url} />
                         <AvatarFallback>
-                          {comment.author_name?.[0] || "?"}
+                          {comment.author_name?.[0] || '?'}
                         </AvatarFallback>
                       </Avatar>
                       <span className="text-xs">{comment.author_name}</span>
@@ -224,7 +224,7 @@ export default function CommentsPage() {
                       />
                     </TableCell>
                     <TableCell className="text-xs">
-                      {comment.group?.name || "N/A"}
+                      {comment.group?.name || 'N/A'}
                     </TableCell>
                     <TableCell className="text-xs">
                       {formatDistanceToNow(new Date(comment.published_at), {
@@ -252,7 +252,7 @@ export default function CommentsPage() {
                   onClick={() => fetchNextPage()}
                   disabled={isFetchingNextPage}
                 >
-                  {isFetchingNextPage ? "Загрузка..." : "Загрузить еще"}
+                  {isFetchingNextPage ? 'Загрузка...' : 'Загрузить еще'}
                 </Button>
               </div>
             )}
@@ -265,5 +265,5 @@ export default function CommentsPage() {
         )}
       </CardContent>
     </Card>
-  );
+  )
 }

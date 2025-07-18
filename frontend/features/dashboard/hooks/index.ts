@@ -1,2 +1,2 @@
 // Dashboard hooks exports
-export * from "./use-stats";
+export * from './use-stats'

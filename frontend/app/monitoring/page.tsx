@@ -1,5 +1,5 @@
-import MonitoringPage from "@/features/monitoring/ui/MonitoringPage";
+import MonitoringPage from '@/features/monitoring/ui/MonitoringPage'
 
 export default function MonitoringRoute() {
- return <MonitoringPage />;
-} 
+  return <MonitoringPage />
+}

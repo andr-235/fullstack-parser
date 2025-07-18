@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import React, { useState } from "react";
+import React, { useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -8,56 +8,58 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { FileUpload } from "@/components/ui/file-upload";
-import { useUploadKeywordsFromFile } from "@/features/keywords/hooks/use-keywords";
-import { Upload, AlertCircle, CheckCircle, XCircle } from "lucide-react";
-import { toast } from "react-hot-toast";
-import type { KeywordUploadResponse } from "@/types/api";
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { FileUpload } from '@/components/ui/file-upload'
+import { useUploadKeywordsFromFile } from '@/features/keywords/hooks/use-keywords'
+import { Upload, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
+import { toast } from 'react-hot-toast'
+import type { KeywordUploadResponse } from '@/types/api'
 
 interface UploadKeywordsModalProps {
-  onSuccess?: () => void;
+  onSuccess?: () => void
 }
 
 export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [defaultCategory, setDefaultCategory] = useState("");
-  const [isActive, setIsActive] = useState(true);
-  const [isCaseSensitive, setIsCaseSensitive] = useState(false);
-  const [isWholeWord, setIsWholeWord] = useState(false);
+  const [isOpen, setIsOpen] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [defaultCategory, setDefaultCategory] = useState('')
+  const [isActive, setIsActive] = useState(true)
+  const [isCaseSensitive, setIsCaseSensitive] = useState(false)
+  const [isWholeWord, setIsWholeWord] = useState(false)
   const [uploadResult, setUploadResult] =
-    useState<KeywordUploadResponse | null>(null);
+    useState<KeywordUploadResponse | null>(null)
 
-  const uploadMutation = useUploadKeywordsFromFile();
+  const uploadMutation = useUploadKeywordsFromFile()
 
   const handleFileSelect = (file: File) => {
-    setSelectedFile(file);
-    setUploadResult(null);
-  };
+    setSelectedFile(file)
+    setUploadResult(null)
+  }
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      toast.error("Выберите файл для загрузки");
-      return;
+      toast.error('Выберите файл для загрузки')
+      return
     }
 
     // Проверяем размер файла
     if (selectedFile.size > 5 * 1024 * 1024) {
-      toast.error("Файл слишком большой. Максимальный размер: 5MB");
-      return;
+      toast.error('Файл слишком большой. Максимальный размер: 5MB')
+      return
     }
 
     // Проверяем тип файла
-    const allowedTypes = ['.csv', '.txt'];
-    const fileExtension = selectedFile.name.toLowerCase().substring(selectedFile.name.lastIndexOf('.'));
+    const allowedTypes = ['.csv', '.txt']
+    const fileExtension = selectedFile.name
+      .toLowerCase()
+      .substring(selectedFile.name.lastIndexOf('.'))
     if (!allowedTypes.includes(fileExtension)) {
-      toast.error("Неподдерживаемый тип файла. Используйте CSV или TXT");
-      return;
+      toast.error('Неподдерживаемый тип файла. Используйте CSV или TXT')
+      return
     }
 
     try {
@@ -69,57 +71,58 @@ export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
           is_case_sensitive: isCaseSensitive,
           is_whole_word: isWholeWord,
         },
-      });
+      })
 
-      setUploadResult(result);
-      toast.success(result.message);
+      setUploadResult(result)
+      toast.success(result.message)
 
       if (onSuccess) {
-        onSuccess();
+        onSuccess()
       }
 
       // Закрываем модальное окно через 2 секунды
       setTimeout(() => {
-        setIsOpen(false);
-        resetForm();
-      }, 2000);
+        setIsOpen(false)
+        resetForm()
+      }, 2000)
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('Upload error:', error)
 
       // Улучшенная обработка ошибок
-      let errorMessage = "Ошибка загрузки файла";
+      let errorMessage = 'Ошибка загрузки файла'
 
       if (error instanceof Error) {
         if (error.message.includes('FILE_ERROR_NO_SPACE')) {
-          errorMessage = "Недостаточно места на диске. Обратитесь к администратору.";
+          errorMessage =
+            'Недостаточно места на диске. Обратитесь к администратору.'
         } else if (error.message.includes('404')) {
-          errorMessage = "Сервер недоступен. Попробуйте позже.";
+          errorMessage = 'Сервер недоступен. Попробуйте позже.'
         } else if (error.message.includes('413')) {
-          errorMessage = "Файл слишком большой.";
+          errorMessage = 'Файл слишком большой.'
         } else {
-          errorMessage = error.message;
+          errorMessage = error.message
         }
       }
 
-      toast.error(errorMessage);
+      toast.error(errorMessage)
     }
-  };
+  }
 
   const resetForm = () => {
-    setSelectedFile(null);
-    setDefaultCategory("");
-    setIsActive(true);
-    setIsCaseSensitive(false);
-    setIsWholeWord(false);
-    setUploadResult(null);
-  };
+    setSelectedFile(null)
+    setDefaultCategory('')
+    setIsActive(true)
+    setIsCaseSensitive(false)
+    setIsWholeWord(false)
+    setUploadResult(null)
+  }
 
   const handleOpenChange = (open: boolean) => {
-    setIsOpen(open);
+    setIsOpen(open)
     if (!open) {
-      resetForm();
+      resetForm()
     }
-  };
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -147,7 +150,7 @@ export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
             <Label>Файл с ключевыми словами</Label>
             <FileUpload
               onFileSelect={handleFileSelect}
-              acceptedFileTypes={[".csv", ".txt"]}
+              acceptedFileTypes={['.csv', '.txt']}
               maxSize={5 * 1024 * 1024} // 5MB
               className="mt-2"
               placeholder="Перетащите CSV или TXT файл сюда"
@@ -206,7 +209,7 @@ export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
               </div>
               <div className="space-y-2 text-sm">
                 <p>
-                  <strong>Обработано строк:</strong>{" "}
+                  <strong>Обработано строк:</strong>{' '}
                   {uploadResult.total_processed}
                 </p>
                 <p>
@@ -238,11 +241,11 @@ export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
               onClick={handleUpload}
               disabled={!selectedFile || uploadMutation.isPending}
             >
-              {uploadMutation.isPending ? "Загрузка..." : "Загрузить"}
+              {uploadMutation.isPending ? 'Загрузка...' : 'Загрузить'}
             </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
