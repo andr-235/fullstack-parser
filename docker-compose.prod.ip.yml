@@ -37,7 +37,9 @@ services:
       retries: 3
 
   backend:
-    image: fullstack-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: fullstack_prod_backend
     restart: always
     env_file:

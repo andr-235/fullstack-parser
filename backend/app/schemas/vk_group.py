@@ -31,11 +31,22 @@ class VKGroupBase(BaseSchema):
 
 
 # 2. Схема для создания новой записи
-class VKGroupCreate(VKGroupBase):
+class VKGroupCreate(BaseSchema):
     """Схема для создания VK группы в БД."""
 
     vk_id_or_screen_name: str = Field(
         ..., description="ID группы или короткое имя для поиска в VK"
+    )
+    name: str = Field(..., description="Название группы")
+    description: Optional[str] = Field(None, description="Описание группы")
+    is_active: bool = Field(
+        default=True, description="Активен ли мониторинг группы"
+    )
+    max_posts_to_check: int = Field(
+        default=100,
+        ge=1,
+        le=1000,
+        description="Максимум постов для проверки",
     )
 
 
