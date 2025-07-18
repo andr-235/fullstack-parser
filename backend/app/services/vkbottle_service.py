@@ -11,15 +11,15 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
 import structlog
-from vkbottle import API
-from vkbottle.api import API as VKBottleAPI
-from vkbottle.exception_factory import VKAPIError
-from vkbottle_types.objects import (
+from vkbottle import API  # type: ignore
+from vkbottle.api import API as VKBottleAPI  # type: ignore
+from vkbottle.exception_factory import VKAPIError  # type: ignore
+from vkbottle_types.objects import (  # type: ignore
     GroupsGroupFull,
     WallWallComment,
     WallWallpostFull,
 )
-from vkbottle_types.responses import (
+from vkbottle_types.responses import (  # type: ignore
     WallGetCommentsResponseModel,
     WallGetResponseModel,
 )
@@ -453,7 +453,8 @@ class VKBottleService:
                 return dict(group) if isinstance(group, dict) else None
 
         # Проверяем альтернативные форматы ответа для совместимости
-        if hasattr(response, "response"):
+        # (объекты с атрибутом response, не являющиеся списками)
+        if not isinstance(response, list) and hasattr(response, "response"):
             response_data = response.response
             if isinstance(response_data, list) and len(response_data) > 0:
                 group = response_data[0]
