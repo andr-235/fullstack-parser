@@ -82,6 +82,7 @@ jobs:
     timeout-minutes: 10
     needs: lint
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    continue-on-error: true
     permissions:
       contents: write
       pull-requests: write
@@ -250,7 +251,7 @@ jobs:
     name: 🧪 Тесты
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [lint, auto-fix]
+    needs: lint
     strategy:
       matrix:
         component: [backend, frontend]
@@ -333,7 +334,7 @@ jobs:
     name: 🔒 Безопасность
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [lint, auto-fix]
+    needs: lint
     strategy:
       matrix:
         component: [backend, frontend]
