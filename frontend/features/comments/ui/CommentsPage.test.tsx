@@ -5,48 +5,48 @@ import {
   waitFor,
   within,
   act,
-} from "@testing-library/react";
-import CommentsPage from "@/app/comments/page";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useInfiniteComments } from "@/hooks/use-comments";
-import { useGroups } from "@/hooks/use-groups";
-import { useKeywords } from "@/hooks/use-keywords";
+} from '@testing-library/react'
+import CommentsPage from '@/app/comments/page'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useInfiniteComments } from '@/hooks/use-comments'
+import { useGroups } from '@/hooks/use-groups'
+import { useKeywords } from '@/hooks/use-keywords'
 import type {
   VKCommentResponse,
   VKGroupResponse,
   KeywordResponse,
-} from "@/types/api";
-import "@testing-library/jest-dom";
+} from '@/types/api'
+import '@testing-library/jest-dom'
 
-jest.mock("@/hooks/use-comments", () => ({
+jest.mock('@/hooks/use-comments', () => ({
   useInfiniteComments: jest.fn(),
-}));
+}))
 
-jest.mock("@/hooks/use-groups", () => ({
+jest.mock('@/hooks/use-groups', () => ({
   useGroups: jest.fn(),
-}));
+}))
 
-jest.mock("@/hooks/use-keywords", () => ({
+jest.mock('@/hooks/use-keywords', () => ({
   useKeywords: jest.fn(),
-}));
+}))
 
-const mockUseInfiniteComments = useInfiniteComments as jest.Mock;
-const mockUseGroups = useGroups as jest.Mock;
-const mockUseKeywords = useKeywords as jest.Mock;
+const mockUseInfiniteComments = useInfiniteComments as jest.Mock
+const mockUseGroups = useGroups as jest.Mock
+const mockUseKeywords = useKeywords as jest.Mock
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient()
 
 const renderWithProviders = (ui: React.ReactElement) => {
   return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-  );
-};
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+  )
+}
 
 const mockGroups: VKGroupResponse[] = [
   {
     id: 1,
-    name: "Test Group 1",
-    screen_name: "test_group_1",
+    name: 'Test Group 1',
+    screen_name: 'test_group_1',
     vk_id: 101,
     is_active: true,
     total_posts_parsed: 100,
@@ -56,12 +56,12 @@ const mockGroups: VKGroupResponse[] = [
     is_closed: false,
     max_posts_to_check: 100,
   },
-];
+]
 
 const mockKeywords: KeywordResponse[] = [
   {
     id: 1,
-    word: "Test Keyword 1",
+    word: 'Test Keyword 1',
     is_active: true,
     is_case_sensitive: false,
     is_whole_word: false,
@@ -69,7 +69,7 @@ const mockKeywords: KeywordResponse[] = [
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
-];
+]
 
 const mockComment = (id: number, text: string): VKCommentResponse => ({
   id,
@@ -88,9 +88,9 @@ const mockComment = (id: number, text: string): VKCommentResponse => ({
   has_attachments: false,
   matched_keywords_count: 1,
   is_processed: true,
-});
+})
 
-describe("CommentsPage", () => {
+describe('CommentsPage', () => {
   beforeEach(() => {
     mockUseInfiniteComments.mockReturnValue({
       data: { pages: [], pageParams: [] },
@@ -99,52 +99,52 @@ describe("CommentsPage", () => {
       isFetchingNextPage: false,
       isLoading: false,
       error: null,
-    });
-    mockUseGroups.mockReturnValue({ data: { items: mockGroups, total: 1 } });
+    })
+    mockUseGroups.mockReturnValue({ data: { items: mockGroups, total: 1 } })
     mockUseKeywords.mockReturnValue({
       data: { items: mockKeywords, total: 1 },
-    });
-  });
+    })
+  })
 
-  it("должна рендериться без ошибок", () => {
-    renderWithProviders(<CommentsPage />);
+  it('должна рендериться без ошибок', () => {
+    renderWithProviders(<CommentsPage />)
     expect(
-      screen.getByRole("heading", { name: /Фильтры комментариев/i, level: 1 }),
-    ).toBeInTheDocument();
-  });
+      screen.getByRole('heading', { name: /Фильтры комментариев/i, level: 1 })
+    ).toBeInTheDocument()
+  })
 
-  it("должна показывать спиннер загрузки", () => {
+  it('должна показывать спиннер загрузки', () => {
     mockUseInfiniteComments.mockReturnValue({
       data: { pages: [], pageParams: [] },
       isLoading: true,
       isFetching: true,
       isFetchingNextPage: false,
-    });
-    renderWithProviders(<CommentsPage />);
-    expect(screen.getByRole("status") as any).toBeInTheDocument();
-  });
+    })
+    renderWithProviders(<CommentsPage />)
+    expect(screen.getByRole('status') as any).toBeInTheDocument()
+  })
 
-  it("должна показывать сообщение об ошибке", () => {
-    const error = new Error("Failed to fetch comments");
+  it('должна показывать сообщение об ошибке', () => {
+    const error = new Error('Failed to fetch comments')
     mockUseInfiniteComments.mockReturnValue({
       data: { pages: [], pageParams: [] },
       isLoading: false,
       error,
-    });
-    renderWithProviders(<CommentsPage />);
+    })
+    renderWithProviders(<CommentsPage />)
     expect(
-      screen.getByText(`Ошибка: ${error.message}`) as any,
-    ).toBeInTheDocument();
-  });
+      screen.getByText(`Ошибка: ${error.message}`) as any
+    ).toBeInTheDocument()
+  })
 
-  it("должна отображать список комментариев", () => {
+  it('должна отображать список комментариев', () => {
     mockUseInfiniteComments.mockReturnValue({
       data: {
         pages: [
           {
             items: [
-              mockComment(1, "This is a test comment"),
-              mockComment(2, "Another test comment"),
+              mockComment(1, 'This is a test comment'),
+              mockComment(2, 'Another test comment'),
             ],
             total: 2,
             limit: 2,
@@ -155,46 +155,46 @@ describe("CommentsPage", () => {
       },
       isLoading: false,
       error: null,
-    });
+    })
 
-    renderWithProviders(<CommentsPage />);
+    renderWithProviders(<CommentsPage />)
     expect(
-      screen.getByText("This is a test comment") as any,
-    ).toBeInTheDocument();
-    expect(screen.getByText("Another test comment") as any).toBeInTheDocument();
-  });
+      screen.getByText('This is a test comment') as any
+    ).toBeInTheDocument()
+    expect(screen.getByText('Another test comment') as any).toBeInTheDocument()
+  })
 
-  it("должна показывать сообщение, когда комментарии не найдены", () => {
-    renderWithProviders(<CommentsPage />);
+  it('должна показывать сообщение, когда комментарии не найдены', () => {
+    renderWithProviders(<CommentsPage />)
     expect(
-      screen.getByText("Комментарии не найдены.") as any,
-    ).toBeInTheDocument();
-  });
+      screen.getByText('Комментарии не найдены.') as any
+    ).toBeInTheDocument()
+  })
 
-  it("должна фильтровать комментарии по поисковому запросу", async () => {
-    renderWithProviders(<CommentsPage />);
+  it('должна фильтровать комментарии по поисковому запросу', async () => {
+    renderWithProviders(<CommentsPage />)
 
-    const searchInput = screen.getByPlaceholderText("Поиск по тексту...");
+    const searchInput = screen.getByPlaceholderText('Поиск по тексту...')
     await act(async () => {
-      fireEvent.change(searchInput, { target: { value: "filter" } });
-    });
+      fireEvent.change(searchInput, { target: { value: 'filter' } })
+    })
 
     await waitFor(() => {
       expect(mockUseInfiniteComments).toHaveBeenCalledWith(
         expect.objectContaining({
-          text: "filter",
-        }),
-      );
-    });
-  });
+          text: 'filter',
+        })
+      )
+    })
+  })
 
-  it("должна загружать больше комментариев при нажатии на кнопку", async () => {
-    const fetchNextPage = jest.fn();
+  it('должна загружать больше комментариев при нажатии на кнопку', async () => {
+    const fetchNextPage = jest.fn()
     mockUseInfiniteComments.mockReturnValue({
       data: {
         pages: [
           {
-            items: [mockComment(1, "First comment")],
+            items: [mockComment(1, 'First comment')],
             total: 2,
             limit: 1,
             skip: 0,
@@ -207,67 +207,67 @@ describe("CommentsPage", () => {
       isFetchingNextPage: false,
       isLoading: false,
       error: null,
-    });
+    })
 
-    renderWithProviders(<CommentsPage />);
-    const loadMoreButton = screen.getByRole("button", {
+    renderWithProviders(<CommentsPage />)
+    const loadMoreButton = screen.getByRole('button', {
       name: /Загрузить еще/i,
-    });
+    })
     await act(async () => {
-      fireEvent.click(loadMoreButton);
-    });
-    expect(fetchNextPage).toHaveBeenCalled();
-  });
+      fireEvent.click(loadMoreButton)
+    })
+    expect(fetchNextPage).toHaveBeenCalled()
+  })
 
-  it("должна фильтровать по группе", async () => {
-    jest.useFakeTimers();
-    renderWithProviders(<CommentsPage />);
+  it('должна фильтровать по группе', async () => {
+    jest.useFakeTimers()
+    renderWithProviders(<CommentsPage />)
 
     // Используем aria-label для SelectTrigger
-    const groupSelectTrigger = screen.getByLabelText("Группа");
+    const groupSelectTrigger = screen.getByLabelText('Группа')
     await act(async () => {
-      fireEvent.mouseDown(groupSelectTrigger);
-    });
+      fireEvent.mouseDown(groupSelectTrigger)
+    })
 
-    const groupOption = await screen.findByText("Test Group 1");
+    const groupOption = await screen.findByText('Test Group 1')
     await act(async () => {
-      fireEvent.click(groupOption); // Явно кликаем по Item
-    });
-    jest.advanceTimersByTime(500);
+      fireEvent.click(groupOption) // Явно кликаем по Item
+    })
+    jest.advanceTimersByTime(500)
     await waitFor(() => {
-      const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0]);
+      const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0])
       expect(calls).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ group_id: mockGroups[0].id }),
-        ]),
-      );
-    });
-    jest.useRealTimers();
-  });
+        ])
+      )
+    })
+    jest.useRealTimers()
+  })
 
-  it("должна фильтровать по ключевому слову", async () => {
-    jest.useFakeTimers();
-    renderWithProviders(<CommentsPage />);
+  it('должна фильтровать по ключевому слову', async () => {
+    jest.useFakeTimers()
+    renderWithProviders(<CommentsPage />)
 
     // Используем aria-label для второго SelectTrigger
-    const keywordSelectTrigger = screen.getByLabelText("Ключевое слово");
+    const keywordSelectTrigger = screen.getByLabelText('Ключевое слово')
     await act(async () => {
-      fireEvent.mouseDown(keywordSelectTrigger);
-    });
+      fireEvent.mouseDown(keywordSelectTrigger)
+    })
 
-    const keywordOption = await screen.findByText("Test Keyword 1");
+    const keywordOption = await screen.findByText('Test Keyword 1')
     await act(async () => {
-      fireEvent.click(keywordOption); // Явно кликаем по Item
-    });
-    jest.advanceTimersByTime(500);
+      fireEvent.click(keywordOption) // Явно кликаем по Item
+    })
+    jest.advanceTimersByTime(500)
     await waitFor(() => {
-      const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0]);
+      const calls = mockUseInfiniteComments.mock.calls.map((c) => c[0])
       expect(calls).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ keyword_id: mockKeywords[0].id }),
-        ]),
-      );
-    });
-    jest.useRealTimers();
-  });
-});
+        ])
+      )
+    })
+    jest.useRealTimers()
+  })
+})

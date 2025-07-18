@@ -1,2 +1,2 @@
 // Parser hooks exports
-export * from "./use-parser";
+export * from './use-parser'

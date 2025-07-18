@@ -1,5 +1,5 @@
-import GroupsPage from "@/features/groups/ui/GroupsPage";
+import GroupsPage from '@/features/groups/ui/GroupsPage'
 
 export default function GroupsRoute() {
-  return <GroupsPage />;
+  return <GroupsPage />
 }

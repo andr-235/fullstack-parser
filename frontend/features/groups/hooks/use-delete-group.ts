@@ -1,1 +1,1 @@
-export const useDeleteGroup = () => ({ mutate: jest.fn() });
+export const useDeleteGroup = () => ({ mutate: jest.fn() })

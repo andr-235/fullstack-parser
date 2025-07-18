@@ -1,13 +1,13 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, createQueryKey } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { api, createQueryKey } from '@/lib/api'
 import type {
   ParseTaskCreate,
   ParseTaskResponse,
   PaginatedResponse,
   ParserState,
   ParserStats,
-} from "@/types/api";
-import { toast } from "sonner";
+} from '@/types/api'
+import { toast } from 'sonner'
 
 /**
  * Хук для получения состояния парсера
@@ -17,7 +17,7 @@ export function useParserState() {
     queryKey: createQueryKey.parserState(),
     queryFn: () => api.getParserState(),
     refetchInterval: 5000, // Опрашивать каждые 5 секунд
-  });
+  })
 }
 
 /**
@@ -28,7 +28,7 @@ export function useParserStats() {
     queryKey: createQueryKey.parserStats(),
     queryFn: () => api.getParserStats(),
     staleTime: 60 * 1000, // 1 минута
-  });
+  })
 }
 
 /**
@@ -39,40 +39,40 @@ export function useRecentRuns() {
     queryKey: createQueryKey.parserRuns(),
     queryFn: () => api.getRecentParseTasks(),
     staleTime: 30 * 1000, // 30 секунд
-  });
+  })
 }
 
 /**
  * Хук для запуска новой задачи парсинга
  */
 export function useStartParser() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: ParseTaskCreate) => api.startParser(data),
     onSuccess: () => {
-      toast.success("Парсинг запущен");
-      queryClient.invalidateQueries({ queryKey: createQueryKey.parserState() });
-      queryClient.invalidateQueries({ queryKey: createQueryKey.parserRuns() });
+      toast.success('Парсинг запущен')
+      queryClient.invalidateQueries({ queryKey: createQueryKey.parserState() })
+      queryClient.invalidateQueries({ queryKey: createQueryKey.parserRuns() })
     },
     onError: (error: any) => {
-      toast.error(`Ошибка запуска парсера: ${error.message}`);
+      toast.error(`Ошибка запуска парсера: ${error.message}`)
     },
-  });
+  })
 }
 
 /**
  * Хук для остановки парсера
  */
 export function useStopParser() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () => api.stopParser(),
     onSuccess: () => {
-      toast.info("Парсер останавливается...");
-      queryClient.invalidateQueries({ queryKey: createQueryKey.parserState() });
+      toast.info('Парсер останавливается...')
+      queryClient.invalidateQueries({ queryKey: createQueryKey.parserState() })
     },
     onError: (error: any) => {
-      toast.error(`Ошибка остановки парсера: ${error.message}`);
+      toast.error(`Ошибка остановки парсера: ${error.message}`)
     },
-  });
+  })
 }

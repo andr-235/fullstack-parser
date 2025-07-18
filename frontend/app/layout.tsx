@@ -1,30 +1,30 @@
-import type { Metadata } from "next";
-import localFont from "next/font/local";
-import "./globals.css";
+import type { Metadata } from 'next'
+import localFont from 'next/font/local'
+import './globals.css'
 
-import { ReactQueryProvider } from "@/providers/react-query-provider";
-import { Toaster } from "react-hot-toast";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Header } from "@/components/layout/header";
+import { ReactQueryProvider } from '@/providers/react-query-provider'
+import { Toaster } from 'react-hot-toast'
+import { Sidebar } from '@/components/layout/sidebar'
+import { Header } from '@/components/layout/header'
 
 const inter = localFont({
-  src: "./fonts/Inter-VariableFont_opsz,wght.ttf",
-  display: "swap",
-  variable: "--font-inter",
-});
+  src: './fonts/Inter-VariableFont_opsz,wght.ttf',
+  display: 'swap',
+  variable: '--font-inter',
+})
 
 export const metadata: Metadata = {
-  title: "VK Comments Parser",
-  description: "Fullstack приложение для парсинга комментариев ВКонтакте",
+  title: 'VK Comments Parser',
+  description: 'Fullstack приложение для парсинга комментариев ВКонтакте',
   icons: {
-    icon: "/app/favicon.png",
+    icon: '/app/favicon.png',
   },
-};
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <html lang="ru" className="dark">
@@ -46,5 +46,5 @@ export default function RootLayout({
         </ReactQueryProvider>
       </body>
     </html>
-  );
+  )
 }
