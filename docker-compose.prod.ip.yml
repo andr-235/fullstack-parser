@@ -126,8 +126,11 @@ services:
       - NODE_ENV=production
       - SERVER_IP=${SERVER_IP}
       - NEXT_PUBLIC_API_URL=${DOMAIN}
+      - TMPDIR=/tmp/uploads
     expose:
       - "3000"
+    volumes:
+      - frontend_temp:/tmp/uploads
     depends_on:
       backend:
         condition: service_healthy
@@ -193,4 +196,6 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  frontend_temp:
     driver: local
