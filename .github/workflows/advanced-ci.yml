@@ -13,76 +13,10 @@ env:
 
 jobs:
   lint:
-    name: 🔍 Линтинг и проверки
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    strategy:
-      matrix:
-        component: [backend, frontend]
-    steps:
-      - name: ⬇️ Checkout code
-        uses: actions/checkout@v4
-      - name: 🐍 Setup Python (Backend)
-        if: matrix.component == 'backend'
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-      - name: 📦 Кэш poetry (Backend)
-        if: matrix.component == 'backend'
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pypoetry
-          key: poetry-${{ hashFiles('backend/poetry.lock') }}
-          restore-keys: |
-            poetry-
-      - name: 🐍 Install Poetry (Backend)
-        if: matrix.component == 'backend'
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          export PATH="$HOME/.local/bin:$PATH"
-          poetry --version
-      - name: 🐍 Poetry install & линтинг (Backend)
-        if: matrix.component == 'backend'
-        working-directory: ./backend
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          poetry install --no-interaction
-          poetry run ruff check .
-          poetry run black --check .
-          poetry run isort --check-only .
-      - name: 🟢 Setup Node.js (Frontend)
-        if: matrix.component == 'frontend'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: 📦 Кэш pnpm store (Frontend)
-        if: matrix.component == 'frontend'
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-
-      - name: 🟢 Install pnpm (Frontend)
-        if: matrix.component == 'frontend'
-        run: |
-          npm install -g pnpm@10.12.4
-          pnpm --version
-      - name: 🟢 pnpm install & TypeScript линтинг (Frontend)
-        if: matrix.component == 'frontend'
-        working-directory: ./frontend
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm lint
-          pnpm type-check
-
-  auto-fix:
-    name: 🔧 Автоисправление линтеров
+    name: 🔍 Линтинг и автоисправление
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: lint
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    continue-on-error: true
     permissions:
       contents: write
       pull-requests: write
@@ -95,13 +29,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.event.pull_request.head.sha }}
-
       - name: 🐍 Setup Python (Backend)
         if: matrix.component == 'backend'
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-
       - name: 📦 Кэш poetry (Backend)
         if: matrix.component == 'backend'
         uses: actions/cache@v4
@@ -110,15 +42,13 @@ jobs:
           key: poetry-${{ hashFiles('backend/poetry.lock') }}
           restore-keys: |
             poetry-
-
       - name: 🐍 Install Poetry (Backend)
         if: matrix.component == 'backend'
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="$HOME/.local/bin:$PATH"
           poetry --version
-
-      - name: 🔧 Автоисправление Python кода (Backend)
+      - name: 🔧 Автоисправление и линтинг Python (Backend)
         if: matrix.component == 'backend' && contains(github.event.pull_request.files.*.path, 'backend/')
         working-directory: ./backend
         run: |
@@ -138,11 +68,8 @@ jobs:
           echo "📝 Сортировка импортов с isort..."
           poetry run isort . || echo "⚠️ isort не смог исправить все проблемы"
 
-                    echo "🔍 Проверка с ruff --fix..."
+          echo "🔍 Проверка с ruff --fix..."
           poetry run ruff check --fix . || echo "⚠️ ruff не смог исправить все проблемы"
-
-          echo "🔍 Проверка типов с mypy..."
-          poetry run mypy . || echo "⚠️ mypy обнаружил проблемы с типами"
 
           # Проверяем, есть ли изменения
           if git diff --quiet; then
@@ -159,7 +86,14 @@ jobs:
             Автоматически исправлено GitHub Actions"
             git push origin HEAD:${{ github.event.pull_request.head.ref }}
             echo "✅ Изменения закоммичены и запушены"
-                    fi
+          fi
+
+          # Теперь проверяем линтеры после исправлений
+          echo "🔍 Проверка линтеров после автоисправлений..."
+          poetry run ruff check . || exit 1
+          poetry run black --check . || exit 1
+          poetry run isort --check-only . || exit 1
+          poetry run mypy . || echo "⚠️ mypy обнаружил проблемы с типами"
 
       - name: ⏭️ Пропуск автоисправления Backend
         if: matrix.component == 'backend' && !contains(github.event.pull_request.files.*.path, 'backend/')
@@ -171,7 +105,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - name: 📦 Кэш pnpm store (Frontend)
         if: matrix.component == 'frontend'
         uses: actions/cache@v4
@@ -180,14 +113,12 @@ jobs:
           key: pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-store-
-
       - name: 🟢 Install pnpm (Frontend)
         if: matrix.component == 'frontend'
         run: |
           npm install -g pnpm@10.12.4
           pnpm --version
-
-      - name: 🔧 Автоисправление JavaScript/TypeScript кода (Frontend)
+      - name: 🔧 Автоисправление и линтинг JavaScript/TypeScript (Frontend)
         if: matrix.component == 'frontend' && contains(github.event.pull_request.files.*.path, 'frontend/')
         working-directory: ./frontend
         run: |
@@ -199,15 +130,12 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-                    # Запускаем автоисправления
+          # Запускаем автоисправления
           echo "📝 Исправление с ESLint --fix..."
           pnpm lint --fix || echo "⚠️ ESLint не смог исправить все проблемы"
 
-                    echo "📝 Исправление с Prettier..."
+          echo "📝 Исправление с Prettier..."
           pnpm format || echo "⚠️ Prettier не смог исправить все проблемы"
-
-          echo "🔍 Проверка типов TypeScript..."
-          pnpm type-check || echo "⚠️ TypeScript обнаружил проблемы с типами"
 
           # Проверяем, есть ли изменения
           if git diff --quiet; then
@@ -223,7 +151,12 @@ jobs:
             Автоматически исправлено GitHub Actions"
             git push origin HEAD:${{ github.event.pull_request.head.ref }}
             echo "✅ Изменения закоммичены и запушены"
-                    fi
+          fi
+
+          # Теперь проверяем линтеры после исправлений
+          echo "🔍 Проверка линтеров после автоисправлений..."
+          pnpm lint || exit 1
+          pnpm type-check || echo "⚠️ TypeScript обнаружил проблемы с типами"
 
       - name: ⏭️ Пропуск автоисправления Frontend
         if: matrix.component == 'frontend' && !contains(github.event.pull_request.files.*.path, 'frontend/')
@@ -456,7 +389,7 @@ jobs:
     name: 🔒 Безопасность
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: lint
+    needs: [lint, lint-check]
     strategy:
       matrix:
         component: [backend, frontend]
