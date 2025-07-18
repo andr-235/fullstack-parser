@@ -198,7 +198,9 @@ class VKBottleService:
             return posts
 
         except VKAPIError as e:
-            raise self._handle_vk_api_error(e, "получении постов группы")
+            raise self._handle_vk_api_error(
+                e, "получении постов группы"
+            ) from e
         except Exception as e:
             self.logger.error(
                 "Неожиданная ошибка при получении постов группы",
@@ -234,9 +236,7 @@ class VKBottleService:
                     posts.append(post.model_dump())
                 else:
                     # Fallback для старых версий
-                    posts.append(
-                        post.dict() if hasattr(post, "dict") else vars(post)
-                    )
+                    posts.append(vars(post))
             else:
                 # Если это уже словарь
                 posts.append(post)
@@ -323,7 +323,7 @@ class VKBottleService:
         except VKAPIError as e:
             raise self._handle_vk_api_error(
                 e, "получении комментариев к посту"
-            )
+            ) from e
         except Exception as e:
             self.logger.error(
                 "Неожиданная ошибка при получении комментариев",
@@ -360,11 +360,7 @@ class VKBottleService:
                     comments.append(comment.model_dump())
                 else:
                     # Fallback для старых версий
-                    comments.append(
-                        comment.dict()
-                        if hasattr(comment, "dict")
-                        else vars(comment)
-                    )
+                    comments.append(vars(comment))
             else:
                 # Если это уже словарь
                 comments.append(comment)
@@ -416,7 +412,9 @@ class VKBottleService:
             return group_info
 
         except VKAPIError as e:
-            raise self._handle_vk_api_error(e, "получении информации о группе")
+            raise self._handle_vk_api_error(
+                e, "получении информации о группе"
+            ) from e
         except Exception as e:
             self.logger.error(
                 "Неожиданная ошибка при получении информации о группе",
@@ -449,9 +447,7 @@ class VKBottleService:
                     return dict(group.model_dump())
                 else:
                     # Fallback для старых версий
-                    return dict(
-                        group.dict() if hasattr(group, "dict") else vars(group)
-                    )
+                    return dict(vars(group))
             else:
                 # Если это уже словарь
                 return dict(group) if isinstance(group, dict) else None
@@ -467,9 +463,7 @@ class VKBottleService:
                 if hasattr(group, "model_dump"):
                     return dict(group.model_dump())
                 else:
-                    return dict(
-                        group.dict() if hasattr(group, "dict") else vars(group)
-                    )
+                    return dict(vars(group))
             else:
                 return dict(group) if isinstance(group, dict) else None
 
@@ -506,9 +500,7 @@ class VKBottleService:
                 if hasattr(user, "model_dump"):
                     user_info = user.model_dump()
                 else:
-                    user_info = (
-                        user.dict() if hasattr(user, "dict") else vars(user)
-                    )
+                    user_info = vars(user)
 
                 self.logger.info(
                     "Успешно получена информация о пользователе",
@@ -527,7 +519,7 @@ class VKBottleService:
         except VKAPIError as e:
             raise self._handle_vk_api_error(
                 e, "получении информации о пользователе"
-            )
+            ) from e
         except Exception as e:
             self.logger.error(
                 "Неожиданная ошибка при получении информации о пользователе",
@@ -578,11 +570,7 @@ class VKBottleService:
                     if hasattr(group, "model_dump"):
                         groups.append(group.model_dump())
                     else:
-                        groups.append(
-                            group.dict()
-                            if hasattr(group, "dict")
-                            else vars(group)
-                        )
+                        groups.append(vars(group))
 
                 self.logger.info(
                     "Успешно найдены группы",
@@ -599,7 +587,7 @@ class VKBottleService:
                 return []
 
         except VKAPIError as e:
-            raise self._handle_vk_api_error(e, "поиске групп")
+            raise self._handle_vk_api_error(e, "поиске групп") from e
         except Exception as e:
             self.logger.error(
                 "Неожиданная ошибка при поиске групп",
