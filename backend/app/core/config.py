@@ -77,8 +77,7 @@ class Settings(BaseSettings):
     api_v1_str: str = "/api/v1"
     cors_origins: list[str] = Field(
         default_factory=lambda: [
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
+            "https://parser.mysite.ru",
         ],
         alias="CORS_ORIGINS",
     )
@@ -96,11 +95,11 @@ class Settings(BaseSettings):
             return v
 
         if not isinstance(v, str):
-            return ["http://localhost:3000", "http://127.0.0.1:3000"]
+            return ["https://parser.mysite.ru"]
 
         v = v.strip()
         if not v:
-            return ["http://localhost:3000", "http://127.0.0.1:3000"]
+            return ["https://parser.mysite.ru"]
 
         # Пробуем парсить как JSON
         try:
@@ -117,13 +116,13 @@ class Settings(BaseSettings):
             return (
                 origins
                 if origins
-                else ["http://localhost:3000", "http://127.0.0.1:3000"]
+                else ["https://parser.mysite.ru"]
             )
         except Exception:
             pass
 
         # Fallback к дефолтным значениям
-        return ["http://localhost:3000", "http://127.0.0.1:3000"]
+        return ["https://parser.mysite.ru"]
 
     def get_cors_origins(self) -> list[str]:
         return self.cors_origins

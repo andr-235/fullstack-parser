@@ -14,7 +14,7 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [https://parser.mysite.ru](https://parser.mysite.ru) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
@@ -39,7 +39,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 - Для локальной разработки используй `.env.local` в папке frontend:
   ```
-  NEXT_PUBLIC_API_URL=http://localhost:8000
+  NEXT_PUBLIC_API_URL=https://parser.mysite.ru
   ```
 - Для production/staging — переменные задаются через docker-compose или `.env.production`.
 - После изменения переменных всегда пересобирай контейнер:
