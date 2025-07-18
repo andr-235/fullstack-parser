@@ -405,24 +405,73 @@ jobs:
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
+      - name: 📦 Restore Docker cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: docker-cache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            docker-cache-${{ runner.os }}-
+      - name: 🏗️ Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:v0.12.0
       - name: 🏗️ Локальная сборка образов
         run: |
           set -e
           echo "🏗️ Начинаем локальную сборку образов..."
 
-                    # Собираем backend
-          echo "🐍 Сборка backend образа..."
-          docker build --cache-from fullstack-backend:latest -t fullstack-backend:latest ./backend
+          # Инициализируем кэш
+          echo "📦 Инициализация кэша..."
+          mkdir -p /tmp/.buildx-cache
 
-          # Собираем frontend
-          echo "🟢 Сборка frontend образа..."
-          docker build --cache-from fullstack-frontend:latest -t fullstack-frontend:latest ./frontend
+          # Собираем backend с кэшированием
+          echo "🐍 Сборка backend образа с кэшированием..."
+          docker buildx build \
+            --cache-from type=local,src=/tmp/.buildx-cache \
+            --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
+            --tag fullstack-backend:latest \
+            --load \
+            --parallel \
+            ./backend &
 
-          # Собираем arq-worker
-          echo "⚙️ Сборка arq-worker образа..."
-          docker build --cache-from fullstack-arq-worker:latest -t fullstack-arq-worker:latest -f ./backend/Dockerfile.arq ./backend
+          # Собираем frontend с кэшированием
+          echo "🟢 Сборка frontend образа с кэшированием..."
+          docker buildx build \
+            --cache-from type=local,src=/tmp/.buildx-cache \
+            --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
+            --tag fullstack-frontend:latest \
+            --load \
+            --parallel \
+            ./frontend &
+
+          # Собираем arq-worker с кэшированием
+          echo "⚙️ Сборка arq-worker образа с кэшированием..."
+          docker buildx build \
+            --cache-from type=local,src=/tmp/.buildx-cache \
+            --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
+            --tag fullstack-arq-worker:latest \
+            --file ./backend/Dockerfile.arq \
+            --load \
+            --parallel \
+            ./backend &
+
+          # Ждем завершения всех сборок
+          echo "⏳ Ожидание завершения сборки всех образов..."
+          wait
+
+          # Обновляем кэш
+          echo "🔄 Обновление кэша..."
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
           echo "✅ Все образы собраны локально!"
+      - name: 📦 Save Docker cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: docker-cache-${{ runner.os }}-${{ github.sha }}
 
       - name: 🚀 Деплой на сервер
         run: |
