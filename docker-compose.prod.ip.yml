@@ -37,7 +37,7 @@ services:
       retries: 3
 
   backend:
-    image: ghcr.io/andr-235/fullstack-backend:latest
+    image: fullstack-backend:latest
     container_name: fullstack_prod_backend
     restart: always
     env_file:
@@ -73,7 +73,7 @@ services:
       start_period: 40s
 
   arq_worker:
-    image: ghcr.io/andr-235/fullstack-arq-worker:latest
+    image: fullstack-arq-worker:latest
     container_name: fullstack_prod_arq_worker
     restart: always
     command: ["python", "-m", "app.workers.arq_worker"]
@@ -117,7 +117,7 @@ services:
       start_period: 40s
 
   frontend:
-    image: ghcr.io/andr-235/fullstack-parser/frontend:latest
+    image: fullstack-frontend:latest
     container_name: fullstack_prod_frontend
     restart: always
     env_file:

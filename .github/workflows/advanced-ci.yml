@@ -392,60 +392,12 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm audit --audit-level moderate || true
 
-  build:
-    name: 🏗️ Сборка образов
-    needs: [test, security]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      matrix:
-        service: [backend, frontend, arq-worker]
-        include:
-          - service: backend
-            context: ./backend
-            dockerfile: ./backend/Dockerfile
-          - service: frontend
-            context: ./frontend
-            dockerfile: ./frontend/Dockerfile
-          - service: arq-worker
-            context: ./backend
-            dockerfile: ./backend/Dockerfile.arq
-    steps:
-      - name: ⬇️ Checkout code
-        uses: actions/checkout@v4
-      - name: 🔐 Логин в GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: 🏗️ Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: 🏗️ Сборка и пуш ${{ matrix.service }}
-        uses: docker/build-push-action@v5
-        with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
-          build-args: ${{ matrix.service == 'frontend' && format('NEXT_PUBLIC_API_URL={0}', secrets.NEXT_PUBLIC_API_URL) || '' }}
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.run_number }}
-
   deploy:
     name: 🚀 Деплой
-    needs: build
+    needs: [test, security]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: self-hosted
-    timeout-minutes: 15
+    timeout-minutes: 30
     environment: production
     permissions:
       contents: read
@@ -453,9 +405,25 @@ jobs:
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-      - name: 🔐 Логин в GitHub Container Registry
+      - name: 🏗️ Локальная сборка образов
         run: |
-          echo "${{ secrets.GHCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+          set -e
+          echo "🏗️ Начинаем локальную сборку образов..."
+
+                    # Собираем backend
+          echo "🐍 Сборка backend образа..."
+          docker build --cache-from fullstack-backend:latest -t fullstack-backend:latest ./backend
+
+          # Собираем frontend
+          echo "🟢 Сборка frontend образа..."
+          docker build --cache-from fullstack-frontend:latest -t fullstack-frontend:latest ./frontend
+
+          # Собираем arq-worker
+          echo "⚙️ Сборка arq-worker образа..."
+          docker build --cache-from fullstack-arq-worker:latest -t fullstack-arq-worker:latest -f ./backend/Dockerfile.arq ./backend
+
+          echo "✅ Все образы собраны локально!"
+
       - name: 🚀 Деплой на сервер
         run: |
           set -e
@@ -499,10 +467,15 @@ jobs:
           docker ps -a --filter "name=fullstack" --format "table {{.Names}}\t{{.Status}}" | grep -v "fullstack_prod_" | grep "fullstack" | awk '{print $1}' | xargs -r docker rm || true
 
           echo "🚀 Запуск сервисов..."
-          docker compose -f docker-compose.prod.ip.yml up -d --build --pull always --remove-orphans
+          docker compose -f docker-compose.prod.ip.yml up -d --remove-orphans
 
-          echo "🧹 Очистка..."
+          echo "🧹 Очистка старых образов..."
           docker image prune -f || true
+
+          # Удаляем старые образы из registry, если они есть
+          docker rmi ghcr.io/andr-235/fullstack-backend:latest || true
+          docker rmi ghcr.io/andr-235/fullstack-frontend:latest || true
+          docker rmi ghcr.io/andr-235/fullstack-arq-worker:latest || true
 
           echo "✅ Деплой завершён!"
       - name: 📊 Health check
