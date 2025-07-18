@@ -326,6 +326,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [lint, lint-check]
+    if: always() && (needs.lint.result == 'success' || needs.lint-check.result == 'success')
     strategy:
       matrix:
         component: [backend, frontend]
@@ -409,6 +410,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [lint, lint-check]
+    if: always() && (needs.lint.result == 'success' || needs.lint-check.result == 'success')
     strategy:
       matrix:
         component: [backend, frontend]
@@ -469,7 +471,7 @@ jobs:
   deploy:
     name: 🚀 Деплой
     needs: [test, security]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && (needs.security.result == 'success' || needs.security.result == 'skipped')
     runs-on: self-hosted
     timeout-minutes: 30
     environment: production
