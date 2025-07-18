@@ -1,0 +1,48 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Project Architecture - Fullstack Parser
+
+## Overview
+This is a fullstack application with FastAPI backend and Next.js frontend, designed for parsing and monitoring VK social media content.
+
+## Project Structure
+- **Backend**: FastAPI + SQLAlchemy + PostgreSQL + Redis
+- **Frontend**: Next.js 14 + TypeScript + TailwindCSS  
+- **Infrastructure**: Docker + Nginx + Docker Compose
+- **CI/CD**: GitHub Actions + automatic deployment
+
+## Key Directories
+- [backend/](mdc:backend/) - FastAPI application with SQLAlchemy models
+- [frontend/](mdc:frontend/) - Next.js 14 application with TypeScript
+- [docker-compose.yml](mdc:docker-compose.yml) - Main Docker Compose configuration
+- [env.example](mdc:env.example) - Environment variables template
+- [docs/](mdc:docs/) - Project documentation
+
+## Development Workflow
+1. Always use Poetry for backend dependencies: `poetry add <package>`
+2. Always use pnpm for frontend dependencies: `pnpm add <package>`
+3. Create feature branches from main: `git checkout -b feature/name`
+4. Use conventional commits: feat, fix, docs, style, refactor, test, chore
+5. Never commit .env files - use .env.example for templates
+
+## Security Requirements
+- Never hardcode secrets in code
+- Always use environment variables for sensitive data
+- Always validate input data with Pydantic (backend) and Zod (frontend)
+- Always use HTTPS in production
+- Use external Docker images for production (ghcr.io/andr-235/*)
+
+## Code Quality Standards
+- Follow Clean Architecture principles
+- Separate business logic from presentation
+- Use dependency injection
+- Write tests for critical functionality
+- Use structured logging (JSON format)
+- Add health check endpoints
+description:
+globs:
+alwaysApply: false
+---

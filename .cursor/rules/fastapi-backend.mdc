@@ -1,0 +1,102 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# FastAPI Backend Development Rules
+
+## Code Style & Formatting
+- Line length: 79 characters
+- Use Black for code formatting
+- Use isort for import sorting  
+- Use Ruff for linting
+- Use mypy for type checking
+- Use bandit for security scanning
+
+## Project Structure
+Follow this structure in [backend/app/](mdc:backend/app/):
+- [api/v1/](mdc:backend/app/api/v1/) - API endpoints
+- [core/](mdc:backend/app/core/) - Configuration, security, database
+- [models/](mdc:backend/app/models/) - SQLAlchemy models
+- [schemas/](mdc:backend/app/schemas/) - Pydantic schemas
+- [services/](mdc:backend/app/services/) - Business logic
+- [workers/](mdc:backend/app/workers/) - Background tasks
+
+## Dependencies Management
+- **ALWAYS** use Poetry: `poetry add <package>`
+- **NEVER** use pip directly
+- Pin versions in [pyproject.toml](mdc:backend/pyproject.toml)
+- Use `poetry add --group dev <package>` for development dependencies
+
+## Code Patterns
+
+### Pydantic Schemas
+```python
+from typing import Optional, List
+from pydantic import BaseModel, Field
+
+class UserCreate(BaseModel):
+    email: str = Field(..., description="User email")
+    password: str = Field(..., min_length=8)
+```
+
+### Async Functions
+```python
+async def create_user(user_data: UserCreate) -> User:
+    """Create a new user with proper documentation."""
+    hashed_password = hash_password(user_data.password)
+    return await user_service.create(email=user_data.email, password=hashed_password)
+```
+
+### Error Handling
+```python
+from fastapi import HTTPException
+
+@app.get("/users/{user_id}")
+async def get_user(user_id: int):
+    try:
+        user = await user_service.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
+    except DatabaseError as e:
+        logger.error("database_error", error=str(e), user_id=user_id)
+        raise HTTPException(status_code=500, detail="Internal server error")
+```
+
+## Database Operations
+- Use SQLAlchemy async session
+- Always use prepared statements
+- Implement proper connection pooling
+- Use Alembic for migrations: `poetry run alembic revision --autogenerate -m "description"`
+
+## Logging
+```python
+import structlog
+
+logger = structlog.get_logger()
+
+logger.info("user_action", 
+    user_id=user.id, 
+    action="login", 
+    ip_address=request.client.host,
+    user_agent=request.headers.get("user-agent")
+)
+```
+
+## Testing
+- Use pytest for testing
+- Use AsyncClient for API testing
+- Mock external services
+- Test both success and error cases
+
+## Security
+- Always validate input with Pydantic
+- Use environment variables for secrets
+- Implement proper CORS configuration
+- Use JWT tokens with short expiration
+- Hash passwords with bcrypt
+description:
+globs:
+alwaysApply: false
+---
