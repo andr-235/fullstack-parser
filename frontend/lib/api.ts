@@ -192,16 +192,42 @@ class APIClient {
       formData.append('is_whole_word', options.is_whole_word.toString())
     }
 
-    const { data } = await this.client.post<KeywordUploadResponse>(
-      '/keywords/upload/',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+    try {
+      const { data } = await this.client.post<KeywordUploadResponse>(
+        '/keywords/upload/',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 60000, // Увеличиваем таймаут для загрузки файлов
+          maxContentLength: 10 * 1024 * 1024, // 10MB
+          maxBodyLength: 10 * 1024 * 1024, // 10MB
+        }
+      )
+      return data
+    } catch (error: any) {
+      console.error('Upload error details:', error);
+      
+      // Улучшенная обработка ошибок
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Превышено время ожидания загрузки файла');
       }
-    )
-    return data
+      
+      if (error.response?.status === 413) {
+        throw new Error('Файл слишком большой. Максимальный размер: 5MB');
+      }
+      
+      if (error.response?.status === 404) {
+        throw new Error('Эндпоинт загрузки файлов недоступен');
+      }
+      
+      if (error.response?.status === 500) {
+        throw new Error('Ошибка сервера при обработке файла');
+      }
+      
+      throw error;
+    }
   }
 
   // Comments API

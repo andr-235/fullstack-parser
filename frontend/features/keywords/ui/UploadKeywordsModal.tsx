@@ -46,6 +46,20 @@ export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
       return;
     }
 
+    // Проверяем размер файла
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      toast.error("Файл слишком большой. Максимальный размер: 5MB");
+      return;
+    }
+
+    // Проверяем тип файла
+    const allowedTypes = ['.csv', '.txt'];
+    const fileExtension = selectedFile.name.toLowerCase().substring(selectedFile.name.lastIndexOf('.'));
+    if (!allowedTypes.includes(fileExtension)) {
+      toast.error("Неподдерживаемый тип файла. Используйте CSV или TXT");
+      return;
+    }
+
     try {
       const result = await uploadMutation.mutateAsync({
         file: selectedFile,
@@ -70,9 +84,24 @@ export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
         resetForm();
       }, 2000);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Ошибка загрузки файла",
-      );
+      console.error('Upload error:', error);
+
+      // Улучшенная обработка ошибок
+      let errorMessage = "Ошибка загрузки файла";
+
+      if (error instanceof Error) {
+        if (error.message.includes('FILE_ERROR_NO_SPACE')) {
+          errorMessage = "Недостаточно места на диске. Обратитесь к администратору.";
+        } else if (error.message.includes('404')) {
+          errorMessage = "Сервер недоступен. Попробуйте позже.";
+        } else if (error.message.includes('413')) {
+          errorMessage = "Файл слишком большой.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      toast.error(errorMessage);
     }
   };
 
