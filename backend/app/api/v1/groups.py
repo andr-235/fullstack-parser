@@ -58,7 +58,7 @@ async def create_group(
         )
 
     vk_service = VKBottleService(
-        token=settings.vk_access_token, api_version=settings.vk_api_version
+        token=settings.vk.access_token, api_version=settings.vk.api_version
     )
     vk_group_data = await vk_service.get_group_info(screen_name)
 
@@ -81,15 +81,25 @@ async def create_group(
             detail=f"Группа '{existing_group.name}' ({screen_name}) уже существует в системе.",
         )
 
-    # TODO: Перенести логику в сервис
-    # Фильтрация только нужных полей для VKGroup
+    # Создаем объект группы, объединяя данные из VK API и пользовательские настройки
     vk_group_fields = {c.name for c in VKGroup.__table__.columns}
     filtered_data = {
         k: v for k, v in vk_group_data.items() if k in vk_group_fields
     }
+    
     # Маппинг id -> vk_id
     if "id" in vk_group_data:
         filtered_data["vk_id"] = vk_group_data["id"]
+    
+    # Переопределяем поля пользовательскими данными
+    filtered_data.update({
+        "screen_name": screen_name,
+        "name": group_data.name,
+        "description": group_data.description,
+        "is_active": group_data.is_active,
+        "max_posts_to_check": group_data.max_posts_to_check,
+    })
+    
     new_group = VKGroup(**filtered_data)
     db.add(new_group)
     await db.commit()

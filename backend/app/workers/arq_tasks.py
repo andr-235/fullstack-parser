@@ -33,7 +33,7 @@ async def run_parsing_task(
                 await res
 
         async with AsyncSessionLocal() as db:
-            vk_token = settings.vk_access_token
+            vk_token = settings.vk.access_token
             if not vk_token or vk_token == "your-vk-app-id":
                 logger.warning(
                     f"[ARQ] VK_ACCESS_TOKEN не передан или дефолтный: {vk_token}"
@@ -43,15 +43,15 @@ async def run_parsing_task(
                     f"[ARQ] VK_ACCESS_TOKEN начинается с: {vk_token[:8]}..."
                 )
             logger.warning(
-                f"[ARQ] VK_ACCESS_TOKEN (repr): {repr(settings.vk_access_token)}"
+                f"[ARQ] VK_ACCESS_TOKEN (repr): {repr(settings.vk.access_token)}"
             )
             logger.warning(
-                f"[ARQ] VK_ACCESS_TOKEN из settings: {settings.vk_access_token[:8]}..."
+                f"[ARQ] VK_ACCESS_TOKEN из settings: {settings.vk.access_token[:8]}..."
             )
             parser_service = ParserService(
                 db=db,
                 vk_service=VKBottleService(
-                    token=vk_token, api_version=settings.vk_api_version
+                    token=vk_token, api_version=settings.vk.api_version
                 ),
             )
             stats = await parser_service.parse_group_posts(
@@ -92,13 +92,13 @@ async def run_monitoring_cycle(ctx):
 
     try:
         async with AsyncSessionLocal() as db:
-            vk_token = settings.vk_access_token
+            vk_token = settings.vk.access_token
             if not vk_token:
                 logger.error("[ARQ] VK_ACCESS_TOKEN не настроен")
                 return {"error": "VK_ACCESS_TOKEN не настроен"}
 
             vk_service = VKBottleService(
-                token=vk_token, api_version=settings.vk_api_version
+                token=vk_token, api_version=settings.vk.api_version
             )
 
             monitoring_service = MonitoringService(

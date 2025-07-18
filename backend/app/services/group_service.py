@@ -53,7 +53,7 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
                 detail="Не указан ID или короткое имя группы.",
             )
         vk_service = VKBottleService(
-            token=settings.vk_access_token, api_version=settings.vk_api_version
+            token=settings.vk.access_token, api_version=settings.vk.api_version
         )
         vk_group_data = await vk_service.get_group_info(screen_name)
         if not vk_group_data:

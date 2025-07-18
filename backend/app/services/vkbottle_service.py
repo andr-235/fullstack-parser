@@ -241,26 +241,35 @@ class VKBottleService:
                 exc_info=True,
             )
 
-    async def get_group_info(self, group_id: int) -> Optional[dict]:
+    async def get_group_info(self, group_id_or_screen_name: str | int) -> Optional[dict]:
         """
         Получить информацию о группе ВКонтакте.
 
         Args:
-            group_id (int): ID группы ВКонтакте
+            group_id_or_screen_name (str | int): ID группы или screen_name
         Returns:
             Optional[dict]: Информация о группе или None
         Raises:
             VKAPIException: При ошибке VK API
         """
         try:
-            response = await self.api.groups.get_by_id(
-                group_id=group_id,
-                v=self.api_version,
-            )
+            if isinstance(group_id_or_screen_name, str):
+                # Если передан screen_name, используем groups.getById
+                response = await self.api.groups.get_by_id(
+                    group_id=group_id_or_screen_name,
+                    v=self.api_version,
+                )
+            else:
+                # Если передан числовой ID
+                response = await self.api.groups.get_by_id(
+                    group_id=group_id_or_screen_name,
+                    v=self.api_version,
+                )
+            
             if not response or not hasattr(response, "__getitem__"):
                 self.logger.warning(
                     "VK API вернул неожиданный ответ при получении информации о группе",
-                    group_id=group_id,
+                    group_id_or_screen_name=group_id_or_screen_name,
                     response=str(response),
                 )
                 return None
@@ -268,7 +277,7 @@ class VKBottleService:
         except Exception as e:
             self.logger.error(
                 "Ошибка VK API при получении информации о группе",
-                group_id=group_id,
+                group_id_or_screen_name=group_id_or_screen_name,
                 error=str(e),
                 exc_info=True,
             )
