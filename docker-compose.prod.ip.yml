@@ -2,13 +2,14 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: fullstack_prod_postgres
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env.prod
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     expose:
@@ -20,11 +21,18 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
 
   redis:
     image: redis:7-alpine
     container_name: fullstack_prod_redis
-    restart: always
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     networks:
@@ -34,13 +42,19 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: fullstack_prod_backend
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env.prod
     environment:
@@ -73,9 +87,11 @@ services:
       start_period: 40s
 
   arq_worker:
-    image: fullstack-arq-worker:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.arq
     container_name: fullstack_prod_arq_worker
-    restart: always
+    restart: unless-stopped
     command: ["arq", "app.workers.arq_worker.WorkerSettings"]
     env_file:
       - .env.prod
@@ -123,9 +139,11 @@ services:
       start_period: 40s
 
   frontend:
-    image: fullstack-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: fullstack_prod_frontend
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env.prod
     environment:
@@ -154,7 +172,7 @@ services:
       context: ./nginx
       dockerfile: Dockerfile
     container_name: fullstack_prod_nginx
-    restart: always
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
