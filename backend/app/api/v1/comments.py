@@ -39,8 +39,8 @@ async def get_comments(
 
     return PaginatedResponse(
         total=total,
-        skip=pagination.skip,
-        limit=pagination.limit,
+        page=pagination.page,
+        size=pagination.size,
         items=[
             VKCommentResponse.model_validate(comment) for comment in comments
         ],

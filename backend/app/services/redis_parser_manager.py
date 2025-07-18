@@ -88,7 +88,10 @@ class RedisParserManager:
     async def stop_current_task(self) -> None:
         """Stops the current running task."""
         r = await self._get_redis()
-        current_task_id = await r.get("parser:current_task_id")
+        current_task_id_raw = await r.get("parser:current_task_id")
+        current_task_id = (
+            current_task_id_raw.decode() if current_task_id_raw else None
+        )
         if current_task_id:
             task_key = f"parser:task:{current_task_id}"
             async with r.pipeline() as pipe:
@@ -107,13 +110,18 @@ class RedisParserManager:
         """Updates the progress of a running task."""
         r = await self._get_redis()
         task_key = f"parser:task:{task_id}"
-        await r.hset(task_key, "progress", str(progress))
+        result = r.hset(task_key, "progress", str(progress))
+        if hasattr(result, "__await__"):
+            await result
 
     # Data access helpers
     async def get_state(self) -> ParserState:
         """Retrieves the current parser state from Redis."""
         r = await self._get_redis()
-        current_task_id = await r.get("parser:current_task_id")
+        current_task_id_raw = await r.get("parser:current_task_id")
+        current_task_id = (
+            current_task_id_raw.decode() if current_task_id_raw else None
+        )
 
         if not current_task_id:
             return ParserState(status="stopped", task=None)
@@ -121,7 +129,10 @@ class RedisParserManager:
         task_key = f"parser:task:{current_task_id}"
         task_data = None
         try:
-            task_data = await r.hgetall(task_key)
+            result = r.hgetall(task_key)
+            task_data = (
+                await result if hasattr(result, "__await__") else result
+            )
         except ResponseError:
             pass  # Fallback for old string-based format
 
@@ -186,12 +197,16 @@ class RedisParserManager:
         for key in paginated_keys:
             task_data = None
             try:
-                task_data = await r.hgetall(key)
+                result = r.hgetall(key)
+                task_data = (
+                    await result if hasattr(result, "__await__") else result
+                )
             except ResponseError:
                 pass  # Fallback for old string-based format
 
             if not task_data:
-                task_json = await r.get(key)
+                task_json_raw = await r.get(key)
+                task_json = task_json_raw.decode() if task_json_raw else None
                 if task_json:
                     try:
                         task_data = json.loads(task_json)

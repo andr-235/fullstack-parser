@@ -24,8 +24,8 @@ class VKGroupBase(BaseSchema):
     )
     max_posts_to_check: int = Field(
         default=100,
-        gte=1,
-        lte=1000,
+        ge=1,
+        le=1000,
         description="Максимум постов для проверки",
     )
 
@@ -49,8 +49,8 @@ class VKGroupUpdate(BaseSchema):
     is_active: Optional[bool] = None
     max_posts_to_check: Optional[int] = Field(
         default=None,
-        gte=1,
-        lte=1000,
+        ge=1,
+        le=1000,
         description="Максимум постов для проверки",
     )
 

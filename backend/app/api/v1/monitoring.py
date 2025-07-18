@@ -56,7 +56,7 @@ async def start_scheduler(interval_seconds: int = 300) -> StatusResponse:
         )
 
         return StatusResponse(
-            success=True,
+            status="success",
             message=f"Планировщик запущен с интервалом {interval_seconds} секунд",
         )
     except Exception as e:
@@ -73,7 +73,9 @@ async def stop_scheduler() -> StatusResponse:
         scheduler = await get_scheduler_service()
         await scheduler.stop_monitoring_scheduler()
 
-        return StatusResponse(success=True, message="Планировщик остановлен")
+        return StatusResponse(
+            status="success", message="Планировщик остановлен"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -90,7 +92,7 @@ async def run_monitoring_cycle() -> StatusResponse:
 
         if job_id:
             return StatusResponse(
-                success=True,
+                status="success",
                 message=f"Цикл мониторинга запущен (job_id: {job_id})",
             )
         else:
@@ -125,7 +127,8 @@ async def enable_group_monitoring(
 
     if success:
         return StatusResponse(
-            success=True, message=f"Мониторинг включен для группы {group_id}"
+            status="success",
+            message=f"Мониторинг включен для группы {group_id}",
         )
     else:
         raise HTTPException(
@@ -151,7 +154,8 @@ async def disable_group_monitoring(
 
     if success:
         return StatusResponse(
-            success=True, message=f"Мониторинг отключен для группы {group_id}"
+            status="success",
+            message=f"Мониторинг отключен для группы {group_id}",
         )
     else:
         raise HTTPException(
