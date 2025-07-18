@@ -305,7 +305,7 @@ jobs:
             exit 1
           fi
 
-          # Останавливаем процессы на порту 80
+                    # Останавливаем процессы на порту 80
           echo "🛑 Освобождение порта 80..."
           sudo fuser -k 80/tcp || true
           sudo fuser -k 443/tcp || true
@@ -318,8 +318,17 @@ jobs:
           done
           echo "✅ Порт 80 свободен"
 
+          # Останавливаем существующие контейнеры
+          echo "🛑 Остановка существующих контейнеров..."
+          docker compose -f docker-compose.prod.ip.yml down --timeout 30 || true
+
+          # Удаляем сиротские контейнеры
+          echo "🧹 Удаление сиротских контейнеров..."
+          docker ps -a --filter "name=fullstack" --format "table {{.Names}}\t{{.Status}}" | grep -v "fullstack_prod_" | grep "fullstack" | awk '{print $1}' | xargs -r docker stop || true
+          docker ps -a --filter "name=fullstack" --format "table {{.Names}}\t{{.Status}}" | grep -v "fullstack_prod_" | grep "fullstack" | awk '{print $1}' | xargs -r docker rm || true
+
           echo "🚀 Запуск сервисов..."
-          docker compose -f docker-compose.prod.ip.yml up -d --build --pull always
+          docker compose -f docker-compose.prod.ip.yml up -d --build --pull always --remove-orphans
 
           echo "🧹 Очистка..."
           docker image prune -f || true
@@ -333,19 +342,40 @@ jobs:
           # Переходим в рабочую директорию приложения
           cd /opt/app
 
-          # Проверяем, что все контейнеры запущены
-          if docker compose -f docker-compose.prod.ip.yml ps | grep -q "Up"; then
-            echo "✅ Все сервисы запущены"
-          else
-            echo "❌ Не все сервисы запущены"
-            docker compose -f docker-compose.prod.ip.yml ps
-            exit 1
-          fi
+          # Проверяем, что все контейнеры запущены и здоровы
+          echo "🔍 Проверка статуса контейнеров..."
+          docker compose -f docker-compose.prod.ip.yml ps
+
+          # Проверяем, что все основные сервисы запущены
+          services=("postgres" "redis" "backend" "frontend" "nginx")
+          for service in "${services[@]}"; do
+            if docker compose -f docker-compose.prod.ip.yml ps $service | grep -q "Up"; then
+              echo "✅ $service запущен"
+            else
+              echo "❌ $service не запущен"
+              docker compose -f docker-compose.prod.ip.yml logs $service --tail=20
+              exit 1
+            fi
+          done
 
           # Проверяем доступность приложения
-          if curl -f -k https://localhost/health > /dev/null 2>&1; then
-            echo "✅ Приложение доступно"
-          else
-            echo "❌ Приложение недоступно"
+          echo "🌐 Проверка доступности приложения..."
+          max_attempts=10
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            if curl -f -k https://localhost/health > /dev/null 2>&1; then
+              echo "✅ Приложение доступно"
+              break
+            else
+              echo "⏳ Попытка $attempt/$max_attempts - приложение ещё не готово..."
+              sleep 10
+              ((attempt++))
+            fi
+          done
+
+          if [ $attempt -gt $max_attempts ]; then
+            echo "❌ Приложение недоступно после $max_attempts попыток"
+            echo "📋 Логи nginx:"
+            docker compose -f docker-compose.prod.ip.yml logs nginx --tail=20
             exit 1
           fi
