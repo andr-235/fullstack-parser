@@ -76,11 +76,181 @@ jobs:
           pnpm lint
           pnpm type-check
 
+  auto-fix:
+    name: 🔧 Автоисправление линтеров
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: lint
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      matrix:
+        component: [backend, frontend]
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: 🐍 Setup Python (Backend)
+        if: matrix.component == 'backend'
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: 📦 Кэш poetry (Backend)
+        if: matrix.component == 'backend'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-${{ hashFiles('backend/poetry.lock') }}
+          restore-keys: |
+            poetry-
+
+      - name: 🐍 Install Poetry (Backend)
+        if: matrix.component == 'backend'
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry --version
+
+      - name: 🔧 Автоисправление Python кода (Backend)
+        if: matrix.component == 'backend' && contains(github.event.pull_request.files.*.path, 'backend/')
+        working-directory: ./backend
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry install --no-interaction
+
+          echo "🔧 Запуск автоисправлений для Python..."
+
+          # Сохраняем состояние до исправлений
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+          # Запускаем автоисправления
+          echo "📝 Исправление форматирования с black..."
+          poetry run black . || echo "⚠️ black не смог исправить все проблемы"
+
+          echo "📝 Сортировка импортов с isort..."
+          poetry run isort . || echo "⚠️ isort не смог исправить все проблемы"
+
+                    echo "🔍 Проверка с ruff --fix..."
+          poetry run ruff check --fix . || echo "⚠️ ruff не смог исправить все проблемы"
+
+          echo "🔍 Проверка типов с mypy..."
+          poetry run mypy . || echo "⚠️ mypy обнаружил проблемы с типами"
+
+          # Проверяем, есть ли изменения
+          if git diff --quiet; then
+            echo "✅ Нет изменений для коммита"
+          else
+            echo "📝 Найдены изменения, коммитим..."
+            git add .
+            git commit -m "style: автоисправления линтеров для backend
+            
+            - black: форматирование кода
+            - isort: сортировка импортов  
+            - ruff: исправление проблем с кодом
+            
+            Автоматически исправлено GitHub Actions"
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+            echo "✅ Изменения закоммичены и запушены"
+                    fi
+
+      - name: ⏭️ Пропуск автоисправления Backend
+        if: matrix.component == 'backend' && !contains(github.event.pull_request.files.*.path, 'backend/')
+        run: |
+          echo "⏭️ Нет изменений в backend, пропускаем автоисправление"
+
+      - name: 🟢 Setup Node.js (Frontend)
+        if: matrix.component == 'frontend'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 📦 Кэш pnpm store (Frontend)
+        if: matrix.component == 'frontend'
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-
+
+      - name: 🟢 Install pnpm (Frontend)
+        if: matrix.component == 'frontend'
+        run: |
+          npm install -g pnpm@10.12.4
+          pnpm --version
+
+      - name: 🔧 Автоисправление JavaScript/TypeScript кода (Frontend)
+        if: matrix.component == 'frontend' && contains(github.event.pull_request.files.*.path, 'frontend/')
+        working-directory: ./frontend
+        run: |
+          pnpm install --frozen-lockfile
+
+          echo "🔧 Запуск автоисправлений для Frontend..."
+
+          # Сохраняем состояние до исправлений
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+                    # Запускаем автоисправления
+          echo "📝 Исправление с ESLint --fix..."
+          pnpm lint --fix || echo "⚠️ ESLint не смог исправить все проблемы"
+
+                    echo "📝 Исправление с Prettier..."
+          pnpm format || echo "⚠️ Prettier не смог исправить все проблемы"
+
+          echo "🔍 Проверка типов TypeScript..."
+          pnpm type-check || echo "⚠️ TypeScript обнаружил проблемы с типами"
+
+          # Проверяем, есть ли изменения
+          if git diff --quiet; then
+            echo "✅ Нет изменений для коммита"
+          else
+            echo "📝 Найдены изменения, коммитим..."
+            git add .
+            git commit -m "style: автоисправления линтеров для frontend
+            
+            - ESLint: исправление проблем с кодом
+            - Prettier: форматирование кода
+            
+            Автоматически исправлено GitHub Actions"
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+            echo "✅ Изменения закоммичены и запушены"
+                    fi
+
+      - name: ⏭️ Пропуск автоисправления Frontend
+        if: matrix.component == 'frontend' && !contains(github.event.pull_request.files.*.path, 'frontend/')
+        run: |
+          echo "⏭️ Нет изменений в frontend, пропускаем автоисправление"
+
+      - name: 📊 Отчет об изменениях
+        run: |
+          echo "📊 Отчет об автоисправлениях:"
+          echo "Компонент: ${{ matrix.component }}"
+          echo "Ветка: ${{ github.event.pull_request.head.ref }}"
+          echo "SHA: ${{ github.event.pull_request.head.sha }}"
+
+          if git diff --quiet HEAD~1; then
+            echo "✅ Изменения не обнаружены"
+          else
+            echo "📝 Обнаружены изменения:"
+            git diff --stat HEAD~1
+            echo ""
+            echo "🔍 Детальные изменения:"
+            git diff HEAD~1
+          fi
+
   test:
     name: 🧪 Тесты
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: lint
+    needs: [lint, auto-fix]
     strategy:
       matrix:
         component: [backend, frontend]
@@ -163,7 +333,7 @@ jobs:
     name: 🔒 Безопасность
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: lint
+    needs: [lint, auto-fix]
     strategy:
       matrix:
         component: [backend, frontend]
