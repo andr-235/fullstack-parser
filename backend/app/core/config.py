@@ -113,11 +113,7 @@ class Settings(BaseSettings):
             origins = [
                 origin.strip() for origin in v.split(",") if origin.strip()
             ]
-            return (
-                origins
-                if origins
-                else ["https://parser.mysite.ru"]
-            )
+            return origins if origins else ["https://parser.mysite.ru"]
         except Exception:
             pass
 
