@@ -408,21 +408,106 @@ jobs:
       - name: 🏗️ Локальная сборка образов
         run: |
           set -e
-          echo "🏗️ Начинаем локальную сборку образов..."
+          echo "🏗️ Начинаем умную сборку образов..."
 
-                    # Собираем backend
-          echo "🐍 Сборка backend образа..."
-          docker build --cache-from fullstack-backend:latest -t fullstack-backend:latest ./backend
+          # Определяем измененные сервисы
+          echo "🔍 Определение измененных сервисов для сборки..."
 
-          # Собираем frontend
-          echo "🟢 Сборка frontend образа..."
-          docker build --cache-from fullstack-frontend:latest -t fullstack-frontend:latest ./frontend
+          # Получаем список измененных файлов
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD || echo "")
 
-          # Собираем arq-worker
-          echo "⚙️ Сборка arq-worker образа..."
-          docker build --cache-from fullstack-arq-worker:latest -t fullstack-arq-worker:latest -f ./backend/Dockerfile.arq ./backend
+          # Определяем какие сервисы затронуты
+          BACKEND_CHANGED=false
+          FRONTEND_CHANGED=false
+          ARQ_WORKER_CHANGED=false
 
-          echo "✅ Все образы собраны локально!"
+          if [[ -n "$CHANGED_FILES" ]]; then
+            echo "📝 Измененные файлы:"
+            echo "$CHANGED_FILES"
+            
+            # Проверяем изменения в backend
+            if echo "$CHANGED_FILES" | grep -q "^backend/"; then
+              BACKEND_CHANGED=true
+              echo "🐍 Backend изменен - будет собран"
+            fi
+            
+            # Проверяем изменения в frontend
+            if echo "$CHANGED_FILES" | grep -q "^frontend/"; then
+              FRONTEND_CHANGED=true
+              echo "🟢 Frontend изменен - будет собран"
+            fi
+            
+            # ARQ worker зависит от backend
+            if [[ "$BACKEND_CHANGED" == "true" ]]; then
+              ARQ_WORKER_CHANGED=true
+              echo "⚙️ ARQ Worker изменен - будет собран"
+            fi
+          else
+            echo "⚠️ Не удалось определить изменения, собираем все образы"
+            BACKEND_CHANGED=true
+            FRONTEND_CHANGED=true
+            ARQ_WORKER_CHANGED=true
+          fi
+
+          # Инициализируем кэш
+          echo "📦 Инициализация кэша..."
+          mkdir -p /tmp/.buildx-cache
+
+          # Собираем только измененные образы
+          if [[ "$BACKEND_CHANGED" == "true" ]]; then
+            echo "🐍 Сборка backend образа с кэшированием..."
+            docker buildx build \
+              --cache-from type=local,src=/tmp/.buildx-cache \
+              --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
+              --tag fullstack-backend:latest \
+              --load \
+              --parallel \
+              ./backend &
+          else
+            echo "⏭️ Backend не изменен - пропускаем сборку"
+          fi
+
+          if [[ "$FRONTEND_CHANGED" == "true" ]]; then
+            echo "🟢 Сборка frontend образа с кэшированием..."
+            docker buildx build \
+              --cache-from type=local,src=/tmp/.buildx-cache \
+              --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
+              --tag fullstack-frontend:latest \
+              --load \
+              --parallel \
+              ./frontend &
+          else
+            echo "⏭️ Frontend не изменен - пропускаем сборку"
+          fi
+
+          if [[ "$ARQ_WORKER_CHANGED" == "true" ]]; then
+            echo "⚙️ Сборка arq-worker образа с кэшированием..."
+            docker buildx build \
+              --cache-from type=local,src=/tmp/.buildx-cache \
+              --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
+              --tag fullstack-arq-worker:latest \
+              --file ./backend/Dockerfile.arq \
+              --load \
+              --parallel \
+              ./backend &
+          else
+            echo "⏭️ ARQ Worker не изменен - пропускаем сборку"
+          fi
+
+          # Ждем завершения всех сборок
+          echo "⏳ Ожидание завершения сборки образов..."
+          wait
+
+          # Обновляем кэш
+          echo "🔄 Обновление кэша..."
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+          echo "✅ Умная сборка завершена!"
+          echo "📊 Статистика сборки:"
+          echo "   Backend: $BACKEND_CHANGED"
+          echo "   Frontend: $FRONTEND_CHANGED"
+          echo "   ARQ Worker: $ARQ_WORKER_CHANGED"
 
       - name: 🚀 Деплой на сервер
         run: |
