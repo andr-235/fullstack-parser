@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Play,
   Settings,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,7 @@ const navigation = [
   { name: "Ключевые слова", href: "/keywords", icon: KeyRound },
   { name: "Комментарии", href: "/comments", icon: MessageSquare },
   { name: "Парсер", href: "/parser", icon: Play },
+  { name: "Мониторинг", href: "/monitoring", icon: Activity },
 ];
 
 export function Sidebar() {
