@@ -268,14 +268,18 @@ class VKBottleService:
                     v=self.api_version,
                 )
 
-            if not response or not hasattr(response, "__getitem__"):
+            # VKBottle API возвращает список объектов, берем первый элемент
+            if isinstance(response, list) and len(response) > 0:
+                return response[0]
+            elif hasattr(response, "__getitem__") and len(response) > 0:
+                return response[0]
+            else:
                 self.logger.warning(
-                    "VK API вернул неожиданный ответ при получении информации о группе",
+                    "VK API вернул пустой или неожиданный ответ при получении информации о группе",
                     group_id_or_screen_name=group_id_or_screen_name,
                     response=str(response),
                 )
                 return None
-            return response[0]
         except Exception as e:
             self.logger.error(
                 "Ошибка VK API при получении информации о группе",
