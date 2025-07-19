@@ -24,7 +24,7 @@
 
 ### Frontend разработка
 См. @/rules/nextjs-frontend.mdc
-- Next.js 14 с TypeScript strict mode
+- Next.js 15 с TypeScript strict mode
 - TailwindCSS для стилизации
 - React Query для управления состоянием
 - camelCase для переменных и функций

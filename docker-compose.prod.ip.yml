@@ -161,7 +161,7 @@ services:
     networks:
       - prod-app-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -176,7 +176,10 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    volumes: []
+    volumes:
+      - ./nginx/nginx.prod.ip.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl/
+      - ./nginx/logs:/var/log/nginx
     depends_on:
       frontend:
         condition: service_healthy

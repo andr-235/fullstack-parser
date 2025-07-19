@@ -1,0 +1,39 @@
+# =============================================================================
+# Development Dockerfile for Next.js 15 Frontend Application
+# =============================================================================
+
+FROM node:20-alpine
+
+# Install pnpm and dumb-init
+RUN npm install -g pnpm@10.12.4
+RUN apk add --no-cache dumb-init wget
+
+# Create app directory and set permissions
+WORKDIR /app
+
+# Create nextjs user for better security
+RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
+
+# Copy package files only
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Set proper permissions
+RUN chown -R nextjs:nextjs /app
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Environment variables
+ENV PORT=3000 \
+    HOSTNAME=0.0.0.0 \
+    NODE_ENV=development \
+    NEXT_TELEMETRY_DISABLED=1 \
+    WATCHPACK_POLLING=true \
+    CHOKIDAR_USEPOLLING=true
+
+# Start development server with proper host binding
+CMD ["pnpm", "dev", "--hostname", "0.0.0.0"] 

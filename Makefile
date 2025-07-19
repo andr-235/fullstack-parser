@@ -1,10 +1,20 @@
-.PHONY: feature release hotfix cleanup sync release-create release-deploy release-rollback dev test build deploy status logs clean branch commit push pr switch-cicd
+.PHONY: feature release hotfix cleanup sync release-create release-deploy release-rollback dev test build deploy status logs clean branch commit push pr switch-cicd dev-start dev-stop dev-logs
 
 # 🚀 Упрощённые команды для одного разработчика
 dev: ## Запуск в режиме разработки
 	@echo "🚀 Запуск в режиме разработки..."
-	docker compose up -d
-	@echo "✅ Сервисы запущены! Frontend: http://localhost:3000, Backend: http://localhost:8000"
+	@./scripts/dev.sh
+
+dev-start: ## Запуск dev режима (alias для dev)
+	@make dev
+
+dev-stop: ## Остановка dev режима
+	@echo "🛑 Остановка dev режима..."
+	@./scripts/dev-stop.sh
+
+dev-logs: ## Показать логи dev режима
+	@echo "📋 Логи dev режима..."
+	@./scripts/dev-logs.sh
 
 test: ## Быстрые тесты
 	@echo "🧪 Запуск быстрых тестов..."
@@ -129,6 +139,9 @@ help: ## Показать справку
 	@echo ""
 	@echo "🎯 Упрощённые команды (один разработчик):"
 	@echo "  make dev          - Запуск в режиме разработки"
+	@echo "  make dev-start    - Запуск dev режима (alias)"
+	@echo "  make dev-stop     - Остановка dev режима"
+	@echo "  make dev-logs     - Показать логи dev режима"
 	@echo "  make test         - Быстрые тесты"
 	@echo "  make build        - Сборка образов"
 	@echo "  make deploy       - Деплой в production"

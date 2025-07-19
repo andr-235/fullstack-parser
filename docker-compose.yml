@@ -1,20 +1,18 @@
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: fullstack_dev_postgres
+    container_name: fullstack_prod_postgres
     restart: unless-stopped
     env_file:
-      - ./frontend/.env.local
+      - .env.prod
     environment:
-      POSTGRES_DB: ${DB_NAME:-vk_parser}
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - dev-network
+      - prod-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 10s
@@ -23,14 +21,12 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: fullstack_dev_redis
+    container_name: fullstack_prod_redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
-      - dev-network
+      - prod-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -41,76 +37,74 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: dev
-    container_name: fullstack_dev_backend
+    container_name: fullstack_prod_backend
     restart: unless-stopped
     env_file:
-      - ./frontend/.env.local
+      - .env.prod
     environment:
-      - ENV=development
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-vk_parser}
+      - ENV=production
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
-      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN:-dev-vk-token}
-      - VK_API_VERSION=${VK_API_VERSION:-5.131}
-      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
-    ports:
-      - "8000:8000"
+      - SECRET_KEY=${SECRET_KEY}
+      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     networks:
-      - dev-network
+      - prod-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: dev
-    container_name: fullstack_dev_frontend
+    container_name: fullstack_prod_frontend
     restart: unless-stopped
     env_file:
-      - ./frontend/.env.local
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
+      - .env.prod
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=https://localhost
     depends_on:
       - backend
     networks:
-      - dev-network
-    command: pnpm dev
+      - prod-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  arq_worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: dev
-    container_name: fullstack_dev_arq_worker
-    command: python -m app.workers.arq_worker
-    env_file:
-      - ./frontend/.env.local
-    environment:
-      - ENV=development
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-vk_parser}
-      - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
-      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN:-dev-vk-token}
-      - VK_API_VERSION=${VK_API_VERSION:-5.131}
-      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+  nginx:
+    image: nginx:alpine
+    container_name: fullstack_prod_nginx
     restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - frontend
+      - backend
     networks:
-      - dev-network
+      - prod-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
-  dev-network:
+  prod-network:
     driver: bridge
 
 volumes:
