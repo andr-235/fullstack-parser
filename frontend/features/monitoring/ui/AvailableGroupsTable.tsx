@@ -15,12 +15,14 @@ import {
   useEnableGroupMonitoring,
   useRunGroupMonitoring,
 } from '@/hooks/use-monitoring'
+
 import {
   Play,
   Settings,
   Plus,
   Clock,
 } from 'lucide-react'
+
 import type { VKGroupMonitoring } from '@/types/api'
 import MonitoringSettings from './MonitoringSettings'
 
@@ -119,7 +121,9 @@ export default function AvailableGroupsTable({
                   </span>
                 </TableCell>
                 <TableCell>
+
                   <span className="text-sm">{group.monitoring_runs_count || 0}</span>
+
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center gap-2 justify-end">
@@ -177,3 +181,4 @@ export default function AvailableGroupsTable({
     </>
   )
 } 
+

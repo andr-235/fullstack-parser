@@ -90,7 +90,6 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
 
-
     def get_cors_origins(self) -> list[str]:
         """Парсит CORS_ORIGINS из строки в список"""
         try:
@@ -103,6 +102,7 @@ class Settings(BaseSettings):
                     parsed = json.loads(self.cors_origins)
                     if isinstance(parsed, list):
                         return [str(origin).strip() for origin in parsed if origin]
+
                 except (json.JSONDecodeError, ValueError, TypeError):
                     pass
 
@@ -112,6 +112,7 @@ class Settings(BaseSettings):
             ]
             return origins if origins else ["http://localhost:3000", "http://127.0.0.1:3000"]
 
+
         except Exception:
             # В случае любой ошибки возвращаем дефолт
             return ["http://localhost:3000", "http://127.0.0.1:3000"]
@@ -120,7 +121,9 @@ class Settings(BaseSettings):
 # Глобальный объект настроек
 try:
     settings = Settings()
+
     logger.info(f"Settings initialized successfully. CORS_ORIGINS: {settings.cors_origins}")
+
 except Exception as e:
     logger.error(f"Failed to initialize settings: {e}")
     raise

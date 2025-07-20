@@ -279,7 +279,7 @@ async def run_monitoring_cycle(
     """Запустить цикл мониторинга вручную"""
     try:
         from app.core.config import settings
-        
+
         vk_service = VKBottleService(
             token=settings.vk.access_token,
             api_version=settings.vk.api_version,

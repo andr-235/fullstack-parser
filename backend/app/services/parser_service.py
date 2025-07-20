@@ -347,7 +347,7 @@ class ParserService:
         if vk_id is None:
             logger.error(f"Post data missing 'id' field: {post_data}")
             raise ValueError("Post data missing required 'id' field")
-            
+
         result = await self.db.execute(
             select(VKPost).where(
                 VKPost.vk_id == vk_id, VKPost.group_id == group.id

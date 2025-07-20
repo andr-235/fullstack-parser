@@ -175,7 +175,7 @@ class MorphologicalService:
 
         # Берем первый результат парсинга
         parsed = parsed_words[0]
-        
+
         # Получаем формы через natasha
         all_forms = set()
         normal_form = parsed.normal_form if parsed else word.lower()
