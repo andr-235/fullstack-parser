@@ -67,9 +67,9 @@ export default function MonitoringPage() {
               страницу.
             </p>
             <p className="text-sm text-slate-400 mt-2">
-              {statsError?.message ||
-                availableGroupsError?.message ||
-                activeGroupsError?.message}
+
+              {statsError?.message || availableGroupsError?.message || activeGroupsError?.message}
+
             </p>
           </CardContent>
         </Card>
@@ -77,13 +77,14 @@ export default function MonitoringPage() {
     )
   }
 
-  const nextMonitoringTime =
-    stats?.next_monitoring_at && stats.next_monitoring_at !== 'null'
-      ? formatDistanceToNow(new Date(stats.next_monitoring_at), {
-          addSuffix: true,
-          locale: ru,
-        })
-      : 'Не запланировано'
+
+  const nextMonitoringTime = stats?.next_monitoring_at && stats.next_monitoring_at !== 'null'
+    ? formatDistanceToNow(new Date(stats.next_monitoring_at), {
+        addSuffix: true,
+        locale: ru,
+      })
+    : 'Не запланировано'
+
 
   return (
     <div className="space-y-6">

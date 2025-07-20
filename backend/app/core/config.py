@@ -84,12 +84,11 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
     )
     database: DatabaseSettings = DatabaseSettings()
-    redis_url: Optional[str] = Field(
-        default="redis://redis:6379/0", alias="REDIS_URL"
-    )
+    redis_url: Optional[str] = Field(default="redis://redis:6379/0", alias="REDIS_URL")
     vk: VKSettings = VKSettings()
     monitoring: MonitoringSettings = MonitoringSettings()
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+
 
     def get_cors_origins(self) -> list[str]:
         """Парсит CORS_ORIGINS из строки в список"""
@@ -98,29 +97,21 @@ class Settings(BaseSettings):
                 return ["http://localhost:3000", "http://127.0.0.1:3000"]
 
             # Пробуем парсить как JSON
-            if self.cors_origins.startswith(
-                "["
-            ) and self.cors_origins.endswith("]"):
+            if self.cors_origins.startswith("[") and self.cors_origins.endswith("]"):
                 try:
                     parsed = json.loads(self.cors_origins)
                     if isinstance(parsed, list):
-                        return [
-                            str(origin).strip() for origin in parsed if origin
-                        ]
+                        return [str(origin).strip() for origin in parsed if origin]
+
                 except (json.JSONDecodeError, ValueError, TypeError):
                     pass
 
             # Парсим как строку с запятыми
             origins = [
-                origin.strip()
-                for origin in self.cors_origins.split(",")
-                if origin.strip()
+                origin.strip() for origin in self.cors_origins.split(",") if origin.strip()
             ]
-            return (
-                origins
-                if origins
-                else ["http://localhost:3000", "http://127.0.0.1:3000"]
-            )
+            return origins if origins else ["http://localhost:3000", "http://127.0.0.1:3000"]
+
 
         except Exception:
             # В случае любой ошибки возвращаем дефолт
@@ -130,9 +121,9 @@ class Settings(BaseSettings):
 # Глобальный объект настроек
 try:
     settings = Settings()
-    logger.info(
-        f"Settings initialized successfully. CORS_ORIGINS: {settings.cors_origins}"
-    )
+
+    logger.info(f"Settings initialized successfully. CORS_ORIGINS: {settings.cors_origins}")
+
 except Exception as e:
     logger.error(f"Failed to initialize settings: {e}")
     raise

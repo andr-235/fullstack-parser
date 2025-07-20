@@ -85,12 +85,12 @@ async def init_db() -> None:
             # Создаем таблицы только если их нет (lazy creation)
             async with async_engine.begin() as conn:
                 result = await conn.execute(
-                    text(
-                        """
+
+                    text("""
                     SELECT EXISTS (SELECT FROM information_schema.tables
                     WHERE table_schema = 'public' AND table_name = 'vk_groups')
-                    """
-                    )
+                    """)
+
                 )
                 tables_exist = result.scalar()
                 if not tables_exist:

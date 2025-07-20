@@ -180,15 +180,15 @@ class VKBottleService:
                 "offset": offset,
                 "access_token": self._token,
                 "v": self.api_version,
-            }
 
+            
             async with httpx.AsyncClient() as client:
                 response = await client.get(url, params=params)
                 data = response.json()
-
+                
                 if "error" in data:
                     raise VKAPIError(data["error"])
-
+                
                 if "response" in data and data["response"]:
                     posts = data["response"]["items"]
                     self.logger.info(
@@ -228,16 +228,10 @@ class VKBottleService:
                 first_post = posts[0]
                 self.logger.info(
                     "Пример структуры поста",
-                    post_keys=(
-                        list(first_post.keys())
-                        if isinstance(first_post, dict)
-                        else "not dict"
-                    ),
-                    post_id=(
-                        first_post.get("id")
-                        if isinstance(first_post, dict)
-                        else "unknown"
-                    ),
+
+                    post_keys=list(first_post.keys()) if isinstance(first_post, dict) else "not dict",
+                    post_id=first_post.get("id") if isinstance(first_post, dict) else "unknown",
+
                     post_type=type(first_post).__name__,
                 )
 
@@ -280,12 +274,10 @@ class VKBottleService:
             "Обработка ответа VK API",
             response_type=type(response).__name__,
             has_items=hasattr(response, "items"),
-            items_count=(
-                len(response.items)
-                if hasattr(response, "items") and response.items
-                else 0
-            ),
+
+            items_count=len(response.items) if hasattr(response, "items") and response.items else 0,
         )
+        
 
         if not hasattr(response, "items") or not response.items:
             return []
@@ -323,14 +315,11 @@ class VKBottleService:
                 # Если это уже словарь
                 self.logger.info(
                     f"Пост {i} уже словарь",
-                    post_keys=(
-                        list(post.keys())
-                        if isinstance(post, dict)
-                        else "not dict"
-                    ),
-                    post_id=(
-                        post.get("id") if isinstance(post, dict) else "unknown"
-                    ),
+
+                    post_keys=list(post.keys()) if isinstance(post, dict) else "not dict",
+                    post_id=post.get("id") if isinstance(post, dict) else "unknown",
+   ),
+
                 )
                 posts.append(post)
 
@@ -490,12 +479,14 @@ class VKBottleService:
                 "v": self.api_version,
             }
 
+            
             async with httpx.AsyncClient() as client:
                 response = await client.get(url, params=params)
                 data = response.json()
-
+                
                 if "error" in data:
                     raise VKAPIError(data["error"])
+                
 
                 if "response" in data and data["response"]:
                     group_info = data["response"][0]
@@ -543,11 +534,9 @@ class VKBottleService:
             "Обработка ответа VK API",
             response_type=type(response).__name__,
             is_list=isinstance(response, list),
-            has_response_attr=(
-                hasattr(response, "response")
-                if not isinstance(response, list)
-                else False
-            ),
+
+            has_response_attr=hasattr(response, "response") if not isinstance(response, list) else False,
+
         )
 
         # В VKBottle 4.5.2+ API возвращает список объектов напрямую
