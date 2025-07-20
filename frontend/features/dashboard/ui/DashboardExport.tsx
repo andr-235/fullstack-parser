@@ -3,19 +3,25 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { 
-  Download, 
-  FileText, 
-  FileSpreadsheet, 
+import {
+  Download,
+  FileText,
+  FileSpreadsheet,
   Calendar,
   Users,
   Target,
   MessageSquare,
   CheckCircle,
-  Loader2
+  Loader2,
 } from 'lucide-react'
 
 /**
@@ -42,7 +48,10 @@ interface DashboardExportProps {
 /**
  * Компонент экспорта данных дашборда
  */
-export function DashboardExport({ onExport, isExporting }: DashboardExportProps) {
+export function DashboardExport({
+  onExport,
+  isExporting,
+}: DashboardExportProps) {
   const [settings, setSettings] = useState<ExportSettings>({
     format: 'csv',
     dateRange: 'all',
@@ -50,13 +59,13 @@ export function DashboardExport({ onExport, isExporting }: DashboardExportProps)
     includeKeywords: true,
     includeComments: true,
     includeStats: true,
-    groupBy: 'date'
+    groupBy: 'date',
   })
 
   const handleSettingChange = (key: keyof ExportSettings, value: any) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
-      [key]: value
+      [key]: value,
     }))
   }
 
@@ -98,9 +107,11 @@ export function DashboardExport({ onExport, isExporting }: DashboardExportProps)
         {/* Формат файла */}
         <div className="space-y-2">
           <Label className="text-sm font-medium">Формат файла</Label>
-          <Select 
-            value={settings.format} 
-            onValueChange={(value) => handleSettingChange('format', value as 'csv' | 'xlsx' | 'json')}
+          <Select
+            value={settings.format}
+            onValueChange={(value) =>
+              handleSettingChange('format', value as 'csv' | 'xlsx' | 'json')
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -134,8 +145,8 @@ export function DashboardExport({ onExport, isExporting }: DashboardExportProps)
             <Calendar className="h-4 w-4" />
             Период данных
           </Label>
-          <Select 
-            value={settings.dateRange} 
+          <Select
+            value={settings.dateRange}
             onValueChange={(value) => handleSettingChange('dateRange', value)}
           >
             <SelectTrigger>
@@ -156,53 +167,69 @@ export function DashboardExport({ onExport, isExporting }: DashboardExportProps)
         {/* Включаемые данные */}
         <div className="space-y-4">
           <Label className="text-sm font-medium">Включаемые данные</Label>
-          
+
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-blue-500" />
-                <Label htmlFor="include-groups" className="text-sm">Группы</Label>
+                <Label htmlFor="include-groups" className="text-sm">
+                  Группы
+                </Label>
               </div>
               <Switch
                 id="include-groups"
                 checked={settings.includeGroups}
-                onCheckedChange={(checked) => handleSettingChange('includeGroups', checked)}
+                onCheckedChange={(checked) =>
+                  handleSettingChange('includeGroups', checked)
+                }
               />
             </div>
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4 text-green-500" />
-                <Label htmlFor="include-keywords" className="text-sm">Ключевые слова</Label>
+                <Label htmlFor="include-keywords" className="text-sm">
+                  Ключевые слова
+                </Label>
               </div>
               <Switch
                 id="include-keywords"
                 checked={settings.includeKeywords}
-                onCheckedChange={(checked) => handleSettingChange('includeKeywords', checked)}
+                onCheckedChange={(checked) =>
+                  handleSettingChange('includeKeywords', checked)
+                }
               />
             </div>
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-purple-500" />
-                <Label htmlFor="include-comments" className="text-sm">Комментарии</Label>
+                <Label htmlFor="include-comments" className="text-sm">
+                  Комментарии
+                </Label>
               </div>
               <Switch
                 id="include-comments"
                 checked={settings.includeComments}
-                onCheckedChange={(checked) => handleSettingChange('includeComments', checked)}
+                onCheckedChange={(checked) =>
+                  handleSettingChange('includeComments', checked)
+                }
               />
             </div>
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-orange-500" />
-                <Label htmlFor="include-stats" className="text-sm">Статистика</Label>
+                <Label htmlFor="include-stats" className="text-sm">
+                  Статистика
+                </Label>
               </div>
               <Switch
                 id="include-stats"
                 checked={settings.includeStats}
-                onCheckedChange={(checked) => handleSettingChange('includeStats', checked)}
+                onCheckedChange={(checked) =>
+                  handleSettingChange('includeStats', checked)
+                }
               />
             </div>
           </div>
@@ -211,8 +238,8 @@ export function DashboardExport({ onExport, isExporting }: DashboardExportProps)
         {/* Группировка */}
         <div className="space-y-2">
           <Label className="text-sm font-medium">Группировка данных</Label>
-          <Select 
-            value={settings.groupBy} 
+          <Select
+            value={settings.groupBy}
             onValueChange={(value) => handleSettingChange('groupBy', value)}
           >
             <SelectTrigger>
@@ -228,8 +255,8 @@ export function DashboardExport({ onExport, isExporting }: DashboardExportProps)
         </div>
 
         {/* Кнопка экспорта */}
-        <Button 
-          onClick={() => onExport(settings)} 
+        <Button
+          onClick={() => onExport(settings)}
           disabled={isExporting}
           className="w-full"
         >
@@ -248,9 +275,17 @@ export function DashboardExport({ onExport, isExporting }: DashboardExportProps)
 
         {/* Информация о форматах */}
         <div className="text-xs text-slate-500 space-y-1">
-          <p><strong>CSV:</strong> Простой текстовый формат, подходит для Excel</p>
-          <p><strong>Excel:</strong> Нативный формат Microsoft Excel с форматированием</p>
-          <p><strong>JSON:</strong> Структурированный формат для программной обработки</p>
+          <p>
+            <strong>CSV:</strong> Простой текстовый формат, подходит для Excel
+          </p>
+          <p>
+            <strong>Excel:</strong> Нативный формат Microsoft Excel с
+            форматированием
+          </p>
+          <p>
+            <strong>JSON:</strong> Структурированный формат для программной
+            обработки
+          </p>
         </div>
       </CardContent>
     </Card>
@@ -268,14 +303,14 @@ export function useDashboardExport() {
     try {
       // Здесь будет логика экспорта
       console.log('Exporting with settings:', settings)
-      
+
       // Имитация задержки
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
       // Создание и скачивание файла
       const fileName = `dashboard-export-${new Date().toISOString().split('T')[0]}.${settings.format}`
       const content = `Экспорт данных дашборда\nФормат: ${settings.format}\nПериод: ${settings.dateRange}\nДата экспорта: ${new Date().toLocaleString('ru-RU')}`
-      
+
       const blob = new Blob([content], { type: 'text/plain' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -285,7 +320,6 @@ export function useDashboardExport() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      
     } catch (error) {
       console.error('Export failed:', error)
     } finally {
@@ -295,6 +329,6 @@ export function useDashboardExport() {
 
   return {
     isExporting,
-    handleExport
+    handleExport,
   }
-} 
+}

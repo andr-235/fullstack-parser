@@ -19,13 +19,21 @@ jest.mock('date-fns/locale', () => ({
 
 // Мокаем Recharts
 jest.mock('recharts', () => ({
-  LineChart: ({ children }: { children: React.ReactNode }) => <div data-testid="line-chart">{children}</div>,
+  LineChart: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="line-chart">{children}</div>
+  ),
   Line: () => <div data-testid="line" />,
-  AreaChart: ({ children }: { children: React.ReactNode }) => <div data-testid="area-chart">{children}</div>,
+  AreaChart: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="area-chart">{children}</div>
+  ),
   Area: () => <div data-testid="area" />,
-  BarChart: ({ children }: { children: React.ReactNode }) => <div data-testid="bar-chart">{children}</div>,
+  BarChart: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="bar-chart">{children}</div>
+  ),
   Bar: () => <div data-testid="bar" />,
-  PieChart: ({ children }: { children: React.ReactNode }) => <div data-testid="pie-chart">{children}</div>,
+  PieChart: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="pie-chart">{children}</div>
+  ),
   Pie: () => <div data-testid="pie" />,
   Cell: () => <div data-testid="cell" />,
   XAxis: () => <div data-testid="x-axis" />,
@@ -33,7 +41,9 @@ jest.mock('recharts', () => ({
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
   Tooltip: () => <div data-testid="tooltip" />,
   Legend: () => <div data-testid="legend" />,
-  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="responsive-container">{children}</div>,
+  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="responsive-container">{children}</div>
+  ),
 }))
 
 const mockGlobalStats = {
@@ -77,17 +87,19 @@ const createWrapper = () => {
       },
     },
   })
-  
+
   return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
 }
 
 describe('DashboardPage', () => {
-  const mockUseGlobalStats = jest.mocked(require('@/hooks/use-stats').useGlobalStats)
-  const mockUseDashboardStats = jest.mocked(require('@/hooks/use-stats').useDashboardStats)
+  const mockUseGlobalStats = jest.mocked(
+    require('@/hooks/use-stats').useGlobalStats
+  )
+  const mockUseDashboardStats = jest.mocked(
+    require('@/hooks/use-stats').useDashboardStats
+  )
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -99,7 +111,7 @@ describe('DashboardPage', () => {
       isLoading: true,
       error: null,
     })
-    
+
     mockUseDashboardStats.mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -107,7 +119,7 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />, { wrapper: createWrapper() })
-    
+
     expect(screen.getByTestId('loading-spinner')).toBeInTheDocument()
   })
 
@@ -117,7 +129,7 @@ describe('DashboardPage', () => {
       isLoading: false,
       error: new Error('Ошибка загрузки'),
     })
-    
+
     mockUseDashboardStats.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -125,7 +137,7 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />, { wrapper: createWrapper() })
-    
+
     expect(screen.getByText('Ошибка загрузки')).toBeInTheDocument()
     expect(screen.getByText('Обновить')).toBeInTheDocument()
   })
@@ -136,7 +148,7 @@ describe('DashboardPage', () => {
       isLoading: false,
       error: null,
     })
-    
+
     mockUseDashboardStats.mockReturnValue({
       data: mockDashboardStats,
       isLoading: false,
@@ -144,7 +156,7 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />, { wrapper: createWrapper() })
-    
+
     expect(screen.getByText('Дашборд')).toBeInTheDocument()
     expect(screen.getByText('15')).toBeInTheDocument() // total_groups
     expect(screen.getByText('1,234')).toBeInTheDocument() // total_comments
@@ -158,7 +170,7 @@ describe('DashboardPage', () => {
       isLoading: false,
       error: null,
     })
-    
+
     mockUseDashboardStats.mockReturnValue({
       data: mockDashboardStats,
       isLoading: false,
@@ -166,7 +178,7 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />, { wrapper: createWrapper() })
-    
+
     expect(screen.getByText('Обзор')).toBeInTheDocument()
     expect(screen.getByText('Активность')).toBeInTheDocument()
     expect(screen.getByText('Группы')).toBeInTheDocument()
@@ -179,7 +191,7 @@ describe('DashboardPage', () => {
       isLoading: false,
       error: null,
     })
-    
+
     mockUseDashboardStats.mockReturnValue({
       data: mockDashboardStats,
       isLoading: false,
@@ -187,10 +199,10 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />, { wrapper: createWrapper() })
-    
+
     const activityTab = screen.getByText('Активность')
     fireEvent.click(activityTab)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Динамика комментариев')).toBeInTheDocument()
     })
@@ -202,7 +214,7 @@ describe('DashboardPage', () => {
       isLoading: false,
       error: null,
     })
-    
+
     mockUseDashboardStats.mockReturnValue({
       data: mockDashboardStats,
       isLoading: false,
@@ -210,7 +222,7 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />, { wrapper: createWrapper() })
-    
+
     expect(screen.getByTestId('area-chart')).toBeInTheDocument()
     expect(screen.getByTestId('pie-chart')).toBeInTheDocument()
   })
@@ -221,7 +233,7 @@ describe('DashboardPage', () => {
       isLoading: false,
       error: null,
     })
-    
+
     mockUseDashboardStats.mockReturnValue({
       data: mockDashboardStats,
       isLoading: false,
@@ -229,7 +241,7 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />, { wrapper: createWrapper() })
-    
+
     expect(screen.getByText('Последняя активность')).toBeInTheDocument()
     expect(screen.getByText('Завершен парсинг группы')).toBeInTheDocument()
   })
@@ -240,7 +252,7 @@ describe('DashboardPage', () => {
       isLoading: false,
       error: null,
     })
-    
+
     mockUseDashboardStats.mockReturnValue({
       data: mockDashboardStats,
       isLoading: false,
@@ -248,7 +260,7 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />, { wrapper: createWrapper() })
-    
+
     expect(screen.getByText('Экспорт')).toBeInTheDocument()
     expect(screen.getByText('Фильтры')).toBeInTheDocument()
     expect(screen.getByText('Обновить')).toBeInTheDocument()
@@ -256,14 +268,14 @@ describe('DashboardPage', () => {
 
   it('обрабатывает обновление данных', async () => {
     const mockRefetch = jest.fn()
-    
+
     mockUseGlobalStats.mockReturnValue({
       data: mockGlobalStats,
       isLoading: false,
       error: null,
       refetch: mockRefetch,
     })
-    
+
     mockUseDashboardStats.mockReturnValue({
       data: mockDashboardStats,
       isLoading: false,
@@ -272,10 +284,10 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />, { wrapper: createWrapper() })
-    
+
     const refreshButton = screen.getByText('Обновить')
     fireEvent.click(refreshButton)
-    
+
     // Проверяем, что кнопка обновления работает
     expect(refreshButton).toBeInTheDocument()
   })
@@ -286,7 +298,7 @@ describe('DashboardPage', () => {
       isLoading: false,
       error: null,
     })
-    
+
     mockUseDashboardStats.mockReturnValue({
       data: mockDashboardStats,
       isLoading: false,
@@ -294,11 +306,11 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />, { wrapper: createWrapper() })
-    
+
     // Переключаемся на вкладку Активность
     const activityTab = screen.getByText('Активность')
     fireEvent.click(activityTab)
-    
+
     expect(screen.getByText('23')).toBeInTheDocument() // today_comments
     expect(screen.getByText('7')).toBeInTheDocument() // today_matches
     expect(screen.getByText('156')).toBeInTheDocument() // week_comments
@@ -311,7 +323,7 @@ describe('DashboardPage', () => {
       isLoading: false,
       error: null,
     })
-    
+
     mockUseDashboardStats.mockReturnValue({
       data: mockDashboardStats,
       isLoading: false,
@@ -319,11 +331,11 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />, { wrapper: createWrapper() })
-    
+
     // Переключаемся на вкладку Группы
     const groupsTab = screen.getByText('Группы')
     fireEvent.click(groupsTab)
-    
+
     expect(screen.getByText('Производительность групп')).toBeInTheDocument()
     expect(screen.getByTestId('bar-chart')).toBeInTheDocument()
   })
@@ -334,7 +346,7 @@ describe('DashboardPage', () => {
       isLoading: false,
       error: null,
     })
-    
+
     mockUseDashboardStats.mockReturnValue({
       data: mockDashboardStats,
       isLoading: false,
@@ -342,11 +354,11 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />, { wrapper: createWrapper() })
-    
+
     // Переключаемся на вкладку Ключевые слова
     const keywordsTab = screen.getByText('Ключевые слова')
     fireEvent.click(keywordsTab)
-    
+
     expect(screen.getByText('Распределение ключевых слов')).toBeInTheDocument()
     expect(screen.getByText('Топ ключевых слов')).toBeInTheDocument()
     expect(screen.getByTestId('pie-chart')).toBeInTheDocument()

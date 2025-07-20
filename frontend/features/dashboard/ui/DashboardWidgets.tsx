@@ -4,17 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  CheckCircle,
   Clock,
   Activity,
   Users,
   MessageSquare,
   Target,
-  BarChart3
+  BarChart3,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -31,28 +31,31 @@ interface QuickStatsWidgetProps {
   description: string
 }
 
-export function QuickStatsWidget({ 
-  title, 
-  value, 
-  change, 
-  changeType, 
-  icon: Icon, 
-  description 
+export function QuickStatsWidget({
+  title,
+  value,
+  change,
+  changeType,
+  icon: Icon,
+  description,
 }: QuickStatsWidgetProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-slate-600">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-slate-600">
+          {title}
+        </CardTitle>
         <Icon className="h-4 w-4 text-slate-400" />
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value.toLocaleString()}</div>
         <div className="flex items-center gap-2 mt-1">
-          <Badge 
-            variant={changeType === 'increase' ? 'default' : 'destructive'} 
+          <Badge
+            variant={changeType === 'increase' ? 'default' : 'destructive'}
             className="text-xs"
           >
-            {changeType === 'increase' ? '+' : ''}{change}%
+            {changeType === 'increase' ? '+' : ''}
+            {change}%
           </Badge>
           <p className="text-xs text-slate-500">{description}</p>
         </div>
@@ -71,7 +74,12 @@ interface SystemStatusWidgetProps {
   uptime: string
 }
 
-export function SystemStatusWidget({ status, message, lastCheck, uptime }: SystemStatusWidgetProps) {
+export function SystemStatusWidget({
+  status,
+  message,
+  lastCheck,
+  uptime,
+}: SystemStatusWidgetProps) {
   const getStatusIcon = () => {
     switch (status) {
       case 'healthy':
@@ -107,17 +115,25 @@ export function SystemStatusWidget({ status, message, lastCheck, uptime }: Syste
           {getStatusIcon()}
           <div>
             <p className={`font-medium ${getStatusColor()}`}>
-              {status === 'healthy' ? 'Система работает' : 
-               status === 'warning' ? 'Внимание' : 'Ошибка'}
+              {status === 'healthy'
+                ? 'Система работает'
+                : status === 'warning'
+                  ? 'Внимание'
+                  : 'Ошибка'}
             </p>
             <p className="text-sm text-slate-600">{message}</p>
           </div>
         </div>
-        
+
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-slate-600">Последняя проверка:</span>
-            <span>{formatDistanceToNow(new Date(lastCheck), { addSuffix: true, locale: ru })}</span>
+            <span>
+              {formatDistanceToNow(new Date(lastCheck), {
+                addSuffix: true,
+                locale: ru,
+              })}
+            </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-slate-600">Время работы:</span>
@@ -140,12 +156,12 @@ interface ParsingProgressWidgetProps {
   estimatedTime: string
 }
 
-export function ParsingProgressWidget({ 
-  currentTask, 
-  progress, 
-  totalItems, 
-  processedItems, 
-  estimatedTime 
+export function ParsingProgressWidget({
+  currentTask,
+  progress,
+  totalItems,
+  processedItems,
+  estimatedTime,
 }: ParsingProgressWidgetProps) {
   return (
     <Card>
@@ -160,7 +176,7 @@ export function ParsingProgressWidget({
           <p className="text-sm font-medium text-slate-900">{currentTask}</p>
           <p className="text-xs text-slate-500">Обработка группы</p>
         </div>
-        
+
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span>Прогресс</span>
@@ -168,7 +184,7 @@ export function ParsingProgressWidget({
           </div>
           <Progress value={progress} className="h-2" />
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-slate-600">Обработано</p>
@@ -179,7 +195,7 @@ export function ParsingProgressWidget({
             <p className="font-semibold">{totalItems.toLocaleString()}</p>
           </div>
         </div>
-        
+
         <div className="flex justify-between text-sm">
           <span className="text-slate-600">Осталось времени:</span>
           <span>{estimatedTime}</span>
@@ -202,7 +218,9 @@ interface RecentActivityWidgetProps {
   }>
 }
 
-export function RecentActivityWidget({ activities }: RecentActivityWidgetProps) {
+export function RecentActivityWidget({
+  activities,
+}: RecentActivityWidgetProps) {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'parse':
@@ -242,25 +260,30 @@ export function RecentActivityWidget({ activities }: RecentActivityWidgetProps) 
       <CardContent>
         <div className="space-y-3">
           {activities.map((activity) => (
-            <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50">
+            <div
+              key={activity.id}
+              className="flex items-start gap-3 p-3 rounded-lg bg-slate-50"
+            >
               <div className="flex-shrink-0 mt-0.5">
                 {getActivityIcon(activity.type)}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium ${getStatusColor(activity.status)}`}>
+                <p
+                  className={`text-sm font-medium ${getStatusColor(activity.status)}`}
+                >
                   {activity.message}
                 </p>
                 <p className="text-xs text-slate-500">
-                  {formatDistanceToNow(new Date(activity.timestamp), { 
-                    addSuffix: true, 
-                    locale: ru 
+                  {formatDistanceToNow(new Date(activity.timestamp), {
+                    addSuffix: true,
+                    locale: ru,
                   })}
                 </p>
               </div>
             </div>
           ))}
         </div>
-        
+
         <Button variant="outline" size="sm" className="w-full mt-4">
           Показать все
         </Button>
@@ -303,4 +326,4 @@ export function QuickActionsWidget() {
       </CardContent>
     </Card>
   )
-} 
+}

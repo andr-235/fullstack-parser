@@ -4,16 +4,22 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Search, 
-  Filter, 
-  Calendar, 
-  Users, 
-  Target, 
+import {
+  Search,
+  Filter,
+  Calendar,
+  Users,
+  Target,
   X,
-  RefreshCw
+  RefreshCw,
 } from 'lucide-react'
 
 /**
@@ -43,19 +49,19 @@ interface DashboardFiltersProps {
 /**
  * Компонент фильтров для дашборда
  */
-export function DashboardFilters({ 
-  filters, 
-  onFiltersChange, 
-  onReset, 
-  groups, 
-  keywords 
+export function DashboardFilters({
+  filters,
+  onFiltersChange,
+  onReset,
+  groups,
+  keywords,
 }: DashboardFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const handleFilterChange = (key: keyof DashboardFilters, value: any) => {
     onFiltersChange({
       ...filters,
-      [key]: value
+      [key]: value,
     })
   }
 
@@ -71,8 +77,8 @@ export function DashboardFilters({
     onFiltersChange(newFilters)
   }
 
-  const hasActiveFilters = Object.values(filters).some(value => 
-    value !== '' && value !== null && value !== 'all'
+  const hasActiveFilters = Object.values(filters).some(
+    (value) => value !== '' && value !== null && value !== 'all'
   )
 
   return (
@@ -85,18 +91,14 @@ export function DashboardFilters({
           </CardTitle>
           <div className="flex gap-2">
             {hasActiveFilters && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onReset}
-              >
+              <Button variant="outline" size="sm" onClick={onReset}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Сбросить
               </Button>
             )}
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
             >
               {isExpanded ? 'Скрыть' : 'Показать'}
@@ -104,7 +106,7 @@ export function DashboardFilters({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Поиск */}
         <div className="relative">
@@ -123,8 +125,8 @@ export function DashboardFilters({
             {filters.search && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 Поиск: {filters.search}
-                <X 
-                  className="h-3 w-3 cursor-pointer" 
+                <X
+                  className="h-3 w-3 cursor-pointer"
                   onClick={() => clearFilter('search')}
                 />
               </Badge>
@@ -132,26 +134,27 @@ export function DashboardFilters({
             {filters.dateRange && filters.dateRange !== 'all' && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 Период: {filters.dateRange}
-                <X 
-                  className="h-3 w-3 cursor-pointer" 
+                <X
+                  className="h-3 w-3 cursor-pointer"
                   onClick={() => clearFilter('dateRange')}
                 />
               </Badge>
             )}
             {filters.groupId && (
               <Badge variant="secondary" className="flex items-center gap-1">
-                Группа: {groups.find(g => g.id === filters.groupId)?.name}
-                <X 
-                  className="h-3 w-3 cursor-pointer" 
+                Группа: {groups.find((g) => g.id === filters.groupId)?.name}
+                <X
+                  className="h-3 w-3 cursor-pointer"
                   onClick={() => clearFilter('groupId')}
                 />
               </Badge>
             )}
             {filters.keywordId && (
               <Badge variant="secondary" className="flex items-center gap-1">
-                Ключевое слово: {keywords.find(k => k.id === filters.keywordId)?.word}
-                <X 
-                  className="h-3 w-3 cursor-pointer" 
+                Ключевое слово:{' '}
+                {keywords.find((k) => k.id === filters.keywordId)?.word}
+                <X
+                  className="h-3 w-3 cursor-pointer"
                   onClick={() => clearFilter('keywordId')}
                 />
               </Badge>
@@ -159,8 +162,8 @@ export function DashboardFilters({
             {filters.status && filters.status !== 'all' && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 Статус: {filters.status}
-                <X 
-                  className="h-3 w-3 cursor-pointer" 
+                <X
+                  className="h-3 w-3 cursor-pointer"
                   onClick={() => clearFilter('status')}
                 />
               </Badge>
@@ -177,9 +180,11 @@ export function DashboardFilters({
                 <Calendar className="h-4 w-4" />
                 Период
               </label>
-              <Select 
-                value={filters.dateRange} 
-                onValueChange={(value) => handleFilterChange('dateRange', value)}
+              <Select
+                value={filters.dateRange}
+                onValueChange={(value) =>
+                  handleFilterChange('dateRange', value)
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Выберите период" />
@@ -201,9 +206,14 @@ export function DashboardFilters({
                 <Users className="h-4 w-4" />
                 Группа
               </label>
-              <Select 
-                value={filters.groupId?.toString() || 'all'} 
-                onValueChange={(value) => handleFilterChange('groupId', value === 'all' ? null : parseInt(value))}
+              <Select
+                value={filters.groupId?.toString() || 'all'}
+                onValueChange={(value) =>
+                  handleFilterChange(
+                    'groupId',
+                    value === 'all' ? null : parseInt(value)
+                  )
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Выберите группу" />
@@ -225,9 +235,14 @@ export function DashboardFilters({
                 <Target className="h-4 w-4" />
                 Ключевое слово
               </label>
-              <Select 
-                value={filters.keywordId?.toString() || 'all'} 
-                onValueChange={(value) => handleFilterChange('keywordId', value === 'all' ? null : parseInt(value))}
+              <Select
+                value={filters.keywordId?.toString() || 'all'}
+                onValueChange={(value) =>
+                  handleFilterChange(
+                    'keywordId',
+                    value === 'all' ? null : parseInt(value)
+                  )
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Выберите ключевое слово" />
@@ -245,9 +260,11 @@ export function DashboardFilters({
 
             {/* Статус */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Статус</label>
-              <Select 
-                value={filters.status} 
+              <label className="text-sm font-medium text-slate-700">
+                Статус
+              </label>
+              <Select
+                value={filters.status}
                 onValueChange={(value) => handleFilterChange('status', value)}
               >
                 <SelectTrigger>
@@ -264,9 +281,11 @@ export function DashboardFilters({
 
             {/* Сортировка */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Сортировка</label>
-              <Select 
-                value={filters.sortBy} 
+              <label className="text-sm font-medium text-slate-700">
+                Сортировка
+              </label>
+              <Select
+                value={filters.sortBy}
                 onValueChange={(value) => handleFilterChange('sortBy', value)}
               >
                 <SelectTrigger>
@@ -283,10 +302,14 @@ export function DashboardFilters({
 
             {/* Порядок сортировки */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Порядок</label>
-              <Select 
-                value={filters.sortOrder} 
-                onValueChange={(value) => handleFilterChange('sortOrder', value as 'asc' | 'desc')}
+              <label className="text-sm font-medium text-slate-700">
+                Порядок
+              </label>
+              <Select
+                value={filters.sortOrder}
+                onValueChange={(value) =>
+                  handleFilterChange('sortOrder', value as 'asc' | 'desc')
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -315,7 +338,7 @@ export function useDashboardFilters() {
     keywordId: null,
     status: 'all',
     sortBy: 'date',
-    sortOrder: 'desc'
+    sortOrder: 'desc',
   })
 
   const resetFilters = () => {
@@ -326,13 +349,13 @@ export function useDashboardFilters() {
       keywordId: null,
       status: 'all',
       sortBy: 'date',
-      sortOrder: 'desc'
+      sortOrder: 'desc',
     })
   }
 
   return {
     filters,
     setFilters,
-    resetFilters
+    resetFilters,
   }
-} 
+}

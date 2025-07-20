@@ -9,13 +9,13 @@ import { useGlobalStats, useDashboardStats } from '@/hooks/use-stats'
 import { useDashboardData } from '../hooks/use-dashboard-data'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import type { KeywordResponse, VKGroupResponse } from '@/types/api'
-import { 
-  Users, 
-  MessageSquare, 
-  KeyRound, 
-  Activity, 
-  TrendingUp, 
-  Clock, 
+import {
+  Users,
+  MessageSquare,
+  KeyRound,
+  Activity,
+  TrendingUp,
+  Clock,
   Target,
   RefreshCw,
   AlertCircle,
@@ -25,26 +25,26 @@ import {
   Filter,
   Download,
   Eye,
-  Search
+  Search,
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { 
-  LineChart, 
-  Line, 
-  AreaChart, 
-  Area, 
-  BarChart, 
-  Bar, 
-  PieChart, 
-  Pie, 
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
   Cell,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer 
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
 } from 'recharts'
 
 /**
@@ -53,33 +53,47 @@ import {
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [timeRange, setTimeRange] = useState('7d')
-  
-  const { data: globalStats, isLoading: globalLoading, error: globalError } = useGlobalStats()
-  const { data: dashboardStats, isLoading: dashboardLoading, error: dashboardError } = useDashboardStats()
+
+  const {
+    data: globalStats,
+    isLoading: globalLoading,
+    error: globalError,
+  } = useGlobalStats()
+  const {
+    data: dashboardStats,
+    isLoading: dashboardLoading,
+    error: dashboardError,
+  } = useDashboardStats()
 
   const isLoading = globalLoading || dashboardLoading
   const error = globalError || dashboardError
 
   // Используем реальные данные из API
   const { data: dashboardData } = useDashboardData()
-  
+
   // Данные для графиков активности
   const activityData = dashboardData?.activityData || []
-  
+
   // Данные для круговой диаграммы ключевых слов
-  const keywordData = dashboardData?.topKeywords?.map((keyword: KeywordResponse, index: number) => ({
-    name: keyword.word,
-    value: keyword.total_matches,
-    color: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'][index % 5]
-  })) || []
-  
+  const keywordData =
+    dashboardData?.topKeywords?.map(
+      (keyword: KeywordResponse, index: number) => ({
+        name: keyword.word,
+        value: keyword.total_matches,
+        color: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'][
+          index % 5
+        ],
+      })
+    ) || []
+
   // Данные для производительности групп
-  const groupPerformanceData = dashboardData?.topGroups?.map((group: VKGroupResponse) => ({
-    name: group.name,
-    posts: group.total_posts_parsed,
-    comments: group.total_comments_found,
-    matches: group.total_comments_found // Используем общее количество комментариев как приближение
-  })) || []
+  const groupPerformanceData =
+    dashboardData?.topGroups?.map((group: VKGroupResponse) => ({
+      name: group.name,
+      posts: group.total_posts_parsed,
+      comments: group.total_comments_found,
+      matches: group.total_comments_found, // Используем общее количество комментариев как приближение
+    })) || []
 
   if (isLoading) {
     return (
@@ -101,12 +115,10 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <p className="text-slate-600 mb-4">
-              Не удалось загрузить данные дашборда. Попробуйте обновить страницу.
+              Не удалось загрузить данные дашборда. Попробуйте обновить
+              страницу.
             </p>
-            <Button 
-              onClick={() => window.location.reload()} 
-              className="w-full"
-            >
+            <Button onClick={() => window.location.reload()} className="w-full">
               <RefreshCw className="h-4 w-4 mr-2" />
               Обновить
             </Button>
@@ -179,24 +191,40 @@ export default function DashboardPage() {
       </div>
 
       {/* Вкладки с детальной информацией */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4"
+      >
         <TabsList className="flex w-full overflow-x-auto">
-          <TabsTrigger value="overview" className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3">
+          <TabsTrigger
+            value="overview"
+            className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3"
+          >
             <span className="hidden lg:inline">Обзор</span>
             <span className="hidden sm:inline lg:hidden">Обзор</span>
             <span className="sm:hidden">Обзор</span>
           </TabsTrigger>
-          <TabsTrigger value="activity" className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3">
+          <TabsTrigger
+            value="activity"
+            className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3"
+          >
             <span className="hidden lg:inline">Активность</span>
             <span className="hidden sm:inline lg:hidden">Актив</span>
             <span className="sm:hidden">Актив</span>
           </TabsTrigger>
-          <TabsTrigger value="groups" className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3">
+          <TabsTrigger
+            value="groups"
+            className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3"
+          >
             <span className="hidden lg:inline">Группы</span>
             <span className="hidden sm:inline lg:hidden">Группы</span>
             <span className="sm:hidden">Группы</span>
           </TabsTrigger>
-          <TabsTrigger value="keywords" className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3">
+          <TabsTrigger
+            value="keywords"
+            className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3"
+          >
             <span className="hidden lg:inline">Ключевые слова</span>
             <span className="hidden sm:inline lg:hidden">Ключи</span>
             <span className="sm:hidden">Ключи</span>
@@ -220,32 +248,36 @@ export default function DashboardPage() {
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={activityData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date" 
-                      tickFormatter={(value) => format(new Date(value), 'dd.MM')}
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(value) =>
+                        format(new Date(value), 'dd.MM')
+                      }
                     />
                     <YAxis />
-                    <Tooltip 
-                      labelFormatter={(value) => format(new Date(value), 'dd MMM yyyy')}
+                    <Tooltip
+                      labelFormatter={(value) =>
+                        format(new Date(value), 'dd MMM yyyy')
+                      }
                       formatter={(value, name) => [
-                        value, 
-                        name === 'comments' ? 'Комментарии' : 'Совпадения'
+                        value,
+                        name === 'comments' ? 'Комментарии' : 'Совпадения',
                       ]}
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="comments" 
-                      stackId="1" 
-                      stroke="#3B82F6" 
-                      fill="#3B82F6" 
+                    <Area
+                      type="monotone"
+                      dataKey="comments"
+                      stackId="1"
+                      stroke="#3B82F6"
+                      fill="#3B82F6"
                       fillOpacity={0.3}
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="matches" 
-                      stackId="1" 
-                      stroke="#10B981" 
-                      fill="#10B981" 
+                    <Area
+                      type="monotone"
+                      dataKey="matches"
+                      stackId="1"
+                      stroke="#10B981"
+                      fill="#10B981"
                       fillOpacity={0.3}
                     />
                   </AreaChart>
@@ -269,7 +301,9 @@ export default function DashboardPage() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) =>
+                        `${name} ${(percent * 100).toFixed(0)}%`
+                      }
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
@@ -278,7 +312,12 @@ export default function DashboardPage() {
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [`${value} совпадений`, 'Количество']} />
+                    <Tooltip
+                      formatter={(value) => [
+                        `${value} совпадений`,
+                        'Количество',
+                      ]}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -295,24 +334,37 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {dashboardStats?.recent_activity?.slice(0, 5).map((activity) => (
-                  <div key={activity.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
-                    <div className="flex-shrink-0">
-                      {activity.type === 'parse' && <RefreshCw className="h-4 w-4 text-blue-500" />}
-                      {activity.type === 'comment' && <MessageSquare className="h-4 w-4 text-green-500" />}
-                      {activity.type === 'group' && <Users className="h-4 w-4 text-purple-500" />}
+                {dashboardStats?.recent_activity
+                  ?.slice(0, 5)
+                  .map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-slate-50"
+                    >
+                      <div className="flex-shrink-0">
+                        {activity.type === 'parse' && (
+                          <RefreshCw className="h-4 w-4 text-blue-500" />
+                        )}
+                        {activity.type === 'comment' && (
+                          <MessageSquare className="h-4 w-4 text-green-500" />
+                        )}
+                        {activity.type === 'group' && (
+                          <Users className="h-4 w-4 text-purple-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-900">
+                          {activity.message}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {formatDistanceToNow(new Date(activity.timestamp), {
+                            addSuffix: true,
+                            locale: ru,
+                          })}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900">{activity.message}</p>
-                      <p className="text-xs text-slate-500">
-                        {formatDistanceToNow(new Date(activity.timestamp), { 
-                          addSuffix: true, 
-                          locale: ru 
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </CardContent>
           </Card>
@@ -346,26 +398,30 @@ export default function DashboardPage() {
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={activityData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date" 
-                      tickFormatter={(value) => format(new Date(value), 'dd.MM')}
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(value) =>
+                        format(new Date(value), 'dd.MM')
+                      }
                     />
                     <YAxis />
-                    <Tooltip 
-                      labelFormatter={(value) => format(new Date(value), 'dd MMM yyyy')}
+                    <Tooltip
+                      labelFormatter={(value) =>
+                        format(new Date(value), 'dd MMM yyyy')
+                      }
                     />
                     <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="comments" 
-                      stroke="#3B82F6" 
+                    <Line
+                      type="monotone"
+                      dataKey="comments"
+                      stroke="#3B82F6"
                       strokeWidth={2}
                       name="Комментарии"
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="matches" 
-                      stroke="#10B981" 
+                    <Line
+                      type="monotone"
+                      dataKey="matches"
+                      stroke="#10B981"
                       strokeWidth={2}
                       name="Совпадения"
                     />
@@ -387,28 +443,40 @@ export default function DashboardPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-slate-600">Сегодня</span>
                     <div className="text-right">
-                      <div className="font-semibold">{dashboardStats?.today_comments || 0}</div>
+                      <div className="font-semibold">
+                        {dashboardStats?.today_comments || 0}
+                      </div>
                       <div className="text-xs text-slate-500">комментариев</div>
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-slate-600">За неделю</span>
                     <div className="text-right">
-                      <div className="font-semibold">{dashboardStats?.week_comments || 0}</div>
+                      <div className="font-semibold">
+                        {dashboardStats?.week_comments || 0}
+                      </div>
                       <div className="text-xs text-slate-500">комментариев</div>
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">Совпадения сегодня</span>
+                    <span className="text-sm text-slate-600">
+                      Совпадения сегодня
+                    </span>
                     <div className="text-right">
-                      <div className="font-semibold text-green-600">{dashboardStats?.today_matches || 0}</div>
+                      <div className="font-semibold text-green-600">
+                        {dashboardStats?.today_matches || 0}
+                      </div>
                       <div className="text-xs text-slate-500">найдено</div>
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">Совпадения за неделю</span>
+                    <span className="text-sm text-slate-600">
+                      Совпадения за неделю
+                    </span>
                     <div className="text-right">
-                      <div className="font-semibold text-green-600">{dashboardStats?.week_matches || 0}</div>
+                      <div className="font-semibold text-green-600">
+                        {dashboardStats?.week_matches || 0}
+                      </div>
                       <div className="text-xs text-slate-500">найдено</div>
                     </div>
                   </div>
@@ -485,10 +553,13 @@ export default function DashboardPage() {
               <CardContent>
                 <div className="space-y-3">
                   {keywordData.map((keyword: any, index: number) => (
-                    <div key={keyword.name} className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
+                    <div
+                      key={keyword.name}
+                      className="flex items-center justify-between p-3 rounded-lg bg-slate-50"
+                    >
                       <div className="flex items-center gap-3">
-                        <div 
-                          className="w-4 h-4 rounded-full" 
+                        <div
+                          className="w-4 h-4 rounded-full"
                           style={{ backgroundColor: keyword.color }}
                         />
                         <span className="font-medium">{keyword.name}</span>
@@ -521,18 +592,27 @@ interface MetricCardProps {
   description: string
 }
 
-function MetricCard({ title, value, icon: Icon, trend, trendUp, description }: MetricCardProps) {
+function MetricCard({
+  title,
+  value,
+  icon: Icon,
+  trend,
+  trendUp,
+  description,
+}: MetricCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-slate-600">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-slate-600">
+          {title}
+        </CardTitle>
         <Icon className="h-4 w-4 text-slate-400" />
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value.toLocaleString()}</div>
         <div className="flex items-center gap-2 mt-1">
-          <Badge 
-            variant={trendUp ? 'default' : 'destructive'} 
+          <Badge
+            variant={trendUp ? 'default' : 'destructive'}
             className="text-xs"
           >
             {trend}

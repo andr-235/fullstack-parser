@@ -13,19 +13,17 @@ export default function DashboardRoute() {
 }
 ```
 
-
-
 ## 🎨 Использование отдельных компонентов
 
 ### Виджеты
 
 ```tsx
-import { 
-  QuickStatsWidget, 
+import {
+  QuickStatsWidget,
   SystemStatusWidget,
   ParsingProgressWidget,
   RecentActivityWidget,
-  QuickActionsWidget 
+  QuickActionsWidget,
 } from '@/features/dashboard/ui/DashboardWidgets'
 import { Users, MessageSquare, Target } from 'lucide-react'
 
@@ -41,7 +39,7 @@ function MyDashboard() {
         icon={Users}
         description="Активных групп"
       />
-      
+
       <QuickStatsWidget
         title="Комментарии"
         value={1234}
@@ -50,7 +48,7 @@ function MyDashboard() {
         icon={MessageSquare}
         description="За все время"
       />
-      
+
       <QuickStatsWidget
         title="Совпадения"
         value={89}
@@ -85,15 +83,15 @@ function MyDashboard() {
             type: 'parse',
             message: 'Завершен парсинг группы "Bitcoin Club"',
             timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-            status: 'success'
+            status: 'success',
           },
           {
             id: 2,
             type: 'comment',
             message: 'Найдено 23 новых комментария с ключевыми словами',
             timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-            status: 'success'
-          }
+            status: 'success',
+          },
         ]}
       />
 
@@ -107,21 +105,24 @@ function MyDashboard() {
 ### Фильтры
 
 ```tsx
-import { DashboardFilters, useDashboardFilters } from '@/features/dashboard/ui/DashboardFilters'
+import {
+  DashboardFilters,
+  useDashboardFilters,
+} from '@/features/dashboard/ui/DashboardFilters'
 
 function MyFilteredDashboard() {
   const { filters, setFilters, resetFilters } = useDashboardFilters()
-  
+
   const groups = [
     { id: 1, name: 'Crypto News' },
     { id: 2, name: 'Bitcoin Club' },
-    { id: 3, name: 'NFT World' }
+    { id: 3, name: 'NFT World' },
   ]
-  
+
   const keywords = [
     { id: 1, word: 'Криптовалюта' },
     { id: 2, word: 'Биткоин' },
-    { id: 3, word: 'NFT' }
+    { id: 3, word: 'NFT' },
   ]
 
   return (
@@ -133,11 +134,9 @@ function MyFilteredDashboard() {
         groups={groups}
         keywords={keywords}
       />
-      
+
       {/* Отфильтрованный контент */}
-      <div>
-        {/* Ваш контент здесь */}
-      </div>
+      <div>{/* Ваш контент здесь */}</div>
     </div>
   )
 }
@@ -146,18 +145,18 @@ function MyFilteredDashboard() {
 ### Экспорт
 
 ```tsx
-import { DashboardExport, useDashboardExport } from '@/features/dashboard/ui/DashboardExport'
+import {
+  DashboardExport,
+  useDashboardExport,
+} from '@/features/dashboard/ui/DashboardExport'
 
 function MyExportableDashboard() {
   const { isExporting, handleExport } = useDashboardExport()
 
   return (
     <div className="space-y-6">
-      <DashboardExport
-        onExport={handleExport}
-        isExporting={isExporting}
-      />
-      
+      <DashboardExport onExport={handleExport} isExporting={isExporting} />
+
       {/* Остальной контент дашборда */}
     </div>
   )
@@ -194,7 +193,7 @@ function MyDataDrivenDashboard() {
           icon={Users}
           description="Активных групп"
         />
-        
+
         <QuickStatsWidget
           title="Комментарии"
           value={data.globalStats?.total_comments || 0}
@@ -203,7 +202,7 @@ function MyDataDrivenDashboard() {
           icon={MessageSquare}
           description="За все время"
         />
-        
+
         <QuickStatsWidget
           title="Ключевые слова"
           value={data.globalStats?.total_keywords || 0}
@@ -212,7 +211,7 @@ function MyDataDrivenDashboard() {
           icon={Target}
           description="Активных слов"
         />
-        
+
         <QuickStatsWidget
           title="Совпадения"
           value={data.globalStats?.comments_with_keywords || 0}
@@ -232,7 +231,9 @@ function MyDataDrivenDashboard() {
           <CardContent>
             {data.topGroups?.items?.slice(0, 5).map((group, index) => (
               <div key={group.id} className="flex justify-between p-2">
-                <span>{index + 1}. {group.name}</span>
+                <span>
+                  {index + 1}. {group.name}
+                </span>
                 <span>{group.total_comments_found} комментариев</span>
               </div>
             ))}
@@ -247,7 +248,9 @@ function MyDataDrivenDashboard() {
           <CardContent>
             {data.topKeywords?.items?.slice(0, 5).map((keyword, index) => (
               <div key={keyword.id} className="flex justify-between p-2">
-                <span>{index + 1}. {keyword.word}</span>
+                <span>
+                  {index + 1}. {keyword.word}
+                </span>
                 <span>{keyword.total_matches} совпадений</span>
               </div>
             ))}
@@ -313,7 +316,10 @@ export function CustomWidget({ title, data, icon: Icon }: CustomWidgetProps) {
       <CardContent>
         <div className="space-y-2">
           {data.map((item, index) => (
-            <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+            <div
+              key={index}
+              className="flex justify-between items-center p-2 bg-gray-50 rounded"
+            >
               <span>{item.name}</span>
               <Badge variant="secondary">{item.value}</Badge>
             </div>
@@ -339,10 +345,10 @@ module.exports = {
           warning: '#F59E0B',
           error: '#EF4444',
           purple: '#8B5CF6',
-        }
-      }
-    }
-  }
+        },
+      },
+    },
+  },
 }
 ```
 
@@ -354,22 +360,26 @@ module.exports = {
 // lib/api.ts
 export const api = {
   // Существующие методы...
-  
+
   // Новые методы для дашборда
   getActivityData: async (params: { timeRange: string }) => {
     const response = await fetch(`/api/activity?timeRange=${params.timeRange}`)
     return response.json()
   },
-  
+
   getTopGroups: async (params: { limit: number }) => {
-    const response = await fetch(`/api/groups?limit=${params.limit}&sort=comments`)
+    const response = await fetch(
+      `/api/groups?limit=${params.limit}&sort=comments`
+    )
     return response.json()
   },
-  
+
   getTopKeywords: async (params: { limit: number }) => {
-    const response = await fetch(`/api/keywords?limit=${params.limit}&sort=matches`)
+    const response = await fetch(
+      `/api/keywords?limit=${params.limit}&sort=matches`
+    )
     return response.json()
-  }
+  },
 }
 ```
 
@@ -379,20 +389,20 @@ export const api = {
 // hooks/use-dashboard-data.ts
 export function useDashboardData() {
   const queryClient = useQueryClient()
-  
+
   // Настройка кэширования
   const staleTime = 5 * 60 * 1000 // 5 минут
   const refetchInterval = 60 * 1000 // 1 минута
-  
+
   // Ваши хуки...
-  
+
   return {
     data,
     isLoading,
     error,
     refetch: () => {
       queryClient.invalidateQueries(['dashboard'])
-    }
+    },
   }
 }
 ```
@@ -409,7 +419,7 @@ function ResponsiveDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Метрики */}
       </div>
-      
+
       {/* На мобильных - вертикальное расположение */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Виджеты */}
@@ -441,7 +451,7 @@ describe('QuickStatsWidget', () => {
         description="Активных групп"
       />
     )
-    
+
     expect(screen.getByText('Группы')).toBeInTheDocument()
     expect(screen.getByText('42')).toBeInTheDocument()
     expect(screen.getByText('+12%')).toBeInTheDocument()
@@ -473,4 +483,4 @@ function Dashboard() {
 }
 ```
 
-Этот пример демонстрирует полный спектр возможностей дашборда и показывает, как его можно интегрировать в ваше приложение. 
+Этот пример демонстрирует полный спектр возможностей дашборда и показывает, как его можно интегрировать в ваше приложение.

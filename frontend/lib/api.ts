@@ -317,9 +317,10 @@ class APIClient {
     } catch (error) {
       // Fallback - генерируем моковые данные на основе реальной статистики
       const globalStats = await this.getGlobalStats()
-      const days = params.timeRange === '7d' ? 7 : params.timeRange === '30d' ? 30 : 1
+      const days =
+        params.timeRange === '7d' ? 7 : params.timeRange === '30d' ? 30 : 1
       const activityData = []
-      
+
       for (let i = days - 1; i >= 0; i--) {
         const date = new Date()
         date.setDate(date.getDate() - i)
@@ -329,7 +330,7 @@ class APIClient {
           matches: Math.floor(Math.random() * 30) + 5,
         })
       }
-      
+
       return activityData
     }
   }
@@ -341,7 +342,9 @@ class APIClient {
     } catch (error) {
       // Fallback - получаем группы и сортируем по комментариям
       const groups = await this.getGroups({ limit: params.limit })
-      return groups.items.sort((a, b) => b.total_comments_found - a.total_comments_found)
+      return groups.items.sort(
+        (a, b) => b.total_comments_found - a.total_comments_found
+      )
     }
   }
 
@@ -358,7 +361,9 @@ class APIClient {
 
   async getRecentComments(params: { limit: number }) {
     try {
-      const { data } = await this.client.get('/stats/recent-comments', { params })
+      const { data } = await this.client.get('/stats/recent-comments', {
+        params,
+      })
       return data
     } catch (error) {
       // Fallback - получаем последние комментарии
@@ -378,7 +383,7 @@ class APIClient {
         status: 'healthy',
         message: 'Система работает нормально',
         lastCheck: new Date().toISOString(),
-        uptime: 'Неизвестно'
+        uptime: 'Неизвестно',
       }
     }
   }
@@ -395,24 +400,31 @@ class APIClient {
         progress: parserState.task?.progress || 0,
         totalItems: 0,
         processedItems: parserState.task?.posts_processed || 0,
-        estimatedTime: 'Неизвестно'
+        estimatedTime: 'Неизвестно',
       }
     }
   }
 
   async getRecentActivity(params: { limit: number }) {
     try {
-      const { data } = await this.client.get('/stats/recent-activity', { params })
+      const { data } = await this.client.get('/stats/recent-activity', {
+        params,
+      })
       return data
     } catch (error) {
       // Fallback - получаем последние задачи парсинга
       const tasks = await this.getRecentParseTasks({ limit: params.limit })
-      return tasks.items.map(task => ({
+      return tasks.items.map((task) => ({
         id: task.task_id,
         type: 'parse' as const,
         message: `Парсинг группы ${task.group_name || task.group_id}`,
         timestamp: task.started_at,
-        status: task.status === 'completed' ? 'success' : task.status === 'failed' ? 'error' : 'warning'
+        status:
+          task.status === 'completed'
+            ? 'success'
+            : task.status === 'failed'
+              ? 'error'
+              : 'warning',
       }))
     }
   }
@@ -445,22 +457,14 @@ class APIClient {
     return data
   }
 
-
-  async getAvailableGroupsForMonitoring(
-    params?: PaginationParams
-  ) {
-
+  async getAvailableGroupsForMonitoring(params?: PaginationParams) {
     const { data } = await this.client.get<
       PaginatedResponse<VKGroupMonitoring>
     >('/monitoring/groups/available', { params })
     return data
   }
 
-
-  async getActiveMonitoringGroups(
-    params?: PaginationParams
-  ) {
-
+  async getActiveMonitoringGroups(params?: PaginationParams) {
     const { data } = await this.client.get<
       PaginatedResponse<VKGroupMonitoring>
     >('/monitoring/groups/active', { params })
@@ -546,19 +550,24 @@ export const createQueryKey = {
 
   globalStats: () => ['stats', 'global'] as const,
   dashboardStats: () => ['stats', 'dashboard'] as const,
-  activityData: (timeRange: string) => ['stats', 'activity', timeRange] as const,
+  activityData: (timeRange: string) =>
+    ['stats', 'activity', timeRange] as const,
   topGroups: (limit: number) => ['stats', 'top-groups', limit] as const,
   topKeywords: (limit: number) => ['stats', 'top-keywords', limit] as const,
-  recentComments: (limit: number) => ['stats', 'recent-comments', limit] as const,
+  recentComments: (limit: number) =>
+    ['stats', 'recent-comments', limit] as const,
   systemStatus: () => ['system', 'status'] as const,
   parsingProgress: () => ['parser', 'progress'] as const,
-  recentActivity: (limit: number) => ['stats', 'recent-activity', limit] as const,
+  recentActivity: (limit: number) =>
+    ['stats', 'recent-activity', limit] as const,
 
   monitoringStats: () => ['monitoring', 'stats'] as const,
   monitoringGroups: (params?: any) => ['monitoring', 'groups', params] as const,
 
-  availableGroupsForMonitoring: (params?: any) => ['monitoring', 'groups', 'available', params] as const,
-  activeMonitoringGroups: (params?: any) => ['monitoring', 'groups', 'active', params] as const,
+  availableGroupsForMonitoring: (params?: any) =>
+    ['monitoring', 'groups', 'available', params] as const,
+  activeMonitoringGroups: (params?: any) =>
+    ['monitoring', 'groups', 'active', params] as const,
 
   monitoringGroup: (id: number) => ['monitoring', 'groups', id] as const,
 }

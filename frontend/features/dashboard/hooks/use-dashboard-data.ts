@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { api, createQueryKey } from '@/lib/api'
 import { useGlobalStats, useDashboardStats } from '@/hooks/use-stats'
-import type { 
-  GlobalStats, 
-  DashboardStats, 
-  VKGroupResponse, 
+import type {
+  GlobalStats,
+  DashboardStats,
+  VKGroupResponse,
   KeywordResponse,
-  VKCommentResponse 
+  VKCommentResponse,
 } from '@/types/api'
 
 /**
@@ -115,9 +115,9 @@ export function useDashboardData() {
   const parsingProgress = useParsingProgress()
   const recentActivity = useRecentActivity(5)
 
-  const isLoading = 
-    globalStats.isLoading || 
-    dashboardStats.isLoading || 
+  const isLoading =
+    globalStats.isLoading ||
+    dashboardStats.isLoading ||
     activityData.isLoading ||
     topGroups.isLoading ||
     topKeywords.isLoading ||
@@ -126,9 +126,9 @@ export function useDashboardData() {
     parsingProgress.isLoading ||
     recentActivity.isLoading
 
-  const error = 
-    globalStats.error || 
-    dashboardStats.error || 
+  const error =
+    globalStats.error ||
+    dashboardStats.error ||
     activityData.error ||
     topGroups.error ||
     topKeywords.error ||
@@ -161,6 +161,6 @@ export function useDashboardData() {
       systemStatus.refetch()
       parsingProgress.refetch()
       recentActivity.refetch()
-    }
+    },
   }
-} 
+}
