@@ -5,24 +5,17 @@
 FROM node:20-alpine
 
 # Install pnpm and dumb-init
-RUN npm install -g pnpm@10.12.4
+RUN npm install -g pnpm@10.13.1
 RUN apk add --no-cache dumb-init wget
 
-# Create app directory and set permissions
+# Create app directory
 WORKDIR /app
-
-# Create nextjs user for better security
-RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 
 # Copy package files only
 COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies
+# Install dependencies globally (will be overridden by volume mount)
 RUN pnpm install --frozen-lockfile
-
-# Set proper permissions
-RUN chown -R nextjs:nextjs /app
-USER nextjs
 
 # Expose port
 EXPOSE 3000
@@ -35,5 +28,5 @@ ENV PORT=3000 \
     WATCHPACK_POLLING=true \
     CHOKIDAR_USEPOLLING=true
 
-# Start development server with proper host binding
-CMD ["pnpm", "dev", "--hostname", "0.0.0.0"] 
+# Start development server with Turbopack for faster builds
+CMD ["pnpm", "dev", "--hostname", "0.0.0.0", "--turbo"] 

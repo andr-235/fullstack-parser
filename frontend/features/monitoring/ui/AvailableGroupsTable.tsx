@@ -10,56 +10,43 @@ import {
   TableRow,
   Button,
   Badge,
-  Switch,
 } from '@/shared/ui'
 import {
   useEnableGroupMonitoring,
-  useDisableGroupMonitoring,
   useRunGroupMonitoring,
-  useUpdateGroupMonitoring,
 } from '@/hooks/use-monitoring'
 import {
   Play,
   Settings,
+  Plus,
   Clock,
-  CheckCircle,
-  AlertTriangle,
-  XCircle,
 } from 'lucide-react'
-import { formatDistanceToNow, format } from 'date-fns'
-import { ru } from 'date-fns/locale'
 import type { VKGroupMonitoring } from '@/types/api'
 import MonitoringSettings from './MonitoringSettings'
 
-interface GroupsMonitoringTableProps {
+interface AvailableGroupsTableProps {
   groups: VKGroupMonitoring[]
 }
 
-export default function GroupsMonitoringTable({
+export default function AvailableGroupsTable({
   groups,
-}: GroupsMonitoringTableProps) {
+}: AvailableGroupsTableProps) {
   const [settingsGroup, setSettingsGroup] = useState<VKGroupMonitoring | null>(
     null
   )
   const [showSettings, setShowSettings] = useState(false)
 
   const enableMutation = useEnableGroupMonitoring()
-  const disableMutation = useDisableGroupMonitoring()
   const runMutation = useRunGroupMonitoring()
-  const updateMutation = useUpdateGroupMonitoring()
 
-  const handleToggleMonitoring = (group: VKGroupMonitoring) => {
+  const handleEnableMonitoring = (group: VKGroupMonitoring) => {
     // Используем setTimeout чтобы избежать setState во время рендеринга
     setTimeout(() => {
-      if (group.auto_monitoring_enabled) {
-        disableMutation.mutate(group.id)
-      } else {
-        enableMutation.mutate({
-          groupId: group.id,
-          intervalMinutes: 60,
-          priority: 5,
-        })
-      }
+      enableMutation.mutate({
+        groupId: group.id,
+        intervalMinutes: group.monitoring_interval_minutes,
+        priority: group.monitoring_priority,
+      })
     }, 0)
   }
 
@@ -78,68 +65,20 @@ export default function GroupsMonitoringTable({
     }, 0)
   }
 
-  const getStatusIcon = (group: VKGroupMonitoring) => {
-    if (!group.auto_monitoring_enabled) {
-      return <XCircle className="h-4 w-4 text-slate-400" />
-    }
-
-    if (group.last_monitoring_error) {
-      return <AlertTriangle className="h-4 w-4 text-red-400" />
-    }
-
+  const getLastActivityTime = (group: VKGroupMonitoring) => {
     if (group.last_monitoring_success) {
-      return <CheckCircle className="h-4 w-4 text-green-400" />
+      return `Последний запуск: ${new Date(group.last_monitoring_success).toLocaleDateString('ru-RU')}`
     }
-
-    return <Clock className="h-4 w-4 text-yellow-400" />
-  }
-
-  const getStatusText = (group: VKGroupMonitoring) => {
-    if (!group.auto_monitoring_enabled) {
-      return 'Отключен'
-    }
-
-    if (group.last_monitoring_error) {
-      return 'Ошибка'
-    }
-
-    if (group.last_monitoring_success) {
-      return 'Работает'
-    }
-
-    return 'Ожидает'
-  }
-
-  const getNextMonitoringTime = (group: VKGroupMonitoring) => {
-    if (!group.next_monitoring_at || group.next_monitoring_at === 'null') {
-      return 'Не запланировано'
-    }
-
-    return formatDistanceToNow(new Date(group.next_monitoring_at), {
-      addSuffix: true,
-      locale: ru,
-    })
-  }
-
-  const getLastMonitoringTime = (group: VKGroupMonitoring) => {
-    if (group.last_monitoring_success) {
-      return formatDistanceToNow(new Date(group.last_monitoring_success), {
-        addSuffix: true,
-        locale: ru,
-      })
-    }
-
-    if (group.last_monitoring_error) {
-      return 'Ошибка'
-    }
-
-    return 'Никогда'
+    return 'Никогда не запускался'
   }
 
   if (groups.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-slate-400">Нет групп с мониторингом</p>
+        <p className="text-slate-400">Нет групп, доступных для мониторинга</p>
+        <p className="text-sm text-slate-500 mt-2">
+          Добавьте группы в разделе "Группы" для начала мониторинга
+        </p>
       </div>
     )
   }
@@ -152,17 +91,14 @@ export default function GroupsMonitoringTable({
             <TableRow>
               <TableHead>Группа</TableHead>
               <TableHead>Статус</TableHead>
-              <TableHead>Приоритет</TableHead>
-              <TableHead>Интервал</TableHead>
-              <TableHead>Последний запуск</TableHead>
-              <TableHead>Следующий запуск</TableHead>
+              <TableHead>Последняя активность</TableHead>
               <TableHead>Запусков</TableHead>
               <TableHead className="text-right">Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {groups.map((group, index) => (
-              <TableRow key={group.id || `group-${index}`}>
+              <TableRow key={group.id || `available-group-${index}`}>
                 <TableCell>
                   <div>
                     <div className="font-medium">{group.name}</div>
@@ -172,43 +108,21 @@ export default function GroupsMonitoringTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(group)}
-                    <span className="text-sm">{getStatusText(group)}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">
-                    {group.monitoring_priority}/10
+                  <Badge variant="secondary" className="bg-slate-600">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Доступна
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <span className="text-sm">
-                    {group.monitoring_interval_minutes} мин
-                  </span>
-                </TableCell>
-                <TableCell>
                   <span className="text-sm text-slate-400">
-                    {getLastMonitoringTime(group)}
+                    {getLastActivityTime(group)}
                   </span>
                 </TableCell>
                 <TableCell>
-                  <span className="text-sm text-slate-400">
-                    {getNextMonitoringTime(group)}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm">{group.monitoring_runs_count}</span>
+                  <span className="text-sm">{group.monitoring_runs_count || 0}</span>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center gap-2 justify-end">
-                    <Switch
-                      checked={group.auto_monitoring_enabled}
-                      onCheckedChange={() => handleToggleMonitoring(group)}
-                      disabled={
-                        enableMutation.isPending || disableMutation.isPending
-                      }
-                    />
                     <Button
                       size="sm"
                       variant="outline"
@@ -223,6 +137,15 @@ export default function GroupsMonitoringTable({
                       onClick={() => handleOpenSettings(group)}
                     >
                       <Settings className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleEnableMonitoring(group)}
+                      disabled={enableMutation.isPending}
+                      className="flex items-center gap-1"
+                    >
+                      <Plus className="h-3 w-3" />
+                      {enableMutation.isPending ? 'Включение...' : 'Включить'}
                     </Button>
                   </div>
                 </TableCell>
@@ -241,9 +164,10 @@ export default function GroupsMonitoringTable({
           onSave={(updateData) => {
             // Используем setTimeout чтобы избежать setState во время рендеринга
             setTimeout(() => {
-              updateMutation.mutate({
+              enableMutation.mutate({
                 groupId: settingsGroup.id,
-                updateData,
+                intervalMinutes: updateData.interval_minutes,
+                priority: updateData.priority,
               })
               setShowSettings(false)
             }, 0)
@@ -252,4 +176,4 @@ export default function GroupsMonitoringTable({
       )}
     </>
   )
-}
+} 

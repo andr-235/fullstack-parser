@@ -5,7 +5,7 @@ Database configuration для VK Comments Parser
 from functools import lru_cache
 from typing import AsyncGenerator
 
-from sqlalchemy import MetaData
+from sqlalchemy import MetaData, text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -81,14 +81,14 @@ async def init_db() -> None:
         try:
             # Проверяем подключение без создания таблиц
             async with async_engine.begin() as conn:
-                await conn.execute("SELECT 1")
+                await conn.execute(text("SELECT 1"))
             # Создаем таблицы только если их нет (lazy creation)
             async with async_engine.begin() as conn:
                 result = await conn.execute(
-                    """
-                    SELECT EXISTS (SELECT FROM information_schema.tables\n"
-                    "WHERE table_schema = 'public' AND table_name = 'vk_groups')"
-                    """
+                    text("""
+                    SELECT EXISTS (SELECT FROM information_schema.tables
+                    WHERE table_schema = 'public' AND table_name = 'vk_groups')
+                    """)
                 )
                 tables_exist = result.scalar()
                 if not tables_exist:

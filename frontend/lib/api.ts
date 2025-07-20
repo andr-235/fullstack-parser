@@ -337,6 +337,24 @@ class APIClient {
     return data
   }
 
+  async getAvailableGroupsForMonitoring(
+    params?: PaginationParams
+  ) {
+    const { data } = await this.client.get<
+      PaginatedResponse<VKGroupMonitoring>
+    >('/monitoring/groups/available', { params })
+    return data
+  }
+
+  async getActiveMonitoringGroups(
+    params?: PaginationParams
+  ) {
+    const { data } = await this.client.get<
+      PaginatedResponse<VKGroupMonitoring>
+    >('/monitoring/groups/active', { params })
+    return data
+  }
+
   async enableGroupMonitoring(
     groupId: number,
     intervalMinutes: number = 60,
@@ -419,5 +437,7 @@ export const createQueryKey = {
 
   monitoringStats: () => ['monitoring', 'stats'] as const,
   monitoringGroups: (params?: any) => ['monitoring', 'groups', params] as const,
+  availableGroupsForMonitoring: (params?: any) => ['monitoring', 'groups', 'available', params] as const,
+  activeMonitoringGroups: (params?: any) => ['monitoring', 'groups', 'active', params] as const,
   monitoringGroup: (id: number) => ['monitoring', 'groups', id] as const,
 }

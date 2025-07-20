@@ -119,9 +119,13 @@ class RedisParserManager:
         """Retrieves the current parser state from Redis."""
         r = await self._get_redis()
         current_task_id_raw = await r.get("parser:current_task_id")
-        current_task_id = (
-            current_task_id_raw.decode() if current_task_id_raw else None
-        )
+        current_task_id = None
+        
+        if current_task_id_raw:
+            if isinstance(current_task_id_raw, bytes):
+                current_task_id = current_task_id_raw.decode()
+            else:
+                current_task_id = str(current_task_id_raw)
 
         if not current_task_id:
             return ParserState(status="stopped", task=None)
@@ -206,7 +210,12 @@ class RedisParserManager:
 
             if not task_data:
                 task_json_raw = await r.get(key)
-                task_json = task_json_raw.decode() if task_json_raw else None
+                task_json = None
+                if task_json_raw:
+                    if isinstance(task_json_raw, bytes):
+                        task_json = task_json_raw.decode()
+                    else:
+                        task_json = str(task_json_raw)
                 if task_json:
                     try:
                         task_data = json.loads(task_json)

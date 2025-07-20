@@ -342,8 +342,12 @@ class ParserService:
         return list(result.scalars().all())
 
     async def _get_or_create_post(self, group: VKGroup, post_data) -> VKPost:
-        # Теперь post_data может быть объектом VKBottle, а не dict
-        vk_id = getattr(post_data, "id", None)
+        # post_data теперь словарь из VK API
+        vk_id = post_data.get("id")
+        if vk_id is None:
+            logger.error(f"Post data missing 'id' field: {post_data}")
+            raise ValueError("Post data missing required 'id' field")
+            
         result = await self.db.execute(
             select(VKPost).where(
                 VKPost.vk_id == vk_id, VKPost.group_id == group.id
@@ -351,13 +355,14 @@ class ParserService:
         )
         post = result.scalar_one_or_none()
         if post:
+            # Обновляем существующий пост
             for field in [
                 "likes_count",
                 "reposts_count",
                 "comments_count",
                 "views_count",
             ]:
-                # Для likes, reposts, comments, views — пробуем получить через атрибут, если нет — 0
+                # Для likes, reposts, comments, views — получаем из словаря
                 setattr(
                     post,
                     field,
@@ -366,7 +371,7 @@ class ParserService:
                         field[:-6] if field.endswith("_count") else field,
                     ),
                 )
-            date_value = getattr(post_data, "date", None)
+            date_value = post_data.get("date")
             if isinstance(date_value, datetime):
                 post.updated_at = date_value.replace(tzinfo=None)
             elif isinstance(date_value, (int, float)):
@@ -380,7 +385,8 @@ class ParserService:
                 post.updated_at = None
             return post
 
-        date_value = getattr(post_data, "date", None)
+        # Создаем новый пост
+        date_value = post_data.get("date")
         if isinstance(date_value, datetime):
             published_at = date_value.replace(tzinfo=None)
             updated_at = date_value.replace(tzinfo=None)
@@ -398,10 +404,10 @@ class ParserService:
             updated_at = None
 
         new_post = VKPost(
-            vk_id=getattr(post_data, "id", None),
-            vk_owner_id=getattr(post_data, "owner_id", None),
+            vk_id=post_data.get("id"),
+            vk_owner_id=post_data.get("owner_id"),
             group_id=group.id,
-            text=getattr(post_data, "text", ""),
+            text=post_data.get("text", ""),
             likes_count=self._get_nested_count(post_data, "likes"),
             reposts_count=self._get_nested_count(post_data, "reposts"),
             comments_count=self._get_nested_count(post_data, "comments"),
@@ -435,7 +441,7 @@ class ParserService:
         for comment_data in comments:
             try:
                 if not force_reparse:
-                    comment_vk_id = getattr(comment_data, "id", None)
+                    comment_vk_id = comment_data.get("id")
                     existing = await self.db.execute(
                         select(VKComment).where(
                             VKComment.vk_id == comment_vk_id
@@ -444,7 +450,7 @@ class ParserService:
                     if existing.scalar_one_or_none():
                         continue
 
-                text = getattr(comment_data, "text", "")
+                text = comment_data.get("text", "")
                 matches = self._find_keywords_in_text(text, keywords)
                 if matches:
                     await self._save_comment(post, comment_data, matches)
@@ -452,7 +458,7 @@ class ParserService:
                     stats["matches"] += len(matches)
                 stats["new"] += 1
             except Exception as e:
-                comment_id = getattr(comment_data, "id", None)
+                comment_id = comment_data.get("id")
                 logger.error(
                     f"Ошибка обработки комментария {comment_id}: {e}",
                     exc_info=True,
@@ -533,18 +539,18 @@ class ParserService:
     async def _save_comment(
         self, post: VKPost, comment_data, matches: list
     ) -> VKComment:
-        author_id = getattr(comment_data, "from_id", None)
+        author_id = comment_data.get("from_id")
         (
             author_name,
             author_screen_name,
             author_photo_url,
         ) = await self._get_author_info(author_id)
         new_comment = VKComment(
-            vk_id=getattr(comment_data, "id", None),
+            vk_id=comment_data.get("id"),
             post_id=post.id,
-            text=getattr(comment_data, "text", ""),
+            text=comment_data.get("text", ""),
             published_at=datetime.fromtimestamp(
-                getattr(comment_data, "date", 0), tz=timezone.utc
+                comment_data.get("date", 0), tz=timezone.utc
             ).replace(tzinfo=None),
             author_id=author_id,
             author_name=author_name,

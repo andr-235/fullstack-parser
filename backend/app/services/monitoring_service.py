@@ -27,7 +27,7 @@ class MonitoringService:
 
     async def get_groups_for_monitoring(self) -> List[VKGroup]:
         """Получить группы, готовые для мониторинга"""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Получаем активные группы с включенным мониторингом,
         # которые нужно проверить сейчас или уже просрочены
@@ -293,13 +293,13 @@ class MonitoringService:
             monitored_groups = len(monitored_groups.scalars().all())
 
             # Группы, готовые для мониторинга
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             ready_groups = await self.db.execute(
                 select(VKGroup).where(
                     and_(
                         VKGroup.is_active,
                         VKGroup.auto_monitoring_enabled,
-                        VKGroup.next_monitoring_at
-                        <= datetime.now(timezone.utc),
+                        VKGroup.next_monitoring_at <= now,
                     )
                 )
             )
@@ -338,4 +338,10 @@ class MonitoringService:
                 error=str(e),
                 exc_info=True,
             )
-            return {}
+            return {
+                "total_groups": 0,
+                "active_groups": 0,
+                "monitored_groups": 0,
+                "ready_for_monitoring": 0,
+                "next_monitoring_at": None,
+            }
