@@ -1,4 +1,5 @@
-// dashboard ui exports
-// TODO: Add dashboard ui
-
-export {}
+export { default as DashboardPage } from './DashboardPage'
+export { default as HomePage } from './HomePage'
+export * from './DashboardWidgets'
+export * from './DashboardFilters'
+export * from './DashboardExport'
