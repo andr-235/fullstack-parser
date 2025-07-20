@@ -25,9 +25,18 @@ class WorkerSettings:
     )
     # Ограничения для предотвращения высокого потребления CPU
 
-    max_jobs = int(os.environ.get("ARQ_MAX_JOBS", 1))  # Максимум 1 задача одновременно
-    job_timeout = int(os.environ.get("ARQ_JOB_TIMEOUT", 300))  # Таймаут задачи 5 минут
-    keep_result = int(os.environ.get("ARQ_KEEP_RESULT", 60))  # Хранить результат 1 минуту
-    poll_delay = float(os.environ.get("ARQ_POLL_DELAY", 1.0))  # Задержка между проверками задач
-    max_tries = int(os.environ.get("ARQ_MAX_TRIES", 3))  # Максимум 3 попытки для задачи
-
+    max_jobs = int(
+        os.environ.get("ARQ_MAX_JOBS", 1)
+    )  # Максимум 1 задача одновременно
+    job_timeout = int(
+        os.environ.get("ARQ_JOB_TIMEOUT", 300)
+    )  # Таймаут задачи 5 минут
+    keep_result = int(
+        os.environ.get("ARQ_KEEP_RESULT", 60)
+    )  # Хранить результат 1 минуту
+    poll_delay = float(
+        os.environ.get("ARQ_POLL_DELAY", 1.0)
+    )  # Задержка между проверками задач
+    max_tries = int(
+        os.environ.get("ARQ_MAX_TRIES", 3)
+    )  # Максимум 3 попытки для задачи
