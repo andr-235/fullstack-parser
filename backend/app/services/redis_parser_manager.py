@@ -120,7 +120,7 @@ class RedisParserManager:
         r = await self._get_redis()
         current_task_id_raw = await r.get("parser:current_task_id")
         current_task_id = None
-        
+
         if current_task_id_raw:
             if isinstance(current_task_id_raw, bytes):
                 current_task_id = current_task_id_raw.decode()

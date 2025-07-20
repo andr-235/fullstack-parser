@@ -3,6 +3,7 @@ API endpoints для управления автоматическим мони�
 """
 
 from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -109,7 +110,8 @@ async def get_monitoring_groups(
 
 
 @router.get(
-    "/groups/available", response_model=PaginatedResponse[GroupMonitoringResponse]
+    "/groups/available",
+    response_model=PaginatedResponse[GroupMonitoringResponse],
 )
 async def get_available_groups_for_monitoring(
     pagination: PaginationParams = Depends(),
@@ -145,7 +147,8 @@ async def get_available_groups_for_monitoring(
                 group_name=group.name,
                 screen_name=group.screen_name,
                 auto_monitoring_enabled=group.auto_monitoring_enabled,
-                monitoring_interval_minutes=group.monitoring_interval_minutes or 60,
+                monitoring_interval_minutes=group.monitoring_interval_minutes
+                or 60,
                 monitoring_priority=group.monitoring_priority or 5,
                 next_monitoring_at=group.next_monitoring_at,
                 monitoring_runs_count=group.monitoring_runs_count or 0,
@@ -173,14 +176,18 @@ async def get_active_monitoring_groups(
     from app.models.vk_group import VKGroup
 
     # Получаем группы с включенным мониторингом
-    query = select(VKGroup).where(
-        and_(
-            VKGroup.is_active.is_(True),
-            VKGroup.auto_monitoring_enabled.is_(True),
+    query = (
+        select(VKGroup)
+        .where(
+            and_(
+                VKGroup.is_active.is_(True),
+                VKGroup.auto_monitoring_enabled.is_(True),
+            )
         )
-    ).order_by(
-        VKGroup.monitoring_priority.desc(),
-        VKGroup.next_monitoring_at.asc(),
+        .order_by(
+            VKGroup.monitoring_priority.desc(),
+            VKGroup.next_monitoring_at.asc(),
+        )
     )
 
     # Подсчет общего количества
@@ -227,7 +234,7 @@ async def get_scheduler_status() -> SchedulerStatus:
         is_running=False,
         monitoring_interval_seconds=300,
         redis_connected=True,  # Предполагаем, что Redis работает
-        last_check=datetime.now().isoformat()
+        last_check=datetime.now().isoformat(),
     )
 
 
@@ -279,7 +286,7 @@ async def run_monitoring_cycle(
     """Запустить цикл мониторинга вручную"""
     try:
         from app.core.config import settings
-        
+
         vk_service = VKBottleService(
             token=settings.vk.access_token,
             api_version=settings.vk.api_version,
