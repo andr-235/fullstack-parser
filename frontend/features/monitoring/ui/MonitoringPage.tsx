@@ -10,7 +10,8 @@ import {
 } from '@/shared/ui'
 import {
   useMonitoringStats,
-  useMonitoringGroups,
+  useAvailableGroupsForMonitoring,
+  useActiveMonitoringGroups,
   useRunMonitoringCycle,
 } from '@/hooks/use-monitoring'
 import {
@@ -20,10 +21,12 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle,
+  Plus,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import GroupsMonitoringTable from './GroupsMonitoringTable'
+import AvailableGroupsTable from './AvailableGroupsTable'
 
 export default function MonitoringPage() {
   const {
@@ -32,13 +35,18 @@ export default function MonitoringPage() {
     error: statsError,
   } = useMonitoringStats()
   const {
-    data: groups,
-    isLoading: groupsLoading,
-    error: groupsError,
-  } = useMonitoringGroups()
+    data: availableGroups,
+    isLoading: availableGroupsLoading,
+    error: availableGroupsError,
+  } = useAvailableGroupsForMonitoring()
+  const {
+    data: activeGroups,
+    isLoading: activeGroupsLoading,
+    error: activeGroupsError,
+  } = useActiveMonitoringGroups()
   const runCycleMutation = useRunMonitoringCycle()
 
-  if (statsLoading || groupsLoading) {
+  if (statsLoading || availableGroupsLoading || activeGroupsLoading) {
     return (
       <div className="flex justify-center items-center h-full">
         <LoadingSpinner />
@@ -46,7 +54,7 @@ export default function MonitoringPage() {
     )
   }
 
-  if (statsError || groupsError) {
+  if (statsError || availableGroupsError || activeGroupsError) {
     return (
       <div className="flex justify-center items-center h-full">
         <Card className="w-96">
@@ -59,7 +67,7 @@ export default function MonitoringPage() {
               страницу.
             </p>
             <p className="text-sm text-slate-400 mt-2">
-              {statsError?.message || groupsError?.message}
+              {statsError?.message || availableGroupsError?.message || activeGroupsError?.message}
             </p>
           </CardContent>
         </Card>
@@ -67,7 +75,7 @@ export default function MonitoringPage() {
     )
   }
 
-  const nextMonitoringTime = stats?.next_monitoring_at
+  const nextMonitoringTime = stats?.next_monitoring_at && stats.next_monitoring_at !== 'null'
     ? formatDistanceToNow(new Date(stats.next_monitoring_at), {
         addSuffix: true,
         locale: ru,
@@ -161,16 +169,29 @@ export default function MonitoringPage() {
         </Card>
       </div>
 
-      {/* Таблица групп */}
+      {/* Группы с активным мониторингом */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            Группы с мониторингом
+            Группы с активным мониторингом
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <GroupsMonitoringTable groups={groups?.items || []} />
+          <GroupsMonitoringTable groups={activeGroups?.items || []} />
+        </CardContent>
+      </Card>
+
+      {/* Группы, доступные для мониторинга */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Группы, доступные для мониторинга
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AvailableGroupsTable groups={availableGroups?.items || []} />
         </CardContent>
       </Card>
     </div>

@@ -20,8 +20,16 @@ const nextConfig = {
     domains: ['localhost', 'parser.mysite.ru'],
   },
 
+  // Конфигурация для Turbopack
   experimental: {
-    forceSwcTransforms: true,
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
   },
 }
 
