@@ -19,6 +19,11 @@ logger = logging.getLogger(__name__)
     summary="Проверка состояния сервиса",
     tags=["Health"],
 )
+@router.head(
+    "/",
+    summary="Проверка состояния сервиса (HEAD)",
+    tags=["Health"],
+)
 async def health_check(
     db: AsyncSession = Depends(get_db),
 ):

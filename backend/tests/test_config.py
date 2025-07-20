@@ -35,5 +35,10 @@ class TestSettings:
         """Тест наличия CORS origins"""
         settings = Settings()
         assert hasattr(settings, "cors_origins")
-        assert isinstance(settings.cors_origins, list)
+        assert isinstance(settings.cors_origins, str)
         assert len(settings.cors_origins) > 0
+        
+        # Тест метода get_cors_origins
+        cors_list = settings.get_cors_origins()
+        assert isinstance(cors_list, list)
+        assert len(cors_list) > 0

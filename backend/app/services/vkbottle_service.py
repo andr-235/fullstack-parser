@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
+import httpx
 import structlog
 from vkbottle import API  # type: ignore
 from vkbottle.api import API as VKBottleAPI  # type: ignore
@@ -88,6 +89,7 @@ class VKBottleService:
 
         self.logger = structlog.get_logger(__name__)
         self.api_version = api_version
+        self._token = token
         self._token_preview = self._get_token_preview(token)
 
         # Инициализация VKBottle API с правильной типизацией
@@ -171,15 +173,48 @@ class VKBottleService:
         )
 
         try:
-            response: WallGetResponseModel = await self.api.wall.get(
-                owner_id=owner_id,
-                count=count,
-                offset=offset,
-                v=self.api_version,
-            )
-
-            # Извлекаем посты из ответа
-            posts = self._extract_posts_from_response(response)
+            # Используем прямые HTTP запросы к VK API для получения постов
+            url = "https://api.vk.com/method/wall.get"
+            params = {
+                "owner_id": owner_id,
+                "count": count,
+                "offset": offset,
+                "access_token": self._token,
+                "v": self.api_version,
+            }
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, params=params)
+                data = response.json()
+                
+                if "error" in data:
+                    raise VKAPIError(data["error"])
+                
+                if "response" in data and data["response"]:
+                    posts = data["response"]["items"]
+                    self.logger.info(
+                        "Успешно получены посты через HTTP API",
+                        group_id=group_id,
+                        posts_count=len(posts),
+                    )
+                    
+                    # Логируем первый пост для отладки
+                    if posts:
+                        first_post = posts[0]
+                        self.logger.info(
+                            "Пример структуры поста",
+                            post_keys=list(first_post.keys()),
+                            post_id=first_post.get("id"),
+                            post_type=type(first_post).__name__,
+                        )
+                    
+                    return posts
+                else:
+                    self.logger.warning(
+                        "VK API вернул пустой ответ при получении постов",
+                        group_id=group_id,
+                    )
+                    return []
 
             if not posts:
                 self.logger.warning(
@@ -188,6 +223,16 @@ class VKBottleService:
                     response_type=type(response).__name__,
                 )
                 return []
+
+            # Логируем первый пост для отладки
+            if posts:
+                first_post = posts[0]
+                self.logger.info(
+                    "Пример структуры поста",
+                    post_keys=list(first_post.keys()) if isinstance(first_post, dict) else "not dict",
+                    post_id=first_post.get("id") if isinstance(first_post, dict) else "unknown",
+                    post_type=type(first_post).__name__,
+                )
 
             self.logger.info(
                 "Успешно получены посты группы",
@@ -224,21 +269,52 @@ class VKBottleService:
         Returns:
             Список постов в виде словарей
         """
+        self.logger.info(
+            "Обработка ответа VK API",
+            response_type=type(response).__name__,
+            has_items=hasattr(response, "items"),
+            items_count=len(response.items) if hasattr(response, "items") and response.items else 0,
+        )
+        
         if not hasattr(response, "items") or not response.items:
             return []
 
         # Конвертируем объекты WallWallpostFull в словари
         posts = []
-        for post in response.items:
+        for i, post in enumerate(response.items):
+            self.logger.info(
+                f"Обработка поста {i}",
+                post_type=type(post).__name__,
+                is_wallwallpostfull=isinstance(post, WallWallpostFull),
+                has_model_dump=hasattr(post, "model_dump"),
+            )
+            
             if isinstance(post, WallWallpostFull):
                 # Используем model_dump() для Pydantic моделей
                 if hasattr(post, "model_dump"):
-                    posts.append(post.model_dump())
+                    post_dict = post.model_dump()
+                    self.logger.info(
+                        f"Пост {i} конвертирован через model_dump",
+                        post_keys=list(post_dict.keys()),
+                        post_id=post_dict.get("id"),
+                    )
+                    posts.append(post_dict)
                 else:
                     # Fallback для старых версий
-                    posts.append(vars(post))
+                    post_dict = vars(post)
+                    self.logger.info(
+                        f"Пост {i} конвертирован через vars",
+                        post_keys=list(post_dict.keys()),
+                        post_id=post_dict.get("id"),
+                    )
+                    posts.append(post_dict)
             else:
                 # Если это уже словарь
+                self.logger.info(
+                    f"Пост {i} уже словарь",
+                    post_keys=list(post.keys()) if isinstance(post, dict) else "not dict",
+                    post_id=post.get("id") if isinstance(post, dict) else "unknown",
+                )
                 posts.append(post)
 
         return posts
@@ -389,27 +465,35 @@ class VKBottleService:
         )
 
         try:
-            response = await self.api.groups.get_by_id(
-                group_id=group_id_or_screen_name,
-                v=self.api_version,
-            )
-
-            # Извлекаем информацию о группе из ответа
-            group_info = self._extract_group_info_from_response(response)
-
-            if group_info:
-                self.logger.info(
-                    "Успешно получена информация о группе",
-                    group_id_or_screen_name=group_id_or_screen_name,
-                    group_name=group_info.get("name", "Unknown"),
-                )
-            else:
-                self.logger.warning(
-                    "VK API вернул пустой ответ при получении информации о группе",
-                    group_id_or_screen_name=group_id_or_screen_name,
-                )
-
-            return group_info
+            # Используем прямые HTTP запросы к VK API
+            url = "https://api.vk.com/method/groups.getById"
+            params = {
+                "group_id": group_id_or_screen_name,
+                "access_token": self._token,
+                "v": self.api_version,
+            }
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, params=params)
+                data = response.json()
+                
+                if "error" in data:
+                    raise VKAPIError(data["error"])
+                
+                if "response" in data and data["response"]:
+                    group_info = data["response"][0]
+                    self.logger.info(
+                        "Успешно получена информация о группе через HTTP API",
+                        group_id_or_screen_name=group_id_or_screen_name,
+                        group_name=group_info.get("name", "Unknown"),
+                    )
+                    return group_info
+                else:
+                    self.logger.warning(
+                        "VK API вернул пустой ответ при получении информации о группе",
+                        group_id_or_screen_name=group_id_or_screen_name,
+                    )
+                    return None
 
         except VKAPIError as e:
             raise self._handle_vk_api_error(
@@ -438,19 +522,28 @@ class VKBottleService:
         Returns:
             Информация о группе в виде словаря или None
         """
+        self.logger.info(
+            "Обработка ответа VK API",
+            response_type=type(response).__name__,
+            is_list=isinstance(response, list),
+            has_response_attr=hasattr(response, "response") if not isinstance(response, list) else False,
+        )
+
         # В VKBottle 4.5.2+ API возвращает список объектов напрямую
         if isinstance(response, list) and len(response) > 0:
             group = response[0]
-            if isinstance(group, GroupsGroupFull):
-                # Используем model_dump() для Pydantic моделей
-                if hasattr(group, "model_dump"):
-                    return dict(group.model_dump())
-                else:
-                    # Fallback для старых версий
-                    return dict(vars(group))
+            self.logger.info(
+                "Обработка элемента списка",
+                group_type=type(group).__name__,
+                is_dict=isinstance(group, dict),
+            )
+            
+            if isinstance(group, dict):
+                return group
+            elif hasattr(group, "model_dump"):
+                return dict(group.model_dump())
             else:
-                # Если это уже словарь
-                return dict(group) if isinstance(group, dict) else None
+                return dict(vars(group))
 
         # Проверяем альтернативные форматы ответа для совместимости
         # (объекты с атрибутом response, не являющиеся списками)
@@ -458,14 +551,17 @@ class VKBottleService:
             response_data = response.response
             if isinstance(response_data, list) and len(response_data) > 0:
                 group = response_data[0]
-                if isinstance(group, GroupsGroupFull):
-                    if hasattr(group, "model_dump"):
-                        return dict(group.model_dump())
-                    else:
-                        return dict(vars(group))
+                if isinstance(group, dict):
+                    return group
+                elif hasattr(group, "model_dump"):
+                    return dict(group.model_dump())
                 else:
-                    return dict(group) if isinstance(group, dict) else None
+                    return dict(vars(group))
 
+        self.logger.warning(
+            "Не удалось извлечь информацию о группе из ответа",
+            response_type=type(response).__name__,
+        )
         return None
 
     async def get_user_info(self, user_id: int) -> Optional[Dict[str, Any]]:

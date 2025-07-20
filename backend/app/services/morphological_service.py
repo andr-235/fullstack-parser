@@ -35,14 +35,10 @@ class MorphologicalService:
         forms.add(word.lower())
 
         # Получаем нормальную форму через natasha
-        normal_form = self.morph.normalize(word.lower())
-        if normal_form:
-            forms.add(normal_form)
-
-        # Для natasha получаем все возможные формы через морфологический анализ
-        # Это упрощенная версия, так как natasha работает немного иначе
-        parsed_word = self.morph.parse(word.lower())
-        if parsed_word:
+        parsed_words = self.morph.parse(word.lower())
+        if parsed_words and len(parsed_words) > 0:
+            # Берем первый результат парсинга
+            parsed_word = parsed_words[0]
             # Добавляем нормальную форму
             forms.add(parsed_word.normal_form)
 
@@ -146,9 +142,9 @@ class MorphologicalService:
         if not self.is_russian_word(word):
             return word.lower()
 
-        normal_form = self.morph.normalize(word.lower())
-        if normal_form:
-            return normal_form
+        parsed_words = self.morph.parse(word.lower())
+        if parsed_words and len(parsed_words) > 0:
+            return parsed_words[0].normal_form
         return word.lower()
 
     def get_word_info(self, word: str) -> dict:
@@ -168,8 +164,8 @@ class MorphologicalService:
                 "is_russian": False,
             }
 
-        parsed = self.morph.parse(word.lower())
-        if not parsed:
+        parsed_words = self.morph.parse(word.lower())
+        if not parsed_words or len(parsed_words) == 0:
             return {
                 "normal_form": word.lower(),
                 "forms": [word.lower()],
@@ -177,6 +173,9 @@ class MorphologicalService:
                 "analysis_failed": True,
             }
 
+        # Берем первый результат парсинга
+        parsed = parsed_words[0]
+        
         # Получаем формы через natasha
         all_forms = set()
         normal_form = parsed.normal_form if parsed else word.lower()

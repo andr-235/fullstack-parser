@@ -3,10 +3,14 @@
 """
 
 import json
+import logging
 from typing import Optional
 
-from pydantic import ConfigDict, Field, PostgresDsn, RedisDsn, field_validator
+from pydantic import ConfigDict, Field, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings
+
+# Настройка логирования для отладки
+logger = logging.getLogger(__name__)
 
 
 class DatabaseSettings(BaseSettings):
@@ -75,54 +79,48 @@ class Settings(BaseSettings):
     app_name: str = "VK Comments Parser"
     debug: bool = Field(default=False)
     api_v1_str: str = "/api/v1"
-    cors_origins: list[str] = Field(
-        default_factory=lambda: [
-            "https://parser.mysite.ru",
-        ],
+    cors_origins: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000",
         alias="CORS_ORIGINS",
     )
     database: DatabaseSettings = DatabaseSettings()
-    redis_url: Optional[RedisDsn] = Field(default=None, alias="REDIS_URL")
+    redis_url: Optional[str] = Field(default="redis://redis:6379/0", alias="REDIS_URL")
     vk: VKSettings = VKSettings()
     monitoring: MonitoringSettings = MonitoringSettings()
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, v):
-        """Парсит CORS_ORIGINS из различных форматов"""
-        if isinstance(v, list):
-            return v
 
-        if not isinstance(v, str):
-            return ["https://parser.mysite.ru"]
-
-        v = v.strip()
-        if not v:
-            return ["https://parser.mysite.ru"]
-
-        # Пробуем парсить как JSON
-        try:
-            if v.startswith("[") and v.endswith("]"):
-                return json.loads(v)
-        except (json.JSONDecodeError, ValueError):
-            pass
-
-        # Парсим как строку с запятыми
-        try:
-            origins = [
-                origin.strip() for origin in v.split(",") if origin.strip()
-            ]
-            return origins if origins else ["https://parser.mysite.ru"]
-        except Exception:
-            pass
-
-        # Fallback к дефолтным значениям
-        return ["https://parser.mysite.ru"]
 
     def get_cors_origins(self) -> list[str]:
-        return self.cors_origins
+        """Парсит CORS_ORIGINS из строки в список"""
+        try:
+            if not self.cors_origins:
+                return ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+            # Пробуем парсить как JSON
+            if self.cors_origins.startswith("[") and self.cors_origins.endswith("]"):
+                try:
+                    parsed = json.loads(self.cors_origins)
+                    if isinstance(parsed, list):
+                        return [str(origin).strip() for origin in parsed if origin]
+                except (json.JSONDecodeError, ValueError, TypeError):
+                    pass
+
+            # Парсим как строку с запятыми
+            origins = [
+                origin.strip() for origin in self.cors_origins.split(",") if origin.strip()
+            ]
+            return origins if origins else ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+        except Exception:
+            # В случае любой ошибки возвращаем дефолт
+            return ["http://localhost:3000", "http://127.0.0.1:3000"]
 
 
 # Глобальный объект настроек
-settings = Settings()
+try:
+    settings = Settings()
+    logger.info(f"Settings initialized successfully. CORS_ORIGINS: {settings.cors_origins}")
+except Exception as e:
+    logger.error(f"Failed to initialize settings: {e}")
+    raise
