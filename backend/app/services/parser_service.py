@@ -661,6 +661,7 @@ class ParserService:
         new_comment = VKComment(
             vk_id=comment_data.get("id"),
             post_id=post.id,
+            post_vk_id=post.vk_id,  # Добавляем VK ID поста для формирования ссылок
             text=comment_data.get("text", ""),
             published_at=datetime.fromtimestamp(
                 comment_data.get("date", 0), tz=timezone.utc

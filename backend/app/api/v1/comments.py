@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.models.comment_keyword_match import CommentKeywordMatch
 from app.models.vk_comment import VKComment
+from app.models.vk_post import VKPost
 from app.schemas.base import PaginatedResponse, PaginationParams
 from app.schemas.vk_comment import VKCommentResponse
 
@@ -25,13 +26,14 @@ async def get_comments(
 ) -> PaginatedResponse:
     """Получить список всех найденных комментариев"""
 
-    # Загружаем комментарии с связанными ключевыми словами
+    # Загружаем комментарии с связанными ключевыми словами и группой
     query = (
         select(VKComment)
         .options(
             selectinload(VKComment.keyword_matches).selectinload(
                 CommentKeywordMatch.keyword
-            )
+            ),
+            selectinload(VKComment.post).selectinload(VKPost.group)
         )
         .order_by(VKComment.created_at.desc())
     )
@@ -48,27 +50,42 @@ async def get_comments(
     # Преобразуем в ответы с ключевыми словами
     comment_responses = []
     for comment in comments:
+        # Логируем информацию о группе
+        if comment.post and comment.post.group:
+            logger.debug(f"Comment {comment.id} has group: {comment.post.group.name}")
+        else:
+            logger.warning(f"Comment {comment.id} has no group. Post: {comment.post}, Group: {comment.post.group if comment.post else None}")
+        
         comment_data = VKCommentResponse.model_validate(comment)
 
         # Добавляем найденные ключевые слова
         matched_keywords = []
         if comment.keyword_matches:
-            logger.info(
-                f"Comment {comment.id} has {len(comment.keyword_matches)} keyword matches"
-            )
+            logger.debug(f"Comment {comment.id} has {len(comment.keyword_matches)} keyword matches")
             for match in comment.keyword_matches:
                 if match.keyword:
                     # Добавляем только слово ключевого слова
                     matched_keywords.append(match.keyword.word)
-                    logger.info(f"Found keyword: {match.keyword.word}")
+                    logger.debug(f"Found keyword: {match.keyword.word}")
                 else:
                     logger.warning(f"Match {match.id} has no keyword")
         else:
-            logger.info(f"Comment {comment.id} has no keyword matches")
+            logger.debug(f"Comment {comment.id} has no keyword matches")
 
         # Добавляем поле matched_keywords к ответу
         comment_dict = comment_data.model_dump()
         comment_dict["matched_keywords"] = matched_keywords
+        
+        # Добавляем информацию о группе
+        if comment.post and comment.post.group:
+            comment_dict["group"] = {
+                "id": comment.post.group.id,
+                "name": comment.post.group.name,
+                "screen_name": comment.post.group.screen_name,
+                "vk_id": comment.post.group.vk_id
+            }
+        else:
+            comment_dict["group"] = None
 
         comment_responses.append(comment_dict)
 
