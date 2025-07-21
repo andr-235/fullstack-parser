@@ -37,7 +37,7 @@ class PaginationParams(BaseModel):
     """Параметры для пагинации."""
 
     page: int = Field(1, ge=1, description="Номер страницы")
-    size: int = Field(10, ge=1, le=100, description="Размер страницы")
+    size: int = Field(50, ge=1, le=100, description="Размер страницы")
 
     @property
     def skip(self) -> int:
