@@ -40,7 +40,7 @@ import {
   Settings,
   Copy,
   ExternalLink,
-  Check
+  Check,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -86,7 +86,7 @@ export default function GroupsPage() {
           }
 
           toast.error(errorMessage)
-        }
+        },
       }
     )
   }
@@ -136,8 +136,12 @@ export default function GroupsPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
             <Trash2 className="h-8 w-8 text-red-500" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">Ошибка загрузки</h3>
-          <p className="text-slate-600 mb-4">Не удалось загрузить список групп</p>
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">
+            Ошибка загрузки
+          </h3>
+          <p className="text-slate-600 mb-4">
+            Не удалось загрузить список групп
+          </p>
           <p className="text-sm text-slate-400">
             {error instanceof Error ? error.message : String(error)}
           </p>
@@ -157,8 +161,7 @@ export default function GroupsPage() {
           <p className="text-slate-600">
             {searchTerm
               ? 'Попробуйте изменить параметры поиска'
-              : 'Добавьте первую группу для начала работы'
-            }
+              : 'Добавьте первую группу для начала работы'}
           </p>
         </div>
       )
@@ -173,14 +176,20 @@ export default function GroupsPage() {
                 <Activity className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-200">Активные группы</p>
+                <p className="text-sm font-medium text-slate-200">
+                  Активные группы
+                </p>
                 <p className="text-xs text-slate-400">
-                  {filteredGroups.filter(g => g.is_active).length} из {filteredGroups.length} групп
+                  {filteredGroups.filter((g) => g.is_active).length} из{' '}
+                  {filteredGroups.length} групп
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="bg-slate-700 border-slate-600 text-slate-200">
-              {filteredGroups.filter(g => g.is_active).length} активных
+            <Badge
+              variant="outline"
+              className="bg-slate-700 border-slate-600 text-slate-200"
+            >
+              {filteredGroups.filter((g) => g.is_active).length} активных
             </Badge>
           </div>
         </div>
@@ -190,11 +199,21 @@ export default function GroupsPage() {
             <table className="min-w-full relative">
               <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 shadow-md">
                 <tr>
-                  <th className="px-4 py-3 text-left font-bold text-slate-200">ID</th>
-                  <th className="px-4 py-3 text-left font-bold text-slate-200">Группа</th>
-                  <th className="px-4 py-3 text-left font-bold text-slate-200">Статус</th>
-                  <th className="px-4 py-3 text-left font-bold text-slate-200">Последний парсинг</th>
-                  <th className="px-4 py-3 text-right font-bold text-slate-200">Действия</th>
+                  <th className="px-4 py-3 text-left font-bold text-slate-200">
+                    ID
+                  </th>
+                  <th className="px-4 py-3 text-left font-bold text-slate-200">
+                    Группа
+                  </th>
+                  <th className="px-4 py-3 text-left font-bold text-slate-200">
+                    Статус
+                  </th>
+                  <th className="px-4 py-3 text-left font-bold text-slate-200">
+                    Последний парсинг
+                  </th>
+                  <th className="px-4 py-3 text-right font-bold text-slate-200">
+                    Действия
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700">
@@ -204,15 +223,20 @@ export default function GroupsPage() {
                     className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${index % 2 === 0 ? 'bg-slate-800' : 'bg-slate-750'}`}
                     style={{
                       animationDelay: `${index * 50}ms`,
-                      animationFillMode: 'both'
+                      animationFillMode: 'both',
                     }}
                   >
-                    <td className="px-4 py-3 font-mono text-blue-400 font-semibold">{group.vk_id}</td>
+                    <td className="px-4 py-3 font-mono text-blue-400 font-semibold">
+                      {group.vk_id}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="relative">
                           <img
-                            src={group.photo_url || `${AVATAR_PLACEHOLDER}${encodeURIComponent(group.name)}`}
+                            src={
+                              group.photo_url ||
+                              `${AVATAR_PLACEHOLDER}${encodeURIComponent(group.name)}`
+                            }
                             alt={group.name}
                             className="w-10 h-10 rounded-full border-2 border-slate-600 shadow-sm object-cover bg-slate-700 transition-transform duration-200 hover:scale-110"
                             loading="lazy"
@@ -225,16 +249,24 @@ export default function GroupsPage() {
                           <div className="font-bold text-slate-200 text-base leading-tight flex items-center gap-1">
                             {group.name}
                             {group.is_closed && (
-                              <span className="ml-1 px-2 py-0.5 rounded bg-yellow-900 text-yellow-300 text-xs font-semibold animate-bounce">Приват</span>
+                              <span className="ml-1 px-2 py-0.5 rounded bg-yellow-900 text-yellow-300 text-xs font-semibold animate-bounce">
+                                Приват
+                              </span>
                             )}
                           </div>
-                          <div className="text-xs text-blue-400 font-mono">@{group.screen_name}</div>
+                          <div className="text-xs text-blue-400 font-mono">
+                            @{group.screen_name}
+                          </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm transition-all duration-200 ${group.is_active ? 'bg-gradient-to-r from-green-900 to-emerald-900 text-green-300 hover:from-green-800 hover:to-emerald-800' : 'bg-gradient-to-r from-slate-700 to-gray-700 text-slate-400 hover:from-slate-600 hover:to-gray-600'}`}>
-                        <span className={`w-2 h-2 rounded-full ${group.is_active ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`}></span>
+                      <span
+                        className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm transition-all duration-200 ${group.is_active ? 'bg-gradient-to-r from-green-900 to-emerald-900 text-green-300 hover:from-green-800 hover:to-emerald-800' : 'bg-gradient-to-r from-slate-700 to-gray-700 text-slate-400 hover:from-slate-600 hover:to-gray-600'}`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full ${group.is_active ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`}
+                        ></span>
                         {group.is_active ? 'Активна' : 'На паузе'}
                       </span>
                     </td>
@@ -242,7 +274,10 @@ export default function GroupsPage() {
                       {group.last_parsed_at ? (
                         <span className="flex items-center gap-2 text-blue-400 font-medium">
                           <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
-                          {formatDistanceToNow(new Date(group.last_parsed_at), { addSuffix: true, locale: ru })}
+                          {formatDistanceToNow(new Date(group.last_parsed_at), {
+                            addSuffix: true,
+                            locale: ru,
+                          })}
                         </span>
                       ) : (
                         <span className="flex items-center gap-2 text-slate-500 font-medium">
@@ -258,7 +293,12 @@ export default function GroupsPage() {
                           size="icon"
                           aria-label="Открыть в VK"
                           className="hover:bg-slate-700 text-slate-300 hover:text-blue-400 transition-all duration-200 hover:scale-110 group"
-                          onClick={() => window.open(`https://vk.com/${group.screen_name}`, '_blank')}
+                          onClick={() =>
+                            window.open(
+                              `https://vk.com/${group.screen_name}`,
+                              '_blank'
+                            )
+                          }
                         >
                           <ExternalLink className="h-4 w-4 group-hover:rotate-12 transition-transform" />
                         </Button>
@@ -278,7 +318,9 @@ export default function GroupsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          aria-label={group.is_active ? 'Приостановить' : 'Возобновить'}
+                          aria-label={
+                            group.is_active ? 'Приостановить' : 'Возобновить'
+                          }
                           disabled={updateGroupMutation.isPending}
                           className="hover:bg-slate-700 text-slate-300 hover:text-slate-200 transition-all duration-200 hover:scale-110"
                           onClick={() =>
@@ -322,12 +364,16 @@ export default function GroupsPage() {
   // Статистика
   const totalGroups = groupsData?.items?.length || 0
   const activeGroups = groupsData?.items?.filter((g) => g.is_active).length || 0
-  const inactiveGroups = groupsData?.items?.filter((g) => !g.is_active).length || 0
-  const totalComments = groupsData?.items?.reduce(
-    (sum, g) => sum + (g.total_comments_found || 0),
-    0
-  ) || 0
-  const formattedTotalComments = new Intl.NumberFormat('ru-RU').format(totalComments)
+  const inactiveGroups =
+    groupsData?.items?.filter((g) => !g.is_active).length || 0
+  const totalComments =
+    groupsData?.items?.reduce(
+      (sum, g) => sum + (g.total_comments_found || 0),
+      0
+    ) || 0
+  const formattedTotalComments = new Intl.NumberFormat('ru-RU').format(
+    totalComments
+  )
 
   return (
     <div className="space-y-6">
@@ -340,7 +386,8 @@ export default function GroupsPage() {
           <h1 className="text-2xl font-bold">Управление группами ВКонтакте</h1>
         </div>
         <p className="text-slate-300">
-          Добавляйте, настраивайте и управляйте группами для парсинга комментариев
+          Добавляйте, настраивайте и управляйте группами для парсинга
+          комментариев
         </p>
       </div>
 
@@ -353,8 +400,12 @@ export default function GroupsPage() {
                 <Users className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-300">Всего групп</p>
-                <p className="text-2xl font-bold text-blue-400">{totalGroups}</p>
+                <p className="text-sm font-medium text-slate-300">
+                  Всего групп
+                </p>
+                <p className="text-2xl font-bold text-blue-400">
+                  {totalGroups}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -368,7 +419,9 @@ export default function GroupsPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-300">Активных</p>
-                <p className="text-2xl font-bold text-green-400">{activeGroups}</p>
+                <p className="text-2xl font-bold text-green-400">
+                  {activeGroups}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -382,7 +435,9 @@ export default function GroupsPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-300">Неактивных</p>
-                <p className="text-2xl font-bold text-orange-400">{inactiveGroups}</p>
+                <p className="text-2xl font-bold text-orange-400">
+                  {inactiveGroups}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -395,8 +450,12 @@ export default function GroupsPage() {
                 <MessageSquare className="h-5 w-5 text-purple-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-300">Комментариев</p>
-                <p className="text-2xl font-bold text-purple-400">{formattedTotalComments}</p>
+                <p className="text-sm font-medium text-slate-300">
+                  Комментариев
+                </p>
+                <p className="text-2xl font-bold text-purple-400">
+                  {formattedTotalComments}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -434,7 +493,7 @@ export default function GroupsPage() {
                 <span>Только активные</span>
               </label>
 
-              <UploadGroupsModal onSuccess={() => { }} />
+              <UploadGroupsModal onSuccess={() => {}} />
             </div>
           </div>
 
@@ -465,9 +524,7 @@ export default function GroupsPage() {
 
       {/* Таблица групп */}
       <Card className="border-slate-700 bg-slate-800 shadow-lg">
-        <CardContent className="p-0">
-          {renderContent()}
-        </CardContent>
+        <CardContent className="p-0">{renderContent()}</CardContent>
       </Card>
     </div>
   )

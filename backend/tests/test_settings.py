@@ -2,20 +2,21 @@
 Тесты для системы настроек
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock
 from fastapi.testclient import TestClient
 
-from app.main import app
-from app.services.settings_service import SettingsService
 from app.api.v1.settings import (
-    VKAPISettings,
-    MonitoringSettings,
+    ApplicationSettings,
     DatabaseSettings,
     LoggingSettings,
+    MonitoringSettings,
     UISettings,
-    ApplicationSettings,
+    VKAPISettings,
 )
+from app.main import app
+from app.services.settings_service import SettingsService
 
 client = TestClient(app)
 

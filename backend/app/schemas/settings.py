@@ -2,8 +2,9 @@
 Схемы для настроек приложения
 """
 
+from typing import Optional
+
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
 
 
 class VKAPISettings(BaseModel):

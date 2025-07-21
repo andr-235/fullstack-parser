@@ -2,22 +2,16 @@
 API для управления настройками приложения
 """
 
+from typing import Any, Dict
+
 import structlog
 from fastapi import APIRouter, HTTPException, status
-from typing import Dict, Any
 
-from app.core.config import settings
-from app.services.settings_service import get_settings_service
 from app.schemas.settings import (
-    ApplicationSettings,
-    VKAPISettings,
-    MonitoringSettings,
-    DatabaseSettings,
-    LoggingSettings,
-    UISettings,
-    SettingsUpdateRequest,
     SettingsResponse,
+    SettingsUpdateRequest,
 )
+from app.services.settings_service import get_settings_service
 
 logger = structlog.get_logger()
 router = APIRouter()

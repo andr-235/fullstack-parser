@@ -22,14 +22,17 @@ from app.schemas.parser import (
     ParseTaskCreate,
     ParseTaskResponse,
 )
-from app.schemas.vk_comment import CommentSearchParams, CommentWithKeywords
+from app.schemas.vk_comment import (
+    CommentSearchParams,
+    CommentWithKeywords,
+    VKCommentResponse,
+)
 from app.services.parser_service import ParserService
 from app.services.redis_parser_manager import (
     RedisParserManager,
     get_redis_parser_manager,
 )
 from app.services.vkbottle_service import VKBottleService
-from app.schemas.vk_comment import VKCommentResponse
 
 router = APIRouter(tags=["Parser"])
 
@@ -66,8 +69,9 @@ async def get_comments(
 
     # Загружаем связанные ключевые слова для каждого комментария
     from sqlalchemy.orm import selectinload
-    from app.models.vk_comment import VKComment
+
     from app.models.comment_keyword_match import CommentKeywordMatch
+    from app.models.vk_comment import VKComment
     from app.schemas.keyword import KeywordResponse
 
     # Получаем комментарии с ключевыми словами

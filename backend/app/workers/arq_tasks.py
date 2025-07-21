@@ -2,14 +2,10 @@
 ARQ задачи для фоновой обработки
 """
 
-import asyncio
-import logging
 from datetime import datetime, timezone
 from typing import Any, Dict
 
 import structlog
-from arq import create_pool
-from arq.connections import ArqRedis
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal

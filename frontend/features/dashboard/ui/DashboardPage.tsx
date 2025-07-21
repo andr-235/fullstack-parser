@@ -103,7 +103,9 @@ export default function DashboardPage() {
       <div className="flex justify-center items-center min-h-[400px]">
         <div className="flex flex-col items-center justify-center space-y-4">
           <LoadingSpinner className="h-8 w-8 text-blue-500" />
-          <span className="text-slate-400 font-medium">Загрузка дашборда...</span>
+          <span className="text-slate-400 font-medium">
+            Загрузка дашборда...
+          </span>
         </div>
       </div>
     )
@@ -239,7 +241,9 @@ export default function DashboardPage() {
                     <Activity className="h-5 w-5 text-blue-400" />
                     Активность за неделю
                   </span>
-                  <Badge className="bg-green-900 text-green-300 border-green-700">+23%</Badge>
+                  <Badge className="bg-green-900 text-green-300 border-green-700">
+                    +23%
+                  </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -259,7 +263,7 @@ export default function DashboardPage() {
                         backgroundColor: '#1F2937',
                         border: '1px solid #374151',
                         borderRadius: '8px',
-                        color: '#F9FAFB'
+                        color: '#F9FAFB',
                       }}
                       labelFormatter={(value) =>
                         format(new Date(value), 'dd MMM yyyy')
@@ -322,7 +326,7 @@ export default function DashboardPage() {
                         backgroundColor: '#1F2937',
                         border: '1px solid #374151',
                         borderRadius: '8px',
-                        color: '#F9FAFB'
+                        color: '#F9FAFB',
                       }}
                       formatter={(value) => [
                         `${value} совпадений`,
@@ -399,7 +403,11 @@ export default function DashboardPage() {
                         variant={timeRange === range ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setTimeRange(range)}
-                        className={timeRange === range ? 'bg-blue-600 hover:bg-blue-700' : 'border-slate-600 text-slate-300 hover:bg-slate-700'}
+                        className={
+                          timeRange === range
+                            ? 'bg-blue-600 hover:bg-blue-700'
+                            : 'border-slate-600 text-slate-300 hover:bg-slate-700'
+                        }
                       >
                         {range}
                       </Button>
@@ -424,7 +432,7 @@ export default function DashboardPage() {
                         backgroundColor: '#1F2937',
                         border: '1px solid #374151',
                         borderRadius: '8px',
-                        color: '#F9FAFB'
+                        color: '#F9FAFB',
                       }}
                       labelFormatter={(value) =>
                         format(new Date(value), 'dd MMM yyyy')
@@ -525,7 +533,7 @@ export default function DashboardPage() {
                       backgroundColor: '#1F2937',
                       border: '1px solid #374151',
                       borderRadius: '8px',
-                      color: '#F9FAFB'
+                      color: '#F9FAFB',
                     }}
                   />
                   <Legend />
@@ -569,7 +577,7 @@ export default function DashboardPage() {
                         backgroundColor: '#1F2937',
                         border: '1px solid #374151',
                         borderRadius: '8px',
-                        color: '#F9FAFB'
+                        color: '#F9FAFB',
                       }}
                     />
                   </RechartsPieChart>
@@ -597,10 +605,14 @@ export default function DashboardPage() {
                           className="w-4 h-4 rounded-full"
                           style={{ backgroundColor: keyword.color }}
                         />
-                        <span className="font-medium text-slate-200">{keyword.name}</span>
+                        <span className="font-medium text-slate-200">
+                          {keyword.name}
+                        </span>
                       </div>
                       <div className="text-right">
-                        <div className="font-semibold text-slate-200">{keyword.value}</div>
+                        <div className="font-semibold text-slate-200">
+                          {keyword.value}
+                        </div>
                         <div className="text-xs text-slate-400">совпадений</div>
                       </div>
                     </div>
@@ -644,7 +656,9 @@ function MetricCard({
         <Icon className="h-4 w-4 text-slate-400" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-slate-200">{value.toLocaleString()}</div>
+        <div className="text-2xl font-bold text-slate-200">
+          {value.toLocaleString()}
+        </div>
         <div className="flex items-center gap-2 mt-1">
           <Badge
             className={`text-xs ${trendUp ? 'bg-green-900 text-green-300 border-green-700' : 'bg-red-900 text-red-300 border-red-700'}`}

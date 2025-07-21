@@ -201,10 +201,15 @@ export default function GroupsMonitoringTable({
                   </span>
                 </TableCell>
                 <TableCell>
-                  <span className={`text-sm ${getNextMonitoringTime(group) === 'Просрочено' ? 'text-red-400' :
-                      getNextMonitoringTime(group) === 'Не запланировано' ? 'text-slate-400' :
-                        'text-slate-400'
-                    }`}>
+                  <span
+                    className={`text-sm ${
+                      getNextMonitoringTime(group) === 'Просрочено'
+                        ? 'text-red-400'
+                        : getNextMonitoringTime(group) === 'Не запланировано'
+                          ? 'text-slate-400'
+                          : 'text-slate-400'
+                    }`}
+                  >
                     {getNextMonitoringTime(group)}
                   </span>
                 </TableCell>

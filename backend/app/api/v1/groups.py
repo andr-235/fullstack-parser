@@ -5,7 +5,7 @@ API endpoints для управления VK группами
 import re
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Form
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,7 +15,6 @@ from app.models import VKGroup
 from app.schemas.base import (
     PaginatedResponse,
     PaginationParams,
-    StatusResponse,
 )
 from app.schemas.vk_group import (
     VKGroupCreate,

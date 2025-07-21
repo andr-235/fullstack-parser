@@ -23,7 +23,9 @@ interface UploadGroupsModalProps {
   onSuccess?: () => void
 }
 
-export default function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
+export default function UploadGroupsModal({
+  onSuccess,
+}: UploadGroupsModalProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isActive, setIsActive] = useState(true)
@@ -224,4 +226,4 @@ export default function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps)
       </DialogContent>
     </Dialog>
   )
-} 
+}

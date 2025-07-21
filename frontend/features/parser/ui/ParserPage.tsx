@@ -54,31 +54,36 @@ import type { ParseTaskResponse } from '@/types/api'
 
 const statusConfig: Record<
   string,
-  { label: string; variant: BadgeProps['variant']; icon: React.ElementType; color: string }
+  {
+    label: string
+    variant: BadgeProps['variant']
+    icon: React.ElementType
+    color: string
+  }
 > = {
   running: {
     label: 'В работе',
     variant: 'default',
     icon: Play,
-    color: 'bg-green-900 text-green-300 border-green-700'
+    color: 'bg-green-900 text-green-300 border-green-700',
   },
   completed: {
     label: 'Завершен',
     variant: 'default',
     icon: CheckCircle2,
-    color: 'bg-blue-900 text-blue-300 border-blue-700'
+    color: 'bg-blue-900 text-blue-300 border-blue-700',
   },
   failed: {
     label: 'Ошибка',
     variant: 'destructive',
     icon: XCircle,
-    color: 'bg-red-900 text-red-300 border-red-700'
+    color: 'bg-red-900 text-red-300 border-red-700',
   },
   stopped: {
     label: 'Остановлен',
     variant: 'secondary',
     icon: Pause,
-    color: 'bg-slate-700 text-slate-300 border-slate-600'
+    color: 'bg-slate-700 text-slate-300 border-slate-600',
   },
 }
 
@@ -148,8 +153,12 @@ export default function ParserPage() {
                 <Activity className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-300">Всего запусков</p>
-                <p className="text-2xl font-bold text-blue-400">{stats?.total_runs || 0}</p>
+                <p className="text-sm font-medium text-slate-300">
+                  Всего запусков
+                </p>
+                <p className="text-2xl font-bold text-blue-400">
+                  {stats?.total_runs || 0}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -163,7 +172,9 @@ export default function ParserPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-300">Успешных</p>
-                <p className="text-2xl font-bold text-green-400">{stats?.successful_runs || 0}</p>
+                <p className="text-2xl font-bold text-green-400">
+                  {stats?.successful_runs || 0}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -177,7 +188,9 @@ export default function ParserPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-300">Неуспешных</p>
-                <p className="text-2xl font-bold text-red-400">{stats?.failed_runs || 0}</p>
+                <p className="text-2xl font-bold text-red-400">
+                  {stats?.failed_runs || 0}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -190,8 +203,12 @@ export default function ParserPage() {
                 <Clock className="h-5 w-5 text-purple-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-300">Среднее время</p>
-                <p className="text-2xl font-bold text-purple-400">{Math.round(stats?.average_duration || 0)}с</p>
+                <p className="text-sm font-medium text-slate-300">
+                  Среднее время
+                </p>
+                <p className="text-2xl font-bold text-purple-400">
+                  {Math.round(stats?.average_duration || 0)}с
+                </p>
               </div>
             </div>
           </CardContent>
@@ -212,7 +229,9 @@ export default function ParserPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between p-3 bg-slate-700 border border-slate-600 rounded-lg">
-                <span className="text-sm font-medium text-slate-300">Статус</span>
+                <span className="text-sm font-medium text-slate-300">
+                  Статус
+                </span>
                 <ParserStatus status={state?.status || 'stopped'} />
               </div>
 
@@ -242,7 +261,11 @@ export default function ParserPage() {
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-600">
                     {groups.map((group) => (
-                      <SelectItem key={group.id} value={String(group.id)} className="text-slate-200 hover:bg-slate-700">
+                      <SelectItem
+                        key={group.id}
+                        value={String(group.id)}
+                        className="text-slate-200 hover:bg-slate-700"
+                      >
                         {group.name}
                       </SelectItem>
                     ))}
@@ -261,10 +284,11 @@ export default function ParserPage() {
                 </Button>
               ) : (
                 <Button
-                  className={`w-full flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105 ${isProcessing || startParserMutation.isPending
+                  className={`w-full flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105 ${
+                    isProcessing || startParserMutation.isPending
                       ? 'bg-yellow-600 hover:bg-yellow-700 cursor-wait'
                       : 'bg-blue-600 hover:bg-blue-700'
-                    }`}
+                  }`}
                   onClick={handleStart}
                   disabled={!selectedGroupId || isActionInProgress}
                 >
@@ -298,7 +322,9 @@ export default function ParserPage() {
                 <div className="flex justify-center items-center h-64">
                   <div className="flex flex-col items-center justify-center space-y-4">
                     <LoadingSpinner className="h-8 w-8 text-blue-500" />
-                    <span className="text-slate-400 font-medium">Загрузка истории...</span>
+                    <span className="text-slate-400 font-medium">
+                      Загрузка истории...
+                    </span>
                   </div>
                 </div>
               ) : (
@@ -306,57 +332,74 @@ export default function ParserPage() {
                   <table className="min-w-full relative">
                     <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 shadow-md">
                       <tr>
-                        <th className="px-4 py-3 text-left font-bold text-slate-200">Группа</th>
-                        <th className="px-4 py-3 text-left font-bold text-slate-200">Статус</th>
-                        <th className="px-4 py-3 text-left font-bold text-slate-200">Длительность</th>
-                        <th className="px-4 py-3 text-left font-bold text-slate-200">Время</th>
+                        <th className="px-4 py-3 text-left font-bold text-slate-200">
+                          Группа
+                        </th>
+                        <th className="px-4 py-3 text-left font-bold text-slate-200">
+                          Статус
+                        </th>
+                        <th className="px-4 py-3 text-left font-bold text-slate-200">
+                          Длительность
+                        </th>
+                        <th className="px-4 py-3 text-left font-bold text-slate-200">
+                          Время
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700">
-                      {history?.items?.map((task: ParseTaskResponse, index: number) => (
-                        <tr
-                          key={task.task_id}
-                          className="group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01]"
-                          style={{ animationDelay: `${index * 50}ms` }}
-                        >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-                                <span className="text-white text-xs font-bold">
-                                  {task.group_name?.charAt(0)?.toUpperCase() || 'G'}
+                      {history?.items?.map(
+                        (task: ParseTaskResponse, index: number) => (
+                          <tr
+                            key={task.task_id}
+                            className="group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01]"
+                            style={{ animationDelay: `${index * 50}ms` }}
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+                                  <span className="text-white text-xs font-bold">
+                                    {task.group_name
+                                      ?.charAt(0)
+                                      ?.toUpperCase() || 'G'}
+                                  </span>
+                                </div>
+                                <span className="text-slate-200 font-medium">
+                                  {task.group_name}
                                 </span>
                               </div>
-                              <span className="text-slate-200 font-medium">{task.group_name}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <ParserStatus status={task.status} />
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <Timer className="h-4 w-4 text-purple-400" />
-                              <span className="text-slate-300">
-                                {task.stats?.duration_seconds
-                                  ? `${task.stats.duration_seconds} сек`
-                                  : '-'}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-blue-400" />
-                              <span className="text-slate-300">
-                                {task.completed_at
-                                  ? formatDistanceToNow(new Date(task.completed_at), {
-                                    addSuffix: true,
-                                    locale: ru,
-                                  })
-                                  : '-'}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td className="px-4 py-3">
+                              <ParserStatus status={task.status} />
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <Timer className="h-4 w-4 text-purple-400" />
+                                <span className="text-slate-300">
+                                  {task.stats?.duration_seconds
+                                    ? `${task.stats.duration_seconds} сек`
+                                    : '-'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-blue-400" />
+                                <span className="text-slate-300">
+                                  {task.completed_at
+                                    ? formatDistanceToNow(
+                                        new Date(task.completed_at),
+                                        {
+                                          addSuffix: true,
+                                          locale: ru,
+                                        }
+                                      )
+                                    : '-'}
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      )}
                     </tbody>
                   </table>
                 </div>
