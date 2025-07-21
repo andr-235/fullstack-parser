@@ -5,7 +5,7 @@ Parser Service для обработки комментариев и поиск�
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Callable, Coroutine, List, Optional, Tuple, Dict, Any
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
 
 import structlog
 from fastapi import HTTPException, status

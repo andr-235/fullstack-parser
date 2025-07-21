@@ -2,8 +2,7 @@
 API endpoints для управления мониторингом VK групп
 """
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import and_, func, select
@@ -239,7 +238,7 @@ async def get_scheduler_status() -> SchedulerStatus:
             redis_connected=scheduler.redis_pool is not None,
             last_check=datetime.now().isoformat(),
         )
-    except Exception as e:
+    except Exception:
         # В случае ошибки возвращаем дефолтный статус
         return SchedulerStatus(
             is_running=False,

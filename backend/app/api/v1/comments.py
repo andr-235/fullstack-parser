@@ -2,19 +2,17 @@
 API endpoints для управления комментариями
 """
 
+import structlog
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-import structlog
 
 from app.core.database import get_db
-from app.models.vk_comment import VKComment
 from app.models.comment_keyword_match import CommentKeywordMatch
-from app.models.keyword import Keyword
+from app.models.vk_comment import VKComment
 from app.schemas.base import PaginatedResponse, PaginationParams
 from app.schemas.vk_comment import VKCommentResponse
-from app.schemas.keyword import KeywordResponse
 
 router = APIRouter(tags=["Comments"])
 logger = structlog.get_logger(__name__)

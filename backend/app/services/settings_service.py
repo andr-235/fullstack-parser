@@ -2,28 +2,25 @@
 Сервис для управления настройками приложения
 """
 
-import asyncio
-import json
 import os
 from datetime import datetime
-from typing import Dict, Any, Optional
 from functools import lru_cache
+from typing import Any, Dict, Optional
 
-import structlog
 import httpx
-from sqlalchemy.ext.asyncio import AsyncSession
+import structlog
+from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
-from sqlalchemy import text
 from app.schemas.settings import (
     ApplicationSettings,
-    VKAPISettings,
-    MonitoringSettings,
     DatabaseSettings,
     LoggingSettings,
-    UISettings,
+    MonitoringSettings,
     SettingsUpdateRequest,
+    UISettings,
+    VKAPISettings,
 )
 
 logger = structlog.get_logger()

@@ -6,10 +6,10 @@ import csv
 import io
 import re
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
 import structlog
-from fastapi import HTTPException, status, UploadFile
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,10 +17,10 @@ from app.core.config import settings
 from app.models.vk_group import VKGroup
 from app.schemas.vk_group import (
     VKGroupCreate,
-    VKGroupUpdate,
-    VKGroupStats,
-    VKGroupUploadResponse,
     VKGroupRead,
+    VKGroupStats,
+    VKGroupUpdate,
+    VKGroupUploadResponse,
 )
 from app.services.base import BaseService
 from app.services.vkbottle_service import VKBottleService
@@ -230,10 +230,10 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
 
         # Парсим данные в зависимости от формата
         groups_data = await self._parse_file_content(
-            content_str, 
-            file.filename or "unknown.txt", 
-            is_active, 
-            max_posts_to_check
+            content_str,
+            file.filename or "unknown.txt",
+            is_active,
+            max_posts_to_check,
         )
 
         # Создаем группы

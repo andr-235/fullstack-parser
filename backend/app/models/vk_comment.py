@@ -30,7 +30,9 @@ class VKComment(BaseModel):
     # Связи
     post_id = Column(Integer, ForeignKey("vk_posts.id"), nullable=False)
     post = relationship("VKPost", back_populates="comments")
-    post_vk_id = Column(Integer, comment="ID поста в VK (для формирования ссылок)")
+    post_vk_id = Column(
+        Integer, comment="ID поста в VK (для формирования ссылок)"
+    )
 
     # Автор комментария
     author_id = Column(
