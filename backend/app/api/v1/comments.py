@@ -33,7 +33,7 @@ async def get_comments(
             selectinload(VKComment.keyword_matches).selectinload(
                 CommentKeywordMatch.keyword
             ),
-            selectinload(VKComment.post).selectinload(VKPost.group)
+            selectinload(VKComment.post).selectinload(VKPost.group),
         )
         .order_by(VKComment.created_at.desc())
     )
@@ -52,16 +52,22 @@ async def get_comments(
     for comment in comments:
         # Логируем информацию о группе
         if comment.post and comment.post.group:
-            logger.debug(f"Comment {comment.id} has group: {comment.post.group.name}")
+            logger.debug(
+                f"Comment {comment.id} has group: {comment.post.group.name}"
+            )
         else:
-            logger.warning(f"Comment {comment.id} has no group. Post: {comment.post}, Group: {comment.post.group if comment.post else None}")
-        
+            logger.warning(
+                f"Comment {comment.id} has no group. Post: {comment.post}, Group: {comment.post.group if comment.post else None}"
+            )
+
         comment_data = VKCommentResponse.model_validate(comment)
 
         # Добавляем найденные ключевые слова
         matched_keywords = []
         if comment.keyword_matches:
-            logger.debug(f"Comment {comment.id} has {len(comment.keyword_matches)} keyword matches")
+            logger.debug(
+                f"Comment {comment.id} has {len(comment.keyword_matches)} keyword matches"
+            )
             for match in comment.keyword_matches:
                 if match.keyword:
                     # Добавляем только слово ключевого слова
@@ -75,14 +81,14 @@ async def get_comments(
         # Добавляем поле matched_keywords к ответу
         comment_dict = comment_data.model_dump()
         comment_dict["matched_keywords"] = matched_keywords
-        
+
         # Добавляем информацию о группе
         if comment.post and comment.post.group:
             comment_dict["group"] = {
                 "id": comment.post.group.id,
                 "name": comment.post.group.name,
                 "screen_name": comment.post.group.screen_name,
-                "vk_id": comment.post.group.vk_id
+                "vk_id": comment.post.group.vk_id,
             }
         else:
             comment_dict["group"] = None

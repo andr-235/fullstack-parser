@@ -7,33 +7,34 @@
 import asyncio
 import os
 import sys
-from datetime import datetime
-from typing import Optional
 
 # Добавляем путь к backend для импорта
 sys.path.append(os.path.join(os.path.dirname(__file__), "backend"))
 
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker, selectinload
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import selectinload, sessionmaker
 
+from app.core.config import settings
 from app.models.vk_comment import VKComment
 from app.models.vk_post import VKPost
-from app.models.vk_group import VKGroup
-from app.core.config import settings
 
 
 async def fix_comments_data():
     """Исправляет данные комментариев"""
 
     # Создаем подключение к базе данных
-    database_url = str(settings.database.url) if settings.database.url else None
+    database_url = (
+        str(settings.database.url) if settings.database.url else None
+    )
     if not database_url:
         print("❌ Не удалось получить URL базы данных")
         return
 
     engine = create_async_engine(database_url)
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async_session = sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )
 
     async with async_session() as session:
         print("🔍 Анализируем данные комментариев...")
@@ -76,7 +77,10 @@ async def fix_comments_data():
                 continue
 
             # Проверяем, нужно ли обновить post_vk_id
-            if not hasattr(comment, "post_vk_id") or comment.post_vk_id is None:
+            if (
+                not hasattr(comment, "post_vk_id")
+                or comment.post_vk_id is None
+            ):
                 comment.post_vk_id = post.vk_id
                 comments_fixed += 1
                 print(
@@ -88,13 +92,13 @@ async def fix_comments_data():
             await session.commit()
             print(f"💾 Сохранено изменений: {comments_fixed}")
 
-        print(f"\n📈 Статистика:")
+        print("\n📈 Статистика:")
         print(f"   - Комментариев без поста: {comments_without_post}")
         print(f"   - Постов без группы: {comments_without_group}")
         print(f"   - Исправлено комментариев: {comments_fixed}")
 
         # Проверяем результат
-        print(f"\n🔍 Проверяем результат...")
+        print("\n🔍 Проверяем результат...")
 
         # Получаем несколько комментариев для проверки
         test_result = await session.execute(
