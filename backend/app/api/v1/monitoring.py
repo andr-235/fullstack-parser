@@ -1,14 +1,17 @@
 """
-API endpoints для управления автоматическим мониторингом
+API endpoints для управления мониторингом VK групп
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
+from app.models.vk_group import VKGroup
 from app.schemas.base import (
     PaginatedResponse,
     PaginationParams,
@@ -28,6 +31,13 @@ from app.services.vkbottle_service import VKBottleService
 router = APIRouter(tags=["Monitoring"])
 
 
+def _get_vk_service() -> VKBottleService:
+    """Создает экземпляр VK сервиса с настройками из конфигурации"""
+    return VKBottleService(
+        token=settings.vk.access_token, api_version=settings.vk.api_version
+    )
+
+
 @router.get("/test")
 async def test_monitoring():
     """Тестовый эндпоинт для проверки работы роутера"""
@@ -39,9 +49,7 @@ async def get_monitoring_stats(
     db: AsyncSession = Depends(get_db),
 ) -> MonitoringStats:
     """Получить статистику мониторинга"""
-    vk_service = VKBottleService(
-        token="stub", api_version="5.131"
-    )  # TODO: заменить на settings
+    vk_service = _get_vk_service()
     monitoring_service = MonitoringService(db=db, vk_service=vk_service)
 
     stats = await monitoring_service.get_monitoring_stats()
@@ -58,8 +66,6 @@ async def get_monitoring_groups(
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[GroupMonitoringResponse]:
     """Получить список групп с мониторингом"""
-    from app.models.vk_group import VKGroup
-
     # Базовый запрос
     query = select(VKGroup)
 
@@ -88,7 +94,7 @@ async def get_monitoring_groups(
     for group in groups:
         items.append(
             GroupMonitoringResponse(
-                group_id=group.id,
+                id=group.id,
                 group_name=group.name,
                 screen_name=group.screen_name,
                 auto_monitoring_enabled=group.auto_monitoring_enabled,
@@ -118,8 +124,6 @@ async def get_available_groups_for_monitoring(
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[GroupMonitoringResponse]:
     """Получить список групп, доступных для мониторинга (без активного мониторинга)"""
-    from app.models.vk_group import VKGroup
-
     # Получаем активные группы без включенного мониторинга
     query = select(VKGroup).where(
         and_(
@@ -143,7 +147,7 @@ async def get_available_groups_for_monitoring(
     for group in groups:
         items.append(
             GroupMonitoringResponse(
-                group_id=group.id,
+                id=group.id,
                 group_name=group.name,
                 screen_name=group.screen_name,
                 auto_monitoring_enabled=group.auto_monitoring_enabled,
@@ -173,8 +177,6 @@ async def get_active_monitoring_groups(
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[GroupMonitoringResponse]:
     """Получить список групп с активным мониторингом"""
-    from app.models.vk_group import VKGroup
-
     # Получаем группы с включенным мониторингом
     query = (
         select(VKGroup)
@@ -205,7 +207,7 @@ async def get_active_monitoring_groups(
     for group in groups:
         items.append(
             GroupMonitoringResponse(
-                group_id=group.id,
+                id=group.id,
                 group_name=group.name,
                 screen_name=group.screen_name,
                 auto_monitoring_enabled=group.auto_monitoring_enabled,
@@ -229,13 +231,22 @@ async def get_active_monitoring_groups(
 @router.get("/scheduler/status", response_model=SchedulerStatus)
 async def get_scheduler_status() -> SchedulerStatus:
     """Получить статус планировщика"""
-    # Возвращаем дефолтный статус (упрощенная версия)
-    return SchedulerStatus(
-        is_running=False,
-        monitoring_interval_seconds=300,
-        redis_connected=True,  # Предполагаем, что Redis работает
-        last_check=datetime.now().isoformat(),
-    )
+    try:
+        scheduler = await get_scheduler_service()
+        return SchedulerStatus(
+            is_running=scheduler.is_running,
+            monitoring_interval_seconds=scheduler.monitoring_interval_seconds,
+            redis_connected=scheduler.redis_pool is not None,
+            last_check=datetime.now().isoformat(),
+        )
+    except Exception as e:
+        # В случае ошибки возвращаем дефолтный статус
+        return SchedulerStatus(
+            is_running=False,
+            monitoring_interval_seconds=300,
+            redis_connected=False,
+            last_check=datetime.now().isoformat(),
+        )
 
 
 @router.post("/scheduler/start", response_model=StatusResponse)
@@ -285,12 +296,7 @@ async def run_monitoring_cycle(
 ) -> MonitoringCycleResult:
     """Запустить цикл мониторинга вручную"""
     try:
-        from app.core.config import settings
-
-        vk_service = VKBottleService(
-            token=settings.vk.access_token,
-            api_version=settings.vk.api_version,
-        )
+        vk_service = _get_vk_service()
         monitoring_service = MonitoringService(db=db, vk_service=vk_service)
 
         # Запускаем цикл мониторинга напрямую
@@ -312,9 +318,7 @@ async def enable_group_monitoring(
     db: AsyncSession = Depends(get_db),
 ) -> StatusResponse:
     """Включить автоматический мониторинг для группы"""
-    vk_service = VKBottleService(
-        token="stub", api_version="5.131"
-    )  # TODO: заменить на settings
+    vk_service = _get_vk_service()
     monitoring_service = MonitoringService(db=db, vk_service=vk_service)
 
     success = await monitoring_service.enable_group_monitoring(
@@ -341,9 +345,7 @@ async def disable_group_monitoring(
     db: AsyncSession = Depends(get_db),
 ) -> StatusResponse:
     """Отключить автоматический мониторинг для группы"""
-    vk_service = VKBottleService(
-        token="stub", api_version="5.131"
-    )  # TODO: заменить на settings
+    vk_service = _get_vk_service()
     monitoring_service = MonitoringService(db=db, vk_service=vk_service)
 
     success = await monitoring_service.disable_group_monitoring(
@@ -369,8 +371,6 @@ async def update_group_monitoring_settings(
     db: AsyncSession = Depends(get_db),
 ) -> StatusResponse:
     """Обновить настройки мониторинга группы"""
-    from app.models.vk_group import VKGroup
-
     result = await db.execute(select(VKGroup).where(VKGroup.id == group_id))
     group = result.scalar_one_or_none()
 
@@ -405,11 +405,7 @@ async def run_group_monitoring(
     db: AsyncSession = Depends(get_db),
 ) -> StatusResponse:
     """Запустить мониторинг группы вручную"""
-    from app.models.vk_group import VKGroup
-
-    vk_service = VKBottleService(
-        token="stub", api_version="5.131"
-    )  # TODO: заменить на settings
+    vk_service = _get_vk_service()
     monitoring_service = MonitoringService(db=db, vk_service=vk_service)
 
     # Получаем группу
@@ -443,10 +439,6 @@ async def get_group_monitoring_status(
     db: AsyncSession = Depends(get_db),
 ) -> GroupMonitoringResponse:
     """Получить статус мониторинга группы"""
-    from sqlalchemy import select
-
-    from app.models.vk_group import VKGroup
-
     result = await db.execute(select(VKGroup).where(VKGroup.id == group_id))
     group = result.scalar_one_or_none()
 
@@ -456,7 +448,7 @@ async def get_group_monitoring_status(
         )
 
     return GroupMonitoringResponse(
-        group_id=group.id,
+        id=group.id,
         group_name=group.name,
         screen_name=group.screen_name,
         auto_monitoring_enabled=group.auto_monitoring_enabled,
@@ -467,3 +459,52 @@ async def get_group_monitoring_status(
         last_monitoring_success=group.last_monitoring_success,
         last_monitoring_error=group.last_monitoring_error,
     )
+
+
+@router.get("/history", response_model=list[dict])
+async def get_monitoring_history(
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Получить историю мониторинга"""
+    # Получаем последние обновления групп с мониторингом
+    query = (
+        select(VKGroup)
+        .where(
+            and_(
+                VKGroup.is_active.is_(True),
+                VKGroup.auto_monitoring_enabled.is_(True),
+            )
+        )
+        .order_by(VKGroup.last_monitoring_success.desc().nullslast())
+        .limit(limit)
+    )
+
+    result = await db.execute(query)
+    groups = result.scalars().all()
+
+    history = []
+    for group in groups:
+        if group.last_monitoring_success:
+            history.append(
+                {
+                    "group_name": group.name,
+                    "screen_name": group.screen_name,
+                    "action": "Успешный мониторинг",
+                    "timestamp": group.last_monitoring_success.isoformat(),
+                    "status": "success",
+                }
+            )
+        elif group.last_monitoring_error:
+            history.append(
+                {
+                    "group_name": group.name,
+                    "screen_name": group.screen_name,
+                    "action": "Ошибка мониторинга",
+                    "timestamp": group.updated_at.isoformat(),
+                    "status": "error",
+                    "error": group.last_monitoring_error,
+                }
+            )
+
+    return history

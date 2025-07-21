@@ -5,7 +5,7 @@ Pydantic схемы для VK групп
 from datetime import datetime
 from typing import Optional
 
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from app.schemas.base import BaseSchema, IDMixin, TimestampMixin
 
@@ -25,7 +25,7 @@ class VKGroupBase(BaseSchema):
     max_posts_to_check: int = Field(
         default=100,
         ge=1,
-        le=1000,
+        le=10000,
         description="Максимум постов для проверки",
     )
 
@@ -37,7 +37,12 @@ class VKGroupCreate(BaseSchema):
     vk_id_or_screen_name: str = Field(
         ..., description="ID группы или короткое имя для поиска в VK"
     )
-    name: str = Field(..., description="Название группы")
+    name: Optional[str] = Field(
+        None, description="Название группы (заполняется из VK API)"
+    )
+    screen_name: Optional[str] = Field(
+        None, description="Короткое имя группы (заполняется из VK API)"
+    )
     description: Optional[str] = Field(None, description="Описание группы")
     is_active: bool = Field(
         default=True, description="Активен ли мониторинг группы"
@@ -45,7 +50,7 @@ class VKGroupCreate(BaseSchema):
     max_posts_to_check: int = Field(
         default=100,
         ge=1,
-        le=1000,
+        le=10000,
         description="Максимум постов для проверки",
     )
 
@@ -61,7 +66,7 @@ class VKGroupUpdate(BaseSchema):
     max_posts_to_check: Optional[int] = Field(
         default=None,
         ge=1,
-        le=1000,
+        le=10000,
         description="Максимум постов для проверки",
     )
 
@@ -115,3 +120,21 @@ class VKGroupResponse(BaseSchema):
     name: str
     screen_name: str
     photo_url: Optional[str] = None
+
+
+class VKGroupUploadResponse(BaseModel):
+    """Схема ответа при загрузке групп из файла"""
+
+    status: str = Field(description="Статус операции")
+    message: str = Field(description="Сообщение о результате")
+    total_processed: int = Field(
+        description="Общее количество обработанных строк"
+    )
+    created: int = Field(description="Количество созданных групп")
+    skipped: int = Field(description="Количество пропущенных (дубликатов)")
+    errors: list[str] = Field(
+        default_factory=list, description="Список ошибок"
+    )
+    created_groups: list[VKGroupRead] = Field(
+        default_factory=list, description="Созданные группы"
+    )

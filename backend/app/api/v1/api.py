@@ -12,6 +12,7 @@ from app.api.v1 import (
     monitoring,
     morphological,
     parser,
+    settings,
     stats,
 )
 
@@ -36,6 +37,9 @@ api_router.include_router(
     prefix="/morphological",
     tags=["Morphological Analysis"],
 )
+api_router.include_router(
+    settings.router, prefix="/settings", tags=["Settings"]
+)
 
 
 @api_router.get("/")
@@ -52,6 +56,7 @@ async def api_info() -> dict[str, str | dict[str, str]]:
             "stats": "/stats - Статистика системы",
             "monitoring": "/monitoring - Автоматический мониторинг групп",
             "morphological": "/morphological - Морфологический анализ слов",
+            "settings": "/settings - Управление настройками приложения",
             "health": "/health - Состояние сервиса",
         },
     }

@@ -30,8 +30,13 @@ export interface VKGroupBase {
   max_posts_to_check: number
 }
 
-export interface VKGroupCreate extends VKGroupBase {
+export interface VKGroupCreate {
   vk_id_or_screen_name: string
+  name?: string
+  screen_name?: string
+  description?: string
+  is_active: boolean
+  max_posts_to_check: number
 }
 
 export interface VKGroupUpdate {
@@ -58,6 +63,16 @@ export interface VKGroupStats {
   comments_with_keywords: number
   last_activity?: string
   top_keywords: string[]
+}
+
+export interface VKGroupUploadResponse {
+  status: string
+  message: string
+  total_processed: number
+  created: number
+  skipped: number
+  errors: string[]
+  created_groups: VKGroupResponse[]
 }
 
 // Keyword типы
@@ -134,11 +149,11 @@ export interface VKCommentResponse extends VKCommentBase, BaseEntity {
   is_processed: boolean
   processed_at?: string
   group?: VKGroupResponse
-  matched_keywords?: KeywordResponse[]
+  matched_keywords?: string[]
 }
 
 export interface CommentWithKeywords extends VKCommentResponse {
-  matched_keywords: KeywordResponse[]
+  matched_keywords: string[]
   keyword_matches: Array<{
     keyword: string
     matched_text: string
@@ -253,6 +268,8 @@ export interface MonitoringStats {
 }
 
 export interface VKGroupMonitoring extends VKGroupResponse {
+  id: number // Добавляем id для совместимости с frontend
+  group_id?: number // Оставляем group_id для совместимости с API
   auto_monitoring_enabled: boolean
   monitoring_interval_minutes: number
   monitoring_priority: number

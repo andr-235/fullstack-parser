@@ -5,19 +5,24 @@ API endpoints для управления VK группами
 import re
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Form
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models import VKGroup
-from app.schemas.base import PaginatedResponse, PaginationParams
+from app.schemas.base import (
+    PaginatedResponse,
+    PaginationParams,
+    StatusResponse,
+)
 from app.schemas.vk_group import (
     VKGroupCreate,
     VKGroupRead,
     VKGroupStats,
     VKGroupUpdate,
+    VKGroupUploadResponse,
 )
 
 # from app.core.config import settings  # Удалено как неиспользуемое
@@ -91,16 +96,22 @@ async def create_group(
     if "id" in vk_group_data:
         filtered_data["vk_id"] = vk_group_data["id"]
 
-    # Переопределяем поля пользовательскими данными
-    filtered_data.update(
-        {
-            "screen_name": screen_name,
-            "name": group_data.name,
-            "description": group_data.description,
-            "is_active": group_data.is_active,
-            "max_posts_to_check": group_data.max_posts_to_check,
-        }
-    )
+    # Переопределяем поля пользовательскими данными (только если они переданы)
+    update_data = {
+        "screen_name": screen_name,
+        "is_active": group_data.is_active,
+        "max_posts_to_check": group_data.max_posts_to_check,
+    }
+
+    # Добавляем опциональные поля только если они переданы
+    if group_data.name is not None:
+        update_data["name"] = group_data.name
+    if group_data.screen_name is not None:
+        update_data["screen_name"] = group_data.screen_name
+    if group_data.description is not None:
+        update_data["description"] = group_data.description
+
+    filtered_data.update(update_data)
 
     new_group = VKGroup(**filtered_data)
     db.add(new_group)
@@ -175,20 +186,36 @@ async def delete_group(
 async def get_group_stats(
     group_id: int, db: AsyncSession = Depends(get_db)
 ) -> VKGroupStats:
-    """Получить статистику по группе"""
-    group = await db.get(VKGroup, group_id)
-    if not group:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Группа не найдена"
-        )
+    """
+    Получить статистику по группе
+    """
+    return await group_service.get_group_stats(db, group_id)
 
-    # TODO: Добавить получение детальной статистики из связанных таблиц
-    validated_group = VKGroupRead.model_validate(group)
-    return VKGroupStats(
-        group_id=validated_group.vk_id,
-        total_posts=0,
-        total_comments=0,
-        comments_with_keywords=0,
-        last_activity=None,
-        top_keywords=[],
+
+@router.post("/upload", response_model=VKGroupUploadResponse)
+async def upload_groups_from_file(
+    file: UploadFile,
+    is_active: bool = Form(True, description="Активны ли группы"),
+    max_posts_to_check: int = Form(
+        100, description="Максимум постов для проверки"
+    ),
+    db: AsyncSession = Depends(get_db),
+) -> VKGroupUploadResponse:
+    """
+    Загружает группы из файла
+
+    Поддерживаемые форматы:
+    - CSV: screen_name,name,description
+    - TXT: одно screen_name на строку
+
+    Параметры:
+    - file: Файл с группами (CSV или TXT)
+    - is_active: Активны ли загружаемые группы
+    - max_posts_to_check: Максимум постов для проверки
+    """
+    return await group_service.upload_groups_from_file(
+        db=db,
+        file=file,
+        is_active=is_active,
+        max_posts_to_check=max_posts_to_check,
     )

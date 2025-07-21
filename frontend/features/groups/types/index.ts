@@ -1,4 +1,2 @@
-// groups types exports
-// TODO: Add groups types
-
-export {}
+// Groups types exports
+export type { VKGroupResponse } from '@/types/api'

@@ -68,6 +68,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
+def get_async_session() -> AsyncSession:
+    """Получение асинхронной сессии для ARQ задач."""
+    return AsyncSessionLocal()
+
+
 async def init_db() -> None:
     """Инициализация базы данных с оптимизацией и
     повторными попытками подключения.

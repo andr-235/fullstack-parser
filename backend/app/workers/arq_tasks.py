@@ -1,122 +1,250 @@
+"""
+ARQ задачи для фоновой обработки
+"""
+
 import asyncio
+import logging
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 import structlog
+from arq import create_pool
+from arq.connections import ArqRedis
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.services.monitoring_service import MonitoringService
 from app.services.parser_service import ParserService
 from app.services.redis_parser_manager import get_redis_parser_manager
+from app.services.scheduler_service import SchedulerService
 from app.services.vkbottle_service import VKBottleService
 
 logger = structlog.get_logger(__name__)
 
 
 async def run_parsing_task(
-    ctx,
+    ctx: Dict[str, Any],
     group_id: int,
     max_posts: int | None = None,
     force_reparse: bool = False,
-):
+) -> Dict[str, Any]:
     """
-    Задача для парсинга постов группы
+    Задача парсинга группы VK
+
+    Args:
+        ctx: Контекст ARQ
+        group_id: ID группы для парсинга
+        max_posts: Максимальное количество постов
+        force_reparse: Принудительный перепарсинг
+
+    Returns:
+        Результат выполнения задачи
     """
-    logger.info(f"[ARQ] Запуск задачи парсинга для группы {group_id}")
+    start_time = datetime.now(timezone.utc)
+    task_id = ctx.get("job_id")
+
+    logger.info(
+        "Запуск задачи парсинга",
+        task_id=task_id,
+        group_id=group_id,
+        max_posts=max_posts,
+        force_reparse=force_reparse,
+    )
 
     try:
-        task_id = ctx["job_id"] if "job_id" in ctx else None
+        # Получаем зависимости
         redis_manager = get_redis_parser_manager()
+        vk_service = VKBottleService(
+            token=settings.vk.access_token, api_version=settings.vk.api_version
+        )
 
-        async def progress_callback(progress: float):
-            res = redis_manager.update_task_progress(task_id, progress)
-            if asyncio.iscoroutine(res):
-                await res
-
+        # Создаем сессию БД
         async with AsyncSessionLocal() as db:
-            vk_token = settings.vk.access_token
-            if not vk_token or vk_token == "your-vk-app-id":
-                logger.warning(
-                    f"[ARQ] VK_ACCESS_TOKEN не передан или дефолтный: {vk_token}"
-                )
-            else:
-                logger.info(
-                    f"[ARQ] VK_ACCESS_TOKEN начинается с: {vk_token[:8]}..."
-                )
-            logger.warning(
-                f"[ARQ] VK_ACCESS_TOKEN (repr): {repr(settings.vk.access_token)}"
-            )
-            logger.warning(
-                f"[ARQ] VK_ACCESS_TOKEN из settings: {settings.vk.access_token[:8]}..."
-            )
-            parser_service = ParserService(
-                db=db,
-                vk_service=VKBottleService(
-                    token=vk_token, api_version=settings.vk.api_version
-                ),
-            )
+            parser_service = ParserService(db, vk_service)
+
+            # Запускаем парсинг
             stats = await parser_service.parse_group_posts(
                 group_id=group_id,
                 max_posts_count=max_posts,
                 force_reparse=force_reparse,
-                progress_callback=progress_callback,
                 task_id=task_id,
             )
-            # Явно закрываем redis_manager, если есть метод close
-            if hasattr(redis_manager, "close") and callable(
-                redis_manager.close
-            ):
-                close_result = redis_manager.close()
-                if asyncio.iscoroutine(close_result):
-                    await close_result
-            res = redis_manager.complete_task(task_id, stats.model_dump())
-            if asyncio.iscoroutine(res):
-                await res
-            logger.info(f"[ARQ] Задача парсинга завершена успешно: {task_id}")
-            return stats.model_dump()
+
+        duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+
+        logger.info(
+            "Задача парсинга завершена успешно",
+            task_id=task_id,
+            group_id=group_id,
+            duration=duration,
+            stats=stats.model_dump(),
+        )
+
+        return {
+            "status": "success",
+            "group_id": group_id,
+            "duration": duration,
+            "stats": stats.model_dump(),
+        }
 
     except Exception as e:
-        logger.error(f"[ARQ] Ошибка задачи парсинга: {e}", exc_info=True)
-        if "task_id" in locals():
-            redis_manager = get_redis_parser_manager()
-            res = redis_manager.fail_task(task_id, str(e))
-            if asyncio.iscoroutine(res):
-                await res
-        raise e
+        duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+
+        logger.error(
+            "Ошибка выполнения задачи парсинга",
+            task_id=task_id,
+            group_id=group_id,
+            duration=duration,
+            error=str(e),
+            exc_info=True,
+        )
+
+        return {
+            "status": "error",
+            "group_id": group_id,
+            "duration": duration,
+            "error": str(e),
+        }
 
 
-async def run_monitoring_cycle(ctx):
+async def run_monitoring_cycle(ctx: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Задача для запуска цикла автоматического мониторинга всех групп
+    Задача мониторинга групп VK
+
+    Args:
+        ctx: Контекст ARQ
+
+    Returns:
+        Результат выполнения задачи
     """
-    logger.info("[ARQ] Запуск цикла автоматического мониторинга")
+    start_time = datetime.now(timezone.utc)
+    task_id = ctx.get("job_id")
+
+    logger.info("Запуск цикла мониторинга", task_id=task_id)
 
     try:
+        # Получаем зависимости
+        redis_manager = get_redis_parser_manager()
+        vk_service = VKBottleService(
+            token=settings.vk.access_token, api_version=settings.vk.api_version
+        )
+
+        # Создаем сессию БД
         async with AsyncSessionLocal() as db:
-            vk_token = settings.vk.access_token
-            if not vk_token:
-                logger.error("[ARQ] VK_ACCESS_TOKEN не настроен")
-                return {"error": "VK_ACCESS_TOKEN не настроен"}
-
-            vk_service = VKBottleService(
-                token=vk_token, api_version=settings.vk.api_version
-            )
-
             monitoring_service = MonitoringService(
-                db=db, vk_service=vk_service
+                db, vk_service, redis_manager
             )
+            scheduler_service = SchedulerService(db)
 
-            # Запускаем цикл мониторинга
-            stats = await monitoring_service.run_monitoring_cycle()
+            # Запускаем мониторинг
+            result = await monitoring_service.run_monitoring_cycle()
 
-            logger.info("[ARQ] Цикл мониторинга завершён", **stats)
+        duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
-            # Добавляем задержку чтобы не жрать CPU
-            await asyncio.sleep(1)
+        logger.info(
+            "Цикл мониторинга завершен успешно",
+            task_id=task_id,
+            duration=duration,
+            result=result,
+        )
 
-            return stats
+        return {
+            "status": "success",
+            "duration": duration,
+            "result": result,
+        }
 
     except Exception as e:
+        duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+
         logger.error(
-            "[ARQ] Ошибка цикла мониторинга", error=str(e), exc_info=True
+            "Ошибка выполнения цикла мониторинга",
+            task_id=task_id,
+            duration=duration,
+            error=str(e),
+            exc_info=True,
         )
-        return {"error": str(e)}
+
+        return {
+            "status": "error",
+            "duration": duration,
+            "error": str(e),
+        }
+
+
+async def run_scheduler_task(ctx: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Задача планировщика для запуска мониторинга
+
+    Args:
+        ctx: Контекст ARQ
+
+    Returns:
+        Результат выполнения задачи
+    """
+    start_time = datetime.now(timezone.utc)
+    task_id = ctx.get("job_id")
+
+    logger.info("Запуск задачи планировщика", task_id=task_id)
+
+    try:
+        # Получаем зависимости
+        redis_manager = get_redis_parser_manager()
+
+        # Создаем сессию БД
+        async with AsyncSessionLocal() as db:
+            scheduler_service = SchedulerService(db)
+
+            # Проверяем и запускаем задачи мониторинга
+            result = await scheduler_service.process_scheduled_tasks(
+                redis_manager
+            )
+
+        duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+
+        logger.info(
+            "Задача планировщика завершена успешно",
+            task_id=task_id,
+            duration=duration,
+            result=result,
+        )
+
+        return {
+            "status": "success",
+            "duration": duration,
+            "result": result,
+        }
+
+    except Exception as e:
+        duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+
+        logger.error(
+            "Ошибка выполнения задачи планировщика",
+            task_id=task_id,
+            duration=duration,
+            error=str(e),
+            exc_info=True,
+        )
+
+        return {
+            "status": "error",
+            "duration": duration,
+            "error": str(e),
+        }
+
+
+class WorkerSettings:
+    """Настройки ARQ воркера"""
+
+    functions = [
+        run_parsing_task,
+        run_monitoring_cycle,
+        run_scheduler_task,
+    ]
+
+    redis_settings = settings.redis_url
+    max_jobs = 10
+    job_timeout = 3600  # 1 час
+    keep_result = 3600  # Хранить результат 1 час
+    max_tries = 3
+    retry_delay = 60  # 1 минута между попытками

@@ -1,4 +1,3 @@
-// groups ui exports
-// TODO: Add groups ui
-
-export {}
+// Groups UI exports
+export { default as GroupsPage } from './GroupsPage'
+export { default as UploadGroupsModal } from './UploadGroupsModal'

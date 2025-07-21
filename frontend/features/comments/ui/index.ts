@@ -1,4 +1,2 @@
 // Comments UI exports
-// TODO: Add comment UI components
-
-export {}
+export { default as CommentsPage } from './CommentsPage'

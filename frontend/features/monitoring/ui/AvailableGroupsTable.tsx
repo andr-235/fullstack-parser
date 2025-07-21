@@ -165,8 +165,8 @@ export default function AvailableGroupsTable({
             setTimeout(() => {
               enableMutation.mutate({
                 groupId: settingsGroup.id,
-                intervalMinutes: updateData.interval_minutes,
-                priority: updateData.priority,
+                intervalMinutes: updateData.monitoring_interval_minutes || 15,
+                priority: updateData.monitoring_priority || 1,
               })
               setShowSettings(false)
             }, 0)

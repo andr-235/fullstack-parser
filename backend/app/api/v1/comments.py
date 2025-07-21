@@ -5,13 +5,19 @@ API endpoints для управления комментариями
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
+import structlog
 
 from app.core.database import get_db
 from app.models.vk_comment import VKComment
+from app.models.comment_keyword_match import CommentKeywordMatch
+from app.models.keyword import Keyword
 from app.schemas.base import PaginatedResponse, PaginationParams
 from app.schemas.vk_comment import VKCommentResponse
+from app.schemas.keyword import KeywordResponse
 
 router = APIRouter(tags=["Comments"])
+logger = structlog.get_logger(__name__)
 
 
 @router.get("/", response_model=PaginatedResponse)
@@ -21,29 +27,58 @@ async def get_comments(
 ) -> PaginatedResponse:
     """Получить список всех найденных комментариев"""
 
-    query = select(VKComment).order_by(VKComment.created_at.desc())
+    # Загружаем комментарии с связанными ключевыми словами
+    query = (
+        select(VKComment)
+        .options(
+            selectinload(VKComment.keyword_matches).selectinload(
+                CommentKeywordMatch.keyword
+            )
+        )
+        .order_by(VKComment.created_at.desc())
+    )
 
     # Подсчёт общего количества
     total_result = await db.execute(select(VKComment))
     total = len(total_result.scalars().all())
 
     # Получение данных с пагинацией
-    paginated_query = query.offset(pagination.skip).limit(pagination.limit)
+    paginated_query = query.offset(pagination.skip).limit(pagination.size)
     result = await db.execute(paginated_query)
     comments = result.scalars().all()
 
-    import structlog
+    # Преобразуем в ответы с ключевыми словами
+    comment_responses = []
+    for comment in comments:
+        comment_data = VKCommentResponse.model_validate(comment)
 
-    logger = structlog.get_logger(__name__)
-    logger.warning(f"comments: {comments}")
+        # Добавляем найденные ключевые слова
+        matched_keywords = []
+        if comment.keyword_matches:
+            logger.info(
+                f"Comment {comment.id} has {len(comment.keyword_matches)} keyword matches"
+            )
+            for match in comment.keyword_matches:
+                if match.keyword:
+                    # Добавляем только слово ключевого слова
+                    matched_keywords.append(match.keyword.word)
+                    logger.info(f"Found keyword: {match.keyword.word}")
+                else:
+                    logger.warning(f"Match {match.id} has no keyword")
+        else:
+            logger.info(f"Comment {comment.id} has no keyword matches")
+
+        # Добавляем поле matched_keywords к ответу
+        comment_dict = comment_data.model_dump()
+        comment_dict["matched_keywords"] = matched_keywords
+
+        comment_responses.append(comment_dict)
 
     return PaginatedResponse(
         total=total,
         page=pagination.page,
         size=pagination.size,
-        items=[
-            VKCommentResponse.model_validate(comment) for comment in comments
-        ],
+        items=comment_responses,
     )
 
 

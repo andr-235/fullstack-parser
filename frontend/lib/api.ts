@@ -25,7 +25,14 @@ import type {
   VKGroupMonitoring,
   MonitoringGroupUpdate,
   MonitoringRunResult,
+  VKGroupUploadResponse,
 } from '@/types/api'
+import type {
+  ApplicationSettings,
+  SettingsUpdateRequest,
+  SettingsResponse,
+  SettingsHealthStatus,
+} from '@/types/settings'
 
 /**
  * Конфигурация API клиента
@@ -102,6 +109,57 @@ class APIClient {
       `/groups/${groupId}`
     )
     return data
+  }
+
+  async uploadGroupsFromFile(
+    file: File,
+    options?: {
+      is_active?: boolean
+      max_posts_to_check?: number
+    }
+  ) {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    if (options?.is_active !== undefined) {
+      formData.append('is_active', options.is_active.toString())
+    }
+
+    if (options?.max_posts_to_check !== undefined) {
+      formData.append(
+        'max_posts_to_check',
+        options.max_posts_to_check.toString()
+      )
+    }
+
+    try {
+      const { data } = await this.client.post<VKGroupUploadResponse>(
+        '/groups/upload',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 60000, // Увеличиваем таймаут для загрузки файлов
+          maxContentLength: 10 * 1024 * 1024, // 10MB
+          maxBodyLength: 10 * 1024 * 1024, // 10MB
+        }
+      )
+      return data
+    } catch (error: any) {
+      if (error.response?.data?.detail) {
+        throw new APIClientError(
+          error.response.data.detail,
+          error.response.status,
+          error.response.data
+        )
+      }
+      throw new APIClientError(
+        'Ошибка загрузки файла с группами',
+        error.response?.status,
+        error
+      )
+    }
   }
 
   async getGroupStats(groupId: number) {
@@ -198,7 +256,7 @@ class APIClient {
 
     try {
       const { data } = await this.client.post<KeywordUploadResponse>(
-        '/keywords/upload/',
+        '/keywords/upload',
         formData,
         {
           headers: {
@@ -238,7 +296,7 @@ class APIClient {
   async getComments(params?: CommentSearchParams & PaginationParams) {
     const { data } = await this.client.get<
       PaginatedResponse<VKCommentResponse>
-    >('/parser/comments', {
+    >('/comments/', {
       params,
     })
     return data
@@ -514,6 +572,51 @@ class APIClient {
     )
     return data
   }
+
+  // Settings API
+  async getSettings() {
+    const { data } = await this.client.get<SettingsResponse>('/settings/')
+    return data
+  }
+
+  async updateSettings(settings: SettingsUpdateRequest) {
+    const { data } = await this.client.put<SettingsResponse>(
+      '/settings/',
+      settings
+    )
+    return data
+  }
+
+  async resetSettings() {
+    const { data } = await this.client.post<SettingsResponse>('/settings/reset')
+    return data
+  }
+
+  async getSettingsHealth() {
+    const { data } =
+      await this.client.get<SettingsHealthStatus>('/settings/health')
+    return data
+  }
+
+  async testVKAPIConnection(accessToken: string, apiVersion: string = '5.131') {
+    try {
+      const response = await this.client.get(
+        'https://api.vk.com/method/users.get',
+        {
+          params: {
+            access_token: accessToken,
+            v: apiVersion,
+            user_ids: '1',
+          },
+          timeout: 10000, // 10 секунд
+        }
+      )
+      return response.status === 200
+    } catch (error) {
+      console.error('VK API connection test failed:', error)
+      return false
+    }
+  }
 }
 
 // Экспортируем единственный экземпляр
@@ -570,4 +673,7 @@ export const createQueryKey = {
     ['monitoring', 'groups', 'active', params] as const,
 
   monitoringGroup: (id: number) => ['monitoring', 'groups', id] as const,
+
+  settings: () => ['settings'] as const,
+  settingsHealth: () => ['settings', 'health'] as const,
 }

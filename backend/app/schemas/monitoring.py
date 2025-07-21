@@ -55,7 +55,7 @@ class GroupMonitoringConfig(BaseModel):
 class GroupMonitoringResponse(BaseModel):
     """Ответ с информацией о мониторинге группы"""
 
-    group_id: int = Field(description="ID группы")
+    id: int = Field(description="ID группы")
     group_name: str = Field(description="Название группы")
     screen_name: Optional[str] = Field(description="Короткое имя группы")
     auto_monitoring_enabled: bool = Field(

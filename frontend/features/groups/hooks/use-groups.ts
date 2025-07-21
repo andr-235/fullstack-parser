@@ -72,7 +72,29 @@ export function useDeleteGroup() {
   return useMutation({
     mutationFn: (groupId: number) => api.deleteGroup(groupId),
     onSuccess: () => {
-      // Инвалидируем список групп
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+    },
+  })
+}
+
+/**
+ * Хук для загрузки групп из файла
+ */
+export function useUploadGroupsFromFile() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      file,
+      options,
+    }: {
+      file: File
+      options?: {
+        is_active?: boolean
+        max_posts_to_check?: number
+      }
+    }) => api.uploadGroupsFromFile(file, options),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
     },
   })

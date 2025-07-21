@@ -23,7 +23,7 @@ interface UploadKeywordsModalProps {
   onSuccess?: () => void
 }
 
-export function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
+export default function UploadKeywordsModal({ onSuccess }: UploadKeywordsModalProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [defaultCategory, setDefaultCategory] = useState('')

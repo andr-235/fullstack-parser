@@ -6,7 +6,9 @@ from typing import List
 
 from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.schemas.base import (
     PaginatedResponse,
@@ -27,6 +29,7 @@ from app.services.redis_parser_manager import (
     get_redis_parser_manager,
 )
 from app.services.vkbottle_service import VKBottleService
+from app.schemas.vk_comment import VKCommentResponse
 
 router = APIRouter(tags=["Parser"])
 
@@ -38,22 +41,75 @@ async def start_parsing(
     db: AsyncSession = Depends(get_db),
     parser_manager=Depends(get_redis_parser_manager),
 ) -> ParseTaskResponse:
+    """Запустить парсинг группы"""
     vk_service = VKBottleService(
-        token="stub", api_version="5.131"
-    )  # TODO: заменить на settings
+        token=settings.vk.access_token, api_version=settings.vk.api_version
+    )
     service = ParserService(db, vk_service)
     return await service.start_parsing_task(task_data, parser_manager)
 
 
-@router.get("/comments", response_model=PaginatedResponse)
+@router.get("/comments", response_model=PaginatedResponse[VKCommentResponse])
 async def get_comments(
     search_params: CommentSearchParams = Depends(),
     pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
-) -> PaginatedResponse:
-    vk_service = VKBottleService(token="stub", api_version="5.131")
+) -> PaginatedResponse[VKCommentResponse]:
+    """Получить отфильтрованные комментарии"""
+    vk_service = VKBottleService(
+        token=settings.vk.access_token, api_version=settings.vk.api_version
+    )
     service = ParserService(db, vk_service)
-    return await service.filter_comments(search_params, pagination)
+
+    # Получаем отфильтрованные комментарии
+    result = await service.filter_comments(search_params, pagination)
+
+    # Загружаем связанные ключевые слова для каждого комментария
+    from sqlalchemy.orm import selectinload
+    from app.models.vk_comment import VKComment
+    from app.models.comment_keyword_match import CommentKeywordMatch
+    from app.schemas.keyword import KeywordResponse
+
+    # Получаем комментарии с ключевыми словами
+    query = (
+        select(VKComment)
+        .options(
+            selectinload(VKComment.keyword_matches).selectinload(
+                CommentKeywordMatch.keyword
+            )
+        )
+        .where(VKComment.id.in_([item.id for item in result.items]))
+    )
+
+    comments_with_keywords = await db.execute(query)
+    comments = comments_with_keywords.scalars().all()
+
+    # Создаем словарь комментариев с ключевыми словами
+    comments_dict = {}
+    for comment in comments:
+        matched_keywords = []
+        if comment.keyword_matches:
+            for match in comment.keyword_matches:
+                if match.keyword:
+                    keyword_response = KeywordResponse.model_validate(
+                        match.keyword
+                    )
+                    matched_keywords.append(keyword_response.model_dump())
+        comments_dict[comment.id] = matched_keywords
+
+    # Обновляем ответы с ключевыми словами
+    updated_items = []
+    for item in result.items:
+        item_dict = item.model_dump()
+        item_dict["matched_keywords"] = comments_dict.get(item.id, [])
+        updated_items.append(item_dict)
+
+    return PaginatedResponse(
+        total=result.total,
+        page=result.page,
+        size=result.size,
+        items=updated_items,
+    )
 
 
 @router.get("/comments/{comment_id}", response_model=CommentWithKeywords)

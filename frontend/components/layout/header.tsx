@@ -80,7 +80,6 @@ export function Header({ className }: HeaderProps) {
           <span className="sr-only">Уведомления</span>
         </Button>
         <Avatar>
-          <AvatarImage src="/avatars/01.png" alt="User avatar" />
           <AvatarFallback>А</AvatarFallback>
         </Avatar>
       </div>

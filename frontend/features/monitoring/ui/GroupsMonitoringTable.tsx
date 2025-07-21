@@ -115,7 +115,15 @@ export default function GroupsMonitoringTable({
       return 'Не запланировано'
     }
 
-    return formatDistanceToNow(new Date(group.next_monitoring_at), {
+    const nextTime = new Date(group.next_monitoring_at)
+    const now = new Date()
+
+    // Если время в прошлом, показываем "Просрочено"
+    if (nextTime < now) {
+      return 'Просрочено'
+    }
+
+    return formatDistanceToNow(nextTime, {
       addSuffix: true,
       locale: ru,
     })
@@ -193,7 +201,10 @@ export default function GroupsMonitoringTable({
                   </span>
                 </TableCell>
                 <TableCell>
-                  <span className="text-sm text-slate-400">
+                  <span className={`text-sm ${getNextMonitoringTime(group) === 'Просрочено' ? 'text-red-400' :
+                      getNextMonitoringTime(group) === 'Не запланировано' ? 'text-slate-400' :
+                        'text-slate-400'
+                    }`}>
                     {getNextMonitoringTime(group)}
                   </span>
                 </TableCell>

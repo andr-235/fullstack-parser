@@ -1,4 +1,2 @@
-// parser ui exports
-// TODO: Add parser ui
-
-export {}
+// parser UI exports
+export const ParserPage = () => null

@@ -1,5 +1,2 @@
-export { default as DashboardPage } from './DashboardPage'
-export { default as HomePage } from './HomePage'
-export * from './DashboardWidgets'
-export * from './DashboardFilters'
-export * from './DashboardExport'
+// dashboard UI exports
+export const DashboardPage = () => null

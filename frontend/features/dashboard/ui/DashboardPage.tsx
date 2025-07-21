@@ -26,17 +26,20 @@ import {
   Download,
   Eye,
   Search,
+  BarChart,
+  PieChart,
+  LineChart,
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import {
-  LineChart,
+  LineChart as RechartsLineChart,
   Line,
   AreaChart,
   Area,
-  BarChart,
+  BarChart as RechartsBarChart,
   Bar,
-  PieChart,
+  PieChart as RechartsPieChart,
   Pie,
   Cell,
   XAxis,
@@ -98,7 +101,10 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
-        <LoadingSpinner />
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <LoadingSpinner className="h-8 w-8 text-blue-500" />
+          <span className="text-slate-400 font-medium">Загрузка дашборда...</span>
+        </div>
       </div>
     )
   }
@@ -106,19 +112,22 @@ export default function DashboardPage() {
   if (error) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
-        <Card className="w-96">
+        <Card className="w-96 border-slate-700 bg-slate-800">
           <CardHeader>
-            <CardTitle className="text-red-500 flex items-center gap-2">
+            <CardTitle className="text-red-400 flex items-center gap-2">
               <AlertCircle className="h-5 w-5" />
               Ошибка загрузки
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-slate-600 mb-4">
+            <p className="text-slate-400 mb-4">
               Не удалось загрузить данные дашборда. Попробуйте обновить
               страницу.
             </p>
-            <Button onClick={() => window.location.reload()} className="w-full">
+            <Button
+              onClick={() => window.location.reload()}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+            >
               <RefreshCw className="h-4 w-4 mr-2" />
               Обновить
             </Button>
@@ -130,28 +139,17 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Заголовок и быстрые действия */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Дашборд</h1>
-          <p className="text-slate-600 mt-1">
-            Обзор активности парсера VK и ключевых метрик
-          </p>
+      {/* Заголовок */}
+      <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl p-6 text-white">
+        <div className="flex items-center space-x-3 mb-2">
+          <div className="p-2 bg-white/10 rounded-lg">
+            <BarChart className="h-6 w-6" />
+          </div>
+          <h1 className="text-2xl font-bold">Дашборд</h1>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Экспорт
-          </Button>
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Фильтры
-          </Button>
-          <Button size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Обновить
-          </Button>
-        </div>
+        <p className="text-slate-300">
+          Обзор активности парсера VK и ключевых метрик
+        </p>
       </div>
 
       {/* Основные метрики */}
@@ -196,10 +194,10 @@ export default function DashboardPage() {
         onValueChange={setActiveTab}
         className="space-y-4"
       >
-        <TabsList className="flex w-full overflow-x-auto">
+        <TabsList className="flex w-full overflow-x-auto bg-slate-800 border-slate-700">
           <TabsTrigger
             value="overview"
-            className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3"
+            className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3 data-[state=active]:bg-slate-700 data-[state=active]:text-slate-200"
           >
             <span className="hidden lg:inline">Обзор</span>
             <span className="hidden sm:inline lg:hidden">Обзор</span>
@@ -207,7 +205,7 @@ export default function DashboardPage() {
           </TabsTrigger>
           <TabsTrigger
             value="activity"
-            className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3"
+            className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3 data-[state=active]:bg-slate-700 data-[state=active]:text-slate-200"
           >
             <span className="hidden lg:inline">Активность</span>
             <span className="hidden sm:inline lg:hidden">Актив</span>
@@ -215,7 +213,7 @@ export default function DashboardPage() {
           </TabsTrigger>
           <TabsTrigger
             value="groups"
-            className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3"
+            className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3 data-[state=active]:bg-slate-700 data-[state=active]:text-slate-200"
           >
             <span className="hidden lg:inline">Группы</span>
             <span className="hidden sm:inline lg:hidden">Группы</span>
@@ -223,7 +221,7 @@ export default function DashboardPage() {
           </TabsTrigger>
           <TabsTrigger
             value="keywords"
-            className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3"
+            className="flex-1 min-w-[80px] whitespace-nowrap px-2 sm:px-3 data-[state=active]:bg-slate-700 data-[state=active]:text-slate-200"
           >
             <span className="hidden lg:inline">Ключевые слова</span>
             <span className="hidden sm:inline lg:hidden">Ключи</span>
@@ -234,28 +232,35 @@ export default function DashboardPage() {
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             {/* График активности */}
-            <Card>
+            <Card className="border-slate-700 bg-slate-800 shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+                <CardTitle className="flex items-center justify-between text-slate-200">
                   <span className="flex items-center gap-2">
-                    <Activity className="h-5 w-5" />
+                    <Activity className="h-5 w-5 text-blue-400" />
                     Активность за неделю
                   </span>
-                  <Badge variant="secondary">+23%</Badge>
+                  <Badge className="bg-green-900 text-green-300 border-green-700">+23%</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={activityData}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                     <XAxis
                       dataKey="date"
                       tickFormatter={(value) =>
                         format(new Date(value), 'dd.MM')
                       }
+                      tick={{ fill: '#9CA3AF' }}
                     />
-                    <YAxis />
+                    <YAxis tick={{ fill: '#9CA3AF' }} />
                     <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1F2937',
+                        border: '1px solid #374151',
+                        borderRadius: '8px',
+                        color: '#F9FAFB'
+                      }}
                       labelFormatter={(value) =>
                         format(new Date(value), 'dd MMM yyyy')
                       }
@@ -286,16 +291,16 @@ export default function DashboardPage() {
             </Card>
 
             {/* Топ ключевых слов */}
-            <Card>
+            <Card className="border-slate-700 bg-slate-800 shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <KeyRound className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-slate-200">
+                  <KeyRound className="h-5 w-5 text-purple-400" />
                   Топ ключевых слов
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
+                  <RechartsPieChart>
                     <Pie
                       data={keywordData}
                       cx="50%"
@@ -313,22 +318,28 @@ export default function DashboardPage() {
                       ))}
                     </Pie>
                     <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1F2937',
+                        border: '1px solid #374151',
+                        borderRadius: '8px',
+                        color: '#F9FAFB'
+                      }}
                       formatter={(value) => [
                         `${value} совпадений`,
                         'Количество',
                       ]}
                     />
-                  </PieChart>
+                  </RechartsPieChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
           </div>
 
           {/* Последняя активность */}
-          <Card>
+          <Card className="border-slate-700 bg-slate-800 shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-slate-200">
+                <Clock className="h-5 w-5 text-orange-400" />
                 Последняя активность
               </CardTitle>
             </CardHeader>
@@ -336,27 +347,28 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 {dashboardStats?.recent_activity
                   ?.slice(0, 5)
-                  .map((activity) => (
+                  .map((activity, index) => (
                     <div
                       key={activity.id}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-slate-50"
+                      className="flex items-center gap-3 p-3 rounded-lg bg-slate-700 border border-slate-600 animate-fade-in-up"
+                      style={{ animationDelay: `${index * 100}ms` }}
                     >
                       <div className="flex-shrink-0">
                         {activity.type === 'parse' && (
-                          <RefreshCw className="h-4 w-4 text-blue-500" />
+                          <RefreshCw className="h-4 w-4 text-blue-400" />
                         )}
                         {activity.type === 'comment' && (
-                          <MessageSquare className="h-4 w-4 text-green-500" />
+                          <MessageSquare className="h-4 w-4 text-green-400" />
                         )}
                         {activity.type === 'group' && (
-                          <Users className="h-4 w-4 text-purple-500" />
+                          <Users className="h-4 w-4 text-purple-400" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900">
+                        <p className="text-sm font-medium text-slate-200">
                           {activity.message}
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-400">
                           {formatDistanceToNow(new Date(activity.timestamp), {
                             addSuffix: true,
                             locale: ru,
@@ -373,11 +385,11 @@ export default function DashboardPage() {
         <TabsContent value="activity" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             {/* Детальный график активности */}
-            <Card>
+            <Card className="border-slate-700 bg-slate-800 shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+                <CardTitle className="flex items-center justify-between text-slate-200">
                   <span className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
+                    <TrendingUp className="h-5 w-5 text-green-400" />
                     Динамика комментариев
                   </span>
                   <div className="flex gap-2">
@@ -387,6 +399,7 @@ export default function DashboardPage() {
                         variant={timeRange === range ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setTimeRange(range)}
+                        className={timeRange === range ? 'bg-blue-600 hover:bg-blue-700' : 'border-slate-600 text-slate-300 hover:bg-slate-700'}
                       >
                         {range}
                       </Button>
@@ -396,16 +409,23 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={activityData}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                  <RechartsLineChart data={activityData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                     <XAxis
                       dataKey="date"
                       tickFormatter={(value) =>
                         format(new Date(value), 'dd.MM')
                       }
+                      tick={{ fill: '#9CA3AF' }}
                     />
-                    <YAxis />
+                    <YAxis tick={{ fill: '#9CA3AF' }} />
                     <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1F2937',
+                        border: '1px solid #374151',
+                        borderRadius: '8px',
+                        color: '#F9FAFB'
+                      }}
                       labelFormatter={(value) =>
                         format(new Date(value), 'dd MMM yyyy')
                       }
@@ -425,59 +445,59 @@ export default function DashboardPage() {
                       strokeWidth={2}
                       name="Совпадения"
                     />
-                  </LineChart>
+                  </RechartsLineChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
             {/* Статистика по времени */}
-            <Card>
+            <Card className="border-slate-700 bg-slate-800 shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-slate-200">
+                  <Calendar className="h-5 w-5 text-purple-400" />
                   Статистика по времени
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">Сегодня</span>
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-slate-700 border border-slate-600">
+                    <span className="text-sm text-slate-300">Сегодня</span>
                     <div className="text-right">
-                      <div className="font-semibold">
+                      <div className="font-semibold text-slate-200">
                         {dashboardStats?.today_comments || 0}
                       </div>
-                      <div className="text-xs text-slate-500">комментариев</div>
+                      <div className="text-xs text-slate-400">комментариев</div>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">За неделю</span>
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-slate-700 border border-slate-600">
+                    <span className="text-sm text-slate-300">За неделю</span>
                     <div className="text-right">
-                      <div className="font-semibold">
+                      <div className="font-semibold text-slate-200">
                         {dashboardStats?.week_comments || 0}
                       </div>
-                      <div className="text-xs text-slate-500">комментариев</div>
+                      <div className="text-xs text-slate-400">комментариев</div>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-slate-700 border border-slate-600">
+                    <span className="text-sm text-slate-300">
                       Совпадения сегодня
                     </span>
                     <div className="text-right">
-                      <div className="font-semibold text-green-600">
+                      <div className="font-semibold text-green-400">
                         {dashboardStats?.today_matches || 0}
                       </div>
-                      <div className="text-xs text-slate-500">найдено</div>
+                      <div className="text-xs text-slate-400">найдено</div>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-slate-700 border border-slate-600">
+                    <span className="text-sm text-slate-300">
                       Совпадения за неделю
                     </span>
                     <div className="text-right">
-                      <div className="font-semibold text-green-600">
+                      <div className="font-semibold text-green-400">
                         {dashboardStats?.week_matches || 0}
                       </div>
-                      <div className="text-xs text-slate-500">найдено</div>
+                      <div className="text-xs text-slate-400">найдено</div>
                     </div>
                   </div>
                 </div>
@@ -487,25 +507,32 @@ export default function DashboardPage() {
         </TabsContent>
 
         <TabsContent value="groups" className="space-y-4">
-          <Card>
+          <Card className="border-slate-700 bg-slate-800 shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-slate-200">
+                <BarChart3 className="h-5 w-5 text-blue-400" />
                 Производительность групп
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={groupPerformanceData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
+                <RechartsBarChart data={groupPerformanceData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="name" tick={{ fill: '#9CA3AF' }} />
+                  <YAxis tick={{ fill: '#9CA3AF' }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1F2937',
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
+                      color: '#F9FAFB'
+                    }}
+                  />
                   <Legend />
                   <Bar dataKey="posts" fill="#3B82F6" name="Посты" />
                   <Bar dataKey="comments" fill="#10B981" name="Комментарии" />
                   <Bar dataKey="matches" fill="#F59E0B" name="Совпадения" />
-                </BarChart>
+                </RechartsBarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
@@ -513,16 +540,16 @@ export default function DashboardPage() {
 
         <TabsContent value="keywords" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
-            <Card>
+            <Card className="border-slate-700 bg-slate-800 shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <KeyRound className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-slate-200">
+                  <KeyRound className="h-5 w-5 text-purple-400" />
                   Распределение ключевых слов
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
+                  <RechartsPieChart>
                     <Pie
                       data={keywordData}
                       cx="50%"
@@ -537,16 +564,23 @@ export default function DashboardPage() {
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip />
-                  </PieChart>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1F2937',
+                        border: '1px solid #374151',
+                        borderRadius: '8px',
+                        color: '#F9FAFB'
+                      }}
+                    />
+                  </RechartsPieChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-slate-700 bg-slate-800 shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-slate-200">
+                  <Target className="h-5 w-5 text-orange-400" />
                   Топ ключевых слов
                 </CardTitle>
               </CardHeader>
@@ -555,18 +589,19 @@ export default function DashboardPage() {
                   {keywordData.map((keyword: any, index: number) => (
                     <div
                       key={keyword.name}
-                      className="flex items-center justify-between p-3 rounded-lg bg-slate-50"
+                      className="flex items-center justify-between p-3 rounded-lg bg-slate-700 border border-slate-600 animate-fade-in-up"
+                      style={{ animationDelay: `${index * 50}ms` }}
                     >
                       <div className="flex items-center gap-3">
                         <div
                           className="w-4 h-4 rounded-full"
                           style={{ backgroundColor: keyword.color }}
                         />
-                        <span className="font-medium">{keyword.name}</span>
+                        <span className="font-medium text-slate-200">{keyword.name}</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-semibold">{keyword.value}</div>
-                        <div className="text-xs text-slate-500">совпадений</div>
+                        <div className="font-semibold text-slate-200">{keyword.value}</div>
+                        <div className="text-xs text-slate-400">совпадений</div>
                       </div>
                     </div>
                   ))}
@@ -601,23 +636,22 @@ function MetricCard({
   description,
 }: MetricCardProps) {
   return (
-    <Card>
+    <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-slate-600">
+        <CardTitle className="text-sm font-medium text-slate-300">
           {title}
         </CardTitle>
         <Icon className="h-4 w-4 text-slate-400" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value.toLocaleString()}</div>
+        <div className="text-2xl font-bold text-slate-200">{value.toLocaleString()}</div>
         <div className="flex items-center gap-2 mt-1">
           <Badge
-            variant={trendUp ? 'default' : 'destructive'}
-            className="text-xs"
+            className={`text-xs ${trendUp ? 'bg-green-900 text-green-300 border-green-700' : 'bg-red-900 text-red-300 border-red-700'}`}
           >
             {trend}
           </Badge>
-          <p className="text-xs text-slate-500">{description}</p>
+          <p className="text-xs text-slate-400">{description}</p>
         </div>
       </CardContent>
     </Card>

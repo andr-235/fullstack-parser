@@ -1,6 +1,8 @@
-// Widgets layer exports
-export * from './comments-table'
-export * from './groups-list'
-export * from './keywords-manager'
-export * from './parser-form'
-export * from './dashboard-stats'
+// Widgets layer exports - заглушки
+// TODO: Реализовать widgets когда понадобятся
+
+export const CommentsTable = () => null
+export const GroupsList = () => null
+export const KeywordsManager = () => null
+export const ParserForm = () => null
+export const DashboardStats = () => null

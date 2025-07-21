@@ -1,4 +1,2 @@
-// keywords types exports
-// TODO: Add keywords types
-
-export {}
+// Keywords types exports
+export type { KeywordResponse, KeywordUploadResponse } from '@/types/api'
