@@ -7,10 +7,7 @@ from typing import Any, Dict
 import structlog
 from fastapi import APIRouter, HTTPException, status
 
-from app.schemas.settings import (
-    SettingsResponse,
-    SettingsUpdateRequest,
-)
+from app.schemas.settings import SettingsResponse, SettingsUpdateRequest
 from app.services.settings_service import get_settings_service
 
 logger = structlog.get_logger()
