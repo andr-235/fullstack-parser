@@ -33,7 +33,17 @@ import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { formatDistanceToNow, format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { Search, ExternalLink, XCircle, MessageSquare, Users, Target, Filter, ChevronDown, ChevronUp } from 'lucide-react'
+import {
+  Search,
+  ExternalLink,
+  XCircle,
+  MessageSquare,
+  Users,
+  Target,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react'
 import useDebounce from '@/hooks/use-debounce'
 import Link from 'next/link'
 import type { VKCommentResponse, KeywordResponse } from '@/types/api'
@@ -47,7 +57,11 @@ const HighlightedText = ({
   keywords: string[]
 }) => {
   if (!keywords || keywords.length === 0) {
-    return <div className="text-slate-200 text-sm whitespace-pre-wrap break-words">{text}</div>
+    return (
+      <div className="text-slate-200 text-sm whitespace-pre-wrap break-words">
+        {text}
+      </div>
+    )
   }
 
   const regex = new RegExp(`(${keywords.join('|')})`, 'gi')
@@ -57,7 +71,10 @@ const HighlightedText = ({
     <div className="text-slate-200 text-sm whitespace-pre-wrap break-words">
       {parts.map((part, i) =>
         keywords.some((kw) => new RegExp(`^${kw}$`, 'i').test(part)) ? (
-          <Badge key={i} className="mx-1 bg-gradient-to-r from-red-500 to-orange-500 text-white border-0 text-xs font-bold shadow-lg">
+          <Badge
+            key={i}
+            className="mx-1 bg-gradient-to-r from-red-500 to-orange-500 text-white border-0 text-xs font-bold shadow-lg"
+          >
             {part}
           </Badge>
         ) : (
@@ -73,7 +90,7 @@ const CollapsibleSection = ({
   title,
   icon: Icon,
   children,
-  defaultExpanded = false
+  defaultExpanded = false,
 }: {
   title: string
   icon: React.ElementType
@@ -100,11 +117,7 @@ const CollapsibleSection = ({
           )}
         </CardTitle>
       </CardHeader>
-      {isExpanded && (
-        <CardContent className="pt-0">
-          {children}
-        </CardContent>
-      )}
+      {isExpanded && <CardContent className="pt-0">{children}</CardContent>}
     </Card>
   )
 }
@@ -178,7 +191,11 @@ export default function CommentsPage() {
       </div>
 
       {/* Статистика */}
-      <CollapsibleSection title="Статистика" icon={Target} defaultExpanded={false}>
+      <CollapsibleSection
+        title="Статистика"
+        icon={Target}
+        defaultExpanded={false}
+      >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-3">
@@ -187,8 +204,12 @@ export default function CommentsPage() {
                   <MessageSquare className="h-4 w-4 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-slate-300">Комментариев</p>
-                  <p className="text-lg font-bold text-blue-400">{totalComments}</p>
+                  <p className="text-xs font-medium text-slate-300">
+                    Комментариев
+                  </p>
+                  <p className="text-lg font-bold text-blue-400">
+                    {totalComments}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -202,7 +223,9 @@ export default function CommentsPage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium text-slate-300">Групп</p>
-                  <p className="text-lg font-bold text-green-400">{totalGroups}</p>
+                  <p className="text-lg font-bold text-green-400">
+                    {totalGroups}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -215,8 +238,12 @@ export default function CommentsPage() {
                   <Target className="h-4 w-4 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-slate-300">Ключевых слов</p>
-                  <p className="text-lg font-bold text-purple-400">{totalKeywords}</p>
+                  <p className="text-xs font-medium text-slate-300">
+                    Ключевых слов
+                  </p>
+                  <p className="text-lg font-bold text-purple-400">
+                    {totalKeywords}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -225,7 +252,11 @@ export default function CommentsPage() {
       </CollapsibleSection>
 
       {/* Фильтры */}
-      <CollapsibleSection title="Фильтры комментариев" icon={Filter} defaultExpanded={false}>
+      <CollapsibleSection
+        title="Фильтры комментариев"
+        icon={Filter}
+        defaultExpanded={false}
+      >
         <div className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div className="md:col-span-2 relative">
@@ -242,13 +273,25 @@ export default function CommentsPage() {
               value={groupFilter}
               onValueChange={(val) => setGroupFilter(val)}
             >
-              <SelectTrigger className="border-slate-600 bg-slate-700 text-slate-200 text-sm" aria-label="Группа">
+              <SelectTrigger
+                className="border-slate-600 bg-slate-700 text-slate-200 text-sm"
+                aria-label="Группа"
+              >
                 <SelectValue placeholder="Все группы" />
               </SelectTrigger>
               <SelectContent className="bg-slate-800 border-slate-600">
-                <SelectItem value="all" className="text-slate-200 hover:bg-slate-700 text-sm">Все группы</SelectItem>
+                <SelectItem
+                  value="all"
+                  className="text-slate-200 hover:bg-slate-700 text-sm"
+                >
+                  Все группы
+                </SelectItem>
                 {groupsData?.items?.map((group) => (
-                  <SelectItem key={group.id} value={String(group.id)} className="text-slate-200 hover:bg-slate-700 text-sm">
+                  <SelectItem
+                    key={group.id}
+                    value={String(group.id)}
+                    className="text-slate-200 hover:bg-slate-700 text-sm"
+                  >
                     {group.name}
                   </SelectItem>
                 ))}
@@ -260,13 +303,25 @@ export default function CommentsPage() {
                 setKeywordFilter(val === 'all' ? undefined : val)
               }
             >
-              <SelectTrigger className="border-slate-600 bg-slate-700 text-slate-200 text-sm" aria-label="Ключевое слово">
+              <SelectTrigger
+                className="border-slate-600 bg-slate-700 text-slate-200 text-sm"
+                aria-label="Ключевое слово"
+              >
                 <SelectValue placeholder="Все ключевые слова" />
               </SelectTrigger>
               <SelectContent className="bg-slate-800 border-slate-600">
-                <SelectItem value="all" className="text-slate-200 hover:bg-slate-700 text-sm">Все ключевые слова</SelectItem>
+                <SelectItem
+                  value="all"
+                  className="text-slate-200 hover:bg-slate-700 text-sm"
+                >
+                  Все ключевые слова
+                </SelectItem>
                 {keywordsData?.items?.map((keyword) => (
-                  <SelectItem key={keyword.id} value={String(keyword.id)} className="text-slate-200 hover:bg-slate-700 text-sm">
+                  <SelectItem
+                    key={keyword.id}
+                    value={String(keyword.id)}
+                    className="text-slate-200 hover:bg-slate-700 text-sm"
+                  >
                     {keyword.word}
                   </SelectItem>
                 ))}
@@ -290,10 +345,15 @@ export default function CommentsPage() {
       <Card className="border-slate-700 bg-slate-800 shadow-lg">
         <CardContent className="p-0">
           {isFetching && !isFetchingNextPage ? (
-            <div className="flex justify-center items-center h-48" role="status">
+            <div
+              className="flex justify-center items-center h-48"
+              role="status"
+            >
               <div className="flex flex-col items-center justify-center space-y-4">
                 <LoadingSpinner className="h-6 w-6 text-blue-500" />
-                <span className="text-slate-400 font-medium text-sm">Загрузка комментариев...</span>
+                <span className="text-slate-400 font-medium text-sm">
+                  Загрузка комментариев...
+                </span>
               </div>
             </div>
           ) : error ? (
@@ -302,7 +362,9 @@ export default function CommentsPage() {
                 <div className="w-12 h-12 bg-red-900 rounded-full flex items-center justify-center">
                   <XCircle className="h-6 w-6 text-red-400" />
                 </div>
-                <p className="text-red-400 font-medium text-sm">Ошибка загрузки</p>
+                <p className="text-red-400 font-medium text-sm">
+                  Ошибка загрузки
+                </p>
                 <p className="text-slate-400 text-xs">{error.message}</p>
               </div>
             </div>
@@ -310,11 +372,21 @@ export default function CommentsPage() {
             <table className="min-w-full table-fixed">
               <thead className="bg-gradient-to-r from-slate-700 to-slate-600 shadow-md">
                 <tr>
-                  <th className="px-3 py-2 text-left font-bold text-slate-200 text-xs w-48">Автор</th>
-                  <th className="px-3 py-2 text-left font-bold text-slate-200 text-xs w-96">Комментарий</th>
-                  <th className="px-3 py-2 text-left font-bold text-slate-200 text-xs w-32">Группа</th>
-                  <th className="px-3 py-2 text-left font-bold text-slate-200 text-xs w-24">Дата</th>
-                  <th className="px-3 py-2 text-right font-bold text-slate-200 text-xs w-16">Ссылка</th>
+                  <th className="px-3 py-2 text-left font-bold text-slate-200 text-xs w-48">
+                    Автор
+                  </th>
+                  <th className="px-3 py-2 text-left font-bold text-slate-200 text-xs w-96">
+                    Комментарий
+                  </th>
+                  <th className="px-3 py-2 text-left font-bold text-slate-200 text-xs w-32">
+                    Группа
+                  </th>
+                  <th className="px-3 py-2 text-left font-bold text-slate-200 text-xs w-24">
+                    Дата
+                  </th>
+                  <th className="px-3 py-2 text-right font-bold text-slate-200 text-xs w-16">
+                    Ссылка
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700">
@@ -333,8 +405,12 @@ export default function CommentsPage() {
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium text-slate-200 text-xs">{comment.author_name}</div>
-                          <div className="text-xs text-slate-400">@{comment.author_screen_name}</div>
+                          <div className="font-medium text-slate-200 text-xs">
+                            {comment.author_name}
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            @{comment.author_screen_name}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -352,17 +428,24 @@ export default function CommentsPage() {
                           <>
                             <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
                               <span className="text-white text-xs font-bold">
-                                {comment.group.name?.charAt(0)?.toUpperCase() || 'G'}
+                                {comment.group.name?.charAt(0)?.toUpperCase() ||
+                                  'G'}
                               </span>
                             </div>
-                            <span className="text-sm text-slate-300 text-xs">{comment.group.name}</span>
+                            <span className="text-sm text-slate-300 text-xs">
+                              {comment.group.name}
+                            </span>
                           </>
                         ) : (
                           <>
                             <div className="w-5 h-5 bg-gradient-to-br from-slate-600 to-slate-700 rounded-full flex items-center justify-center">
-                              <span className="text-slate-400 text-xs font-bold">?</span>
+                              <span className="text-slate-400 text-xs font-bold">
+                                ?
+                              </span>
                             </div>
-                            <span className="text-sm text-slate-500 text-xs">Не указана</span>
+                            <span className="text-sm text-slate-500 text-xs">
+                              Не указана
+                            </span>
                           </>
                         )}
                       </div>
@@ -371,7 +454,11 @@ export default function CommentsPage() {
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
                         <span className="text-sm text-slate-400 text-xs">
-                          {format(new Date(comment.published_at), 'dd.MM.yyyy HH:mm', { locale: ru })}
+                          {format(
+                            new Date(comment.published_at),
+                            'dd.MM.yyyy HH:mm',
+                            { locale: ru }
+                          )}
                         </span>
                       </div>
                     </td>
@@ -428,8 +515,12 @@ export default function CommentsPage() {
                 <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
                   <MessageSquare className="h-6 w-6 text-slate-400" />
                 </div>
-                <p className="text-slate-400 font-medium text-sm">Комментарии не найдены</p>
-                <p className="text-slate-500 text-xs">Попробуйте изменить параметры фильтрации</p>
+                <p className="text-slate-400 font-medium text-sm">
+                  Комментарии не найдены
+                </p>
+                <p className="text-slate-500 text-xs">
+                  Попробуйте изменить параметры фильтрации
+                </p>
               </div>
             </div>
           )}

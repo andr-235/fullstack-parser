@@ -54,7 +54,9 @@ export default function MonitoringPage() {
       <div className="flex justify-center items-center h-full">
         <div className="flex flex-col items-center justify-center space-y-4">
           <LoadingSpinner className="h-8 w-8 text-blue-500" />
-          <span className="text-slate-400 font-medium">Загрузка мониторинга...</span>
+          <span className="text-slate-400 font-medium">
+            Загрузка мониторинга...
+          </span>
         </div>
       </div>
     )
@@ -106,13 +108,14 @@ export default function MonitoringPage() {
   })()
 
   const systemStatus = (() => {
-    if (!stats) return { status: 'Неизвестно', color: 'text-slate-400', icon: '❓' }
+    if (!stats)
+      return { status: 'Неизвестно', color: 'text-slate-400', icon: '❓' }
 
     if (stats.ready_for_monitoring > 0) {
       return {
         status: `${stats.ready_for_monitoring} групп ждут проверки`,
         color: 'text-yellow-400',
-        icon: '⚠️'
+        icon: '⚠️',
       }
     }
 
@@ -120,14 +123,14 @@ export default function MonitoringPage() {
       return {
         status: 'Система работает',
         color: 'text-green-400',
-        icon: '✅'
+        icon: '✅',
       }
     }
 
     return {
       status: 'Мониторинг не настроен',
       color: 'text-slate-400',
-      icon: '⏸️'
+      icon: '⏸️',
     }
   })()
 
@@ -139,7 +142,10 @@ export default function MonitoringPage() {
     }
 
     if (stats.ready_for_monitoring > 0) {
-      return { status: `${stats.ready_for_monitoring} готовы`, color: 'text-yellow-400' }
+      return {
+        status: `${stats.ready_for_monitoring} готовы`,
+        color: 'text-yellow-400',
+      }
     }
 
     return { status: 'Все обработаны', color: 'text-green-400' }
@@ -181,8 +187,12 @@ export default function MonitoringPage() {
                 <Users className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-300">Всего групп</p>
-                <p className="text-2xl font-bold text-blue-400">{stats?.total_groups || 0}</p>
+                <p className="text-sm font-medium text-slate-300">
+                  Всего групп
+                </p>
+                <p className="text-2xl font-bold text-blue-400">
+                  {stats?.total_groups || 0}
+                </p>
                 <p className="text-xs text-slate-400">
                   {stats?.active_groups || 0} активных
                 </p>
@@ -217,11 +227,18 @@ export default function MonitoringPage() {
                 <Clock className="h-5 w-5 text-purple-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-300">Следующий запуск</p>
-                <div className={`text-sm font-medium ${nextMonitoringTime === 'Просрочено' ? 'text-red-400' :
-                  nextMonitoringTime === 'Не запланировано' ? 'text-slate-400' :
-                    'text-slate-200'
-                  }`}>
+                <p className="text-sm font-medium text-slate-300">
+                  Следующий запуск
+                </p>
+                <div
+                  className={`text-sm font-medium ${
+                    nextMonitoringTime === 'Просрочено'
+                      ? 'text-red-400'
+                      : nextMonitoringTime === 'Не запланировано'
+                        ? 'text-slate-400'
+                        : 'text-slate-200'
+                  }`}
+                >
                   {nextMonitoringTime}
                 </div>
                 <p className="text-xs text-slate-400">Автоматический цикл</p>
@@ -237,12 +254,16 @@ export default function MonitoringPage() {
                 <span className="text-lg">{systemStatus.icon}</span>
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-300">Статус системы</p>
+                <p className="text-sm font-medium text-slate-300">
+                  Статус системы
+                </p>
                 <div className={`text-sm font-medium ${systemStatus.color}`}>
                   {systemStatus.status}
                 </div>
                 <p className="text-xs text-slate-400">
-                  {stats?.monitored_groups && stats.monitored_groups > 0 ? 'Мониторинг активен' : 'Мониторинг не настроен'}
+                  {stats?.monitored_groups && stats.monitored_groups > 0
+                    ? 'Мониторинг активен'
+                    : 'Мониторинг не настроен'}
                 </p>
               </div>
             </div>

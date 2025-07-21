@@ -28,7 +28,17 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { Plus, Trash2, Search, Check, X, Hash, Target, MessageSquare, Activity } from 'lucide-react'
+import {
+  Plus,
+  Trash2,
+  Search,
+  Check,
+  X,
+  Hash,
+  Target,
+  MessageSquare,
+  Activity,
+} from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import type { KeywordResponse, KeywordUpdate } from '@/types/api'
 import useDebounce from '@/hooks/use-debounce'
@@ -76,7 +86,7 @@ const KeywordRow = ({
       onUpdate(
         keyword.id,
         { word: editedWord },
-        { onSuccess: () => { }, onError: () => { } }
+        { onSuccess: () => {}, onError: () => {} }
       )
     }
     setIsEditing(false)
@@ -96,7 +106,11 @@ const KeywordRow = ({
               autoFocus
               className="border-slate-600 bg-slate-700 text-slate-200 focus:border-blue-500 focus:ring-blue-500"
             />
-            <Button size="icon" onClick={handleSave} className="bg-green-600 hover:bg-green-700">
+            <Button
+              size="icon"
+              onClick={handleSave}
+              className="bg-green-600 hover:bg-green-700"
+            >
               <Check className="h-4 w-4" />
             </Button>
             <Button
@@ -133,12 +147,18 @@ const KeywordRow = ({
       <TableCell>
         <div className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4 text-blue-400" />
-          <span className="font-semibold text-blue-400">{keyword.total_matches}</span>
+          <span className="font-semibold text-blue-400">
+            {keyword.total_matches}
+          </span>
         </div>
       </TableCell>
       <TableCell>
-        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm transition-all duration-200 ${keyword.is_active ? 'bg-gradient-to-r from-green-900 to-emerald-900 text-green-300 hover:from-green-800 hover:to-emerald-800' : 'bg-gradient-to-r from-slate-700 to-gray-700 text-slate-400 hover:from-slate-600 hover:to-gray-600'}`}>
-          <span className={`w-2 h-2 rounded-full ${keyword.is_active ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`}></span>
+        <span
+          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm transition-all duration-200 ${keyword.is_active ? 'bg-gradient-to-r from-green-900 to-emerald-900 text-green-300 hover:from-green-800 hover:to-emerald-800' : 'bg-gradient-to-r from-slate-700 to-gray-700 text-slate-400 hover:from-slate-600 hover:to-gray-600'}`}
+        >
+          <span
+            className={`w-2 h-2 rounded-full ${keyword.is_active ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`}
+          ></span>
           {keyword.is_active ? 'Активно' : 'Неактивно'}
         </span>
       </TableCell>
@@ -238,7 +258,7 @@ export default function KeywordsPage() {
   const handleDeleteKeyword = (id: number) => {
     if (window.confirm('Удалить ключевое слово?')) {
       deleteKeywordMutation.mutate(id, {
-        onSuccess: () => toast.success('Ключевое слово удалено! 🗑️')
+        onSuccess: () => toast.success('Ключевое слово удалено! 🗑️'),
       })
     }
   }
@@ -266,7 +286,8 @@ export default function KeywordsPage() {
           <h1 className="text-2xl font-bold">Управление ключевыми словами</h1>
         </div>
         <p className="text-slate-300">
-          Добавляйте, настраивайте и управляйте ключевыми словами для поиска в комментариях
+          Добавляйте, настраивайте и управляйте ключевыми словами для поиска в
+          комментариях
         </p>
       </div>
 
@@ -308,7 +329,9 @@ export default function KeywordsPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-300">Найдено</p>
-                <p className="text-2xl font-bold text-blue-400">{totalMatches}</p>
+                <p className="text-2xl font-bold text-blue-400">
+                  {totalMatches}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -353,9 +376,18 @@ export default function KeywordsPage() {
                   <SelectValue placeholder="Все категории" />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-800 border-slate-600">
-                  <SelectItem value="all" className="text-slate-200 hover:bg-slate-700">Все категории</SelectItem>
+                  <SelectItem
+                    value="all"
+                    className="text-slate-200 hover:bg-slate-700"
+                  >
+                    Все категории
+                  </SelectItem>
                   {(categoriesData || []).map((cat: string) => (
-                    <SelectItem key={cat} value={cat} className="text-slate-200 hover:bg-slate-700">
+                    <SelectItem
+                      key={cat}
+                      value={cat}
+                      className="text-slate-200 hover:bg-slate-700"
+                    >
                       {cat}
                     </SelectItem>
                   ))}
@@ -405,11 +437,21 @@ export default function KeywordsPage() {
             <table className="min-w-full relative">
               <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 shadow-md">
                 <tr>
-                  <th className="px-4 py-3 text-left font-bold text-slate-200">Ключевое слово</th>
-                  <th className="px-4 py-3 text-left font-bold text-slate-200">Категория</th>
-                  <th className="px-4 py-3 text-left font-bold text-slate-200">Найдено</th>
-                  <th className="px-4 py-3 text-left font-bold text-slate-200">Статус</th>
-                  <th className="px-4 py-3 text-right font-bold text-slate-200">Действия</th>
+                  <th className="px-4 py-3 text-left font-bold text-slate-200">
+                    Ключевое слово
+                  </th>
+                  <th className="px-4 py-3 text-left font-bold text-slate-200">
+                    Категория
+                  </th>
+                  <th className="px-4 py-3 text-left font-bold text-slate-200">
+                    Найдено
+                  </th>
+                  <th className="px-4 py-3 text-left font-bold text-slate-200">
+                    Статус
+                  </th>
+                  <th className="px-4 py-3 text-right font-bold text-slate-200">
+                    Действия
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700">
@@ -418,7 +460,9 @@ export default function KeywordsPage() {
                     <td colSpan={5} className="text-center py-10">
                       <div className="flex flex-col items-center justify-center space-y-4">
                         <LoadingSpinner className="h-8 w-8 text-blue-500" />
-                        <span className="text-slate-400 font-medium">Загрузка ключевых слов...</span>
+                        <span className="text-slate-400 font-medium">
+                          Загрузка ключевых слов...
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -429,8 +473,12 @@ export default function KeywordsPage() {
                         <div className="w-16 h-16 bg-red-900 rounded-full flex items-center justify-center">
                           <X className="h-8 w-8 text-red-400" />
                         </div>
-                        <p className="text-red-400 font-medium">Ошибка загрузки</p>
-                        <p className="text-slate-400 text-sm">{(error as Error)?.message}</p>
+                        <p className="text-red-400 font-medium">
+                          Ошибка загрузки
+                        </p>
+                        <p className="text-slate-400 text-sm">
+                          {(error as Error)?.message}
+                        </p>
                       </div>
                     </td>
                   </tr>
@@ -464,8 +512,12 @@ export default function KeywordsPage() {
                         <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center">
                           <Hash className="h-8 w-8 text-slate-400" />
                         </div>
-                        <p className="text-slate-400 font-medium">Нет ключевых слов</p>
-                        <p className="text-slate-500 text-sm">Добавьте первое ключевое слово для начала работы</p>
+                        <p className="text-slate-400 font-medium">
+                          Нет ключевых слов
+                        </p>
+                        <p className="text-slate-500 text-sm">
+                          Добавьте первое ключевое слово для начала работы
+                        </p>
                       </div>
                     </td>
                   </tr>
