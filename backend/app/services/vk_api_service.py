@@ -37,7 +37,7 @@ class VKAPIService:
     MAX_GROUPS_PER_REQUEST = 1000  # Максимум групп за поиск
     MAX_USERS_PER_REQUEST = 1000  # Максимум пользователей за запрос
 
-    def __init__(self, token: str, api_version: str = "5.131"):
+    def __init__(self, token: str, api_version: str = "5.199"):
         """
         Инициализация сервиса.
 
@@ -316,15 +316,70 @@ class VKAPIService:
             Информация о группе или None
         """
         try:
-            if isinstance(group_id_or_screen_name, int):
-                params = {"group_id": str(abs(group_id_or_screen_name))}
-            else:
-                params = {"group_id": group_id_or_screen_name}
+            # Используем group_ids для всех случаев (ID или screen_name)
+            params = {"group_ids": str(group_id_or_screen_name)}
 
             response = await self._make_request("groups.getById", params)
-            if isinstance(response, list) and response:
+            self.logger.info(
+                "VK API response for group info",
+                extra={
+                    "params": params,
+                    "response": response,
+                    "response_type": str(type(response)),
+                },
+            )
+
+            # Обработка нового формата ответа (API 5.139+)
+            if isinstance(response, dict) and "groups" in response:
+                groups = response["groups"]
+                if groups and len(groups) > 0:
+                    return groups[0]
+            # Обработка старого формата ответа
+            elif isinstance(response, list) and response:
                 return response[0]
             return None
+        except VKAPIError as e:
+            if e.code == 100:  # Group not found
+                return None
+            raise
+
+    async def get_group_members_count(
+        self, group_id_or_screen_name: Union[str, int]
+    ) -> Optional[int]:
+        """
+        Получает количество участников группы.
+
+        Args:
+            group_id_or_screen_name: ID группы или screen_name
+
+        Returns:
+            Количество участников или None
+        """
+        try:
+            # Сначала получаем ID группы, если передан screen_name
+            if (
+                isinstance(group_id_or_screen_name, str)
+                and not group_id_or_screen_name.isdigit()
+            ):
+                group_info = await self.get_group_info(group_id_or_screen_name)
+                if not group_info:
+                    return None
+                group_id = group_info["id"]
+            else:
+                group_id = int(group_id_or_screen_name)
+
+            # Получаем количество участников
+            params = {
+                "group_id": abs(group_id),  # VK API требует положительный ID
+                "count": 0,  # Получаем только количество, не список участников
+            }
+
+            response = await self._make_request("groups.getMembers", params)
+
+            if isinstance(response, dict) and "count" in response:
+                return response["count"]
+            return None
+
         except VKAPIError as e:
             if e.code == 100:  # Group not found
                 return None

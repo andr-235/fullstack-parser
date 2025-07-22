@@ -1,98 +1,74 @@
 ---
-description: FastAPI backend development rules and best practices
-globs: ["backend/**/*", "**/*.py"]
-alwaysApply: true
+description: Python (FastAPI)
+alwaysApply: false
 ---
-# FastAPI Backend Development Rules
+# Python (FastAPI) - Scalable API Development
 
-## Code Style & Formatting
-- Line length: 79 characters
-- Use Black for code formatting
-- Use isort for import sorting  
-- Use Ruff for linting
-- Use mypy for type checking
-- Use bandit for security scanning
+You are an expert in Python, FastAPI, and scalable API development.
 
-## Project Structure
-Follow this structure in [backend/app/](mdc:backend/app/):
-- [api/v1/](mdc:backend/app/api/v1/) - API endpoints
-- [core/](mdc:backend/app/core/) - Configuration, security, database
-- [models/](mdc:backend/app/models/) - SQLAlchemy models
-- [schemas/](mdc:backend/app/schemas/) - Pydantic schemas
-- [services/](mdc:backend/app/services/) - Business logic
-- [workers/](mdc:backend/app/workers/) - Background tasks
+## Key Principles
 
-## Dependencies Management
-- **ALWAYS** use Poetry: `poetry add <package>`
-- **NEVER** use pip directly
-- Pin versions in [pyproject.toml](mdc:backend/pyproject.toml)
-- Use `poetry add --group dev <package>` for development dependencies
+- Write concise, technical responses with accurate Python examples.
+- Use functional, declarative programming; avoid classes where possible.
+- Prefer iteration and modularization over code duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., `is_active`, `has_permission`).
+- Use lowercase with underscores for directories and files (e.g., `routers/user_routes.py`).
+- Favor named exports for routes and utility functions.
+- Use the **Receive an Object, Return an Object (RORO)** pattern.
 
-## Code Patterns
+## Python/FastAPI
 
-### Pydantic Schemas
-```python
-from typing import Optional, List
-from pydantic import BaseModel, Field
+- Use `def` for pure functions and `async def` for asynchronous operations.
+- Use type hints for all function signatures. Prefer Pydantic models over raw dictionaries for input validation.
+- File structure: exported router, sub-routes, utilities, static content, types (models, schemas).
+- Avoid unnecessary curly braces in conditional statements.
+- For single-line statements in conditionals, omit curly braces.
+- Use concise, one-line syntax for simple conditional statements (e.g., `if condition: do_something()`).
 
-class UserCreate(BaseModel):
-    email: str = Field(..., description="User email")
-    password: str = Field(..., min_length=8)
-```
+## Error Handling and Validation
 
-### Async Functions
-```python
-async def create_user(user_data: UserCreate) -> User:
-    """Create a new user with proper documentation."""
-    hashed_password = hash_password(user_data.password)
-    return await user_service.create(email=user_data.email, password=hashed_password)
-```
+- Prioritize error handling and edge cases:
+  - Handle errors and edge cases at the beginning of functions.
+  - Use early returns for error conditions to avoid deeply nested `if` statements.
+  - Place the happy path last in the function for improved readability.
+  - Avoid unnecessary `else` statements; use the `if-return` pattern instead.
+  - Use guard clauses to handle preconditions and invalid states early.
+  - Implement proper error logging and user-friendly error messages.
+  - Use custom error types or error factories for consistent error handling.
 
-### Error Handling
-```python
-from fastapi import HTTPException
+## Dependencies
 
-@app.get("/users/{user_id}")
-async def get_user(user_id: int):
-    try:
-        user = await user_service.get_by_id(user_id)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        return user
-    except DatabaseError as e:
-        logger.error("database_error", error=str(e), user_id=user_id)
-        raise HTTPException(status_code=500, detail="Internal server error")
-```
+- **FastAPI**
+- **Pydantic v2**
+- Async database libraries like `asyncpg` or `aiomysql`
+- **SQLAlchemy 2.0** (if using ORM features)
 
-## Database Operations
-- Use SQLAlchemy async session
-- Always use prepared statements
-- Implement proper connection pooling
-- Use Alembic for migrations: `poetry run alembic revision --autogenerate -m "description"`
+## FastAPI-Specific Guidelines
 
-## Logging
-```python
-import structlog
+- Use functional components (plain functions) and Pydantic models for input validation and response schemas.
+- Use declarative route definitions with clear return type annotations.
+- Use `def` for synchronous operations and `async def` for asynchronous ones.
+- Minimize `@app.on_event("startup")` and `@app.on_event("shutdown")`; prefer lifespan context managers for managing startup and shutdown events.
+- Use middleware for logging, error monitoring, and performance optimization.
+- Optimize for performance using async functions for I/O-bound tasks, caching strategies, and lazy loading.
+- Use `HTTPException` for expected errors and model them as specific HTTP responses.
+- Use middleware for handling unexpected errors, logging, and error monitoring.
+- Use Pydantic's `BaseModel` for consistent input/output validation and response schemas.
 
-logger = structlog.get_logger()
+## Performance Optimization
 
-logger.info("user_action", 
-    user_id=user.id, 
-    action="login", 
-    ip_address=request.client.host,
-    user_agent=request.headers.get("user-agent")
-)
-```
+- Minimize blocking I/O operations; use asynchronous operations for all database calls and external API requests.
+- Implement caching for static and frequently accessed data using tools like Redis or in-memory stores.
+- Optimize data serialization and deserialization with Pydantic.
+- Use lazy loading techniques for large datasets and substantial API responses.
 
-## Testing
-- Use pytest for testing
-- Use AsyncClient for API testing
-- Mock external services
-- Test both success and error cases
+## Key Conventions
 
-## Security
-- Always validate input with Pydantic
-- Use environment variables for secrets
-- Implement proper CORS configuration
-- Use JWT tokens with short expiration
-- Hash passwords with bcrypt
+1. Rely on FastAPI’s dependency injection system for managing state and shared resources.
+2. Prioritize API performance metrics (response time, latency, throughput).
+3. Limit blocking operations in routes:
+   - Favor asynchronous and non-blocking flows.
+   - Use dedicated async functions for database and external API operations.
+   - Structure routes and dependencies clearly to optimize readability and maintainability.
+
+Refer to [FastAPI documentation](https://fastapi.tiangolo.com/) for **Data Models**, **Path Operations**, and **Middleware** for best practices.

@@ -69,6 +69,24 @@ async def create_group(
             detail="Группа ВКонтакте не найдена.",
         )
 
+    # Получаем количество участников
+    members_count = await vk_service.get_group_members_count(screen_name)
+    if members_count is not None:
+        vk_group_data["members_count"] = members_count
+
+    # Отладочная информация
+    import structlog
+
+    logger = structlog.get_logger()
+    logger.info(
+        "Получены данные группы из VK API",
+        screen_name=screen_name,
+        vk_group_data=vk_group_data,
+        has_name="name" in vk_group_data,
+        name_value=vk_group_data.get("name"),
+        members_count=members_count,
+    )
+
     # Проверка на существование группы в БД (case-insensitive)
     existing_group_result = await db.execute(
         select(VKGroup).where(

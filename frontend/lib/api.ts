@@ -69,6 +69,8 @@ class APIClient {
           ) as any
           apiError.response = error.response
           apiError.status = error.response.status
+          apiError.data = error.response.data
+          apiError.detail = error.response.data.detail
           throw apiError
         }
         throw new Error(error.message || 'Network Error')

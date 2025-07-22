@@ -1,110 +1,72 @@
 ---
-description: Docker deployment rules and best practices for the project
-globs: ["docker-compose*", "Dockerfile*", "**/docker/**/*"]
-alwaysApply: true
+description: Python Containerization
+alwaysApply: false
 ---
 
-# Docker Deployment Rules
+# Python Containerization Best Practices
 
-## Docker Compose Configuration
-- **ALWAYS** use environment variables from .env files
-- **NEVER** hardcode values in [docker-compose.yml](mdc:docker-compose.yml)
-- Use Docker Compose version 2 syntax
-- Use external images for production (ghcr.io/andr-235/*)
-- Use local builds for development
+## Introduction
 
-## Dockerfile Best Practices
+This guide provides a comprehensive overview of containerizing Python applications using Docker and Kubernetes. It follows Python's official documentation and PEPs to ensure best practices in Python development.
 
-### Backend Dockerfile
-```dockerfile
-# ✅ CORRECT
-FROM python:3.11-slim
+## Table of Contents
 
+1. [Introduction](#introduction)
+2. [Why Containerize Python Applications?](#why-containerize-python-applications)
+3. [Setting Up Docker for Python](#setting-up-docker-for-python)
+4. [Creating a Dockerfile for Python](#creating-a-dockerfile-for-python)
+5. [Managing Dependencies with Pipenv](#managing-dependencies-with-pipenv)
+6. [Deploying with Kubernetes](#deploying-with-kubernetes)
+7. [Best Practices](#best-practices)
+8. [Conclusion](#conclusion)
+
+## Why Containerize Python Applications?
+
+Containerization offers several benefits for Python applications, including:
+
+- **Consistency**: Ensures that the application runs the same in different environments.
+- **Isolation**: Keeps dependencies and configurations isolated from the host system.
+- **Scalability**: Easily scale applications using orchestration tools like Kubernetes.
+
+## Setting Up Docker for Python
+
+To get started with Docker for Python, follow these steps:
+
+1. Install Docker on your system.
+2. Create a `Dockerfile` in your project directory.
+3. Build and run your Docker container.
+
+## Creating a Dockerfile for Python
+
+A typical `Dockerfile` for a Python application might look like this:
+
+```Dockerfile
+FROM python:3.9-slim
 WORKDIR /app
-
-# Copy dependency files first for better caching
-COPY pyproject.toml poetry.lock ./
-RUN pip install poetry && poetry install --no-dev
-
-# Copy application code
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 COPY . .
-RUN poetry run python -m pytest
-
-EXPOSE 8000
-CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0"]
+CMD ["python", "app.py"]
 ```
 
-### Frontend Dockerfile
-```dockerfile
-# ✅ CORRECT
-FROM node:18-alpine AS base
+## Managing Dependencies with Pipenv
 
-# Install pnpm
-RUN npm install -g pnpm
+Pipenv is a tool that automatically creates and manages a virtual environment for your projects. It also adds/removes packages from your `Pipfile` as you install/uninstall packages.
 
-# Dependencies stage
-FROM base AS deps
-WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+## Deploying with Kubernetes
 
-# Build stage
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN pnpm build
+Kubernetes is an open-source system for automating deployment, scaling, and management of containerized applications. To deploy your Python application with Kubernetes:
 
-# Production stage
-FROM nginx:alpine AS runner
-COPY --from=builder /app/out /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/nginx.conf
-EXPOSE 80
-```
+1. Create a `deployment.yaml` file.
+2. Define your service in a `service.yaml` file.
+3. Apply the configurations using `kubectl`.
 
-## Environment Variables
-- Use [env.example](mdc:env.example) as template
-- Never commit .env files to version control
-- Use different .env files for different environments
-- Validate environment variables at startup
+## Best Practices
 
-## Nginx Configuration
-- Use [nginx/nginx.prod.conf](mdc:nginx/nginx.prod.conf) for production
-- Use [nginx/nginx.dev.conf](mdc:nginx/nginx.dev.conf) for development
-- Configure SSL/TLS properly
-- Set up proper CORS headers
-- Enable gzip compression
+- **Use Multi-stage Builds**: Reduce the size of your final Docker image.
+- **Leverage Environment Variables**: Keep configuration out of your code.
+- **Monitor and Log**: Implement logging and monitoring for better observability.
 
-## Production Deployment
-- Use external Docker images from ghcr.io/andr-235/*
-- Implement health checks
-- Use proper resource limits
-- Set up monitoring and logging
-- Use secrets management
+## Conclusion
 
-## Development Setup
-- Use [docker-compose.dev.yml](mdc:docker-compose.dev.yml) for local development
-- Mount source code as volumes for hot reload
-- Use local database for development
-- Enable debug mode
-
-## Security Considerations
-- Use non-root users in containers
-- Scan images for vulnerabilities
-- Use multi-stage builds to reduce image size
-- Implement proper network segmentation
-- Use secrets for sensitive data
-
-## Monitoring & Logging
-- Configure structured logging
-- Set up health check endpoints
-- Use proper log rotation
-- Monitor container resource usage
-- Set up alerting for failures
-
-## CI/CD Integration
-- Use GitHub Actions for automated builds
-- Implement automated testing in pipeline
-- Use semantic versioning for images
-- Implement rollback strategies
-- Monitor deployment status
+Containerizing Python applications using Docker and Kubernetes can significantly improve the consistency, isolation, and scalability of your applications. By following best practices and leveraging tools like Pipenv, you can ensure a smooth development and deployment process.

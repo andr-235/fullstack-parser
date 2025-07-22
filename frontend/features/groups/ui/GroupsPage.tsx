@@ -47,6 +47,9 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -98,11 +101,54 @@ const CollapsibleSection = ({
   )
 }
 
+// Компонент для заголовка с сортировкой
+const SortableHeader = ({
+  children,
+  field,
+  currentSort,
+  currentOrder,
+  onSort,
+  className = "",
+}: {
+  children: React.ReactNode
+  field: 'name' | 'comments' | 'members' | 'last_parsed'
+  currentSort: string
+  currentOrder: string
+  onSort: (field: 'name' | 'comments' | 'members' | 'last_parsed') => void
+  className?: string
+}) => {
+  const isActive = currentSort === field
+
+  return (
+    <th
+      className={`px-4 py-3 text-left font-bold text-slate-200 cursor-pointer hover:bg-slate-600 transition-colors select-none ${className}`}
+      onClick={() => onSort(field)}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        <div className="flex flex-col">
+          {isActive ? (
+            currentOrder === 'asc' ? (
+              <ArrowUp className="h-3 w-3 text-blue-400" />
+            ) : (
+              <ArrowDown className="h-3 w-3 text-blue-400" />
+            )
+          ) : (
+            <ArrowUpDown className="h-3 w-3 text-slate-400" />
+          )}
+        </div>
+      </div>
+    </th>
+  )
+}
+
 export default function GroupsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeOnly, setActiveOnly] = useState(false)
   const [newGroupUrl, setNewGroupUrl] = useState('')
   const [copiedGroup, setCopiedGroup] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<'comments' | 'members' | 'name' | 'last_parsed'>('comments')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const debouncedSearch = useDebounce(searchTerm, 500)
 
   const {
@@ -123,8 +169,42 @@ export default function GroupsPage() {
   const refreshGroupMutation = useRefreshGroupInfo()
 
   const groups = useMemo(
-    () => data?.pages.flatMap((page) => page.items) ?? [],
-    [data]
+    () => {
+      const allGroups = data?.pages.flatMap((page) => page.items) ?? []
+
+      return allGroups.sort((a, b) => {
+        let aValue: any
+        let bValue: any
+
+        switch (sortBy) {
+          case 'comments':
+            aValue = a.total_comments_found || 0
+            bValue = b.total_comments_found || 0
+            break
+          case 'members':
+            aValue = a.members_count || 0
+            bValue = b.members_count || 0
+            break
+          case 'name':
+            aValue = a.name.toLowerCase()
+            bValue = b.name.toLowerCase()
+            break
+          case 'last_parsed':
+            aValue = a.last_parsed_at ? new Date(a.last_parsed_at).getTime() : 0
+            bValue = b.last_parsed_at ? new Date(b.last_parsed_at).getTime() : 0
+            break
+          default:
+            return 0
+        }
+
+        if (sortOrder === 'asc') {
+          return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
+        } else {
+          return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
+        }
+      })
+    },
+    [data, sortBy, sortOrder]
   )
 
   // Хук для автоматической загрузки при скролле
@@ -155,9 +235,12 @@ export default function GroupsPage() {
           console.error('Error response status:', error?.response?.status)
           console.error('Error response data:', error?.response?.data)
           console.error('Error message:', error?.message)
+          console.error('Error name:', error?.name)
+          console.error('Full error object:', JSON.stringify(error, null, 2))
 
           let errorMessage = 'Ошибка при создании группы'
 
+          // Проверяем различные форматы ошибок
           if (error?.status === 409 || error?.response?.status === 409) {
             // Группа уже существует
             errorMessage = error?.response?.data?.detail || error?.message || 'Группа уже существует в системе'
@@ -165,8 +248,16 @@ export default function GroupsPage() {
           } else if (error?.response?.data?.detail) {
             errorMessage = error.response.data.detail
             toast.error(errorMessage)
+          } else if (error?.data?.detail) {
+            // Альтернативный формат ошибки
+            errorMessage = error.data.detail
+            toast.error(errorMessage)
           } else if (error?.message) {
             errorMessage = error.message
+            toast.error(errorMessage)
+          } else if (error?.error) {
+            // Еще один возможный формат
+            errorMessage = error.error
             toast.error(errorMessage)
           } else {
             toast.error(errorMessage)
@@ -187,6 +278,16 @@ export default function GroupsPage() {
       setTimeout(() => setCopiedGroup(null), 2000)
     } catch (err) {
       toast.error('Не удалось скопировать ссылку')
+    }
+  }
+
+  // Функция для переключения сортировки
+  const handleSort = (field: typeof sortBy) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(field)
+      setSortOrder('desc')
     }
   }
 
@@ -364,19 +465,49 @@ export default function GroupsPage() {
                   <table className="min-w-full relative">
                     <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 shadow-md">
                       <tr>
-                        <th className="px-4 py-3 text-left font-bold text-slate-200">
+                        <th className="px-4 py-3 text-left font-bold text-slate-200 w-20">
                           ID
                         </th>
-                        <th className="px-4 py-3 text-left font-bold text-slate-200">
+                        <SortableHeader
+                          field="name"
+                          currentSort={sortBy}
+                          currentOrder={sortOrder}
+                          onSort={handleSort}
+                          className="w-80"
+                        >
                           Группа
-                        </th>
-                        <th className="px-4 py-3 text-left font-bold text-slate-200">
+                        </SortableHeader>
+                        <th className="px-4 py-3 text-left font-bold text-slate-200 w-24">
                           Статус
                         </th>
-                        <th className="px-4 py-3 text-left font-bold text-slate-200">
+                        <SortableHeader
+                          field="comments"
+                          currentSort={sortBy}
+                          currentOrder={sortOrder}
+                          onSort={handleSort}
+                          className="w-32"
+                        >
+                          Комментарии
+                        </SortableHeader>
+                        <SortableHeader
+                          field="members"
+                          currentSort={sortBy}
+                          currentOrder={sortOrder}
+                          onSort={handleSort}
+                          className="w-32"
+                        >
+                          Участники
+                        </SortableHeader>
+                        <SortableHeader
+                          field="last_parsed"
+                          currentSort={sortBy}
+                          currentOrder={sortOrder}
+                          onSort={handleSort}
+                          className="w-40"
+                        >
                           Последний парсинг
-                        </th>
-                        <th className="px-4 py-3 text-right font-bold text-slate-200">
+                        </SortableHeader>
+                        <th className="px-4 py-3 text-right font-bold text-slate-200 w-24">
                           Действия
                         </th>
                       </tr>
@@ -391,95 +522,86 @@ export default function GroupsPage() {
                             animationFillMode: 'both',
                           }}
                         >
-                          <td className="px-4 py-3 font-mono text-blue-400 font-semibold">
+                          <td className="px-4 py-3 font-mono text-blue-400 font-semibold w-20">
                             {group.vk_id}
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <div className="relative">
+                          <td className="px-4 py-3 w-80">
+                            <div className="flex items-center gap-2">
+                              <div className="relative flex-shrink-0">
                                 <img
                                   src={
                                     group.photo_url ||
                                     `${AVATAR_PLACEHOLDER}${encodeURIComponent(group.name)}`
                                   }
                                   alt={group.name}
-                                  className="w-10 h-10 rounded-full border-2 border-slate-600 shadow-sm object-cover bg-slate-700 transition-transform duration-200 hover:scale-110"
+                                  className="w-8 h-8 rounded-full border-2 border-slate-600 shadow-sm object-cover bg-slate-700 transition-transform duration-200 hover:scale-110"
                                   loading="lazy"
                                 />
                                 {group.is_active && (
-                                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-slate-800 animate-pulse"></div>
+                                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-800 animate-pulse"></div>
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-semibold text-slate-200 truncate">
+                                <div className="flex items-center gap-1">
+                                  <h3 className="font-semibold text-slate-200 truncate text-sm">
                                     {group.name}
                                   </h3>
-                                  <div className="flex items-center gap-1">
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs border-slate-600 text-slate-400"
-                                      title={group.members_count ? `${group.members_count.toLocaleString()} участников` : 'Количество участников недоступно'}
-                                    >
-                                      {group.members_count ? `${group.members_count.toLocaleString()}` : 'N/A'}
-                                    </Badge>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => {
-                                        refreshGroupMutation.mutate(group.id, {
-                                          onSuccess: () => {
-                                            toast.success('Информация о группе обновлена! 🔄')
-                                          },
-                                          onError: (error: any) => {
-                                            console.error('Ошибка обновления группы:', error)
-                                            toast.error('Ошибка обновления информации о группе')
-                                          },
-                                        })
-                                      }}
-                                      disabled={refreshGroupMutation.isPending}
-                                      className="h-5 w-5 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
-                                      title="Обновить информацию о группе из VK"
-                                    >
-                                      <RefreshCw className="h-3 w-3" />
-                                    </Button>
-                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      refreshGroupMutation.mutate(group.id, {
+                                        onSuccess: () => {
+                                          toast.success('Информация о группе обновлена! 🔄')
+                                        },
+                                        onError: (error: any) => {
+                                          console.error('Ошибка обновления группы:', error)
+                                          toast.error('Ошибка обновления информации о группе')
+                                        },
+                                      })
+                                    }}
+                                    disabled={refreshGroupMutation.isPending}
+                                    className="h-4 w-4 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                                    title="Обновить информацию о группе из VK"
+                                  >
+                                    <RefreshCw className="h-3 w-3" />
+                                  </Button>
                                 </div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-sm text-slate-400">
+                                <div className="flex items-center gap-1 mt-1">
+                                  <span className="text-xs text-slate-400 truncate">
                                     @{group.screen_name}
                                   </span>
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => handleCopyLink(group.screen_name)}
-                                    className="h-6 w-6 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                                    className="h-4 w-4 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
                                   >
                                     {copiedGroup === group.screen_name ? (
-                                      <Check className="h-3 w-3" />
+                                      <Check className="h-2 w-2" />
                                     ) : (
-                                      <Copy className="h-3 w-3" />
+                                      <Copy className="h-2 w-2" />
                                     )}
                                   </Button>
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     asChild
-                                    className="h-6 w-6 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                                    className="h-4 w-4 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
                                   >
                                     <a
                                       href={`https://vk.com/${group.screen_name}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
-                                      <ExternalLink className="h-3 w-3" />
+                                      <ExternalLink className="h-2 w-2" />
                                     </a>
                                   </Button>
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 w-24">
                             <div className="flex items-center gap-2">
                               <Badge
                                 variant={group.is_active ? "default" : "secondary"}
@@ -501,7 +623,23 @@ export default function GroupsPage() {
                               )} */}
                             </div>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 w-32">
+                            <div className="flex items-center gap-2">
+                              <MessageSquare className="h-4 w-4 text-blue-400" />
+                              <span className="font-semibold text-slate-200">
+                                {group.total_comments_found?.toLocaleString() || '0'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 w-32">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-green-400" />
+                              <span className="font-semibold text-slate-200">
+                                {group.members_count?.toLocaleString() || 'N/A'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 w-40">
                             <div className="text-sm text-slate-400">
                               {group.last_parsed_at ? (
                                 <div className="flex items-center gap-2">
@@ -518,7 +656,7 @@ export default function GroupsPage() {
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-4 py-3 text-right w-24">
                             <div className="flex items-center justify-end gap-1">
                               <Button
                                 variant="ghost"
