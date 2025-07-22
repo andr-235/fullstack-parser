@@ -5,7 +5,7 @@ API endpoints для управления мониторингом VK групп
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -13,14 +13,12 @@ from app.core.database import get_db
 from app.models.vk_group import VKGroup
 from app.schemas.base import (
     PaginatedResponse,
-    PaginationParams,
     StatusResponse,
 )
 from app.schemas.monitoring import (
     GroupMonitoringConfig,
     GroupMonitoringResponse,
     MonitoringCycleResult,
-    MonitoringStats,
     SchedulerStatus,
 )
 from app.services.monitoring_service import MonitoringService

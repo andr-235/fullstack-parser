@@ -22,4 +22,4 @@ export interface AppManifest {
   display: string
   start_url: string
   scope: string
-} 
+}

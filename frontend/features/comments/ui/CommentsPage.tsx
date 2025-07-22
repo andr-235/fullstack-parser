@@ -65,7 +65,7 @@ const HighlightedText = ({
   }
 
   // Экранируем специальные символы в ключевых словах для безопасного использования в regex
-  const escapedKeywords = keywords.map(keyword =>
+  const escapedKeywords = keywords.map((keyword) =>
     keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   )
 
@@ -77,8 +77,8 @@ const HighlightedText = ({
     <div className="text-slate-200 text-sm whitespace-pre-wrap break-words">
       {parts.map((part, i) => {
         // Проверяем, является ли часть ключевым словом (без учета регистра)
-        const isKeyword = keywords.some((kw) =>
-          kw.toLowerCase() === part.toLowerCase()
+        const isKeyword = keywords.some(
+          (kw) => kw.toLowerCase() === part.toLowerCase()
         )
 
         return isKeyword ? (

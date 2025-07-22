@@ -243,7 +243,10 @@ export default function GroupsPage() {
           // Проверяем различные форматы ошибок
           if (error?.status === 409 || error?.response?.status === 409) {
             // Группа уже существует
-            errorMessage = error?.response?.data?.detail || error?.message || 'Группа уже существует в системе'
+            errorMessage =
+              error?.response?.data?.detail ||
+              error?.message ||
+              'Группа уже существует в системе'
             toast.error(errorMessage)
           } else if (error?.response?.data?.detail) {
             errorMessage = error.response.data.detail
@@ -403,7 +406,7 @@ export default function GroupsPage() {
                 <span>Только активные</span>
               </label>
 
-              <UploadGroupsModal onSuccess={() => { }} />
+              <UploadGroupsModal onSuccess={() => {}} />
             </div>
           </div>
 
@@ -441,7 +444,9 @@ export default function GroupsPage() {
                 <LoadingSpinner className="h-8 w-8 text-blue-500" />
                 <div className="absolute inset-0 rounded-full border-2 border-blue-200 animate-ping"></div>
               </div>
-              <span className="text-slate-600 font-medium">Загрузка групп...</span>
+              <span className="text-slate-600 font-medium">
+                Загрузка групп...
+              </span>
             </div>
           ) : error ? (
             <div className="text-center py-16">
@@ -604,13 +609,16 @@ export default function GroupsPage() {
                           <td className="px-4 py-3 w-24">
                             <div className="flex items-center gap-2">
                               <Badge
-                                variant={group.is_active ? "default" : "secondary"}
-                                className={`${group.is_active
-                                  ? "bg-green-600 hover:bg-green-700"
-                                  : "bg-slate-600 hover:bg-slate-700"
-                                  } text-white`}
+                                variant={
+                                  group.is_active ? 'default' : 'secondary'
+                                }
+                                className={`${
+                                  group.is_active
+                                    ? 'bg-green-600 hover:bg-green-700'
+                                    : 'bg-slate-600 hover:bg-slate-700'
+                                } text-white`}
                               >
-                                {group.is_active ? "Активна" : "Неактивна"}
+                                {group.is_active ? 'Активна' : 'Неактивна'}
                               </Badge>
                               {/* Убираем проверку auto_monitoring_enabled, так как это поле не существует в VKGroupResponse */}
                               {/* {group.auto_monitoring_enabled && (
@@ -670,7 +678,7 @@ export default function GroupsPage() {
                                 disabled={updateGroupMutation.isPending}
                                 className="h-8 w-8 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
                                 title={
-                                  group.is_active ? "Остановить" : "Запустить"
+                                  group.is_active ? 'Остановить' : 'Запустить'
                                 }
                               >
                                 {group.is_active ? (
@@ -724,7 +732,9 @@ export default function GroupsPage() {
               {/* Сообщение о конце списка */}
               {!hasNextPage && groups.length > 0 && (
                 <div className="p-3 text-center border-t border-slate-700">
-                  <span className="text-sm text-slate-400">Все группы загружены</span>
+                  <span className="text-sm text-slate-400">
+                    Все группы загружены
+                  </span>
                 </div>
               )}
 
@@ -735,7 +745,9 @@ export default function GroupsPage() {
                       <Users className="h-6 w-6 text-slate-400" />
                     </div>
                     <p className="text-slate-400 font-medium text-sm">
-                      {searchTerm ? 'Группы не найдены' : 'Нет добавленных групп'}
+                      {searchTerm
+                        ? 'Группы не найдены'
+                        : 'Нет добавленных групп'}
                     </p>
                     <p className="text-slate-500 text-xs">
                       {searchTerm

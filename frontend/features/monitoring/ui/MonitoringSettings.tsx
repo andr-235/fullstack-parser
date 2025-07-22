@@ -157,7 +157,11 @@ export default function MonitoringSettings({
                 <span className="text-slate-400">Последний успех:</span>
                 <span className="ml-2 font-medium">
                   {group.last_monitoring_success
-                    ? format(new Date(group.last_monitoring_success), 'dd.MM.yyyy HH:mm', { locale: ru })
+                    ? format(
+                        new Date(group.last_monitoring_success),
+                        'dd.MM.yyyy HH:mm',
+                        { locale: ru }
+                      )
                     : 'Нет'}
                 </span>
               </div>

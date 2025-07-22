@@ -138,7 +138,7 @@ export default function GroupsMonitoringTable({
         text: 'Не запланировано',
         progress: 0,
         status: 'waiting',
-        color: 'text-slate-400'
+        color: 'text-slate-400',
       }
     }
 
@@ -152,19 +152,22 @@ export default function GroupsMonitoringTable({
         text: `Просрочено ${format(nextTime, 'dd.MM.yyyy HH:mm', { locale: ru })}`,
         progress: 100,
         status: 'overdue',
-        color: 'text-red-400'
+        color: 'text-red-400',
       }
     }
 
     // Вычисляем прогресс для интервала мониторинга
     const intervalMs = (group.monitoring_interval_minutes || 60) * 60 * 1000
-    const progress = Math.max(0, Math.min(100, ((intervalMs - timeDiff) / intervalMs) * 100))
+    const progress = Math.max(
+      0,
+      Math.min(100, ((intervalMs - timeDiff) / intervalMs) * 100)
+    )
 
     return {
       text: formatDistanceToNow(nextTime, { addSuffix: true, locale: ru }),
       progress,
       status: 'running',
-      color: 'text-blue-400'
+      color: 'text-blue-400',
     }
   }
 
@@ -174,7 +177,7 @@ export default function GroupsMonitoringTable({
       return {
         text: format(lastTime, 'dd.MM.yyyy HH:mm', { locale: ru }),
         status: 'success',
-        color: 'text-green-400'
+        color: 'text-green-400',
       }
     }
 
@@ -182,14 +185,14 @@ export default function GroupsMonitoringTable({
       return {
         text: 'Ошибка',
         status: 'error',
-        color: 'text-red-400'
+        color: 'text-red-400',
       }
     }
 
     return {
       text: 'Никогда',
       status: 'never',
-      color: 'text-slate-400'
+      color: 'text-slate-400',
     }
   }
 
@@ -215,7 +218,9 @@ export default function GroupsMonitoringTable({
             <Activity className="h-8 w-8 text-slate-400" />
           </div>
           <div>
-            <p className="text-slate-400 font-medium">Нет групп с мониторингом</p>
+            <p className="text-slate-400 font-medium">
+              Нет групп с мониторингом
+            </p>
             <p className="text-sm text-slate-500 mt-1">
               Добавьте группы в мониторинг для автоматической проверки
             </p>
@@ -247,7 +252,10 @@ export default function GroupsMonitoringTable({
               const lastMonitoring = getLastMonitoringTime(group)
 
               return (
-                <TableRow key={group.id || `group-${index}`} className="hover:bg-slate-700/50">
+                <TableRow
+                  key={group.id || `group-${index}`}
+                  className="hover:bg-slate-700/50"
+                >
                   <TableCell>
                     <div>
                       <div className="font-medium">{group.name}</div>
@@ -268,16 +276,24 @@ export default function GroupsMonitoringTable({
                     <div className="inline-block">
                       <Tooltip>
                         <TooltipTrigger>
-                          <Badge className={getPriorityColor(group.monitoring_priority)}>
+                          <Badge
+                            className={getPriorityColor(
+                              group.monitoring_priority
+                            )}
+                          >
                             {group.monitoring_priority}/10
                           </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Приоритет мониторинга группы</p>
                           <p className="text-xs text-slate-300">
-                            {group.monitoring_priority >= 8 ? 'Критический' :
-                              group.monitoring_priority >= 6 ? 'Высокий' :
-                                group.monitoring_priority >= 4 ? 'Средний' : 'Низкий'}
+                            {group.monitoring_priority >= 8
+                              ? 'Критический'
+                              : group.monitoring_priority >= 6
+                                ? 'Высокий'
+                                : group.monitoring_priority >= 4
+                                  ? 'Средний'
+                                  : 'Низкий'}
                           </p>
                         </TooltipContent>
                       </Tooltip>
@@ -287,16 +303,22 @@ export default function GroupsMonitoringTable({
                     <div className="inline-block">
                       <Tooltip>
                         <TooltipTrigger>
-                          <span className={`text-sm ${getIntervalColor(group.monitoring_interval_minutes)}`}>
+                          <span
+                            className={`text-sm ${getIntervalColor(group.monitoring_interval_minutes)}`}
+                          >
                             {group.monitoring_interval_minutes} мин
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Интервал проверки группы</p>
                           <p className="text-xs text-slate-300">
-                            {group.monitoring_interval_minutes <= 30 ? 'Очень часто' :
-                              group.monitoring_interval_minutes <= 60 ? 'Часто' :
-                                group.monitoring_interval_minutes <= 120 ? 'Умеренно' : 'Редко'}
+                            {group.monitoring_interval_minutes <= 30
+                              ? 'Очень часто'
+                              : group.monitoring_interval_minutes <= 60
+                                ? 'Часто'
+                                : group.monitoring_interval_minutes <= 120
+                                  ? 'Умеренно'
+                                  : 'Редко'}
                           </p>
                         </TooltipContent>
                       </Tooltip>
@@ -321,13 +343,18 @@ export default function GroupsMonitoringTable({
                         {nextMonitoring.text}
                       </span>
                       {nextMonitoring.status === 'running' && (
-                        <Progress value={nextMonitoring.progress} className="h-1" />
+                        <Progress
+                          value={nextMonitoring.progress}
+                          className="h-1"
+                        />
                       )}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm">{group.monitoring_runs_count}</span>
+                      <span className="text-sm">
+                        {group.monitoring_runs_count}
+                      </span>
                       {group.monitoring_runs_count > 0 && (
                         <TrendingUp className="h-3 w-3 text-green-400" />
                       )}
@@ -340,14 +367,22 @@ export default function GroupsMonitoringTable({
                           <TooltipTrigger asChild>
                             <Switch
                               checked={group.auto_monitoring_enabled}
-                              onCheckedChange={() => handleToggleMonitoring(group)}
+                              onCheckedChange={() =>
+                                handleToggleMonitoring(group)
+                              }
                               disabled={
-                                enableMutation.isPending || disableMutation.isPending
+                                enableMutation.isPending ||
+                                disableMutation.isPending
                               }
                             />
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{group.auto_monitoring_enabled ? 'Отключить' : 'Включить'} мониторинг</p>
+                            <p>
+                              {group.auto_monitoring_enabled
+                                ? 'Отключить'
+                                : 'Включить'}{' '}
+                              мониторинг
+                            </p>
                           </TooltipContent>
                         </Tooltip>
                       </div>

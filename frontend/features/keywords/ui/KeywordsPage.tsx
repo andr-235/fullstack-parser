@@ -88,7 +88,7 @@ const KeywordRow = ({
       onUpdate(
         keyword.id,
         { word: editedWord },
-        { onSuccess: () => { }, onError: () => { } }
+        { onSuccess: () => {}, onError: () => {} }
       )
     }
     setIsEditing(false)
@@ -192,12 +192,7 @@ export default function KeywordsPage() {
   const [itemsPerPage] = useState(1000) // Увеличиваем лимит для загрузки большего количества записей
 
   // Пагинация
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-  } = useKeywords({
+  const { data, isLoading, error, refetch } = useKeywords({
     q: searchTerm,
     active_only: activeOnly,
     category: category || undefined,
@@ -517,7 +512,9 @@ export default function KeywordsPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 bg-slate-750 border-t border-slate-700">
               <div className="text-sm text-slate-400">
-                Показано {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, total)} из {total} ключевых слов
+                Показано {(currentPage - 1) * itemsPerPage + 1}-
+                {Math.min(currentPage * itemsPerPage, total)} из {total}{' '}
+                ключевых слов
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -530,25 +527,30 @@ export default function KeywordsPage() {
                   Назад
                 </Button>
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <Button
-                      key={page}
-                      variant={page === currentPage ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                      className={page === currentPage
-                        ? "bg-purple-600 hover:bg-purple-700"
-                        : "border-slate-600 text-slate-300 hover:bg-slate-700"
-                      }
-                    >
-                      {page}
-                    </Button>
-                  ))}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <Button
+                        key={page}
+                        variant={page === currentPage ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className={
+                          page === currentPage
+                            ? 'bg-purple-600 hover:bg-purple-700'
+                            : 'border-slate-600 text-slate-300 hover:bg-slate-700'
+                        }
+                      >
+                        {page}
+                      </Button>
+                    )
+                  )}
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  onClick={() =>
+                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                  }
                   disabled={currentPage === totalPages}
                   className="border-slate-600 text-slate-300 hover:bg-slate-700"
                 >
