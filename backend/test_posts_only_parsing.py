@@ -4,10 +4,11 @@
 """
 
 import asyncio
-from app.services.vk_api_service import VKAPIService
-from app.services.parser_service import ParserService
-from app.core.database import AsyncSessionLocal
+
 from app.core.config import settings
+from app.core.database import AsyncSessionLocal
+from app.services.parser_service import ParserService
+from app.services.vk_api_service import VKAPIService
 
 
 async def test_posts_only_parsing():
@@ -45,7 +46,7 @@ async def test_posts_only_parsing():
                     break
 
             if target_post:
-                print(f"✅ Найден пост с 'гиви' в тексте!")
+                print("✅ Найден пост с 'гиви' в тексте!")
                 print(f"   ID: {target_post.get('id')}")
                 print(f"   Текст: {target_post.get('text', '')[:200]}...")
                 print(
@@ -61,7 +62,7 @@ async def test_posts_only_parsing():
                 force_reparse=False,
             )
 
-            print(f"\n✅ Результат парсинга:")
+            print("\n✅ Результат парсинга:")
             print(f"   Обработано постов: {result.posts_processed}")
             print(f"   Найдено комментариев: {result.comments_found}")
             print(f"   Найдено совпадений: {result.keyword_matches}")
@@ -69,7 +70,7 @@ async def test_posts_only_parsing():
 
             # Проверяем, есть ли совпадения с ключевым словом "гиви"
             if result.keyword_matches > 0:
-                print(f"\n🔍 Найдены совпадения с ключевым словом 'гиви'!")
+                print("\n🔍 Найдены совпадения с ключевым словом 'гиви'!")
 
                 # Получаем комментарии с ключевыми словами
                 comments = await parser_service.filter_comments(

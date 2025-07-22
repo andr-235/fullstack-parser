@@ -4,10 +4,11 @@
 """
 
 import asyncio
+
+from app.core.config import settings
+from app.core.database import AsyncSessionLocal
 from app.services.monitoring_service import MonitoringService
 from app.services.vk_api_service import VKAPIService
-from app.core.database import AsyncSessionLocal
-from app.core.config import settings
 
 
 async def test_monitoring_service():
@@ -36,8 +37,9 @@ async def test_monitoring_service():
             print("📅 next_monitoring_at:", stats["next_monitoring_at"])
 
             # Попробуем конвертировать вручную
-            from app.core.time_utils import format_datetime_for_display
             from datetime import datetime
+
+            from app.core.time_utils import format_datetime_for_display
 
             try:
                 utc_time = datetime.fromisoformat(stats["next_monitoring_at"])

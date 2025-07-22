@@ -4,8 +4,9 @@
 """
 
 import asyncio
-from app.services.vk_api_service import VKAPIService
+
 from app.core.config import settings
+from app.services.vk_api_service import VKAPIService
 
 
 async def test_specific_post():
@@ -50,7 +51,7 @@ async def test_specific_post():
                     break
 
             if target_post:
-                print(f"✅ Пост найден!")
+                print("✅ Пост найден!")
                 print(f"   ID: {target_post.get('id')}")
                 print(f"   Дата: {target_post.get('date')}")
                 print(f"   Текст: {target_post.get('text', '')[:200]}...")
@@ -80,7 +81,7 @@ async def test_specific_post():
             print(f"✅ Получено комментариев: {len(comments)}")
 
             if comments:
-                print(f"\n📋 Первые 5 комментариев:")
+                print("\n📋 Первые 5 комментариев:")
                 for i, comment in enumerate(comments[:5], 1):
                     print(f"   {i}. ID: {comment.get('id')}")
                     print(f"      Автор: {comment.get('from_id')}")

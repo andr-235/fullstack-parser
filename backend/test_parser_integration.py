@@ -4,10 +4,11 @@
 """
 
 import asyncio
-from app.services.vk_api_service import VKAPIService
-from app.services.parser_service import ParserService
-from app.core.database import AsyncSessionLocal
+
 from app.core.config import settings
+from app.core.database import AsyncSessionLocal
+from app.services.parser_service import ParserService
+from app.services.vk_api_service import VKAPIService
 
 
 async def test_parser_integration():
@@ -38,7 +39,7 @@ async def test_parser_integration():
                 force_reparse=False,
             )
 
-            print(f"✅ Результат парсинга:")
+            print("✅ Результат парсинга:")
             print(f"   Обработано постов: {result.posts_processed}")
             print(f"   Найдено комментариев: {result.comments_found}")
             print(f"   Найдено совпадений: {result.keyword_matches}")
@@ -46,7 +47,7 @@ async def test_parser_integration():
 
             # Проверяем, есть ли совпадения с ключевым словом "гиви"
             if result.keyword_matches > 0:
-                print(f"\n🔍 Найдены совпадения с ключевым словом 'гиви'!")
+                print("\n🔍 Найдены совпадения с ключевым словом 'гиви'!")
 
                 # Получаем комментарии с ключевыми словами
                 comments = await parser_service.filter_comments(

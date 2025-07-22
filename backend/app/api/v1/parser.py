@@ -2,12 +2,11 @@
 API endpoints для парсинга комментариев VK
 """
 
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -82,9 +81,9 @@ async def get_comments(
     result = await service.filter_comments(search_params, pagination)
 
     # Загружаем связанные ключевые слова для каждого комментария
+    import structlog
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
-    import structlog
 
     from app.models.comment_keyword_match import CommentKeywordMatch
     from app.models.vk_comment import VKComment

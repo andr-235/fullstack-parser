@@ -4,8 +4,9 @@
 """
 
 import asyncio
-from app.services.vk_api_service import VKAPIService
+
 from app.core.config import settings
+from app.services.vk_api_service import VKAPIService
 
 
 async def test_debug_owner_id():
@@ -20,7 +21,7 @@ async def test_debug_owner_id():
         post_id = 126563  # Пост с комментарием "гиви"
 
         print(
-            f"\n📋 Тест 1: Прямой вызов get_post_comments с положительным owner_id"
+            "\n📋 Тест 1: Прямой вызов get_post_comments с положительным owner_id"
         )
         try:
             comments = await vk_service.get_post_comments(
@@ -37,7 +38,7 @@ async def test_debug_owner_id():
             print(f"❌ Ошибка: {e}")
 
         print(
-            f"\n📋 Тест 2: Прямой вызов get_post_comments с отрицательным owner_id"
+            "\n📋 Тест 2: Прямой вызов get_post_comments с отрицательным owner_id"
         )
         try:
             comments = await vk_service.get_post_comments(
@@ -54,7 +55,7 @@ async def test_debug_owner_id():
             print(f"❌ Ошибка: {e}")
 
         print(
-            f"\n📋 Тест 3: Прямой вызов get_all_post_comments с положительным owner_id"
+            "\n📋 Тест 3: Прямой вызов get_all_post_comments с положительным owner_id"
         )
         try:
             comments = await vk_service.get_all_post_comments(
@@ -69,7 +70,7 @@ async def test_debug_owner_id():
             print(f"❌ Ошибка: {e}")
 
         print(
-            f"\n📋 Тест 4: Прямой вызов get_all_post_comments с отрицательным owner_id"
+            "\n📋 Тест 4: Прямой вызов get_all_post_comments с отрицательным owner_id"
         )
         try:
             comments = await vk_service.get_all_post_comments(

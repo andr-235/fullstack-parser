@@ -4,12 +4,14 @@
 """
 
 import asyncio
+
+from sqlalchemy import and_, select
+from sqlalchemy.orm import selectinload
+
 from app.core.database import AsyncSessionLocal
-from app.models.vk_comment import VKComment
 from app.models.comment_keyword_match import CommentKeywordMatch
 from app.models.keyword import Keyword
-from sqlalchemy import select, and_
-from sqlalchemy.orm import selectinload
+from app.models.vk_comment import VKComment
 
 
 async def test_check_database_detailed():

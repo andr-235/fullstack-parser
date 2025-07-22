@@ -6,13 +6,13 @@ import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
-from sqlalchemy import func, select, or_
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models import VKGroup
-from app.schemas.base import PaginatedResponse, PaginationParams
+from app.schemas.base import PaginatedResponse
 from app.schemas.vk_group import (
     VKGroupCreate,
     VKGroupRead,

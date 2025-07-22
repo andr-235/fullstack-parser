@@ -4,8 +4,8 @@
 """
 
 import asyncio
+
 import httpx
-import json
 
 
 async def test_groups_api():

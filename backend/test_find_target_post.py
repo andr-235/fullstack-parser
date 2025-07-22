@@ -4,8 +4,9 @@
 """
 
 import asyncio
-from app.services.vk_api_service import VKAPIService
+
 from app.core.config import settings
+from app.services.vk_api_service import VKAPIService
 
 
 async def test_find_target_post():

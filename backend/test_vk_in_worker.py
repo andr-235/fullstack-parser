@@ -4,8 +4,9 @@
 """
 
 import asyncio
-from app.services.vkbottle_service import VKBottleService
+
 from app.core.config import settings
+from app.services.vkbottle_service import VKBottleService
 
 
 async def test_vk_in_worker():

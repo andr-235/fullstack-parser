@@ -4,7 +4,9 @@
 """
 
 import asyncio
+
 import httpx
+
 from app.core.config import settings
 
 
@@ -63,7 +65,7 @@ async def check_vk_token():
         print(f"❌ Ошибка проверки групп: {e}")
 
     # Проверяем доступ к конкретной группе
-    print(f"\n🔍 Проверка доступа к группе riabirobidzhan (43377172)...")
+    print("\n🔍 Проверка доступа к группе riabirobidzhan (43377172)...")
     url = "https://api.vk.com/method/wall.get"
     params = {
         "access_token": settings.vk.access_token,
@@ -88,7 +90,7 @@ async def check_vk_token():
         print(f"❌ Ошибка проверки стены: {e}")
 
     # Проверяем доступ к комментариям конкретного поста
-    print(f"\n🔍 Проверка доступа к комментариям поста 126563...")
+    print("\n🔍 Проверка доступа к комментариям поста 126563...")
     url = "https://api.vk.com/method/wall.getComments"
     params = {
         "access_token": settings.vk.access_token,

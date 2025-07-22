@@ -4,8 +4,9 @@
 """
 
 import asyncio
-from app.services.vk_api_service import VKAPIService
+
 from app.core.config import settings
+from app.services.vk_api_service import VKAPIService
 
 
 async def test_check_posts():
@@ -37,7 +38,7 @@ async def test_check_posts():
 
                 if post_id == target_post_id:
                     target_post = post
-                    print(f"    ⭐ НАЙДЕН ЦЕЛЕВОЙ ПОСТ!")
+                    print("    ⭐ НАЙДЕН ЦЕЛЕВОЙ ПОСТ!")
                     print(f"    Текст: {post.get('text', '')[:100]}...")
 
             if target_post:

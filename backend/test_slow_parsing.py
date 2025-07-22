@@ -4,8 +4,9 @@
 """
 
 import asyncio
-from app.services.vk_api_service import VKAPIService
+
 from app.core.config import settings
+from app.services.vk_api_service import VKAPIService
 
 
 async def test_slow_parsing():
@@ -19,7 +20,7 @@ async def test_slow_parsing():
         group_id = 43377172  # РИА Биробиджан
         target_post_id = 126563  # Пост с комментарием "гиви"
 
-        print(f"\n📋 Получаем первые 20 постов")
+        print("\n📋 Получаем первые 20 постов")
         try:
             posts = await vk_service.get_group_posts(
                 group_id=group_id, count=20
@@ -61,7 +62,7 @@ async def test_slow_parsing():
                     for j, comment in enumerate(comments, 1):
                         text = comment.get("text", "").lower()
                         if "гиви" in text:
-                            print(f"   🔍 НАЙДЕН КОММЕНТАРИЙ С 'ГИВИ'!")
+                            print("   🔍 НАЙДЕН КОММЕНТАРИЙ С 'ГИВИ'!")
                             print(f"      ID: {comment.get('id')}")
                             print(f"      Автор: {comment.get('from_id')}")
                             print(f"      Текст: {comment.get('text', '')}")
@@ -136,7 +137,7 @@ async def test_slow_parsing():
                                     text = comment.get("text", "").lower()
                                     if "гиви" in text:
                                         print(
-                                            f"   🔍 НАЙДЕН КОММЕНТАРИЙ С 'ГИВИ'!"
+                                            "   🔍 НАЙДЕН КОММЕНТАРИЙ С 'ГИВИ'!"
                                         )
                                         print(f"      ID: {comment.get('id')}")
                                         print(

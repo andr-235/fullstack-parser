@@ -4,9 +4,9 @@
 """
 
 import asyncio
-from app.services.parser_service import ParserService
+
 from app.core.database import AsyncSessionLocal
-from app.core.config import settings
+from app.services.parser_service import ParserService
 
 
 async def test_check_database():
@@ -19,11 +19,11 @@ async def test_check_database():
             db=db, vk_service=None
         )  # Не нужен VK сервис для чтения БД
 
-        print(f"\n📋 Поиск комментариев с ключевым словом 'гиви'")
+        print("\n📋 Поиск комментариев с ключевым словом 'гиви'")
         try:
             # Получаем комментарии с ключевыми словами
-            from app.schemas.vk_comment import CommentSearchParams
             from app.schemas.base import PaginationParams
+            from app.schemas.vk_comment import CommentSearchParams
 
             search_params = CommentSearchParams(keywords=["гиви"])
             pagination = PaginationParams(page=1, size=10)
@@ -58,7 +58,7 @@ async def test_check_database():
                             comment_with_keywords
                             and comment_with_keywords.keyword_matches
                         ):
-                            print(f"      Найденные ключевые слова:")
+                            print("      Найденные ключевые слова:")
                             for match in comment_with_keywords.keyword_matches:
                                 print(
                                     f"        - {match.keyword.word} (позиция: {match.position})"

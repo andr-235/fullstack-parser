@@ -5,8 +5,8 @@
 import asyncio
 import logging
 from typing import Any, Dict, List, Optional, Union
+
 import httpx
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -228,7 +228,7 @@ class VKAPIService:
             params = {"group_ids": abs(group_id_or_screen_name)}
         else:
             params = {"screen_name": group_id_or_screen_name}
-        
+
         try:
             response = await self._make_request("groups.getById", params)
             return (

@@ -63,6 +63,7 @@ async def get_total_matches(
     Получает общее количество совпадений всех ключевых слов
     """
     from sqlalchemy import func
+
     from app.models.comment_keyword_match import CommentKeywordMatch
 
     # Подсчитываем общее количество совпадений
@@ -151,6 +152,7 @@ async def update_keywords_stats(
     Обновляет статистику ключевых слов на основе совпадений в комментариях
     """
     from sqlalchemy import func
+
     from app.models.comment_keyword_match import CommentKeywordMatch
     from app.models.keyword import Keyword
 

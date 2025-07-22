@@ -4,7 +4,9 @@
 """
 
 import asyncio
+
 from sqlalchemy import select
+
 from app.core.database import AsyncSessionLocal
 from app.models.keyword import Keyword
 from app.services.morphological_service import morphological_service
