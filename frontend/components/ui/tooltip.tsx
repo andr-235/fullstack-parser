@@ -8,7 +8,9 @@ interface TooltipContextType {
   setIsVisible: (visible: boolean) => void
 }
 
-const TooltipContext = React.createContext<TooltipContextType | undefined>(undefined)
+const TooltipContext = React.createContext<TooltipContextType | undefined>(
+  undefined
+)
 
 export function TooltipProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>
@@ -26,7 +28,7 @@ export function Tooltip({ children }: { children: React.ReactNode }) {
 
 export function TooltipTrigger({
   children,
-  asChild = false
+  asChild = false,
 }: {
   children: React.ReactNode
   asChild?: boolean
@@ -60,7 +62,7 @@ export function TooltipContent({
   children,
   className,
   side = 'top',
-  align = 'center'
+  align = 'center',
 }: {
   children: React.ReactNode
   className?: string
@@ -76,7 +78,8 @@ export function TooltipContent({
   const { isVisible } = context
 
   const getPositionClasses = () => {
-    const baseClasses = 'absolute z-50 px-2 py-1 text-xs text-white bg-slate-800 rounded-md shadow-lg whitespace-nowrap'
+    const baseClasses =
+      'absolute z-50 px-2 py-1 text-xs text-white bg-slate-800 rounded-md shadow-lg whitespace-nowrap'
 
     switch (side) {
       case 'top':
@@ -114,9 +117,7 @@ export function TooltipContent({
 
   return (
     <div className={cn('relative inline-block')}>
-      <div className={cn(getPositionClasses(), className)}>
-        {children}
-      </div>
+      <div className={cn(getPositionClasses(), className)}>{children}</div>
     </div>
   )
-} 
+}

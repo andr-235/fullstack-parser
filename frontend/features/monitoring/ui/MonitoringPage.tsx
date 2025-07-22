@@ -56,7 +56,9 @@ import MonitoringHistory from './MonitoringHistory'
 
 export default function MonitoringPage() {
   const [activeTab, setActiveTab] = useState('overview')
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'error' | 'waiting'>('all')
+  const [filterStatus, setFilterStatus] = useState<
+    'all' | 'active' | 'error' | 'waiting'
+  >('all')
 
   const {
     data: stats,
@@ -70,10 +72,8 @@ export default function MonitoringPage() {
     error: activeGroupsError,
   } = useActiveMonitoringGroups()
 
-  const {
-    data: schedulerStatus,
-    isLoading: schedulerLoading,
-  } = useSchedulerStatus()
+  const { data: schedulerStatus, isLoading: schedulerLoading } =
+    useSchedulerStatus()
 
   const { data: allGroups } = useGroups({ active_only: true })
   const runCycleMutation = useRunMonitoringCycle()
@@ -123,7 +123,7 @@ export default function MonitoringPage() {
         status: 'Остановлен',
         color: 'text-red-400',
         icon: <Pause className="h-5 w-5" />,
-        description: 'Планировщик не работает'
+        description: 'Планировщик не работает',
       }
     }
 
@@ -132,7 +132,7 @@ export default function MonitoringPage() {
         status: 'Ошибка Redis',
         color: 'text-red-400',
         icon: <WifiOff className="h-5 w-5" />,
-        description: 'Нет подключения к Redis'
+        description: 'Нет подключения к Redis',
       }
     }
 
@@ -141,7 +141,7 @@ export default function MonitoringPage() {
         status: 'Работает',
         color: 'text-green-400',
         icon: <Wifi className="h-5 w-5" />,
-        description: 'Мониторинг активен'
+        description: 'Мониторинг активен',
       }
     }
 
@@ -149,7 +149,7 @@ export default function MonitoringPage() {
       status: 'Готов',
       color: 'text-yellow-400',
       icon: <Clock className="h-5 w-5" />,
-      description: 'Ожидает настройки'
+      description: 'Ожидает настройки',
     }
   })()
 
@@ -159,7 +159,7 @@ export default function MonitoringPage() {
       return {
         text: 'Не запланировано',
         progress: 0,
-        status: 'waiting'
+        status: 'waiting',
       }
     }
 
@@ -172,37 +172,58 @@ export default function MonitoringPage() {
       return {
         text: `Просрочено ${format(nextTime, 'dd.MM.yyyy HH:mm', { locale: ru })}`,
         progress: 100,
-        status: 'overdue'
+        status: 'overdue',
       }
     }
 
     // Вычисляем прогресс (предполагаем интервал 5 минут)
     const intervalMs = 5 * 60 * 1000 // 5 минут
-    const progress = Math.max(0, Math.min(100, ((intervalMs - timeDiff) / intervalMs) * 100))
+    const progress = Math.max(
+      0,
+      Math.min(100, ((intervalMs - timeDiff) / intervalMs) * 100)
+    )
 
     return {
       text: formatDistanceToNow(nextTime, { addSuffix: true, locale: ru }),
       progress,
-      status: 'running'
+      status: 'running',
     }
   })()
 
   // Фильтруем группы по статусу
-  const filteredGroups = activeGroups?.items?.filter(group => {
-    if (filterStatus === 'all') return true
-    if (filterStatus === 'active' && group.auto_monitoring_enabled && !group.last_monitoring_error) return true
-    if (filterStatus === 'error' && group.last_monitoring_error) return true
-    if (filterStatus === 'waiting' && group.auto_monitoring_enabled && !group.last_monitoring_success) return true
-    return false
-  }) || []
+  const filteredGroups =
+    activeGroups?.items?.filter((group) => {
+      if (filterStatus === 'all') return true
+      if (
+        filterStatus === 'active' &&
+        group.auto_monitoring_enabled &&
+        !group.last_monitoring_error
+      )
+        return true
+      if (filterStatus === 'error' && group.last_monitoring_error) return true
+      if (
+        filterStatus === 'waiting' &&
+        group.auto_monitoring_enabled &&
+        !group.last_monitoring_success
+      )
+        return true
+      return false
+    }) || []
 
   // Статистика по группам
   const groupsStats = {
     total: activeGroups?.items?.length || 0, // Группы с мониторингом
     allGroups: allGroups?.total || 0, // Общее количество всех групп
-    active: activeGroups?.items?.filter(g => g.auto_monitoring_enabled && !g.last_monitoring_error).length || 0,
-    error: activeGroups?.items?.filter(g => g.last_monitoring_error).length || 0,
-    waiting: activeGroups?.items?.filter(g => g.auto_monitoring_enabled && !g.last_monitoring_success).length || 0
+    active:
+      activeGroups?.items?.filter(
+        (g) => g.auto_monitoring_enabled && !g.last_monitoring_error
+      ).length || 0,
+    error:
+      activeGroups?.items?.filter((g) => g.last_monitoring_error).length || 0,
+    waiting:
+      activeGroups?.items?.filter(
+        (g) => g.auto_monitoring_enabled && !g.last_monitoring_success
+      ).length || 0,
   }
 
   const handleAddAllGroupsToMonitoring = () => {
@@ -250,7 +271,9 @@ export default function MonitoringPage() {
       setTimeout(() => addGroup(index + 1), 100)
     }
 
-    const loadingToast = toast.loading(`Добавление ${groupsToAdd.length} групп в мониторинг...`)
+    const loadingToast = toast.loading(
+      `Добавление ${groupsToAdd.length} групп в мониторинг...`
+    )
     addGroup(0)
   }
 
@@ -289,7 +312,9 @@ export default function MonitoringPage() {
                 {systemStatus.icon}
                 <span className="font-medium">{systemStatus.status}</span>
               </div>
-              <p className="text-sm text-slate-400">{systemStatus.description}</p>
+              <p className="text-sm text-slate-400">
+                {systemStatus.description}
+              </p>
             </div>
 
             <div className="flex items-center space-x-3">
@@ -331,7 +356,9 @@ export default function MonitoringPage() {
                 <Users className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-300">Всего групп</p>
+                <p className="text-sm font-medium text-slate-300">
+                  Всего групп
+                </p>
                 <p className="text-2xl font-bold text-blue-400">
                   {allGroups?.total || 0}
                 </p>
@@ -367,14 +394,25 @@ export default function MonitoringPage() {
                 <Timer className="h-5 w-5 text-purple-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-300">Следующий запуск</p>
-                <p className={`text-sm font-medium ${nextMonitoringTime.status === 'overdue' ? 'text-red-400' :
-                  nextMonitoringTime.status === 'waiting' ? 'text-slate-400' : 'text-purple-400'
-                  }`}>
+                <p className="text-sm font-medium text-slate-300">
+                  Следующий запуск
+                </p>
+                <p
+                  className={`text-sm font-medium ${
+                    nextMonitoringTime.status === 'overdue'
+                      ? 'text-red-400'
+                      : nextMonitoringTime.status === 'waiting'
+                        ? 'text-slate-400'
+                        : 'text-purple-400'
+                  }`}
+                >
                   {nextMonitoringTime.text}
                 </p>
                 {nextMonitoringTime.status === 'running' && (
-                  <Progress value={nextMonitoringTime.progress} className="mt-2 h-1" />
+                  <Progress
+                    value={nextMonitoringTime.progress}
+                    className="mt-2 h-1"
+                  />
                 )}
               </div>
             </div>
@@ -395,7 +433,9 @@ export default function MonitoringPage() {
                   {systemStatus.status}
                 </div>
                 <p className="text-xs text-slate-400">
-                  {schedulerStatus?.is_running ? 'Планировщик активен' : 'Планировщик остановлен'}
+                  {schedulerStatus?.is_running
+                    ? 'Планировщик активен'
+                    : 'Планировщик остановлен'}
                 </p>
               </div>
             </div>
@@ -404,7 +444,11 @@ export default function MonitoringPage() {
       </div>
 
       {/* Вкладки с детальной информацией */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4"
+      >
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -428,7 +472,9 @@ export default function MonitoringPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-400">Активные</p>
-                    <p className="text-2xl font-bold text-green-400">{groupsStats.active}</p>
+                    <p className="text-2xl font-bold text-green-400">
+                      {groupsStats.active}
+                    </p>
                   </div>
                   <CheckCircle className="h-8 w-8 text-green-400" />
                 </div>
@@ -440,7 +486,9 @@ export default function MonitoringPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-400">Ожидают</p>
-                    <p className="text-2xl font-bold text-yellow-400">{groupsStats.waiting}</p>
+                    <p className="text-2xl font-bold text-yellow-400">
+                      {groupsStats.waiting}
+                    </p>
                   </div>
                   <Clock className="h-8 w-8 text-yellow-400" />
                 </div>
@@ -452,7 +500,9 @@ export default function MonitoringPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-400">Ошибки</p>
-                    <p className="text-2xl font-bold text-red-400">{groupsStats.error}</p>
+                    <p className="text-2xl font-bold text-red-400">
+                      {groupsStats.error}
+                    </p>
                   </div>
                   <AlertCircle className="h-8 w-8 text-red-400" />
                 </div>
@@ -464,8 +514,12 @@ export default function MonitoringPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-400">Всего</p>
-                    <p className="text-2xl font-bold text-blue-400">{groupsStats.allGroups}</p>
-                    <p className="text-xs text-slate-400">{groupsStats.total} с мониторингом</p>
+                    <p className="text-2xl font-bold text-blue-400">
+                      {groupsStats.allGroups}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {groupsStats.total} с мониторингом
+                    </p>
                   </div>
                   <Target className="h-8 w-8 text-blue-400" />
                 </div>
@@ -484,7 +538,9 @@ export default function MonitoringPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-lg ${schedulerStatus?.is_running ? 'bg-green-600' : 'bg-red-600'}`}>
+                  <div
+                    className={`p-2 rounded-lg ${schedulerStatus?.is_running ? 'bg-green-600' : 'bg-red-600'}`}
+                  >
                     {schedulerStatus?.is_running ? (
                       <Play className="h-4 w-4 text-white" />
                     ) : (
@@ -492,15 +548,21 @@ export default function MonitoringPage() {
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-300">Планировщик</p>
-                    <p className={`text-sm ${schedulerStatus?.is_running ? 'text-green-400' : 'text-red-400'}`}>
+                    <p className="text-sm font-medium text-slate-300">
+                      Планировщик
+                    </p>
+                    <p
+                      className={`text-sm ${schedulerStatus?.is_running ? 'text-green-400' : 'text-red-400'}`}
+                    >
                       {schedulerStatus?.is_running ? 'Работает' : 'Остановлен'}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-lg ${schedulerStatus?.redis_connected ? 'bg-green-600' : 'bg-red-600'}`}>
+                  <div
+                    className={`p-2 rounded-lg ${schedulerStatus?.redis_connected ? 'bg-green-600' : 'bg-red-600'}`}
+                  >
                     {schedulerStatus?.redis_connected ? (
                       <Wifi className="h-4 w-4 text-white" />
                     ) : (
@@ -509,8 +571,12 @@ export default function MonitoringPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-slate-300">Redis</p>
-                    <p className={`text-sm ${schedulerStatus?.redis_connected ? 'text-green-400' : 'text-red-400'}`}>
-                      {schedulerStatus?.redis_connected ? 'Подключен' : 'Отключен'}
+                    <p
+                      className={`text-sm ${schedulerStatus?.redis_connected ? 'text-green-400' : 'text-red-400'}`}
+                    >
+                      {schedulerStatus?.redis_connected
+                        ? 'Подключен'
+                        : 'Отключен'}
                     </p>
                   </div>
                 </div>
@@ -520,12 +586,13 @@ export default function MonitoringPage() {
                     <Timer className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-300">Интервал</p>
+                    <p className="text-sm font-medium text-slate-300">
+                      Интервал
+                    </p>
                     <p className="text-sm text-blue-400">
-                      {schedulerStatus?.monitoring_interval_seconds ?
-                        `${Math.round(schedulerStatus.monitoring_interval_seconds / 60)} мин` :
-                        'Не настроен'
-                      }
+                      {schedulerStatus?.monitoring_interval_seconds
+                        ? `${Math.round(schedulerStatus.monitoring_interval_seconds / 60)} мин`
+                        : 'Не настроен'}
                     </p>
                   </div>
                 </div>
@@ -560,13 +627,27 @@ export default function MonitoringPage() {
                   <div className="flex space-x-2">
                     {[
                       { key: 'all', label: 'Все', count: groupsStats.total },
-                      { key: 'active', label: 'Активные', count: groupsStats.active },
-                      { key: 'waiting', label: 'Ожидают', count: groupsStats.waiting },
-                      { key: 'error', label: 'Ошибки', count: groupsStats.error }
-                    ].map(filter => (
+                      {
+                        key: 'active',
+                        label: 'Активные',
+                        count: groupsStats.active,
+                      },
+                      {
+                        key: 'waiting',
+                        label: 'Ожидают',
+                        count: groupsStats.waiting,
+                      },
+                      {
+                        key: 'error',
+                        label: 'Ошибки',
+                        count: groupsStats.error,
+                      },
+                    ].map((filter) => (
                       <Button
                         key={filter.key}
-                        variant={filterStatus === filter.key ? 'default' : 'outline'}
+                        variant={
+                          filterStatus === filter.key ? 'default' : 'outline'
+                        }
                         size="sm"
                         onClick={() => setFilterStatus(filter.key as any)}
                         className="text-xs"
@@ -587,7 +668,8 @@ export default function MonitoringPage() {
                 <Activity className="h-5 w-5 text-green-400" />
                 Группы с мониторингом
                 <span className="text-sm text-slate-400 font-normal">
-                  ({filteredGroups.length} из {groupsStats.total} мониторинг, {groupsStats.allGroups} всего)
+                  ({filteredGroups.length} из {groupsStats.total} мониторинг,{' '}
+                  {groupsStats.allGroups} всего)
                 </span>
               </CardTitle>
             </CardHeader>
