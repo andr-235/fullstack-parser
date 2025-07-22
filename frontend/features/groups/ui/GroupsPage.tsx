@@ -108,7 +108,7 @@ const SortableHeader = ({
   currentSort,
   currentOrder,
   onSort,
-  className = "",
+  className = '',
 }: {
   children: React.ReactNode
   field: 'name' | 'comments' | 'members' | 'last_parsed'
@@ -147,7 +147,9 @@ export default function GroupsPage() {
   const [activeOnly, setActiveOnly] = useState(false)
   const [newGroupUrl, setNewGroupUrl] = useState('')
   const [copiedGroup, setCopiedGroup] = useState<string | null>(null)
-  const [sortBy, setSortBy] = useState<'comments' | 'members' | 'name' | 'last_parsed'>('comments')
+  const [sortBy, setSortBy] = useState<
+    'comments' | 'members' | 'name' | 'last_parsed'
+  >('comments')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const debouncedSearch = useDebounce(searchTerm, 500)
 
@@ -168,44 +170,41 @@ export default function GroupsPage() {
   const deleteGroupMutation = useDeleteGroup()
   const refreshGroupMutation = useRefreshGroupInfo()
 
-  const groups = useMemo(
-    () => {
-      const allGroups = data?.pages.flatMap((page) => page.items) ?? []
+  const groups = useMemo(() => {
+    const allGroups = data?.pages.flatMap((page) => page.items) ?? []
 
-      return allGroups.sort((a, b) => {
-        let aValue: any
-        let bValue: any
+    return allGroups.sort((a, b) => {
+      let aValue: any
+      let bValue: any
 
-        switch (sortBy) {
-          case 'comments':
-            aValue = a.total_comments_found || 0
-            bValue = b.total_comments_found || 0
-            break
-          case 'members':
-            aValue = a.members_count || 0
-            bValue = b.members_count || 0
-            break
-          case 'name':
-            aValue = a.name.toLowerCase()
-            bValue = b.name.toLowerCase()
-            break
-          case 'last_parsed':
-            aValue = a.last_parsed_at ? new Date(a.last_parsed_at).getTime() : 0
-            bValue = b.last_parsed_at ? new Date(b.last_parsed_at).getTime() : 0
-            break
-          default:
-            return 0
-        }
+      switch (sortBy) {
+        case 'comments':
+          aValue = a.total_comments_found || 0
+          bValue = b.total_comments_found || 0
+          break
+        case 'members':
+          aValue = a.members_count || 0
+          bValue = b.members_count || 0
+          break
+        case 'name':
+          aValue = a.name.toLowerCase()
+          bValue = b.name.toLowerCase()
+          break
+        case 'last_parsed':
+          aValue = a.last_parsed_at ? new Date(a.last_parsed_at).getTime() : 0
+          bValue = b.last_parsed_at ? new Date(b.last_parsed_at).getTime() : 0
+          break
+        default:
+          return 0
+      }
 
-        if (sortOrder === 'asc') {
-          return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
-        } else {
-          return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
-        }
-      })
-    },
-    [data, sortBy, sortOrder]
-  )
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
+      } else {
+        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
+      }
+    })
+  }, [data, sortBy, sortOrder])
 
   // Хук для автоматической загрузки при скролле
   const observerRef = useInfiniteScroll({
@@ -557,11 +556,18 @@ export default function GroupsPage() {
                                     onClick={() => {
                                       refreshGroupMutation.mutate(group.id, {
                                         onSuccess: () => {
-                                          toast.success('Информация о группе обновлена! 🔄')
+                                          toast.success(
+                                            'Информация о группе обновлена! 🔄'
+                                          )
                                         },
                                         onError: (error: any) => {
-                                          console.error('Ошибка обновления группы:', error)
-                                          toast.error('Ошибка обновления информации о группе')
+                                          console.error(
+                                            'Ошибка обновления группы:',
+                                            error
+                                          )
+                                          toast.error(
+                                            'Ошибка обновления информации о группе'
+                                          )
                                         },
                                       })
                                     }}
@@ -579,7 +585,9 @@ export default function GroupsPage() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => handleCopyLink(group.screen_name)}
+                                    onClick={() =>
+                                      handleCopyLink(group.screen_name)
+                                    }
                                     className="h-4 w-4 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
                                   >
                                     {copiedGroup === group.screen_name ? (
@@ -635,7 +643,8 @@ export default function GroupsPage() {
                             <div className="flex items-center gap-2">
                               <MessageSquare className="h-4 w-4 text-blue-400" />
                               <span className="font-semibold text-slate-200">
-                                {group.total_comments_found?.toLocaleString() || '0'}
+                                {group.total_comments_found?.toLocaleString() ||
+                                  '0'}
                               </span>
                             </div>
                           </td>
