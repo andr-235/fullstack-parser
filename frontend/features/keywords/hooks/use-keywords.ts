@@ -142,6 +142,31 @@ export function useDeleteKeyword() {
   })
 }
 
+/**
+ * Хук для обновления статистики ключевых слов
+ */
+export function useUpdateKeywordsStats() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => api.updateKeywordsStats(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['keywords'] })
+    },
+  })
+}
+
+/**
+ * Хук для получения общего количества совпадений
+ */
+export function useTotalMatches() {
+  return useQuery({
+    queryKey: ['keywords', 'total-matches'],
+    queryFn: () => api.getTotalMatches(),
+    staleTime: 5 * 60 * 1000, // 5 минут
+  })
+}
+
 // Добавим расширенный тип для пагинации
 export type InfiniteKeywordsParams = Omit<PaginationParams, 'page' | 'skip'> & {
   page?: number
@@ -158,7 +183,7 @@ export type InfiniteKeywordsParams = Omit<PaginationParams, 'page' | 'skip'> & {
  * Хук для бесконечной загрузки ключевых слов (infinite scroll)
  */
 export function useInfiniteKeywords(params?: InfiniteKeywordsParams) {
-  const pageSize = params?.pageSize || 20
+  const pageSize = params?.pageSize || 1000 // Увеличиваем лимит для загрузки большего количества записей
   return useInfiniteQuery({
     queryKey: createQueryKey.keywords({ ...params, pageSize }),
     queryFn: async ({ pageParam = 1 }) => {

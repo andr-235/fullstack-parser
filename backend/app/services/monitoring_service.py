@@ -2,6 +2,8 @@
 Сервис автоматического мониторинга групп ВК
 """
 
+print("DEBUG: Загрузка monitoring_service.py")
+
 import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import List
@@ -12,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.vk_group import VKGroup
 from app.services.arq_enqueue import enqueue_run_parsing_task
-from app.services.vkbottle_service import VKBottleService
+from app.services.vk_api_service import VKAPIService
 
 logger = structlog.get_logger(__name__)
 
@@ -20,14 +22,18 @@ logger = structlog.get_logger(__name__)
 class MonitoringService:
     """Сервис для автоматического мониторинга групп ВК"""
 
-    def __init__(self, db: AsyncSession, vk_service: VKBottleService):
+    def __init__(self, db: AsyncSession, vk_service: VKAPIService):
+        print("DEBUG: Инициализация MonitoringService")
         self.db = db
         self.vk_service = vk_service
         self.logger = logger
 
     async def get_groups_for_monitoring(self) -> List[VKGroup]:
         """Получить группы, готовые для мониторинга"""
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        # Используем время Владивостока для сравнения
+        from app.core.time_utils import now_vladivostok
+
+        now = now_vladivostok().replace(tzinfo=None)
 
         # Получаем активные группы с включенным мониторингом,
         # которые нужно проверить сейчас или уже просрочены
@@ -54,8 +60,11 @@ class MonitoringService:
         if not group.auto_monitoring_enabled:
             return
 
+        # Используем время Владивостока для планирования
+        from app.core.time_utils import now_vladivostok
+
         # Рассчитываем время следующего мониторинга
-        next_time = datetime.now(timezone.utc) + timedelta(
+        next_time = now_vladivostok() + timedelta(
             minutes=group.monitoring_interval_minutes
         )
 
@@ -272,6 +281,8 @@ class MonitoringService:
 
     async def get_monitoring_stats(self) -> dict:
         """Получить статистику мониторинга"""
+        print("DEBUG: Начало получения статистики мониторинга")
+        self.logger.info("Начало получения статистики мониторинга")
         try:
             # Общая статистика
             total_groups = await self.db.execute(select(VKGroup))
@@ -293,7 +304,9 @@ class MonitoringService:
             monitored_groups = len(monitored_groups.scalars().all())
 
             # Группы, готовые для мониторинга
-            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            from app.core.time_utils import now_vladivostok
+
+            now = now_vladivostok().replace(tzinfo=None)
             ready_groups = await self.db.execute(
                 select(VKGroup).where(
                     and_(
@@ -320,7 +333,35 @@ class MonitoringService:
             )
             next_monitoring_time = next_monitoring.scalar()
 
-            return {
+            # Конвертируем в локальное время для отображения
+            self.logger.info("Начинаем конвертацию времени")
+            from app.core.time_utils import format_datetime_for_display
+
+            next_monitoring_local = None
+            if next_monitoring_time:
+                try:
+                    self.logger.info(
+                        "Конвертируем время",
+                        utc_time=next_monitoring_time.isoformat(),
+                    )
+                    next_monitoring_local = format_datetime_for_display(
+                        next_monitoring_time
+                    )
+                    self.logger.info(
+                        "Время сконвертировано",
+                        local_time=next_monitoring_local,
+                    )
+                except Exception as e:
+                    self.logger.error(
+                        "Ошибка конвертации времени",
+                        error=str(e),
+                        exc_info=True,
+                    )
+                    next_monitoring_local = None
+            else:
+                self.logger.info("Нет времени для конвертации")
+
+            result = {
                 "total_groups": total_groups,
                 "active_groups": active_groups,
                 "monitored_groups": monitored_groups,
@@ -330,7 +371,11 @@ class MonitoringService:
                     if next_monitoring_time
                     else None
                 ),
+                "next_monitoring_at_local": next_monitoring_local,
             }
+
+            self.logger.info("Возвращаем результат", result=result)
+            return result
 
         except Exception as e:
             self.logger.error(
@@ -344,4 +389,5 @@ class MonitoringService:
                 "monitored_groups": 0,
                 "ready_for_monitoring": 0,
                 "next_monitoring_at": None,
+                "next_monitoring_at_local": None,
             }

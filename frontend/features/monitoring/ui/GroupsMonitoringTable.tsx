@@ -11,6 +11,11 @@ import {
   Button,
   Badge,
   Switch,
+  Progress,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from '@/shared/ui'
 import {
   useEnableGroupMonitoring,
@@ -25,6 +30,10 @@ import {
   CheckCircle,
   AlertTriangle,
   XCircle,
+  Timer,
+  TrendingUp,
+  AlertCircle,
+  Activity,
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -49,7 +58,6 @@ export default function GroupsMonitoringTable({
   const updateMutation = useUpdateGroupMonitoring()
 
   const handleToggleMonitoring = (group: VKGroupMonitoring) => {
-    // Используем setTimeout чтобы избежать setState во время рендеринга
     setTimeout(() => {
       if (group.auto_monitoring_enabled) {
         disableMutation.mutate(group.id)
@@ -64,14 +72,12 @@ export default function GroupsMonitoringTable({
   }
 
   const handleRunMonitoring = (groupId: number) => {
-    // Используем setTimeout чтобы избежать setState во время рендеринга
     setTimeout(() => {
       runMutation.mutate(groupId)
     }, 0)
   }
 
   const handleOpenSettings = (group: VKGroupMonitoring) => {
-    // Используем setTimeout чтобы избежать setState во время рендеринга
     setTimeout(() => {
       setSettingsGroup(group)
       setShowSettings(true)
@@ -110,50 +116,117 @@ export default function GroupsMonitoringTable({
     return 'Ожидает'
   }
 
+  const getStatusColor = (group: VKGroupMonitoring) => {
+    if (!group.auto_monitoring_enabled) {
+      return 'text-slate-400'
+    }
+
+    if (group.last_monitoring_error) {
+      return 'text-red-400'
+    }
+
+    if (group.last_monitoring_success) {
+      return 'text-green-400'
+    }
+
+    return 'text-yellow-400'
+  }
+
   const getNextMonitoringTime = (group: VKGroupMonitoring) => {
     if (!group.next_monitoring_at || group.next_monitoring_at === 'null') {
-      return 'Не запланировано'
+      return {
+        text: 'Не запланировано',
+        progress: 0,
+        status: 'waiting',
+        color: 'text-slate-400'
+      }
     }
 
     const nextTime = new Date(group.next_monitoring_at)
     const now = new Date()
+    const timeDiff = nextTime.getTime() - now.getTime()
 
-    // Если время в прошлом, показываем "Просрочено"
-    if (nextTime < now) {
-      return 'Просрочено'
+    // Если время в прошлом
+    if (timeDiff < 0) {
+      return {
+        text: `Просрочено ${format(nextTime, 'dd.MM.yyyy HH:mm', { locale: ru })}`,
+        progress: 100,
+        status: 'overdue',
+        color: 'text-red-400'
+      }
     }
 
-    return formatDistanceToNow(nextTime, {
-      addSuffix: true,
-      locale: ru,
-    })
+    // Вычисляем прогресс для интервала мониторинга
+    const intervalMs = (group.monitoring_interval_minutes || 60) * 60 * 1000
+    const progress = Math.max(0, Math.min(100, ((intervalMs - timeDiff) / intervalMs) * 100))
+
+    return {
+      text: formatDistanceToNow(nextTime, { addSuffix: true, locale: ru }),
+      progress,
+      status: 'running',
+      color: 'text-blue-400'
+    }
   }
 
   const getLastMonitoringTime = (group: VKGroupMonitoring) => {
     if (group.last_monitoring_success) {
-      return formatDistanceToNow(new Date(group.last_monitoring_success), {
-        addSuffix: true,
-        locale: ru,
-      })
+      const lastTime = new Date(group.last_monitoring_success)
+      return {
+        text: format(lastTime, 'dd.MM.yyyy HH:mm', { locale: ru }),
+        status: 'success',
+        color: 'text-green-400'
+      }
     }
 
     if (group.last_monitoring_error) {
-      return 'Ошибка'
+      return {
+        text: 'Ошибка',
+        status: 'error',
+        color: 'text-red-400'
+      }
     }
 
-    return 'Никогда'
+    return {
+      text: 'Никогда',
+      status: 'never',
+      color: 'text-slate-400'
+    }
+  }
+
+  const getPriorityColor = (priority: number) => {
+    if (priority >= 8) return 'bg-red-600 text-white'
+    if (priority >= 6) return 'bg-orange-600 text-white'
+    if (priority >= 4) return 'bg-yellow-600 text-white'
+    return 'bg-blue-600 text-white'
+  }
+
+  const getIntervalColor = (minutes: number) => {
+    if (minutes <= 30) return 'text-red-400'
+    if (minutes <= 60) return 'text-orange-400'
+    if (minutes <= 120) return 'text-yellow-400'
+    return 'text-green-400'
   }
 
   if (groups.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-slate-400">Нет групп с мониторингом</p>
+        <div className="flex flex-col items-center space-y-4">
+          <div className="p-4 bg-slate-700 rounded-full">
+            <Activity className="h-8 w-8 text-slate-400" />
+          </div>
+          <div>
+            <p className="text-slate-400 font-medium">Нет групп с мониторингом</p>
+            <p className="text-sm text-slate-500 mt-1">
+              Добавьте группы в мониторинг для автоматической проверки
+            </p>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <>
+    <TooltipProvider>
       <div className="rounded-md border border-slate-700">
         <Table>
           <TableHeader>
@@ -169,81 +242,155 @@ export default function GroupsMonitoringTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {groups.map((group, index) => (
-              <TableRow key={group.id || `group-${index}`}>
-                <TableCell>
-                  <div>
-                    <div className="font-medium">{group.name}</div>
-                    <div className="text-sm text-slate-400">
-                      @{group.screen_name}
+            {groups.map((group, index) => {
+              const nextMonitoring = getNextMonitoringTime(group)
+              const lastMonitoring = getLastMonitoringTime(group)
+
+              return (
+                <TableRow key={group.id || `group-${index}`} className="hover:bg-slate-700/50">
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">{group.name}</div>
+                      <div className="text-sm text-slate-400">
+                        @{group.screen_name}
+                      </div>
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(group)}
-                    <span className="text-sm">{getStatusText(group)}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">
-                    {group.monitoring_priority}/10
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm">
-                    {group.monitoring_interval_minutes} мин
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-slate-400">
-                    {getLastMonitoringTime(group)}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={`text-sm ${
-                      getNextMonitoringTime(group) === 'Просрочено'
-                        ? 'text-red-400'
-                        : getNextMonitoringTime(group) === 'Не запланировано'
-                          ? 'text-slate-400'
-                          : 'text-slate-400'
-                    }`}
-                  >
-                    {getNextMonitoringTime(group)}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm">{group.monitoring_runs_count}</span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center gap-2 justify-end">
-                    <Switch
-                      checked={group.auto_monitoring_enabled}
-                      onCheckedChange={() => handleToggleMonitoring(group)}
-                      disabled={
-                        enableMutation.isPending || disableMutation.isPending
-                      }
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleRunMonitoring(group.id)}
-                      disabled={runMutation.isPending}
-                    >
-                      <Play className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleOpenSettings(group)}
-                    >
-                      <Settings className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(group)}
+                      <span className={`text-sm ${getStatusColor(group)}`}>
+                        {getStatusText(group)}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="inline-block">
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Badge className={getPriorityColor(group.monitoring_priority)}>
+                            {group.monitoring_priority}/10
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Приоритет мониторинга группы</p>
+                          <p className="text-xs text-slate-300">
+                            {group.monitoring_priority >= 8 ? 'Критический' :
+                              group.monitoring_priority >= 6 ? 'Высокий' :
+                                group.monitoring_priority >= 4 ? 'Средний' : 'Низкий'}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="inline-block">
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <span className={`text-sm ${getIntervalColor(group.monitoring_interval_minutes)}`}>
+                            {group.monitoring_interval_minutes} мин
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Интервал проверки группы</p>
+                          <p className="text-xs text-slate-300">
+                            {group.monitoring_interval_minutes <= 30 ? 'Очень часто' :
+                              group.monitoring_interval_minutes <= 60 ? 'Часто' :
+                                group.monitoring_interval_minutes <= 120 ? 'Умеренно' : 'Редко'}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm ${lastMonitoring.color}`}>
+                        {lastMonitoring.text}
+                      </span>
+                      {lastMonitoring.status === 'success' && (
+                        <CheckCircle className="h-3 w-3 text-green-400" />
+                      )}
+                      {lastMonitoring.status === 'error' && (
+                        <AlertCircle className="h-3 w-3 text-red-400" />
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <span className={`text-sm ${nextMonitoring.color}`}>
+                        {nextMonitoring.text}
+                      </span>
+                      {nextMonitoring.status === 'running' && (
+                        <Progress value={nextMonitoring.progress} className="h-1" />
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{group.monitoring_runs_count}</span>
+                      {group.monitoring_runs_count > 0 && (
+                        <TrendingUp className="h-3 w-3 text-green-400" />
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center gap-2 justify-end">
+                      <div className="inline-block">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Switch
+                              checked={group.auto_monitoring_enabled}
+                              onCheckedChange={() => handleToggleMonitoring(group)}
+                              disabled={
+                                enableMutation.isPending || disableMutation.isPending
+                              }
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{group.auto_monitoring_enabled ? 'Отключить' : 'Включить'} мониторинг</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+
+                      <div className="inline-block">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRunMonitoring(group.id)}
+                              disabled={runMutation.isPending}
+                            >
+                              <Play className="h-3 w-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Запустить мониторинг сейчас</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+
+                      <div className="inline-block">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenSettings(group)}
+                            >
+                              <Settings className="h-3 w-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Настройки мониторинга</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </div>
@@ -255,17 +402,14 @@ export default function GroupsMonitoringTable({
           open={showSettings}
           onOpenChange={setShowSettings}
           onSave={(updateData) => {
-            // Используем setTimeout чтобы избежать setState во время рендеринга
-            setTimeout(() => {
-              updateMutation.mutate({
-                groupId: settingsGroup.id,
-                updateData,
-              })
-              setShowSettings(false)
-            }, 0)
+            updateMutation.mutate({
+              groupId: settingsGroup.id,
+              updateData,
+            })
+            setShowSettings(false)
           }}
         />
       )}
-    </>
+    </TooltipProvider>
   )
 }

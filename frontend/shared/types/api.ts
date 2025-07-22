@@ -11,8 +11,8 @@ export interface BaseEntity {
 
 export interface PaginatedResponse<T> {
   total: number
-  skip: number
-  limit: number
+  page: number
+  size: number
   items: T[]
 }
 
@@ -27,6 +27,6 @@ export interface APIError {
 }
 
 export interface PaginationParams {
-  skip?: number
-  limit?: number
+  page?: number
+  size?: number
 }

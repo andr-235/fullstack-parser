@@ -10,9 +10,7 @@ import type {
 /**
  * Хук для получения списка групп
  */
-export function useGroups(
-  params?: PaginationParams & { active_only?: boolean }
-) {
+export function useGroups(params?: { active_only?: boolean; search?: string }) {
   return useQuery({
     queryKey: createQueryKey.groups(params),
     queryFn: () => api.getGroups(params),

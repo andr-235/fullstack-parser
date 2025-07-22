@@ -6,6 +6,7 @@ import { Bell, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { AppIcon } from '@/shared/ui'
 
 interface HeaderProps {
   className?: string
@@ -42,6 +43,10 @@ export function Header({ className }: HeaderProps) {
       )}
     >
       <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <AppIcon size="md" className="w-6 h-6" />
+          <span className="text-sm font-medium text-slate-200">ВК Парсер</span>
+        </div>
         <nav className="hidden sm:flex items-center text-sm font-medium">
           <Link
             href="/dashboard"

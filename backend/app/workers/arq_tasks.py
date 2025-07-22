@@ -13,7 +13,7 @@ from app.services.monitoring_service import MonitoringService
 from app.services.parser_service import ParserService
 from app.services.redis_parser_manager import get_redis_parser_manager
 from app.services.scheduler_service import SchedulerService
-from app.services.vkbottle_service import VKBottleService
+from app.services.vk_api_service import VKAPIService
 
 logger = structlog.get_logger(__name__)
 
@@ -50,7 +50,7 @@ async def run_parsing_task(
     try:
         # Получаем зависимости
         redis_manager = get_redis_parser_manager()
-        vk_service = VKBottleService(
+        vk_service = VKAPIService(
             token=settings.vk.access_token, api_version=settings.vk.api_version
         )
 
@@ -121,7 +121,7 @@ async def run_monitoring_cycle(ctx: Dict[str, Any]) -> Dict[str, Any]:
     try:
         # Получаем зависимости
         redis_manager = get_redis_parser_manager()
-        vk_service = VKBottleService(
+        vk_service = VKAPIService(
             token=settings.vk.access_token, api_version=settings.vk.api_version
         )
 

@@ -42,8 +42,13 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
+    tzdata \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -r appuser && useradd --no-log-init -r -g appuser appuser
+
+# Устанавливаем часовой пояс для Владивостока
+ENV TZ=Asia/Vladivostok
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Копируем Python пакеты и код
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages

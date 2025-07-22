@@ -11,8 +11,8 @@ export interface BaseEntity {
 
 export interface PaginatedResponse<T> {
   total: number
-  skip: number
-  limit: number
+  page: number
+  size: number
   items: T[]
 }
 
@@ -169,8 +169,6 @@ export interface CommentSearchParams {
   author_id?: number
   date_from?: string
   date_to?: string
-  skip?: number
-  limit?: number
 }
 
 // Parser типы
@@ -254,8 +252,8 @@ export interface APIError {
 
 // Пагинация
 export interface PaginationParams {
-  skip?: number
-  limit?: number
+  page?: number
+  size?: number
 }
 
 // Monitoring типы
@@ -291,4 +289,11 @@ export interface MonitoringRunResult {
   successful_runs: number
   failed_runs: number
   duration_seconds: number
+}
+
+export interface SchedulerStatus {
+  is_running: boolean
+  monitoring_interval_seconds: number
+  redis_connected: boolean
+  last_check: string
 }

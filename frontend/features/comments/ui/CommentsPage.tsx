@@ -64,23 +64,35 @@ const HighlightedText = ({
     )
   }
 
-  const regex = new RegExp(`(${keywords.join('|')})`, 'gi')
+  // Экранируем специальные символы в ключевых словах для безопасного использования в regex
+  const escapedKeywords = keywords.map(keyword =>
+    keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  )
+
+  // Создаем regex для поиска всех совпадений
+  const regex = new RegExp(`(${escapedKeywords.join('|')})`, 'gi')
   const parts = text.split(regex)
 
   return (
     <div className="text-slate-200 text-sm whitespace-pre-wrap break-words">
-      {parts.map((part, i) =>
-        keywords.some((kw) => new RegExp(`^${kw}$`, 'i').test(part)) ? (
+      {parts.map((part, i) => {
+        // Проверяем, является ли часть ключевым словом (без учета регистра)
+        const isKeyword = keywords.some((kw) =>
+          kw.toLowerCase() === part.toLowerCase()
+        )
+
+        return isKeyword ? (
           <Badge
             key={i}
-            className="mx-1 bg-gradient-to-r from-red-500 to-orange-500 text-white border-0 text-xs font-bold shadow-lg"
+            className="mx-1 bg-gradient-to-r from-red-500 to-orange-500 text-white border-0 text-xs font-bold shadow-lg hover:from-red-600 hover:to-orange-600 transition-all duration-200"
+            title={`Найдено ключевое слово: ${part}`}
           >
             {part}
           </Badge>
         ) : (
           part
         )
-      )}
+      })}
     </div>
   )
 }
@@ -128,6 +140,7 @@ export default function CommentsPage() {
   const [keywordFilter, setKeywordFilter] = useState<string | undefined>(
     undefined
   )
+
   const debouncedText = useDebounce(textFilter, 500)
 
   useEffect(() => {
@@ -154,7 +167,6 @@ export default function CommentsPage() {
     group_id:
       groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
     keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
-    limit: 20,
   })
 
   const { data: groupsData } = useGroups()

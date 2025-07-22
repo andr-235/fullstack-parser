@@ -6,7 +6,7 @@ import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -22,9 +22,9 @@ from app.schemas.vk_group import (
 )
 
 # from app.core.config import settings  # Удалено как неиспользуемое
-# from app.services.vkbottle_service import VKBottleService  # Удалено как неиспользуемое
+# from app.services.vk_api_service import VKAPIService  # Удалено как неиспользуемое
 from app.services.group_service import group_service
-from app.services.vkbottle_service import VKBottleService
+from app.services.vk_api_service import VKAPIService
 
 router = APIRouter(tags=["Groups"])
 
@@ -58,7 +58,7 @@ async def create_group(
             detail="Не указан ID или короткое имя группы.",
         )
 
-    vk_service = VKBottleService(
+    vk_service = VKAPIService(
         token=settings.vk.access_token, api_version=settings.vk.api_version
     )
     vk_group_data = await vk_service.get_group_info(screen_name)
@@ -119,25 +119,35 @@ async def create_group(
 
 @router.get("/", response_model=PaginatedResponse[VKGroupRead])
 async def get_groups(
-    pagination: PaginationParams = Depends(),
     active_only: bool = True,
+    search: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[VKGroupRead]:
     """Получить список VK групп"""
     query = select(VKGroup)
+
+    # Фильтр по активности
     if active_only:
         query = query.filter(VKGroup.is_active.is_(True))
 
-    total = await db.scalar(select(func.count()).select_from(query.subquery()))
-    result = await db.execute(
-        query.offset(pagination.skip).limit(pagination.size)
-    )
+    # Поиск по названию или screen_name
+    if search:
+        search_term = f"%{search.lower()}%"
+        query = query.filter(
+            or_(
+                func.lower(VKGroup.name).like(search_term),
+                func.lower(VKGroup.screen_name).like(search_term),
+            )
+        )
+
+    # Получаем все группы без пагинации
+    result = await db.execute(query)
     groups = result.scalars().all()
 
     return PaginatedResponse(
-        total=total or 0,
-        page=pagination.page,
-        size=pagination.size,
+        total=len(groups),
+        page=1,
+        size=len(groups),
         items=[VKGroupRead.model_validate(group) for group in groups],
     )
 
@@ -165,6 +175,16 @@ async def update_group(
 ) -> VKGroupRead:
     """Обновить настройки группы"""
     group = await group_service.update_group(db, group_id, group_update)
+    return VKGroupRead.model_validate(group)
+
+
+@router.post("/{group_id}/refresh", response_model=VKGroupRead)
+async def refresh_group_info(
+    group_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> VKGroupRead:
+    """Обновить информацию о группе из VK API"""
+    group = await group_service.refresh_group_from_vk(db, group_id)
     return VKGroupRead.model_validate(group)
 
 

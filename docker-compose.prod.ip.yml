@@ -10,10 +10,11 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      POSTGRES_HOST_AUTH_METHOD: "md5"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    expose:
-      - "5432"
+    ports:
+      - "5432:5432"
     networks:
       - prod-db-network
     healthcheck:
@@ -59,6 +60,7 @@ services:
       - .env.prod
     environment:
       - ENV=production
+      - TZ=Asia/Vladivostok
       - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY}

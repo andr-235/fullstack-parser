@@ -29,6 +29,8 @@ RUN npm install -g pnpm@10.12.4
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static/
 COPY --from=builder /app/package.json ./package.json
+# Копируем папку public с иконками
+COPY --from=builder /app/public ./public
 # Для dev-режима копируем node_modules
 COPY --from=deps /app/node_modules ./node_modules
 USER nextjs

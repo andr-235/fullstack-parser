@@ -19,6 +19,8 @@ import {
 import { Play, Settings, Plus, Clock } from 'lucide-react'
 
 import type { VKGroupMonitoring } from '@/types/api'
+import { format } from 'date-fns'
+import { ru } from 'date-fns/locale'
 import MonitoringSettings from './MonitoringSettings'
 
 interface AvailableGroupsTableProps {
@@ -64,7 +66,7 @@ export default function AvailableGroupsTable({
 
   const getLastActivityTime = (group: VKGroupMonitoring) => {
     if (group.last_monitoring_success) {
-      return `Последний запуск: ${new Date(group.last_monitoring_success).toLocaleDateString('ru-RU')}`
+      return `Последний запуск: ${format(new Date(group.last_monitoring_success), 'dd.MM.yyyy HH:mm', { locale: ru })}`
     }
     return 'Никогда не запускался'
   }

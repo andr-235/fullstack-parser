@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+} from '@tanstack/react-query'
 import { api, createQueryKey } from '@/lib/api'
 import type {
   VKGroupResponse,
@@ -17,6 +22,38 @@ export function useGroups(
     queryKey: createQueryKey.groups(params),
     queryFn: () => api.getGroups(params),
     staleTime: 5 * 60 * 1000, // 5 минут
+  })
+}
+
+/**
+ * Хук для бесконечной загрузки групп (infinite scroll)
+ */
+export function useInfiniteGroups(params?: {
+  active_only?: boolean
+  search?: string
+  pageSize?: number
+}) {
+  const pageSize = params?.pageSize || 1000 // Увеличиваем лимит для загрузки большего количества записей
+  return useInfiniteQuery({
+    queryKey: createQueryKey.groups({ ...params, pageSize }),
+    queryFn: async ({ pageParam = 1 }) => {
+      const { pageSize, ...rest } = params ?? {}
+      const res = await api.getGroups({
+        ...rest,
+        page: pageParam,
+        size: pageSize,
+      } as any)
+      return res
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((acc, page) => acc + page.items.length, 0)
+      if (loaded < (lastPage?.total || 0)) {
+        return allPages.length + 1
+      }
+      return undefined
+    },
+    initialPageParam: 1,
+    staleTime: 5 * 60 * 1000,
   })
 }
 
@@ -109,5 +146,19 @@ export function useGroupStats(groupId: number) {
     queryFn: () => api.getGroupStats(groupId),
     enabled: !!groupId,
     staleTime: 2 * 60 * 1000, // 2 минуты
+  })
+}
+
+/**
+ * Хук для обновления информации о группе из VK API
+ */
+export function useRefreshGroupInfo() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (groupId: number) => api.refreshGroupInfo(groupId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+    },
   })
 }

@@ -25,14 +25,14 @@ from app.schemas.monitoring import (
 )
 from app.services.monitoring_service import MonitoringService
 from app.services.scheduler_service import get_scheduler_service
-from app.services.vkbottle_service import VKBottleService
+from app.services.vk_api_service import VKAPIService
 
 router = APIRouter(tags=["Monitoring"])
 
 
-def _get_vk_service() -> VKBottleService:
+def _get_vk_service() -> VKAPIService:
     """Создает экземпляр VK сервиса с настройками из конфигурации"""
-    return VKBottleService(
+    return VKAPIService(
         token=settings.vk.access_token, api_version=settings.vk.api_version
     )
 
@@ -43,23 +43,29 @@ async def test_monitoring():
     return {"message": "Monitoring router works!"}
 
 
-@router.get("/stats", response_model=MonitoringStats)
+@router.get("/stats")
 async def get_monitoring_stats(
     db: AsyncSession = Depends(get_db),
-) -> MonitoringStats:
+):
     """Получить статистику мониторинга"""
     vk_service = _get_vk_service()
     monitoring_service = MonitoringService(db=db, vk_service=vk_service)
 
     stats = await monitoring_service.get_monitoring_stats()
-    return MonitoringStats(**stats)
+
+    # Отладочная информация
+    import structlog
+
+    logger = structlog.get_logger()
+    logger.info("API stats response", stats=stats)
+
+    return stats
 
 
 @router.get(
     "/groups", response_model=PaginatedResponse[GroupMonitoringResponse]
 )
 async def get_monitoring_groups(
-    pagination: PaginationParams = Depends(),
     active_only: bool = True,
     monitoring_enabled: bool = True,
     db: AsyncSession = Depends(get_db),
@@ -78,14 +84,8 @@ async def get_monitoring_groups(
     if conditions:
         query = query.where(and_(*conditions))
 
-    # Подсчет общего количества
-    count_query = select(func.count()).select_from(query.subquery())
-    total = await db.scalar(count_query) or 0
-
-    # Получение данных с пагинацией
-    result = await db.execute(
-        query.offset(pagination.skip).limit(pagination.size)
-    )
+    # Получаем все группы без пагинации
+    result = await db.execute(query)
     groups = result.scalars().all()
 
     # Преобразование в ответ
@@ -107,9 +107,9 @@ async def get_monitoring_groups(
         )
 
     return PaginatedResponse(
-        total=total,
-        page=pagination.page,
-        size=pagination.size,
+        total=len(items),
+        page=1,
+        size=len(items),
         items=items,
     )
 
@@ -119,7 +119,6 @@ async def get_monitoring_groups(
     response_model=PaginatedResponse[GroupMonitoringResponse],
 )
 async def get_available_groups_for_monitoring(
-    pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[GroupMonitoringResponse]:
     """Получить список групп, доступных для мониторинга (без активного мониторинга)"""
@@ -131,14 +130,8 @@ async def get_available_groups_for_monitoring(
         )
     )
 
-    # Подсчет общего количества
-    count_query = select(func.count()).select_from(query.subquery())
-    total = await db.scalar(count_query) or 0
-
-    # Получение данных с пагинацией
-    result = await db.execute(
-        query.offset(pagination.skip).limit(pagination.size)
-    )
+    # Получаем все группы без пагинации
+    result = await db.execute(query)
     groups = result.scalars().all()
 
     # Преобразование в ответ
@@ -161,9 +154,9 @@ async def get_available_groups_for_monitoring(
         )
 
     return PaginatedResponse(
-        total=total,
-        page=pagination.page,
-        size=pagination.size,
+        total=len(items),
+        page=1,
+        size=len(items),
         items=items,
     )
 
@@ -172,7 +165,6 @@ async def get_available_groups_for_monitoring(
     "/groups/active", response_model=PaginatedResponse[GroupMonitoringResponse]
 )
 async def get_active_monitoring_groups(
-    pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[GroupMonitoringResponse]:
     """Получить список групп с активным мониторингом"""
@@ -191,14 +183,8 @@ async def get_active_monitoring_groups(
         )
     )
 
-    # Подсчет общего количества
-    count_query = select(func.count()).select_from(query.subquery())
-    total = await db.scalar(count_query) or 0
-
-    # Получение данных с пагинацией
-    result = await db.execute(
-        query.offset(pagination.skip).limit(pagination.size)
-    )
+    # Получаем все группы без пагинации
+    result = await db.execute(query)
     groups = result.scalars().all()
 
     # Преобразование в ответ
@@ -220,9 +206,9 @@ async def get_active_monitoring_groups(
         )
 
     return PaginatedResponse(
-        total=total,
-        page=pagination.page,
-        size=pagination.size,
+        total=len(items),
+        page=1,
+        size=len(items),
         items=items,
     )
 

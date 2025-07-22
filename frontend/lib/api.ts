@@ -26,6 +26,7 @@ import type {
   MonitoringGroupUpdate,
   MonitoringRunResult,
   VKGroupUploadResponse,
+  SchedulerStatus,
 } from '@/types/api'
 import type {
   ApplicationSettings,
@@ -52,7 +53,7 @@ class APIClient {
   constructor() {
     this.client = axios.create({
       baseURL: `${API_BASE_URL}/api/v1`,
-      timeout: 30000,
+      timeout: 120000, // Увеличиваем таймаут до 2 минут для операций мониторинга
       headers: {
         'Content-Type': 'application/json',
       },
@@ -63,7 +64,12 @@ class APIClient {
       (response) => response,
       (error: AxiosError<APIError>) => {
         if (error.response?.data) {
-          throw new Error(error.response.data.detail || 'API Error')
+          const apiError = new Error(
+            error.response.data.detail || 'API Error'
+          ) as any
+          apiError.response = error.response
+          apiError.status = error.response.status
+          throw apiError
         }
         throw new Error(error.message || 'Network Error')
       }
@@ -71,7 +77,9 @@ class APIClient {
   }
 
   // VK Groups API
-  async getGroups(params?: PaginationParams & { active_only?: boolean }) {
+  async getGroups(
+    params?: PaginationParams & { active_only?: boolean; search?: string }
+  ) {
     const { data } = await this.client.get<PaginatedResponse<VKGroupResponse>>(
       '/groups/',
       {
@@ -100,6 +108,13 @@ class APIClient {
     const { data } = await this.client.put<VKGroupResponse>(
       `/groups/${groupId}`,
       updateData
+    )
+    return data
+  }
+
+  async refreshGroupInfo(groupId: number) {
+    const { data } = await this.client.post<VKGroupResponse>(
+      `/groups/${groupId}/refresh`
     )
     return data
   }
@@ -292,11 +307,25 @@ class APIClient {
     }
   }
 
+  async updateKeywordsStats() {
+    const { data } = await this.client.post<StatusResponse>(
+      '/keywords/update-stats'
+    )
+    return data
+  }
+
+  async getTotalMatches() {
+    const { data } = await this.client.get<{ total_matches: number }>(
+      '/keywords/total-matches'
+    )
+    return data
+  }
+
   // Comments API
   async getComments(params?: CommentSearchParams & PaginationParams) {
     const { data } = await this.client.get<
       PaginatedResponse<VKCommentResponse>
-    >('/comments/', {
+    >('/parser/comments', {
       params,
     })
     return data
@@ -399,7 +428,7 @@ class APIClient {
       return data
     } catch (error) {
       // Fallback - получаем группы и сортируем по комментариям
-      const groups = await this.getGroups({ limit: params.limit })
+      const groups = await this.getGroups({ size: params.limit })
       return groups.items.sort(
         (a, b) => b.total_comments_found - a.total_comments_found
       )
@@ -412,7 +441,7 @@ class APIClient {
       return data
     } catch (error) {
       // Fallback - получаем ключевые слова и сортируем по совпадениям
-      const keywords = await this.getKeywords({ limit: params.limit })
+      const keywords = await this.getKeywords({ size: params.limit })
       return keywords.items.sort((a, b) => b.total_matches - a.total_matches)
     }
   }
@@ -425,7 +454,7 @@ class APIClient {
       return data
     } catch (error) {
       // Fallback - получаем последние комментарии
-      const comments = await this.getComments({ limit: params.limit })
+      const comments = await this.getComments({ size: params.limit })
       return comments
     }
   }
@@ -471,7 +500,7 @@ class APIClient {
       return data
     } catch (error) {
       // Fallback - получаем последние задачи парсинга
-      const tasks = await this.getRecentParseTasks({ limit: params.limit })
+      const tasks = await this.getRecentParseTasks({ size: params.limit })
       return tasks.items.map((task) => ({
         id: task.task_id,
         type: 'parse' as const,
@@ -568,7 +597,18 @@ class APIClient {
 
   async runMonitoringCycle() {
     const { data } = await this.client.post<MonitoringRunResult>(
-      '/monitoring/run-cycle'
+      '/monitoring/run-cycle',
+      {},
+      {
+        timeout: 300000, // 5 минут для операции мониторинга
+      }
+    )
+    return data
+  }
+
+  async getSchedulerStatus() {
+    const { data } = await this.client.get<SchedulerStatus>(
+      '/monitoring/scheduler/status'
     )
     return data
   }
@@ -673,6 +713,7 @@ export const createQueryKey = {
     ['monitoring', 'groups', 'active', params] as const,
 
   monitoringGroup: (id: number) => ['monitoring', 'groups', id] as const,
+  schedulerStatus: () => ['monitoring', 'scheduler', 'status'] as const,
 
   settings: () => ['settings'] as const,
   settingsHealth: () => ['settings', 'health'] as const,

@@ -20,7 +20,10 @@ class MonitoringStats(BaseModel):
         description="Количество групп, готовых для мониторинга"
     )
     next_monitoring_at: Optional[str] = Field(
-        description="Время следующего мониторинга"
+        description="Время следующего мониторинга (UTC)"
+    )
+    next_monitoring_at_local: Optional[str] = Field(
+        description="Время следующего мониторинга (локальное время Владивостока)"
     )
 
 

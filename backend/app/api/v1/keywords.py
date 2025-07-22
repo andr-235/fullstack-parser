@@ -5,6 +5,7 @@ API endpoints для управления ключевыми словами
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, UploadFile, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -52,6 +53,24 @@ async def get_keyword_categories(
     db: AsyncSession = Depends(get_db),
 ) -> list[str]:
     return await keyword_service.get_categories(db)
+
+
+@router.get("/total-matches", response_model=dict)
+async def get_total_matches(
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Получает общее количество совпадений всех ключевых слов
+    """
+    from sqlalchemy import func
+    from app.models.comment_keyword_match import CommentKeywordMatch
+
+    # Подсчитываем общее количество совпадений
+    result = await db.execute(select(func.count(CommentKeywordMatch.id)))
+
+    total_matches = result.scalar() or 0
+
+    return {"total_matches": total_matches}
 
 
 @router.get("/{keyword_id}", response_model=KeywordResponse)
@@ -121,4 +140,42 @@ async def upload_keywords_from_file(
         is_active=is_active,
         is_case_sensitive=is_case_sensitive,
         is_whole_word=is_whole_word,
+    )
+
+
+@router.post("/update-stats", response_model=StatusResponse)
+async def update_keywords_stats(
+    db: AsyncSession = Depends(get_db),
+) -> StatusResponse:
+    """
+    Обновляет статистику ключевых слов на основе совпадений в комментариях
+    """
+    from sqlalchemy import func
+    from app.models.comment_keyword_match import CommentKeywordMatch
+    from app.models.keyword import Keyword
+
+    # Подсчитываем количество совпадений для каждого ключевого слова
+    result = await db.execute(
+        select(
+            CommentKeywordMatch.keyword_id,
+            func.count(CommentKeywordMatch.id).label("match_count"),
+        ).group_by(CommentKeywordMatch.keyword_id)
+    )
+
+    keyword_stats = result.all()
+
+    # Обновляем total_matches для каждого ключевого слова
+    for keyword_id, match_count in keyword_stats:
+        keyword_result = await db.execute(
+            select(Keyword).where(Keyword.id == keyword_id)
+        )
+        keyword = keyword_result.scalar_one_or_none()
+        if keyword:
+            keyword.total_matches = match_count
+
+    await db.commit()
+
+    return StatusResponse(
+        status="success",
+        message=f"Статистика обновлена для {len(keyword_stats)} ключевых слов",
     )

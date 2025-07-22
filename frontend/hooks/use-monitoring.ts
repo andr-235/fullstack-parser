@@ -5,6 +5,7 @@ import type {
   VKGroupMonitoring,
   MonitoringGroupUpdate,
   MonitoringRunResult,
+  SchedulerStatus,
 } from '@/types/api'
 import toast from 'react-hot-toast'
 
@@ -21,13 +22,23 @@ export function useMonitoringStats() {
 }
 
 /**
+ * Хук для получения статуса планировщика
+ */
+export function useSchedulerStatus() {
+  return useQuery<SchedulerStatus>({
+    queryKey: createQueryKey.schedulerStatus(),
+    queryFn: () => api.getSchedulerStatus(),
+    staleTime: 10 * 1000, // 10 секунд - частое обновление
+    refetchInterval: 30 * 1000, // Обновляем каждые 30 секунд
+  })
+}
+
+/**
  * Хук для получения групп с мониторингом
  */
 export function useMonitoringGroups(params?: {
   active_only?: boolean
   monitoring_enabled?: boolean
-  skip?: number
-  limit?: number
 }) {
   return useQuery({
     queryKey: createQueryKey.monitoringGroups(params),
@@ -39,13 +50,10 @@ export function useMonitoringGroups(params?: {
 /**
  * Хук для получения групп, доступных для мониторинга
  */
-export function useAvailableGroupsForMonitoring(params?: {
-  skip?: number
-  limit?: number
-}) {
+export function useAvailableGroupsForMonitoring() {
   return useQuery({
-    queryKey: createQueryKey.availableGroupsForMonitoring(params),
-    queryFn: () => api.getAvailableGroupsForMonitoring(params),
+    queryKey: createQueryKey.availableGroupsForMonitoring(),
+    queryFn: () => api.getAvailableGroupsForMonitoring(),
     staleTime: 60 * 1000, // 1 минута
   })
 }
@@ -53,13 +61,10 @@ export function useAvailableGroupsForMonitoring(params?: {
 /**
  * Хук для получения групп с активным мониторингом
  */
-export function useActiveMonitoringGroups(params?: {
-  skip?: number
-  limit?: number
-}) {
+export function useActiveMonitoringGroups() {
   return useQuery({
-    queryKey: createQueryKey.activeMonitoringGroups(params),
-    queryFn: () => api.getActiveMonitoringGroups(params),
+    queryKey: createQueryKey.activeMonitoringGroups(),
+    queryFn: () => api.getActiveMonitoringGroups(),
     staleTime: 30 * 1000, // 30 секунд - более частое обновление
     refetchInterval: 60 * 1000, // Обновляем каждую минуту
   })

@@ -12,6 +12,16 @@
   .bg-slate-750 {
     background-color: #1e293b;
   }
+
+  /* Улучшенный рендеринг изображений */
+  .image-rendering-pixelated {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -o-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
 }
 
 /* Кастомные анимации */
@@ -38,6 +48,7 @@
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;
@@ -49,6 +60,7 @@
 }
 
 @keyframes bounce {
+
   0%,
   20%,
   53%,
@@ -72,6 +84,7 @@
 }
 
 @keyframes ping {
+
   75%,
   100% {
     transform: scale(2);

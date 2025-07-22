@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
 
@@ -14,11 +14,25 @@ const inter = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'VK Comments Parser',
+  title: 'ВК Парсер',
   description: 'Fullstack приложение для парсинга комментариев ВКонтакте',
   icons: {
-    icon: '/app/favicon.png',
+    icon: [
+      { url: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
   },
+  manifest: '/site.webmanifest',
+  robots: 'index, follow',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#0f172a', // slate-900
 }
 
 export default function RootLayout({

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
-  useGroups,
+  useInfiniteGroups,
   useCreateGroup,
   useUpdateGroup,
   useDeleteGroup,
-} from '@/hooks/use-groups'
+  useRefreshGroupInfo,
+} from '@/features/groups/hooks/use-groups'
 import {
   Card,
   CardContent,
@@ -41,25 +42,98 @@ import {
   Copy,
   ExternalLink,
   Check,
+  Target,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import type { VKGroupResponse } from '@/types/api'
 import UploadGroupsModal from './UploadGroupsModal'
 import { toast } from 'react-hot-toast'
+import useDebounce from '@/hooks/use-debounce'
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll'
 
 const AVATAR_PLACEHOLDER =
   'https://ui-avatars.com/api/?background=0D8ABC&color=fff&name='
+
+// Сворачиваемый блок
+const CollapsibleSection = ({
+  title,
+  icon: Icon,
+  children,
+  defaultExpanded = false,
+}: {
+  title: string
+  icon: React.ElementType
+  children: React.ReactNode
+  defaultExpanded?: boolean
+}) => {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded)
+
+  return (
+    <Card className="border-slate-700 bg-slate-800 shadow-lg">
+      <CardHeader
+        className="pb-3 cursor-pointer hover:bg-slate-750 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Icon className="h-4 w-4 text-slate-400" />
+            <CardTitle className="text-sm font-semibold text-slate-200">
+              {title}
+            </CardTitle>
+          </div>
+          {isExpanded ? (
+            <ChevronUp className="h-4 w-4 text-slate-400" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-slate-400" />
+          )}
+        </div>
+      </CardHeader>
+      {isExpanded && <CardContent className="pt-0">{children}</CardContent>}
+    </Card>
+  )
+}
 
 export default function GroupsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeOnly, setActiveOnly] = useState(false)
   const [newGroupUrl, setNewGroupUrl] = useState('')
   const [copiedGroup, setCopiedGroup] = useState<string | null>(null)
-  const { data: groupsData, isLoading, error } = useGroups()
+  const debouncedSearch = useDebounce(searchTerm, 500)
+
+  const {
+    data,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage,
+  } = useInfiniteGroups({
+    active_only: activeOnly,
+    search: debouncedSearch,
+  })
+
   const createGroupMutation = useCreateGroup()
   const updateGroupMutation = useUpdateGroup()
   const deleteGroupMutation = useDeleteGroup()
+  const refreshGroupMutation = useRefreshGroupInfo()
+
+  const groups = useMemo(
+    () => data?.pages.flatMap((page) => page.items) ?? [],
+    [data]
+  )
+
+  // Хук для автоматической загрузки при скролле
+  const observerRef = useInfiniteScroll({
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    threshold: 200,
+  })
 
   const handleAddGroup = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -77,15 +151,26 @@ export default function GroupsPage() {
         },
         onError: (error: any) => {
           console.error('Ошибка создания группы:', error)
+          console.error('Error status:', error?.status)
+          console.error('Error response status:', error?.response?.status)
+          console.error('Error response data:', error?.response?.data)
+          console.error('Error message:', error?.message)
+
           let errorMessage = 'Ошибка при создании группы'
 
-          if (error?.response?.data?.detail) {
+          if (error?.status === 409 || error?.response?.status === 409) {
+            // Группа уже существует
+            errorMessage = error?.response?.data?.detail || error?.message || 'Группа уже существует в системе'
+            toast.error(errorMessage)
+          } else if (error?.response?.data?.detail) {
             errorMessage = error.response.data.detail
+            toast.error(errorMessage)
           } else if (error?.message) {
             errorMessage = error.message
+            toast.error(errorMessage)
+          } else {
+            toast.error(errorMessage)
           }
-
-          toast.error(errorMessage)
         },
       }
     )
@@ -105,364 +190,88 @@ export default function GroupsPage() {
     }
   }
 
-  let filteredGroups = groupsData?.items || []
-  if (searchTerm) {
-    filteredGroups = filteredGroups.filter(
-      (group) =>
-        group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        group.screen_name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }
-  if (activeOnly) {
-    filteredGroups = filteredGroups.filter((group) => group.is_active)
-  }
-
-  const renderContent = () => {
-    if (isLoading && !groupsData) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-          <div className="relative">
-            <LoadingSpinner className="h-8 w-8 text-blue-500" />
-            <div className="absolute inset-0 rounded-full border-2 border-blue-200 animate-ping"></div>
-          </div>
-          <span className="text-slate-600 font-medium">Загрузка групп...</span>
-        </div>
-      )
-    }
-
-    if (error) {
-      return (
-        <div className="text-center py-16">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
-            <Trash2 className="h-8 w-8 text-red-500" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">
-            Ошибка загрузки
-          </h3>
-          <p className="text-slate-600 mb-4">
-            Не удалось загрузить список групп
-          </p>
-          <p className="text-sm text-slate-400">
-            {error instanceof Error ? error.message : String(error)}
-          </p>
-        </div>
-      )
-    }
-
-    if (filteredGroups.length === 0) {
-      return (
-        <div className="text-center py-16">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
-            <Users className="h-8 w-8 text-slate-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">
-            {searchTerm ? 'Группы не найдены' : 'Нет добавленных групп'}
-          </h3>
-          <p className="text-slate-600">
-            {searchTerm
-              ? 'Попробуйте изменить параметры поиска'
-              : 'Добавьте первую группу для начала работы'}
-          </p>
-        </div>
-      )
-    }
-
-    return (
-      <div className="space-y-4">
-        <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-lg p-4 border border-slate-600">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-slate-700 rounded-lg">
-                <Activity className="h-5 w-5 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-200">
-                  Активные группы
-                </p>
-                <p className="text-xs text-slate-400">
-                  {filteredGroups.filter((g) => g.is_active).length} из{' '}
-                  {filteredGroups.length} групп
-                </p>
-              </div>
-            </div>
-            <Badge
-              variant="outline"
-              className="bg-slate-700 border-slate-600 text-slate-200"
-            >
-              {filteredGroups.filter((g) => g.is_active).length} активных
-            </Badge>
-          </div>
-        </div>
-
-        <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden shadow-lg">
-          <div className="overflow-x-auto max-h-[420px] scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
-            <table className="min-w-full relative">
-              <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 shadow-md">
-                <tr>
-                  <th className="px-4 py-3 text-left font-bold text-slate-200">
-                    ID
-                  </th>
-                  <th className="px-4 py-3 text-left font-bold text-slate-200">
-                    Группа
-                  </th>
-                  <th className="px-4 py-3 text-left font-bold text-slate-200">
-                    Статус
-                  </th>
-                  <th className="px-4 py-3 text-left font-bold text-slate-200">
-                    Последний парсинг
-                  </th>
-                  <th className="px-4 py-3 text-right font-bold text-slate-200">
-                    Действия
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700">
-                {filteredGroups.map((group, index) => (
-                  <tr
-                    key={group.id}
-                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${index % 2 === 0 ? 'bg-slate-800' : 'bg-slate-750'}`}
-                    style={{
-                      animationDelay: `${index * 50}ms`,
-                      animationFillMode: 'both',
-                    }}
-                  >
-                    <td className="px-4 py-3 font-mono text-blue-400 font-semibold">
-                      {group.vk_id}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <img
-                            src={
-                              group.photo_url ||
-                              `${AVATAR_PLACEHOLDER}${encodeURIComponent(group.name)}`
-                            }
-                            alt={group.name}
-                            className="w-10 h-10 rounded-full border-2 border-slate-600 shadow-sm object-cover bg-slate-700 transition-transform duration-200 hover:scale-110"
-                            loading="lazy"
-                          />
-                          {group.is_active && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-slate-800 animate-pulse"></div>
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-200 text-base leading-tight flex items-center gap-1">
-                            {group.name}
-                            {group.is_closed && (
-                              <span className="ml-1 px-2 py-0.5 rounded bg-yellow-900 text-yellow-300 text-xs font-semibold animate-bounce">
-                                Приват
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-blue-400 font-mono">
-                            @{group.screen_name}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm transition-all duration-200 ${group.is_active ? 'bg-gradient-to-r from-green-900 to-emerald-900 text-green-300 hover:from-green-800 hover:to-emerald-800' : 'bg-gradient-to-r from-slate-700 to-gray-700 text-slate-400 hover:from-slate-600 hover:to-gray-600'}`}
-                      >
-                        <span
-                          className={`w-2 h-2 rounded-full ${group.is_active ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`}
-                        ></span>
-                        {group.is_active ? 'Активна' : 'На паузе'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {group.last_parsed_at ? (
-                        <span className="flex items-center gap-2 text-blue-400 font-medium">
-                          <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
-                          {formatDistanceToNow(new Date(group.last_parsed_at), {
-                            addSuffix: true,
-                            locale: ru,
-                          })}
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-2 text-slate-500 font-medium">
-                          <span className="w-2 h-2 bg-slate-500 rounded-full"></span>
-                          Никогда
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Открыть в VK"
-                          className="hover:bg-slate-700 text-slate-300 hover:text-blue-400 transition-all duration-200 hover:scale-110 group"
-                          onClick={() =>
-                            window.open(
-                              `https://vk.com/${group.screen_name}`,
-                              '_blank'
-                            )
-                          }
-                        >
-                          <ExternalLink className="h-4 w-4 group-hover:rotate-12 transition-transform" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Копировать ссылку"
-                          className={`transition-all duration-200 hover:scale-110 ${copiedGroup === group.screen_name ? 'bg-green-900 text-green-400' : 'hover:bg-slate-700 text-slate-300 hover:text-blue-400'}`}
-                          onClick={() => handleCopyLink(group.screen_name)}
-                        >
-                          {copiedGroup === group.screen_name ? (
-                            <Check className="h-4 w-4 animate-bounce" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={
-                            group.is_active ? 'Приостановить' : 'Возобновить'
-                          }
-                          disabled={updateGroupMutation.isPending}
-                          className="hover:bg-slate-700 text-slate-300 hover:text-slate-200 transition-all duration-200 hover:scale-110"
-                          onClick={() =>
-                            updateGroupMutation.mutate({
-                              groupId: group.id,
-                              data: { is_active: !group.is_active },
-                            })
-                          }
-                        >
-                          {group.is_active ? (
-                            <Pause className="h-4 w-4" />
-                          ) : (
-                            <Play className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label="удалить"
-                          className="hover:bg-red-900 text-red-400 hover:text-red-300 transition-all duration-200 hover:scale-110"
-                          disabled={deleteGroupMutation.isPending}
-                          data-testid="delete-group"
-                          onClick={() => {
-                            deleteGroupMutation.mutate(group.id)
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   // Статистика
-  const totalGroups = groupsData?.items?.length || 0
-  const activeGroups = groupsData?.items?.filter((g) => g.is_active).length || 0
-  const inactiveGroups =
-    groupsData?.items?.filter((g) => !g.is_active).length || 0
-  const totalComments =
-    groupsData?.items?.reduce(
-      (sum, g) => sum + (g.total_comments_found || 0),
-      0
-    ) || 0
-  const formattedTotalComments = new Intl.NumberFormat('ru-RU').format(
-    totalComments
-  )
+  const totalGroups = data?.pages[0]?.total || 0
+  const activeGroups = groups.filter((group) => group.is_active).length
+  const inactiveGroups = totalGroups - activeGroups
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Заголовок */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl p-4 text-white">
         <div className="flex items-center space-x-3 mb-2">
           <div className="p-2 bg-white/10 rounded-lg">
-            <Users className="h-6 w-6" />
+            <Users className="h-5 w-5" />
           </div>
-          <h1 className="text-2xl font-bold">Управление группами ВКонтакте</h1>
+          <h1 className="text-xl font-bold">Управление группами</h1>
         </div>
-        <p className="text-slate-300">
-          Добавляйте, настраивайте и управляйте группами для парсинга
-          комментариев
+        <p className="text-slate-300 text-sm">
+          Добавление, настройка и мониторинг VK групп для парсинга
         </p>
       </div>
 
       {/* Статистика */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-slate-700 rounded-lg">
-                <Users className="h-5 w-5 text-blue-400" />
+      <CollapsibleSection
+        title="Статистика"
+        icon={Target}
+        defaultExpanded={false}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
+            <CardContent className="p-3">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-slate-700 rounded-lg">
+                  <Users className="h-4 w-4 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-300">
+                    Всего групп
+                  </p>
+                  <p className="text-lg font-bold text-blue-400">
+                    {totalGroups}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-slate-300">
-                  Всего групп
-                </p>
-                <p className="text-2xl font-bold text-blue-400">
-                  {totalGroups}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-slate-700 rounded-lg">
-                <Activity className="h-5 w-5 text-green-400" />
+          <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
+            <CardContent className="p-3">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-slate-700 rounded-lg">
+                  <Activity className="h-4 w-4 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-300">Активных</p>
+                  <p className="text-lg font-bold text-green-400">
+                    {activeGroups}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-slate-300">Активных</p>
-                <p className="text-2xl font-bold text-green-400">
-                  {activeGroups}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-slate-700 rounded-lg">
-                <Pause className="h-5 w-5 text-orange-400" />
+          <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
+            <CardContent className="p-3">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-slate-700 rounded-lg">
+                  <Pause className="h-4 w-4 text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-300">
+                    Неактивных
+                  </p>
+                  <p className="text-lg font-bold text-orange-400">
+                    {inactiveGroups}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-slate-300">Неактивных</p>
-                <p className="text-2xl font-bold text-orange-400">
-                  {inactiveGroups}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </CollapsibleSection>
 
-        <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-slate-700 rounded-lg">
-                <MessageSquare className="h-5 w-5 text-purple-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-300">
-                  Комментариев
-                </p>
-                <p className="text-2xl font-bold text-purple-400">
-                  {formattedTotalComments}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Управление */}
+      {/* Управление группами */}
       <Card className="border-slate-700 bg-slate-800 shadow-lg">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold text-slate-200">
@@ -493,7 +302,7 @@ export default function GroupsPage() {
                 <span>Только активные</span>
               </label>
 
-              <UploadGroupsModal onSuccess={() => {}} />
+              <UploadGroupsModal onSuccess={() => { }} />
             </div>
           </div>
 
@@ -524,7 +333,283 @@ export default function GroupsPage() {
 
       {/* Таблица групп */}
       <Card className="border-slate-700 bg-slate-800 shadow-lg">
-        <CardContent className="p-0">{renderContent()}</CardContent>
+        <CardContent className="p-0">
+          {isFetching && !data ? (
+            <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+              <div className="relative">
+                <LoadingSpinner className="h-8 w-8 text-blue-500" />
+                <div className="absolute inset-0 rounded-full border-2 border-blue-200 animate-ping"></div>
+              </div>
+              <span className="text-slate-600 font-medium">Загрузка групп...</span>
+            </div>
+          ) : error ? (
+            <div className="text-center py-16">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
+                <Trash2 className="h-8 w-8 text-red-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                Ошибка загрузки
+              </h3>
+              <p className="text-slate-600 mb-4">
+                Не удалось загрузить список групп
+              </p>
+              <p className="text-sm text-slate-400">
+                {error instanceof Error ? error.message : String(error)}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden shadow-lg">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full relative">
+                    <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 shadow-md">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-bold text-slate-200">
+                          ID
+                        </th>
+                        <th className="px-4 py-3 text-left font-bold text-slate-200">
+                          Группа
+                        </th>
+                        <th className="px-4 py-3 text-left font-bold text-slate-200">
+                          Статус
+                        </th>
+                        <th className="px-4 py-3 text-left font-bold text-slate-200">
+                          Последний парсинг
+                        </th>
+                        <th className="px-4 py-3 text-right font-bold text-slate-200">
+                          Действия
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700">
+                      {groups.map((group, index) => (
+                        <tr
+                          key={group.id}
+                          className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${index % 2 === 0 ? 'bg-slate-800' : 'bg-slate-750'}`}
+                          style={{
+                            animationDelay: `${index * 50}ms`,
+                            animationFillMode: 'both',
+                          }}
+                        >
+                          <td className="px-4 py-3 font-mono text-blue-400 font-semibold">
+                            {group.vk_id}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="relative">
+                                <img
+                                  src={
+                                    group.photo_url ||
+                                    `${AVATAR_PLACEHOLDER}${encodeURIComponent(group.name)}`
+                                  }
+                                  alt={group.name}
+                                  className="w-10 h-10 rounded-full border-2 border-slate-600 shadow-sm object-cover bg-slate-700 transition-transform duration-200 hover:scale-110"
+                                  loading="lazy"
+                                />
+                                {group.is_active && (
+                                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-slate-800 animate-pulse"></div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-semibold text-slate-200 truncate">
+                                    {group.name}
+                                  </h3>
+                                  <div className="flex items-center gap-1">
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs border-slate-600 text-slate-400"
+                                      title={group.members_count ? `${group.members_count.toLocaleString()} участников` : 'Количество участников недоступно'}
+                                    >
+                                      {group.members_count ? `${group.members_count.toLocaleString()}` : 'N/A'}
+                                    </Badge>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => {
+                                        refreshGroupMutation.mutate(group.id, {
+                                          onSuccess: () => {
+                                            toast.success('Информация о группе обновлена! 🔄')
+                                          },
+                                          onError: (error: any) => {
+                                            console.error('Ошибка обновления группы:', error)
+                                            toast.error('Ошибка обновления информации о группе')
+                                          },
+                                        })
+                                      }}
+                                      disabled={refreshGroupMutation.isPending}
+                                      className="h-5 w-5 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                                      title="Обновить информацию о группе из VK"
+                                    >
+                                      <RefreshCw className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-sm text-slate-400">
+                                    @{group.screen_name}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleCopyLink(group.screen_name)}
+                                    className="h-6 w-6 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                                  >
+                                    {copiedGroup === group.screen_name ? (
+                                      <Check className="h-3 w-3" />
+                                    ) : (
+                                      <Copy className="h-3 w-3" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    asChild
+                                    className="h-6 w-6 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                                  >
+                                    <a
+                                      href={`https://vk.com/${group.screen_name}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={group.is_active ? "default" : "secondary"}
+                                className={`${group.is_active
+                                  ? "bg-green-600 hover:bg-green-700"
+                                  : "bg-slate-600 hover:bg-slate-700"
+                                  } text-white`}
+                              >
+                                {group.is_active ? "Активна" : "Неактивна"}
+                              </Badge>
+                              {/* Убираем проверку auto_monitoring_enabled, так как это поле не существует в VKGroupResponse */}
+                              {/* {group.auto_monitoring_enabled && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs border-blue-500 text-blue-400"
+                                >
+                                  Мониторинг
+                                </Badge>
+                              )} */}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="text-sm text-slate-400">
+                              {group.last_parsed_at ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                                  <span>
+                                    {formatDistanceToNow(
+                                      new Date(group.last_parsed_at),
+                                      { addSuffix: true, locale: ru }
+                                    )}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-500">Никогда</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  updateGroupMutation.mutate({
+                                    groupId: group.id,
+                                    data: { is_active: !group.is_active },
+                                  })
+                                }
+                                disabled={updateGroupMutation.isPending}
+                                className="h-8 w-8 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                                title={
+                                  group.is_active ? "Остановить" : "Запустить"
+                                }
+                              >
+                                {group.is_active ? (
+                                  <Pause className="h-4 w-4" />
+                                ) : (
+                                  <Play className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-slate-700 text-slate-400 hover:text-green-400 transition-all duration-200"
+                                title="Настройки"
+                              >
+                                <Settings className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  deleteGroupMutation.mutate(group.id)
+                                }
+                                disabled={deleteGroupMutation.isPending}
+                                className="h-8 w-8 hover:bg-slate-700 text-slate-400 hover:text-red-400 transition-all duration-200"
+                                title="Удалить"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Элемент для отслеживания скролла */}
+              <div ref={observerRef} className="h-4" />
+
+              {/* Индикатор загрузки */}
+              {isFetchingNextPage && (
+                <div className="p-3 text-center border-t border-slate-700">
+                  <div className="flex items-center justify-center gap-2 text-slate-400">
+                    <LoadingSpinner className="h-4 w-4" />
+                    <span className="text-sm">Загрузка групп...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Сообщение о конце списка */}
+              {!hasNextPage && groups.length > 0 && (
+                <div className="p-3 text-center border-t border-slate-700">
+                  <span className="text-sm text-slate-400">Все группы загружены</span>
+                </div>
+              )}
+
+              {groups.length === 0 && !isFetching && (
+                <div className="text-center py-12">
+                  <div className="flex flex-col items-center justify-center space-y-3">
+                    <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
+                      <Users className="h-6 w-6 text-slate-400" />
+                    </div>
+                    <p className="text-slate-400 font-medium text-sm">
+                      {searchTerm ? 'Группы не найдены' : 'Нет добавленных групп'}
+                    </p>
+                    <p className="text-slate-500 text-xs">
+                      {searchTerm
+                        ? 'Попробуйте изменить параметры поиска'
+                        : 'Добавьте первую группу для начала работы'}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
       </Card>
     </div>
   )

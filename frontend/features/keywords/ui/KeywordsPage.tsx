@@ -7,6 +7,8 @@ import {
   useUpdateKeyword,
   useDeleteKeyword,
   useInfiniteKeywords,
+  useUpdateKeywordsStats,
+  useTotalMatches,
 } from '@/features/keywords/hooks/use-keywords'
 import {
   Card,
@@ -86,7 +88,7 @@ const KeywordRow = ({
       onUpdate(
         keyword.id,
         { word: editedWord },
-        { onSuccess: () => {}, onError: () => {} }
+        { onSuccess: () => { }, onError: () => { } }
       )
     }
     setIsEditing(false)
@@ -186,53 +188,48 @@ export default function KeywordsPage() {
   const [newKeywordCategory, setNewKeywordCategory] = useState('')
   const [activeOnly, setActiveOnly] = useState(true)
   const [category, setCategory] = useState<string>('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(1000) // Увеличиваем лимит для загрузки большего количества записей
 
-  // Для тестов: если категория не выбрана, не передавать параметр category
-  const pageSize = 20
+  // Пагинация
   const {
     data,
     isLoading,
-    isError,
     error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
     refetch,
-  } = useInfiniteKeywords({
+  } = useKeywords({
     q: searchTerm,
     active_only: activeOnly,
     category: category || undefined,
-    pageSize,
-    order_by: 'word',
-    order_dir: 'asc',
+    page: currentPage,
+    size: itemsPerPage,
   })
 
-  const keywords = data?.pages.flatMap((page) => page.items) || []
-  const total = data?.pages[0]?.total || 0
+  const keywords = data?.items || []
+  const total = data?.total || 0
   const active = keywords.filter((k) => k.is_active).length || 0
-  const totalMatches =
-    keywords.reduce((sum, k) => sum + k.total_matches, 0) || 0
 
-  // Intersection Observer для бесконечного скролла
-  const loaderRef = React.useRef<HTMLTableRowElement | null>(null)
+  // Получаем общее количество совпадений
+  const { data: totalMatchesData } = useTotalMatches()
+  const totalMatches = totalMatchesData?.total_matches || 0
+
+  // Сброс страницы при изменении фильтров
   React.useEffect(() => {
-    if (!hasNextPage || isFetchingNextPage) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) fetchNextPage()
-      },
-      { root: null, rootMargin: '0px', threshold: 1.0 }
-    )
-    if (loaderRef.current) observer.observe(loaderRef.current)
-    return () => {
-      if (loaderRef.current) observer.unobserve(loaderRef.current)
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+    setCurrentPage(1)
+  }, [searchTerm, activeOnly, category])
+
+  const totalPages = Math.ceil(total / itemsPerPage)
 
   const { data: categoriesData } = useKeywordCategories()
   const createKeywordMutation = useCreateKeyword()
   const updateKeywordMutation = useUpdateKeyword()
   const deleteKeywordMutation = useDeleteKeyword()
+  const updateStatsMutation = useUpdateKeywordsStats()
+
+  // Автоматически обновляем статистику при загрузке страницы
+  React.useEffect(() => {
+    updateStatsMutation.mutate()
+  }, [])
 
   const handleAddKeyword = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -433,7 +430,7 @@ export default function KeywordsPage() {
       {/* Таблица ключевых слов */}
       <Card className="border-slate-700 bg-slate-800 shadow-lg">
         <CardContent className="p-0">
-          <div className="overflow-x-auto max-h-[600px] scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
+          <div className="overflow-x-auto">
             <table className="min-w-full relative">
               <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 shadow-md">
                 <tr>
@@ -466,7 +463,7 @@ export default function KeywordsPage() {
                       </div>
                     </td>
                   </tr>
-                ) : isError ? (
+                ) : error ? (
                   <tr>
                     <td colSpan={5} className="text-center py-10">
                       <div className="flex flex-col items-center justify-center space-y-4">
@@ -494,16 +491,6 @@ export default function KeywordsPage() {
                         isDeleting={deleteKeywordMutation.isPending}
                       />
                     ))}
-                    <tr ref={loaderRef}>
-                      <td colSpan={5} className="text-center py-4">
-                        {isFetchingNextPage && <LoadingSpinner />}
-                        {!hasNextPage && (
-                          <span className="text-slate-400">
-                            Все ключевые слова загружены
-                          </span>
-                        )}
-                      </td>
-                    </tr>
                   </>
                 ) : (
                   <tr>
@@ -525,6 +512,51 @@ export default function KeywordsPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Пагинация */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 bg-slate-750 border-t border-slate-700">
+              <div className="text-sm text-slate-400">
+                Показано {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, total)} из {total} ключевых слов
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                >
+                  Назад
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className={page === currentPage
+                        ? "bg-purple-600 hover:bg-purple-700"
+                        : "border-slate-600 text-slate-300 hover:bg-slate-700"
+                      }
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                >
+                  Вперед
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

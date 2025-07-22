@@ -23,7 +23,7 @@ from app.schemas.vk_group import (
     VKGroupUploadResponse,
 )
 from app.services.base import BaseService
-from app.services.vkbottle_service import VKBottleService
+from app.services.vk_api_service import VKAPIService
 
 # Типы для улучшения читаемости
 GroupData = Dict[str, Any]  # Данные группы от VK API
@@ -142,6 +142,72 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
             "Группа обновлена", group_id=group_id, updates=update_data
         )
         return group
+
+    async def refresh_group_from_vk(
+        self, db: AsyncSession, group_id: int
+    ) -> VKGroup:
+        """
+        Обновляет информацию о группе из VK API
+
+        Args:
+            db: Сессия базы данных
+            group_id: ID группы
+
+        Returns:
+            Обновленная группа
+
+        Raises:
+            HTTPException: Если группа не найдена или ошибка VK API
+        """
+        group = await db.get(VKGroup, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        try:
+            # Получаем актуальную информацию из VK API
+            vk_service = VKAPIService(
+                token=settings.vk.access_token,
+                api_version=settings.vk.api_version,
+            )
+
+            vk_group_data = await vk_service.get_group_info(group.screen_name)
+            if not vk_group_data:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Группа не найдена в VK API",
+                )
+
+            # Обновляем поля из VK API
+            vk_group_fields = {c.name for c in VKGroup.__table__.columns}
+            for key, value in vk_group_data.items():
+                if key in vk_group_fields and key not in [
+                    "id",
+                    "created_at",
+                    "updated_at",
+                ]:
+                    setattr(group, key, value)
+
+            await db.commit()
+            await db.refresh(group)
+
+            self.logger.info(
+                "Информация о группе обновлена из VK API",
+                group_id=group_id,
+                screen_name=group.screen_name,
+                members_count=group.members_count,
+            )
+            return group
+
+        except Exception as e:
+            self.logger.error(
+                "Ошибка обновления информации о группе из VK API",
+                group_id=group_id,
+                error=str(e),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Ошибка обновления информации о группе: {str(e)}",
+            )
 
     async def delete_group(self, db: AsyncSession, group_id: int) -> None:
         """
@@ -274,7 +340,7 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
         Raises:
             HTTPException: Если группа не найдена в VK
         """
-        vk_service = VKBottleService(
+        vk_service = VKAPIService(
             token=settings.vk.access_token, api_version=settings.vk.api_version
         )
 

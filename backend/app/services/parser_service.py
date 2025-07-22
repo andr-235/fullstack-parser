@@ -34,7 +34,7 @@ from app.schemas.vk_group import VKGroupResponse
 from app.services.arq_enqueue import enqueue_run_parsing_task
 from app.services.morphological_service import morphological_service
 from app.services.redis_parser_manager import RedisParserManager
-from app.services.vkbottle_service import VKBottleService
+from app.services.vk_api_service import VKAPIService
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class ParserService:
     - Статистика и отчеты
     """
 
-    def __init__(self, db: AsyncSession, vk_service: VKBottleService):
+    def __init__(self, db: AsyncSession, vk_service: VKAPIService):
         self.db = db
         self.vk_service = vk_service
         self.logger = structlog.get_logger(__name__)
@@ -117,22 +117,35 @@ class ParserService:
         Returns:
             Отфильтрованные комментарии с пагинацией
         """
+        self.logger.info(
+            "Начало фильтрации комментариев",
+            search_params=search_params.model_dump(),
+            pagination=pagination.model_dump(),
+        )
+
         query = self._build_comments_query(search_params)
 
         # Получаем общее количество
         total_result = await self.db.execute(query)
         total = len(total_result.scalars().all())
 
+        self.logger.info(
+            "Общее количество комментариев",
+            total=total,
+            skip=pagination.skip,
+            limit=pagination.size,
+        )
+
         # Применяем пагинацию
         paginated_query = query.offset(pagination.skip).limit(pagination.size)
         result = await self.db.execute(paginated_query)
         comments = result.scalars().all()
 
-        # Отладочная информация
         self.logger.info(
-            "Filtering comments",
+            "Результаты фильтрации",
             total_comments=len(comments),
             first_comment_id=comments[0].id if comments else None,
+            last_comment_id=comments[-1].id if comments else None,
             first_comment_has_post=(
                 comments[0].post is not None if comments else None
             ),
@@ -302,6 +315,10 @@ class ParserService:
                 continue
 
         await self._update_group_stats(group, stats)
+
+        # Обновляем статистику ключевых слов
+        await self._update_keywords_stats()
+
         stats.duration_seconds = (
             datetime.now(timezone.utc) - start_time
         ).total_seconds()
@@ -546,7 +563,22 @@ class ParserService:
         """
         matches: List[KeywordMatch] = []
 
+        self.logger.debug(
+            "Поиск ключевых слов в тексте",
+            text_length=len(text),
+            keywords_count=len(keywords),
+            text_preview=text[:100] + "..." if len(text) > 100 else text,
+        )
+
         for keyword in keywords:
+            self.logger.debug(
+                "Обработка ключевого слова",
+                keyword_id=keyword.id,
+                keyword_word=keyword.word,
+                is_case_sensitive=keyword.is_case_sensitive,
+                is_whole_word=keyword.is_whole_word,
+            )
+
             # Используем морфологический анализ для поиска всех форм слова
             morphological_matches = (
                 morphological_service.find_morphological_matches(
@@ -557,9 +589,22 @@ class ParserService:
                 )
             )
 
+            self.logger.debug(
+                "Результаты морфологического поиска",
+                keyword_word=keyword.word,
+                matches_count=len(morphological_matches),
+                matches=morphological_matches,
+            )
+
             # Добавляем найденные совпадения
             for matched_text, position in morphological_matches:
                 matches.append((keyword, matched_text, position))
+
+        self.logger.info(
+            "Завершен поиск ключевых слов",
+            total_matches=len(matches),
+            unique_keywords=len(set(match[0].id for match in matches)),
+        )
 
         return matches
 
@@ -699,6 +744,34 @@ class ParserService:
         group.last_parsed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         group.total_posts_parsed += stats.posts_processed
         group.total_comments_found += stats.comments_found
+        await self.db.commit()
+
+    async def _update_keywords_stats(self) -> None:
+        """Обновляет статистику ключевых слов на основе совпадений"""
+        from sqlalchemy import func
+
+        # Подсчитываем количество совпадений для каждого ключевого слова
+        result = await self.db.execute(
+            select(
+                CommentKeywordMatch.keyword_id,
+                func.count(CommentKeywordMatch.id).label("match_count"),
+            ).group_by(CommentKeywordMatch.keyword_id)
+        )
+
+        keyword_stats = result.all()
+
+        # Обновляем total_matches для каждого ключевого слова
+        for keyword_id, match_count in keyword_stats:
+            await self.db.execute(
+                select(Keyword).where(Keyword.id == keyword_id)
+            )
+            keyword_result = await self.db.execute(
+                select(Keyword).where(Keyword.id == keyword_id)
+            )
+            keyword = keyword_result.scalar_one_or_none()
+            if keyword:
+                keyword.total_matches = match_count
+
         await self.db.commit()
 
     # Устаревшие методы - помечены как deprecated

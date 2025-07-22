@@ -57,6 +57,9 @@ class VKCommentResponse(VKCommentBase, IDMixin, TimestampMixin, BaseSchema):
         None, description="Когда был обработан"
     )
     group: Optional[VKGroupResponse] = None
+    matched_keywords: Optional[list[str]] = Field(
+        default=None, description="Найденные ключевые слова"
+    )
 
 
 class CommentWithKeywords(VKCommentResponse):
@@ -80,5 +83,3 @@ class CommentSearchParams(BaseModel):
     author_id: Optional[int] = None
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None
-    skip: int = 0
-    limit: int = 100

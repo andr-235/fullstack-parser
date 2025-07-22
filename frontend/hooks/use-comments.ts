@@ -23,17 +23,17 @@ export function useComments(params?: CommentSearchParams & PaginationParams) {
 export function useInfiniteComments(filters?: CommentSearchParams) {
   return useInfiniteQuery({
     queryKey: ['comments', 'infinite', filters],
-    queryFn: ({ pageParam = 0 }) =>
+    queryFn: ({ pageParam = 1 }) =>
       api.getComments({
         ...filters,
-        skip: pageParam,
-        limit: 20,
+        page: pageParam,
+        size: 1000, // Увеличиваем лимит для загрузки большего количества записей
       }),
     getNextPageParam: (lastPage, pages) => {
-      const totalLoaded = pages.length * 20
-      return lastPage.total > totalLoaded ? totalLoaded : undefined
+      const totalLoaded = pages.length * 1000
+      return lastPage.total > totalLoaded ? pages.length + 1 : undefined
     },
-    initialPageParam: 0,
+    initialPageParam: 1,
     staleTime: 2 * 60 * 1000,
   })
 }
