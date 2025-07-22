@@ -120,8 +120,12 @@ class VKGroupResponse(BaseSchema):
     name: str
     screen_name: str
     photo_url: Optional[str] = None
-    total_comments_found: int = Field(default=0, description="Общее количество найденных комментариев")
-    members_count: Optional[int] = Field(None, description="Количество участников")
+    total_comments_found: int = Field(
+        default=0, description="Общее количество найденных комментариев"
+    )
+    members_count: Optional[int] = Field(
+        None, description="Количество участников"
+    )
 
 
 class VKGroupUploadResponse(BaseModel):
