@@ -1,0 +1,132 @@
+---
+description: Структура проекта и организация файлов
+globs: **/*
+alwaysApply: true
+---
+
+# Структура проекта
+
+## **Корневая структура**
+- **frontend/** - Next.js приложение с FSD архитектурой
+- **backend/** - FastAPI приложение с Python
+- **docs/** - Документация проекта
+- **scripts/** - Вспомогательные скрипты
+- **nginx/** - Конфигурация веб-сервера
+- **monitoring/** - Мониторинг и логирование
+- **tests/** - Общие тесты
+- **environments/** - Конфигурации окружений
+- **backup/** - Резервные копии
+- **ai-docs/** - AI документация
+
+## **Frontend структура (FSD архитектура)**
+
+### **app/** - Next.js App Router
+- **layout.tsx** - Корневой layout
+- **page.tsx** - Главная страница
+- **globals.css** - Глобальные стили
+- **api/** - API роуты Next.js
+- **{feature}/** - Страницы по фичам (dashboard, settings, etc.)
+
+### **shared/** - Общие ресурсы
+- **ui/** - Переиспользуемые UI компоненты
+- **lib/** - Утилиты и библиотеки
+- **hooks/** - React хуки
+- **constants/** - Константы
+- **config/** - Конфигурации
+- **types/** - TypeScript типы
+- **store/** - Глобальное состояние
+
+### **entities/** - Бизнес-сущности
+- **user/** - Пользователи
+- **group/** - Группы
+- **post/** - Посты
+- **comment/** - Комментарии
+- **keyword/** - Ключевые слова
+
+### **features/** - Функциональные модули
+- **dashboard/** - Дашборд
+- **settings/** - Настройки
+- **monitoring/** - Мониторинг
+- **parser/** - Парсер
+- **groups/** - Управление группами
+- **keywords/** - Управление ключевыми словами
+- **comments/** - Управление комментариями
+
+### **widgets/** - Составные компоненты
+- **layout/** - Компоненты макета
+- **{feature}-page/** - Страничные виджеты
+- **{feature}-table/** - Табличные виджеты
+- **{feature}-form/** - Формы
+
+### **providers/** - Провайдеры контекста
+- **store/** - Redux/Zustand провайдеры
+
+## **Backend структура**
+
+### **app/** - Основное приложение
+- **main.py** - Точка входа FastAPI
+- **core/** - Ядро приложения
+  - **config.py** - Конфигурация
+  - **database.py** - Настройки БД
+  - **security.py** - Безопасность
+  - **logging.py** - Логирование
+  - **time_utils.py** - Утилиты времени
+  - **hashing.py** - Хеширование
+- **api/** - API эндпоинты
+  - **v1/** - Версия API
+- **models/** - Модели данных
+- **schemas/** - Pydantic схемы
+- **services/** - Бизнес-логика
+- **workers/** - Фоновые задачи
+- **middleware/** - Промежуточное ПО
+
+### **alembic/** - Миграции БД
+- **alembic.ini** - Конфигурация Alembic
+
+### **tests/** - Тесты
+- **test_filter.py** - Тесты фильтров
+- **check_vk_token.py** - Проверка токенов
+
+## **Конфигурационные файлы**
+
+### **Корневые конфиги**
+- **docker-compose.yml** - Основной Docker Compose
+- **docker-compose.dev.yml** - Разработка
+- **docker-compose.prod.ip.yml** - Продакшн
+- **Makefile** - Автоматизация задач
+- **.env** - Переменные окружения
+- **.env.dev** - Разработка
+- **.env.prod** - Продакшн
+
+### **Frontend конфиги**
+- **next.config.js** - Next.js конфигурация
+- **tailwind.config.js** - Tailwind CSS
+- **tsconfig.json** - TypeScript
+- **jest.config.js** - Тестирование
+- **package.json** - Зависимости
+
+### **Backend конфиги**
+- **pyproject.toml** - Python проект
+- **poetry.lock** - Зависимости Poetry
+- **pytest.ini** - Конфигурация тестов
+
+## **Правила организации**
+
+### **✅ DO:**
+- Следуйте FSD архитектуре в frontend
+- Группируйте файлы по функциональности
+- Используйте index.ts для экспортов
+- Разделяйте бизнес-логику и UI
+- Создавайте отдельные папки для каждой сущности
+
+### **❌ DON'T:**
+- Смешивайте слои FSD архитектуры
+- Создавайте файлы в неподходящих папках
+- Дублируйте код между entities/features/widgets
+- Игнорируйте типизацию TypeScript
+- Нарушайте структуру API версионирования
+
+## **Ссылки на документацию**
+- [FSD Guide](mdc:frontend/FSD_GUIDE.md) - Руководство по FSD архитектуре
+- [Frontend README](mdc:frontend/README.md) - Документация frontend
+- [Backend README](mdc:backend/README.md) - Документация backend
