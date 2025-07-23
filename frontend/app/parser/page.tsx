@@ -1,4 +1,4 @@
-import ParserPage from '@/features/parser/ui/ParserPage'
+import { ParserPage } from '@/widgets/parser-page'
 
 export default function ParserRoute() {
   return <ParserPage />

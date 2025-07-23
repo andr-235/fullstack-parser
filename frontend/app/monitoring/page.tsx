@@ -1,6 +1,6 @@
-import MonitoringPage from '@/features/monitoring/ui/MonitoringPage'
+import { MonitoringPage } from '@/widgets/monitoring-page'
 
-export default function MonitoringRoute() {
+export default function MonitoringPage() {
   return <MonitoringPage />
 }
 

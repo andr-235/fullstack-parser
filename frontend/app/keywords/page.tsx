@@ -1,4 +1,4 @@
-import KeywordsPage from '@/features/keywords/ui/KeywordsPage'
+import { KeywordsPage } from '@/widgets/keywords-page'
 
 export default function KeywordsRoute() {
   return <KeywordsPage />

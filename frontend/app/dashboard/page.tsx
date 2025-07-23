@@ -1,4 +1,4 @@
-import DashboardPage from '@/features/dashboard/ui/DashboardPage'
+import { DashboardPage } from '@/widgets/dashboard-page'
 
 export default function DashboardRoute() {
   return <DashboardPage />
