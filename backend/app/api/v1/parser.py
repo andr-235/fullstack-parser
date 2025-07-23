@@ -5,7 +5,14 @@ API endpoints для парсинга комментариев VK
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    status,
+    Query,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -58,8 +65,8 @@ async def get_comments(
     text: Optional[str] = None,
     group_id: Optional[int] = None,
     keyword_id: Optional[int] = None,
-    author_id: Optional[int] = None,
-    author_screen_name: Optional[List[str]] = None,
+    author_id: Optional[List[int]] = Query(None),
+    author_screen_name: Optional[List[str]] = Query(None),
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     is_viewed: Optional[bool] = None,
@@ -67,28 +74,7 @@ async def get_comments(
     pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[VKCommentResponse]:
-    """Получить отфильтрованные комментарии"""
-    import structlog
-
-    logger = structlog.get_logger()
-
-    logger.info(
-        "API get_comments called",
-        text=text,
-        group_id=group_id,
-        keyword_id=keyword_id,
-        author_id=author_id,
-        author_screen_name=author_screen_name,
-        is_viewed=is_viewed,
-        is_archived=is_archived,
-    )
-
-    vk_service = VKAPIService(
-        token=settings.vk.access_token, api_version=settings.vk.api_version
-    )
-    service = ParserService(db, vk_service)
-
-    # Создаем объект параметров поиска
+    """Получает отфильтрованные комментарии с пагинацией"""
     search_params = CommentSearchParams(
         text=text,
         group_id=group_id,
@@ -101,76 +87,12 @@ async def get_comments(
         is_archived=is_archived,
     )
 
-    print(f"DEBUG: author_screen_name = {author_screen_name}")
-    print(
-        f"DEBUG: search_params.author_screen_name = {search_params.author_screen_name}"
+    vk_service = VKAPIService(
+        token=settings.vk.access_token, api_version=settings.vk.api_version
     )
+    parser_service = ParserService(db, vk_service)
 
-    logger.info(
-        "Search params created", search_params=search_params.model_dump()
-    )
-
-    # Получаем отфильтрованные комментарии
-    result = await service.filter_comments(search_params, pagination)
-
-    # Загружаем связанные ключевые слова для каждого комментария
-    import structlog
-    from sqlalchemy import select
-    from sqlalchemy.orm import selectinload
-
-    from app.models.comment_keyword_match import CommentKeywordMatch
-    from app.models.vk_comment import VKComment
-
-    try:
-        # Получаем комментарии с ключевыми словами
-        comment_ids = [item.id for item in result.items]
-
-        # Загружаем комментарии с ключевыми словами одним запросом
-        query = (
-            select(VKComment)
-            .options(
-                selectinload(VKComment.keyword_matches).selectinload(
-                    CommentKeywordMatch.keyword
-                )
-            )
-            .where(VKComment.id.in_(comment_ids))
-        )
-        comments_result = await db.execute(query)
-        comments = comments_result.scalars().all()
-
-        # Создаем словарь комментариев с ключевыми словами
-        comments_dict = {}
-        for comment in comments:
-            matched_keywords = []
-            if comment.keyword_matches:
-                for match in comment.keyword_matches:
-                    if match.keyword:
-                        # Добавляем только слово ключевого слова как строку
-                        matched_keywords.append(match.keyword.word)
-            comments_dict[comment.id] = matched_keywords
-
-        # Обновляем ответы с ключевыми словами
-        updated_items = []
-        for item in result.items:
-            item_dict = item.model_dump()
-            matched_keywords = comments_dict.get(item.id, [])
-            item_dict["matched_keywords"] = matched_keywords
-            updated_items.append(VKCommentResponse(**item_dict))
-
-        return PaginatedResponse(
-            total=result.total,
-            page=result.page,
-            size=result.size,
-            items=updated_items,
-        )
-    except Exception as e:
-        # Возвращаем результат без ключевых слов в случае ошибки
-        return PaginatedResponse(
-            total=result.total,
-            page=result.page,
-            size=result.size,
-            items=result.items,
-        )
+    return await parser_service.filter_comments(search_params, pagination)
 
 
 @router.get("/comments/{comment_id}", response_model=CommentWithKeywords)

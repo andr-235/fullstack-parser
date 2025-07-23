@@ -100,7 +100,7 @@ class CommentSearchParams(BaseModel):
     text: Optional[str] = None
     group_id: Optional[int] = None
     keyword_id: Optional[int] = None
-    author_id: Optional[int] = None
+    author_id: Optional[List[int]] = None
     author_screen_name: Optional[List[str]] = None
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None

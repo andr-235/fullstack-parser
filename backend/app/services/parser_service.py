@@ -849,10 +849,6 @@ class ParserService:
 
     def _build_comments_query(self, search_params: CommentSearchParams):
         """Строит SQL запрос для фильтрации комментариев"""
-        self.logger.info(
-            "Building comments query", search_params=search_params.model_dump()
-        )
-
         query = select(VKComment).options(
             selectinload(VKComment.post).selectinload(VKPost.group)
         )
@@ -871,12 +867,15 @@ class ParserService:
                 )
             )
         if search_params.author_id:
-            query = query.where(VKComment.author_id == search_params.author_id)
+            if isinstance(search_params.author_id, list):
+                query = query.where(
+                    VKComment.author_id.in_(search_params.author_id)
+                )
+            else:
+                query = query.where(
+                    VKComment.author_id == search_params.author_id
+                )
         if search_params.author_screen_name:
-            self.logger.info(
-                "Adding author_screen_name filter",
-                author_screen_name=search_params.author_screen_name,
-            )
             query = query.where(
                 VKComment.author_screen_name.in_(
                     search_params.author_screen_name
@@ -905,7 +904,6 @@ class ParserService:
         )
         query = query.order_by(desc(VKComment.published_at))
 
-        self.logger.info("Query built successfully")
         return query
 
     def _convert_comment_to_response(

@@ -177,7 +177,14 @@ export default function CommentsPage() {
   // Функция для получения параметров фильтра по автору
   const getAuthorParams = () => {
     if (authorFilter === 'special' && specialAuthors.length > 0) {
-      return { author_screen_name: specialAuthors }
+      // Преобразуем author_screen_name в author_id
+      const authorIds = specialAuthors.map(screenName => {
+        // Извлекаем ID из screen_name (например, "id217878560" -> 217878560)
+        const match = screenName.match(/^id(\d+)$/)
+        return match ? parseInt(match[1]) : null
+      }).filter(id => id !== null)
+
+      return { author_id: authorIds }
     }
     return {}
   }

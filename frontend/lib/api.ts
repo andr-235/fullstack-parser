@@ -58,6 +58,9 @@ class APIClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      paramsSerializer: {
+        indexes: null, // Отключаем индексы для массивов
+      },
     })
 
     // Interceptors для обработки ошибок
@@ -326,10 +329,29 @@ class APIClient {
 
   // Comments API
   async getComments(params?: CommentSearchParams & PaginationParams) {
+    // Преобразуем параметры для правильной отправки массивов
+    const queryParams: any = {}
+
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            // Для массивов используем специальный формат для FastAPI
+            queryParams[key] = value
+          } else {
+            queryParams[key] = value
+          }
+        }
+      })
+    }
+
     const { data } = await this.client.get<
       PaginatedResponse<VKCommentResponse>
     >('/parser/comments', {
-      params,
+      params: queryParams,
+      paramsSerializer: {
+        indexes: null, // Отключаем индексы для массивов
+      },
     })
     return data
   }
