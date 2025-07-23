@@ -1,3 +1,9 @@
+---
+description: TypeScript лучшие практики для строгого, чистого и читаемого кода
+globs: **/*.ts, **/*.tsx, **/*.d.ts
+alwaysApply: true
+---
+
 # TypeScript Best Practices
 
 ## **Основные принципы**
@@ -518,8 +524,3 @@ type Status = "active" | "inactive"; // Дублирование
 - [TypeScript Playground](https://www.typescriptlang.org/play)
 - [TypeScript ESLint](https://typescript-eslint.io/)
 - [TypeScript Performance](https://github.com/microsoft/TypeScript/wiki/Performance)
-  description:
-  globs:
-  alwaysApply: false
-
----
