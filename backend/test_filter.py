@@ -4,20 +4,22 @@
 """
 
 import asyncio
-import sys
 import os
+import sys
 
 # Добавляем путь к приложению
 sys.path.insert(0, "/app")
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-from app.services.parser_service import ParserService
-from app.schemas.vk_comment import CommentSearchParams
-from app.models.vk_comment import VKComment
-from app.models.vk_post import VKPost
-from app.models.vk_group import VKGroup
 from datetime import datetime, timezone
+
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+
+from app.models.vk_comment import VKComment
+from app.models.vk_group import VKGroup
+from app.models.vk_post import VKPost
+from app.schemas.vk_comment import CommentSearchParams
+from app.services.parser_service import ParserService
 
 
 async def test_filter():

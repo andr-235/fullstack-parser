@@ -10,8 +10,8 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     HTTPException,
-    status,
     Query,
+    status,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -112,7 +112,9 @@ async def update_comment_status(
 ) -> VKCommentResponse:
     """Обновить статус комментария (просмотрен/архивирован)"""
     from datetime import datetime, timezone
+
     from sqlalchemy import select
+
     from app.models.vk_comment import VKComment
 
     # Получаем комментарий
