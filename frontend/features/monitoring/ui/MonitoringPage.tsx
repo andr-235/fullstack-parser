@@ -170,7 +170,9 @@ export default function MonitoringPage() {
 
     // Если время просрочено
     if (isOverdue(stats.next_monitoring_at)) {
-      const displayTime = stats.next_monitoring_at_local || formatDateTimeShort(stats.next_monitoring_at)
+      const displayTime =
+        stats.next_monitoring_at_local ||
+        formatDateTimeShort(stats.next_monitoring_at)
       return {
         text: `Просрочено ${displayTime}`,
         progress: 100,
@@ -182,7 +184,10 @@ export default function MonitoringPage() {
     const progress = calculateProgress(stats.next_monitoring_at, 5)
 
     // Для отображения используем относительное время
-    const displayText = formatDistanceToNow(new Date(stats.next_monitoring_at), { addSuffix: true, locale: ru })
+    const displayText = formatDistanceToNow(
+      new Date(stats.next_monitoring_at),
+      { addSuffix: true, locale: ru }
+    )
 
     return {
       text: displayText,
@@ -399,12 +404,13 @@ export default function MonitoringPage() {
                   Следующий запуск
                 </p>
                 <p
-                  className={`text-sm font-medium ${nextMonitoringTime.status === 'overdue'
-                    ? 'text-red-400'
-                    : nextMonitoringTime.status === 'waiting'
-                      ? 'text-slate-400'
-                      : 'text-purple-400'
-                    }`}
+                  className={`text-sm font-medium ${
+                    nextMonitoringTime.status === 'overdue'
+                      ? 'text-red-400'
+                      : nextMonitoringTime.status === 'waiting'
+                        ? 'text-slate-400'
+                        : 'text-purple-400'
+                  }`}
                 >
                   {nextMonitoringTime.text}
                 </p>

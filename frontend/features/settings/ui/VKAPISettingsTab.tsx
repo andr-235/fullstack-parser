@@ -65,9 +65,9 @@ export function VKAPISettingsTab() {
   const isTokenValid = formData.access_token.length > 0
   const isRequestsValid =
     formData.requests_per_second >=
-    SETTINGS_VALIDATION.vk_api.requests_per_second.min &&
+      SETTINGS_VALIDATION.vk_api.requests_per_second.min &&
     formData.requests_per_second <=
-    SETTINGS_VALIDATION.vk_api.requests_per_second.max
+      SETTINGS_VALIDATION.vk_api.requests_per_second.max
 
   if (isLoading) {
     return <div>Загрузка настроек...</div>

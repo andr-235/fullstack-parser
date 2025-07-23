@@ -1,11 +1,13 @@
+from datetime import datetime, timezone
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.services.parser_service import ParserService
-from app.schemas.vk_comment import CommentSearchParams
+
 from app.models.vk_comment import VKComment
-from app.models.vk_post import VKPost
 from app.models.vk_group import VKGroup
-from datetime import datetime, timezone
+from app.models.vk_post import VKPost
+from app.schemas.vk_comment import CommentSearchParams
+from app.services.parser_service import ParserService
 
 
 @pytest.mark.asyncio

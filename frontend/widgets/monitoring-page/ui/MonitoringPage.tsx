@@ -3,5 +3,5 @@
 import { MonitoringPage as MonitoringPageFeature } from '@/features/monitoring'
 
 export function MonitoringPage() {
- return <MonitoringPageFeature />
-} 
+  return <MonitoringPageFeature />
+}

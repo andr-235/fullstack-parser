@@ -149,7 +149,9 @@ export default function GroupsMonitoringTable({
 
     // Если время просрочено
     if (isOverdue(group.next_monitoring_at)) {
-      const displayTime = group.next_monitoring_at_local || formatDateTimeShort(group.next_monitoring_at)
+      const displayTime =
+        group.next_monitoring_at_local ||
+        formatDateTimeShort(group.next_monitoring_at)
       return {
         text: `Просрочено ${displayTime}`,
         progress: 100,
@@ -165,7 +167,10 @@ export default function GroupsMonitoringTable({
     )
 
     // Для отображения используем относительное время
-    const displayText = formatDistanceToNow(new Date(group.next_monitoring_at), { addSuffix: true, locale: ru })
+    const displayText = formatDistanceToNow(
+      new Date(group.next_monitoring_at),
+      { addSuffix: true, locale: ru }
+    )
 
     return {
       text: displayText,
@@ -177,7 +182,9 @@ export default function GroupsMonitoringTable({
 
   const getLastMonitoringTime = (group: VKGroupMonitoring) => {
     if (group.last_monitoring_success) {
-      const displayTime = group.last_monitoring_success_local || formatDateTimeShort(group.last_monitoring_success)
+      const displayTime =
+        group.last_monitoring_success_local ||
+        formatDateTimeShort(group.last_monitoring_success)
       return {
         text: displayTime,
         status: 'success',

@@ -284,10 +284,11 @@ export default function ParserPage() {
                 </Button>
               ) : (
                 <Button
-                  className={`w-full flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105 ${isProcessing || startParserMutation.isPending
-                    ? 'bg-yellow-600 hover:bg-yellow-700 cursor-wait'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                    }`}
+                  className={`w-full flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105 ${
+                    isProcessing || startParserMutation.isPending
+                      ? 'bg-yellow-600 hover:bg-yellow-700 cursor-wait'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                   onClick={handleStart}
                   disabled={!selectedGroupId || isActionInProgress}
                 >
@@ -386,12 +387,12 @@ export default function ParserPage() {
                                 <span className="text-slate-300">
                                   {task.completed_at
                                     ? formatDistanceToNow(
-                                      new Date(task.completed_at),
-                                      {
-                                        addSuffix: true,
-                                        locale: ru,
-                                      }
-                                    )
+                                        new Date(task.completed_at),
+                                        {
+                                          addSuffix: true,
+                                          locale: ru,
+                                        }
+                                      )
                                     : '-'}
                                 </span>
                               </div>

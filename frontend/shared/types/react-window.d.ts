@@ -6,10 +6,15 @@ declare module 'react-window-infinite-loader' {
     itemCount: number
     loadMoreItems: (startIndex: number, stopIndex: number) => Promise<void>
     children: (props: {
-      onItemsRendered: (props: { visibleStartIndex: number; visibleStopIndex: number }) => void
+      onItemsRendered: (props: {
+        visibleStartIndex: number
+        visibleStopIndex: number
+      }) => void
       ref: React.RefObject<any>
     }) => ReactNode
   }
 
-  export default function InfiniteLoader(props: InfiniteLoaderProps): JSX.Element
-} 
+  export default function InfiniteLoader(
+    props: InfiniteLoaderProps
+  ): JSX.Element
+}
