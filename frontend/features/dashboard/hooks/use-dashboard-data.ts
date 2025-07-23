@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { api, createQueryKey } from '@/lib/api'
+import { api, createQueryKey } from '@/shared/lib/api'
 import { useGlobalStats, useDashboardStats } from './use-stats'
 import type {
   GlobalStats,

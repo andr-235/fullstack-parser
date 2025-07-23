@@ -11,7 +11,7 @@ import {
   Settings,
   Activity,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 import { AppIcon } from '@/shared/ui'
 
 const navigation = [

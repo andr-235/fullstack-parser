@@ -41,7 +41,7 @@ import {
   formatDateTimeShort,
   isOverdue,
   calculateProgress,
-} from '@/lib/time-utils'
+} from '@/shared/lib/time-utils'
 import type { VKGroupMonitoring } from '@/types/api'
 import MonitoringSettings from './MonitoringSettings'
 

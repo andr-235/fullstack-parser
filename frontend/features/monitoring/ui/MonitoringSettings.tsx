@@ -19,7 +19,7 @@ import {
 import type { VKGroupMonitoring, MonitoringGroupUpdate } from '@/types/api'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { formatDateTimeShort } from '@/lib/time-utils'
+import { formatDateTimeShort } from '@/shared/lib/time-utils'
 
 interface MonitoringSettingsProps {
   group: VKGroupMonitoring

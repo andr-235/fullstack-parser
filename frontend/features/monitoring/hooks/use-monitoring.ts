@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, createQueryKey } from '@/lib/api'
+import { api, createQueryKey } from '@/shared/lib/api'
 import type {
   MonitoringStats,
   VKGroupMonitoring,

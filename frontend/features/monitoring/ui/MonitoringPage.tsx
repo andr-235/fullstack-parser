@@ -53,7 +53,7 @@ import {
   formatDateTimeShort,
   isOverdue,
   calculateProgress,
-} from '@/lib/time-utils'
+} from '@/shared/lib/time-utils'
 import GroupsMonitoringTable from './GroupsMonitoringTable'
 import { toast } from 'react-hot-toast'
 import { useGroups } from '@/entities/group'

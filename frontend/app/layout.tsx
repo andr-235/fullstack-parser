@@ -2,9 +2,9 @@ import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
 
-import { Providers } from './providers'
-import { Sidebar } from '@/components/layout/sidebar'
-import { Header } from '@/components/layout/header'
+import { ReactQueryProvider } from '@/providers/react-query-provider'
+import { Sidebar } from '@/widgets/layout'
+import { Header } from '@/widgets/layout'
 
 const inter = localFont({
   src: './fonts/Inter-VariableFont_opsz,wght.ttf',
@@ -44,7 +44,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} bg-slate-900 font-sans text-slate-50`}
       >
-        <Providers>
+        <ReactQueryProvider>
           <div className="flex min-h-screen">
             <Sidebar />
             <div className="flex-1 flex flex-col">
@@ -52,7 +52,7 @@ export default function RootLayout({
               <main className="flex-1 overflow-auto p-6">{children}</main>
             </div>
           </div>
-        </Providers>
+        </ReactQueryProvider>
       </body>
     </html>
   )

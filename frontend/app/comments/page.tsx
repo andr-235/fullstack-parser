@@ -1,4 +1,4 @@
-import CommentsPage from '@/features/comments/ui/CommentsPage'
+import { CommentsPage } from '@/widgets/comments-page'
 
 export default function CommentsRoute() {
   return <CommentsPage />

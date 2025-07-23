@@ -53,7 +53,7 @@ import {
 } from '@/shared/ui'
 import { Label } from '@/shared/ui'
 import { useKeywordCategories } from '@/entities/keyword'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 import UploadKeywordsModal from './UploadKeywordsModal'
 
 const KeywordRow = ({

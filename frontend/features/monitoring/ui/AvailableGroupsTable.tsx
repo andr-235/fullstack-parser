@@ -21,7 +21,7 @@ import { Play, Settings, Plus, Clock } from 'lucide-react'
 import type { VKGroupMonitoring } from '@/types/api'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { formatDateTimeShort } from '@/lib/time-utils'
+import { formatDateTimeShort } from '@/shared/lib/time-utils'
 import MonitoringSettings from './MonitoringSettings'
 
 interface AvailableGroupsTableProps {
