@@ -4,7 +4,7 @@ import {
  CardContent,
  CardHeader,
  CardTitle,
-} from '@/components/ui/card'
+} from '@/shared/ui'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import type { CollapsibleSectionProps } from '../../types'
 

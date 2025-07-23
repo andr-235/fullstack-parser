@@ -44,7 +44,7 @@ export function Header({ className }: HeaderProps) {
     >
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <AppIcon size="md" className="w-6 h-6" />
+          <AppIcon size={24} className="w-6 h-6" />
           <span className="text-sm font-medium text-slate-200">ВК Парсер</span>
         </div>
         <nav className="hidden sm:flex items-center text-sm font-medium">

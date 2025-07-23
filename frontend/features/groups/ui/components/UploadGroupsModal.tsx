@@ -5,10 +5,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
+} from '@/shared/ui'
 import { Button } from '@/shared/ui'
 import { Input } from '@/shared/ui'
 import { Label } from '@/shared/ui'
@@ -23,7 +24,7 @@ interface UploadGroupsModalProps {
   onSuccess?: () => void
 }
 
-export default function UploadGroupsModal({
+export function UploadGroupsModal({
   onSuccess,
 }: UploadGroupsModalProps) {
   const [isOpen, setIsOpen] = useState(false)

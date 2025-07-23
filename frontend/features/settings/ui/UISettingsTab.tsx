@@ -16,14 +16,14 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@/shared/ui'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from '@/shared/ui'
 import { Badge } from '@/shared/ui'
 import { Monitor, RefreshCw, Bell } from 'lucide-react'
 import { THEME_OPTIONS, SETTINGS_VALIDATION } from '@/types/settings'

@@ -78,9 +78,9 @@ export function CommentsTable({
        </TableCell>
        <TableCell>
         <div className="flex flex-wrap gap-1">
-         {comment.matched_keywords?.map((keyword) => (
-          <Badge key={keyword.id} variant="secondary" className="text-xs">
-           {keyword.word}
+         {comment.matched_keywords?.map((keyword, index) => (
+          <Badge key={index} variant="secondary" className="text-xs">
+           {keyword}
           </Badge>
          ))}
         </div>

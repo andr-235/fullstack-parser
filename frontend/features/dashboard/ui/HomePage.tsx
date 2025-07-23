@@ -1,12 +1,6 @@
 'use client'
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui'
 import { Button } from '@/shared/ui'
 import { BarChart, Search, Zap, Code } from 'lucide-react'
 import Link from 'next/link'

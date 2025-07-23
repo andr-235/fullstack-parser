@@ -1,8 +1,5 @@
 import React from 'react'
-import {
- Card,
- CardContent,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Users, Activity, Pause } from 'lucide-react'
 import { CollapsibleSection } from './CollapsibleSection'
 import type { GroupsStatsData } from '../../types'

@@ -15,14 +15,14 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@/shared/ui'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from '@/shared/ui'
 import { FileText } from 'lucide-react'
 import { LOG_LEVEL_OPTIONS, LOG_FORMAT_OPTIONS } from '@/types/settings'
 

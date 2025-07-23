@@ -16,7 +16,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from '@/shared/ui'
 import { Badge } from '@/shared/ui'
 import { Clock, Users, Timer, Play } from 'lucide-react'
 import { SETTINGS_VALIDATION } from '@/types/settings'

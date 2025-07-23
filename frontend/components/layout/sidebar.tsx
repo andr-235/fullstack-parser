@@ -29,7 +29,7 @@ export function Sidebar() {
   return (
     <aside className="w-64 flex-shrink-0 border-r border-slate-700 bg-slate-900 flex flex-col">
       <div className="flex items-center gap-2 p-4 h-16 border-b border-slate-700">
-        <AppIcon size="md" className="w-6 h-6" />
+        <AppIcon size={24} className="w-6 h-6" />
         <h2 className="text-lg font-semibold text-slate-50">ВК Парсер</h2>
       </div>
 
