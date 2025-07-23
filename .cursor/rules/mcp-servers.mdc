@@ -1,0 +1,99 @@
+---
+description: Управление и использование MCP серверов в проекте
+globs: .cursor/mcp.json, **/*.{ts,tsx,js,jsx,py}
+alwaysApply: true
+---
+
+# MCP Серверы
+
+## **Настроенные серверы**
+
+### **Context7**
+
+```json
+{
+  "context7": {
+    "command": "npx",
+    "args": ["-y", "@upstash/context7-mcp"]
+  }
+}
+```
+
+**Назначение:** Доступ к актуальной документации библиотек и фреймворков
+**Использование:** Получение up-to-date документации для разработки
+
+### **Sequential Thinking**
+
+```json
+{
+  "sequential-thinking": {
+    "command": "uvx",
+    "args": [
+      "--from",
+      "git+https://github.com/arben-adm/mcp-sequential-thinking",
+      "--with",
+      "portalocker",
+      "mcp-sequential-thinking"
+    ]
+  }
+}
+```
+
+**Назначение:** Пошаговое мышление и решение сложных задач
+**Использование:** Анализ проблем, планирование архитектуры
+
+## **Рекомендации по использованию**
+
+### **✅ DO:**
+
+- Используйте Context7 для получения актуальной документации
+- Применяйте Sequential Thinking для сложных архитектурных решений
+- Обновляйте MCP серверы регулярно
+- Документируйте новые MCP серверы в этом правиле
+- Проверяйте совместимость с текущими версиями инструментов
+
+### **❌ DON'T:**
+
+- Не добавляйте MCP серверы без проверки безопасности
+- Не используйте устаревшие версии серверов
+- Не игнорируйте ошибки подключения к MCP серверам
+- Не смешивайте разные источники MCP серверов
+
+## **План обновлений**
+
+### **Ежемесячно**
+
+```bash
+# Проверка обновлений Context7
+npx -y @upstash/context7-mcp@latest
+
+# Проверка обновлений Sequential Thinking
+uvx --from git+https://github.com/arben-adm/mcp-sequential-thinking --with portalocker mcp-sequential-thinking
+```
+
+### **При добавлении новых серверов**
+
+1. Проверьте безопасность источника
+2. Протестируйте в dev окружении
+3. Обновите это правило
+4. Документируйте назначение и использование
+
+## **Безопасность**
+
+### **Проверка источников**
+
+- Context7: Официальный пакет от Upstash
+- Sequential Thinking: Проверенный GitHub репозиторий
+- Всегда проверяйте репутацию источника
+
+### **Мониторинг**
+
+- Следите за обновлениями MCP серверов
+- Проверяйте changelog перед обновлением
+- Тестируйте новые версии в изолированной среде
+
+## **Ссылки**
+
+- [MCP Protocol](https://modelcontextprotocol.io/)
+- [Context7 Documentation](https://github.com/upstash/context7)
+- [Sequential Thinking MCP](https://github.com/arben-adm/mcp-sequential-thinking)
