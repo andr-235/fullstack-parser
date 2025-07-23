@@ -1,0 +1,457 @@
+# Feature-Sliced Design (FSD) Архитектура
+
+## **Основные принципы**
+
+### **Слои архитектуры (сверху вниз)**
+
+1. **app/** - Инициализация приложения, глобальные стили, провайдеры
+2. **pages/** - Страницы приложения, роутинг
+3. **widgets/** - Составные блоки страниц
+4. **features/** - Функциональные модули
+5. **entities/** - Бизнес-сущности
+6. **shared/** - Переиспользуемые ресурсы
+
+### **Правила импортов**
+
+```typescript
+// ✅ DO: Импорт только из нижних слоев
+import { Button } from "@/shared/ui/button";
+import { UserCard } from "@/entities/user";
+import { AuthForm } from "@/features/auth";
+
+// ❌ DON'T: Импорт из верхних слоев
+import { AppProvider } from "@/app/providers"; // В entities/features/widgets
+import { DashboardPage } from "@/pages/dashboard"; // В entities/features
+```
+
+## **Структура слоев**
+
+### **app/** - Инициализация приложения
+
+```typescript
+// app/providers/index.tsx
+export const AppProvider = ({ children }) => (
+  <ThemeProvider>
+    <StoreProvider>
+      <RouterProvider>{children}</RouterProvider>
+    </StoreProvider>
+  </ThemeProvider>
+);
+
+// app/styles/globals.css
+// Глобальные стили, CSS переменные, сброс стилей
+```
+
+### **pages/** - Страницы приложения
+
+```typescript
+// pages/dashboard/
+├── ui/
+│   └── DashboardPage.tsx
+├── api/
+│   └── loader.ts
+└── index.ts
+
+// pages/dashboard/index.ts
+export { DashboardPage } from './ui/DashboardPage';
+export { loader } from './api/loader';
+
+// pages/dashboard/ui/DashboardPage.tsx
+import { DashboardWidget } from '@/widgets/dashboard';
+import { UserProfile } from '@/entities/user';
+
+export const DashboardPage = () => (
+  <div>
+    <DashboardWidget />
+    <UserProfile />
+  </div>
+);
+```
+
+### **widgets/** - Составные блоки
+
+```typescript
+// widgets/dashboard/
+├── ui/
+│   ├── DashboardWidget.tsx
+│   ├── StatsCard.tsx
+│   └── Chart.tsx
+├── model/
+│   └── store.ts
+└── index.ts
+
+// widgets/dashboard/ui/DashboardWidget.tsx
+import { StatsCard } from './StatsCard';
+import { Chart } from './Chart';
+import { useDashboardStore } from '../model/store';
+
+export const DashboardWidget = () => {
+  const stats = useDashboardStore();
+  return (
+    <div>
+      <StatsCard data={stats} />
+      <Chart data={stats} />
+    </div>
+  );
+};
+```
+
+### **features/** - Функциональные модули
+
+```typescript
+// features/auth/
+├── ui/
+│   ├── LoginForm.tsx
+│   └── RegisterForm.tsx
+├── api/
+│   ├── login.ts
+│   └── register.ts
+├── model/
+│   └── auth-store.ts
+└── index.ts
+
+// features/auth/ui/LoginForm.tsx
+import { Button } from '@/shared/ui/button';
+import { Input } from '@/shared/ui/input';
+import { useAuthStore } from '../model/auth-store';
+
+export const LoginForm = () => {
+  const { login } = useAuthStore();
+  // Логика формы
+};
+```
+
+### **entities/** - Бизнес-сущности
+
+```typescript
+// entities/user/
+├── ui/
+│   ├── UserCard.tsx
+│   ├── UserAvatar.tsx
+│   └── UserInfo.tsx
+├── model/
+│   ├── types.ts
+│   └── store.ts
+├── api/
+│   └── user-api.ts
+└── index.ts
+
+// entities/user/model/types.ts
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+}
+
+// entities/user/ui/UserCard.tsx
+import { UserAvatar } from './UserAvatar';
+import { UserInfo } from './UserInfo';
+
+export const UserCard = ({ user }: { user: User }) => (
+  <div>
+    <UserAvatar src={user.avatar} />
+    <UserInfo user={user} />
+  </div>
+);
+```
+
+### **shared/** - Переиспользуемые ресурсы
+
+```typescript
+// shared/ui/
+├── button/
+│   ├── Button.tsx
+│   ├── Button.module.css
+│   └── index.ts
+├── input/
+│   ├── Input.tsx
+│   └── index.ts
+└── index.ts
+
+// shared/ui/button/Button.tsx
+import styles from './Button.module.css';
+
+export const Button = ({ children, ...props }) => (
+  <button className={styles.button} {...props}>
+    {children}
+  </button>
+);
+
+// shared/lib/
+├── api/
+│   └── client.ts
+├── utils/
+│   └── format.ts
+└── constants/
+    └── config.ts
+```
+
+## **Правила организации**
+
+### **✅ DO:**
+
+- **Разделяйте ответственность**: каждый слой отвечает за свою область
+- **Используйте index.ts**: для экспорта публичного API слоя
+- **Группируйте по функциональности**: связанные компоненты в одной папке
+- **Следуйте принципу единственной ответственности**: один файл - одна задача
+- **Используйте типизацию**: TypeScript для всех компонентов и функций
+
+### **❌ DON'T:**
+
+- **Нарушайте правила импортов**: импорт из верхних слоев в нижние
+- **Создавайте циклические зависимости**: между слоями или внутри слоя
+- **Смешивайте слои**: не размещайте entities в features или наоборот
+- **Дублируйте код**: используйте shared для переиспользуемых компонентов
+- **Игнорируйте типизацию**: всегда определяйте типы для props и данных
+
+## **Структура файлов**
+
+### **Стандартная структура слайса**
+
+```typescript
+// {layer}/{slice}/
+├── ui/           // React компоненты
+├── api/          // API вызовы, хуки
+├── model/        // Состояние, типы, утилиты
+├── lib/          // Вспомогательные функции
+└── index.ts      // Публичный API
+```
+
+### **Публичный API (index.ts)**
+
+```typescript
+// entities/user/index.ts
+export { UserCard } from "./ui/UserCard";
+export { UserAvatar } from "./ui/UserAvatar";
+export type { User } from "./model/types";
+export { useUserStore } from "./model/store";
+
+// НЕ экспортируйте внутренние файлы
+// export { UserCard } from './ui/UserCard/UserCard.tsx'; // ❌
+```
+
+## **Импорты и зависимости**
+
+### **Правила импортов между слоями**
+
+```typescript
+// app → pages → widgets → features → entities → shared
+// ✅ Разрешено: импорт из нижних слоев
+// ❌ Запрещено: импорт из верхних слоев
+
+// Примеры правильных импортов
+import { Button } from "@/shared/ui/button"; // ✅
+import { User } from "@/entities/user"; // ✅
+import { AuthForm } from "@/features/auth"; // ✅
+import { DashboardWidget } from "@/widgets/dashboard"; // ✅
+
+// Примеры неправильных импортов
+import { AppProvider } from "@/app/providers"; // ❌
+import { DashboardPage } from "@/pages/dashboard"; // ❌
+```
+
+### **Кросс-импорты между сущностями**
+
+```typescript
+// entities/user/@x/post/index.ts
+export type { User } from "../model/types";
+
+// entities/post/model/types.ts
+import type { User } from "entities/user/@x/post";
+
+export interface Post {
+  id: string;
+  title: string;
+  author: User;
+}
+```
+
+## **Состояние и управление данными**
+
+### **Локальное состояние**
+
+```typescript
+// features/auth/model/auth-store.ts
+import { create } from "zustand";
+
+interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  logout: () => void;
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  isAuthenticated: false,
+  login: async (credentials) => {
+    // Логика авторизации
+  },
+  logout: () => set({ user: null, isAuthenticated: false }),
+}));
+```
+
+### **API вызовы**
+
+```typescript
+// entities/user/api/user-api.ts
+import { apiClient } from "@/shared/lib/api";
+
+export const getUser = async (id: string): Promise<User> => {
+  const response = await apiClient.get(`/users/${id}`);
+  return response.data;
+};
+
+export const updateUser = async (
+  id: string,
+  data: Partial<User>
+): Promise<User> => {
+  const response = await apiClient.put(`/users/${id}`, data);
+  return response.data;
+};
+```
+
+## **Стилизация**
+
+### **CSS модули**
+
+```typescript
+// shared/ui/button/Button.module.css
+.button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: var(--primary-color);
+  color: white;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--primary-hover);
+}
+
+// shared/ui/button/Button.tsx
+import styles from './Button.module.css';
+
+export const Button = ({ className, ...props }) => (
+  <button className={`${styles.button} ${className || ''}`} {...props} />
+);
+```
+
+### **CSS переменные**
+
+```css
+/* app/styles/globals.css */
+:root {
+  --primary-color: #007bff;
+  --primary-hover: #0056b3;
+  --text-color: #333;
+  --border-color: #ddd;
+  --background-color: #fff;
+}
+```
+
+## **Тестирование**
+
+### **Структура тестов**
+
+```typescript
+// entities/user/__tests__/UserCard.test.tsx
+import { render, screen } from "@testing-library/react";
+import { UserCard } from "../ui/UserCard";
+
+describe("UserCard", () => {
+  it("отображает информацию о пользователе", () => {
+    const user = { id: "1", name: "John Doe", email: "john@example.com" };
+    render(<UserCard user={user} />);
+
+    expect(screen.getByText("John Doe")).toBeInTheDocument();
+    expect(screen.getByText("john@example.com")).toBeInTheDocument();
+  });
+});
+```
+
+## **Мониторинг и отладка**
+
+### **Логирование**
+
+```typescript
+// shared/lib/logger.ts
+export const logger = {
+  info: (message: string, data?: any) => console.log(`[INFO] ${message}`, data),
+  error: (message: string, error?: any) =>
+    console.error(`[ERROR] ${message}`, error),
+  warn: (message: string, data?: any) =>
+    console.warn(`[WARN] ${message}`, data),
+};
+```
+
+### **Обработка ошибок**
+
+```typescript
+// shared/lib/error-boundary.tsx
+import React from "react";
+
+export class ErrorBoundary extends React.Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    logger.error("Ошибка в компоненте", { error, errorInfo });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div>Что-то пошло не так</div>;
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+## **Производительность**
+
+### **Ленивая загрузка**
+
+```typescript
+// pages/dashboard/ui/DashboardPage.tsx
+import { lazy, Suspense } from "react";
+
+const DashboardWidget = lazy(() => import("@/widgets/dashboard"));
+
+export const DashboardPage = () => (
+  <Suspense fallback={<div>Загрузка...</div>}>
+    <DashboardWidget />
+  </Suspense>
+);
+```
+
+### **Мемоизация**
+
+```typescript
+// entities/user/ui/UserCard.tsx
+import { memo } from "react";
+
+export const UserCard = memo(({ user }: { user: User }) => (
+  <div>
+    <UserAvatar src={user.avatar} />
+    <UserInfo user={user} />
+  </div>
+));
+```
+
+## **Ссылки**
+
+- [FSD Documentation](https://feature-sliced.design/)
+- [FSD Examples](https://github.com/feature-sliced/examples)
+- [FSD CLI](https://github.com/feature-sliced/cli)
+  description:
+  globs:
+  alwaysApply: false
+
+---
