@@ -406,7 +406,7 @@ export default function GroupsPage() {
                 <span>Только активные</span>
               </label>
 
-              <UploadGroupsModal onSuccess={() => {}} />
+              <UploadGroupsModal onSuccess={() => { }} />
             </div>
           </div>
 
@@ -470,7 +470,7 @@ export default function GroupsPage() {
                   <table className="min-w-full relative">
                     <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 shadow-md">
                       <tr>
-                        <th className="px-4 py-3 text-left font-bold text-slate-200 w-20">
+                        <th className="px-3 py-2 text-left font-bold text-slate-200 w-16">
                           ID
                         </th>
                         <SortableHeader
@@ -478,11 +478,11 @@ export default function GroupsPage() {
                           currentSort={sortBy}
                           currentOrder={sortOrder}
                           onSort={handleSort}
-                          className="w-80"
+                          className="w-48"
                         >
                           Группа
                         </SortableHeader>
-                        <th className="px-4 py-3 text-left font-bold text-slate-200 w-24">
+                        <th className="px-3 py-2 text-left font-bold text-slate-200 w-20">
                           Статус
                         </th>
                         <SortableHeader
@@ -490,7 +490,7 @@ export default function GroupsPage() {
                           currentSort={sortBy}
                           currentOrder={sortOrder}
                           onSort={handleSort}
-                          className="w-32"
+                          className="w-24"
                         >
                           Комментарии
                         </SortableHeader>
@@ -499,7 +499,7 @@ export default function GroupsPage() {
                           currentSort={sortBy}
                           currentOrder={sortOrder}
                           onSort={handleSort}
-                          className="w-32"
+                          className="w-24"
                         >
                           Участники
                         </SortableHeader>
@@ -508,11 +508,11 @@ export default function GroupsPage() {
                           currentSort={sortBy}
                           currentOrder={sortOrder}
                           onSort={handleSort}
-                          className="w-40"
+                          className="w-32"
                         >
                           Последний парсинг
                         </SortableHeader>
-                        <th className="px-4 py-3 text-right font-bold text-slate-200 w-24">
+                        <th className="px-3 py-2 text-right font-bold text-slate-200 w-20">
                           Действия
                         </th>
                       </tr>
@@ -527,11 +527,11 @@ export default function GroupsPage() {
                             animationFillMode: 'both',
                           }}
                         >
-                          <td className="px-4 py-3 font-mono text-blue-400 font-semibold w-20">
+                          <td className="px-3 py-2 font-mono text-blue-400 font-semibold w-16">
                             {group.vk_id}
                           </td>
-                          <td className="px-4 py-3 w-80">
-                            <div className="flex items-center gap-2">
+                          <td className="px-3 py-2 w-48">
+                            <div className="flex items-center gap-1">
                               <div className="relative flex-shrink-0">
                                 <img
                                   src={
@@ -539,16 +539,16 @@ export default function GroupsPage() {
                                     `${AVATAR_PLACEHOLDER}${encodeURIComponent(group.name)}`
                                   }
                                   alt={group.name}
-                                  className="w-8 h-8 rounded-full border-2 border-slate-600 shadow-sm object-cover bg-slate-700 transition-transform duration-200 hover:scale-110"
+                                  className="w-5 h-5 rounded-full border border-slate-600 shadow-sm object-cover bg-slate-700 transition-transform duration-200 hover:scale-110"
                                   loading="lazy"
                                 />
                                 {group.is_active && (
-                                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-800 animate-pulse"></div>
+                                  <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-slate-800 animate-pulse"></div>
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1">
-                                  <h3 className="font-semibold text-slate-200 truncate text-sm">
+                                  <h3 className="font-semibold text-slate-200 truncate text-xs">
                                     {group.name}
                                   </h3>
                                   <Button
@@ -566,13 +566,13 @@ export default function GroupsPage() {
                                       })
                                     }}
                                     disabled={refreshGroupMutation.isPending}
-                                    className="h-4 w-4 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                                    className="h-2.5 w-2.5 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
                                     title="Обновить информацию о группе из VK"
                                   >
-                                    <RefreshCw className="h-3 w-3" />
+                                    <RefreshCw className="h-1.5 w-1.5" />
                                   </Button>
                                 </div>
-                                <div className="flex items-center gap-1 mt-1">
+                                <div className="flex items-center gap-0.5 mt-0.5">
                                   <span className="text-xs text-slate-400 truncate">
                                     @{group.screen_name}
                                   </span>
@@ -580,43 +580,42 @@ export default function GroupsPage() {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => handleCopyLink(group.screen_name)}
-                                    className="h-4 w-4 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                                    className="h-2.5 w-2.5 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
                                   >
                                     {copiedGroup === group.screen_name ? (
-                                      <Check className="h-2 w-2" />
+                                      <Check className="h-1 w-1" />
                                     ) : (
-                                      <Copy className="h-2 w-2" />
+                                      <Copy className="h-1 w-1" />
                                     )}
                                   </Button>
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     asChild
-                                    className="h-4 w-4 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                                    className="h-2.5 w-2.5 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
                                   >
                                     <a
                                       href={`https://vk.com/${group.screen_name}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
-                                      <ExternalLink className="h-2 w-2" />
+                                      <ExternalLink className="h-1 w-1" />
                                     </a>
                                   </Button>
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3 w-24">
+                          <td className="px-3 py-2 w-20">
                             <div className="flex items-center gap-2">
                               <Badge
                                 variant={
                                   group.is_active ? 'default' : 'secondary'
                                 }
-                                className={`${
-                                  group.is_active
-                                    ? 'bg-green-600 hover:bg-green-700'
-                                    : 'bg-slate-600 hover:bg-slate-700'
-                                } text-white`}
+                                className={`${group.is_active
+                                  ? 'bg-green-600 hover:bg-green-700'
+                                  : 'bg-slate-600 hover:bg-slate-700'
+                                  } text-white`}
                               >
                                 {group.is_active ? 'Активна' : 'Неактивна'}
                               </Badge>
@@ -631,7 +630,7 @@ export default function GroupsPage() {
                               )} */}
                             </div>
                           </td>
-                          <td className="px-4 py-3 w-32">
+                          <td className="px-3 py-2 w-24">
                             <div className="flex items-center gap-2">
                               <MessageSquare className="h-4 w-4 text-blue-400" />
                               <span className="font-semibold text-slate-200">
@@ -639,7 +638,7 @@ export default function GroupsPage() {
                               </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 w-32">
+                          <td className="px-3 py-2 w-24">
                             <div className="flex items-center gap-2">
                               <Users className="h-4 w-4 text-green-400" />
                               <span className="font-semibold text-slate-200">
@@ -647,7 +646,7 @@ export default function GroupsPage() {
                               </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 w-40">
+                          <td className="px-3 py-2 w-32">
                             <div className="text-sm text-slate-400">
                               {group.last_parsed_at ? (
                                 <div className="flex items-center gap-2">
@@ -664,7 +663,7 @@ export default function GroupsPage() {
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-right w-24">
+                          <td className="px-3 py-2 text-right w-20">
                             <div className="flex items-center justify-end gap-1">
                               <Button
                                 variant="ghost"
