@@ -12,10 +12,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.time_utils import format_datetime_for_display
 from app.models.vk_group import VKGroup
-from app.schemas.base import (
-    PaginatedResponse,
-    StatusResponse,
-)
+from app.schemas.base import PaginatedResponse, StatusResponse
 from app.schemas.monitoring import (
     GroupMonitoringConfig,
     GroupMonitoringResponse,

@@ -1,0 +1,339 @@
+# Git Workflow и Стандарты
+
+## **Основные принципы работы с репозиторием**
+
+### **Инициализация и клонирование**
+
+```bash
+# ✅ DO: Клонирование репозитория
+git clone <repository-url>
+cd <project-name>
+
+# ✅ DO: Инициализация нового репозитория
+git init
+git remote add origin <repository-url>
+```
+
+### **Структура веток**
+
+- **main/master** - основная ветка с продакшн кодом
+- **develop** - ветка разработки для интеграции фич
+- **feature/\*** - ветки для разработки новых функций
+- **release/\*** - ветки для подготовки релизов
+- **hotfix/\*** - ветки для критических исправлений
+
+## **Жизненный цикл веток**
+
+### **Основные ветки**
+
+```bash
+# ✅ DO: Работа с основной веткой
+git checkout main
+git pull origin main
+
+# ✅ DO: Создание ветки разработки
+git checkout -b develop
+git push -u origin develop
+```
+
+### **Feature ветки**
+
+```bash
+# ✅ DO: Создание feature ветки от develop
+git checkout develop
+git pull origin develop
+git checkout -b feature/user-authentication
+
+# ✅ DO: Завершение feature ветки
+git checkout develop
+git merge feature/user-authentication
+git branch -d feature/user-authentication
+```
+
+### **Release ветки**
+
+```bash
+# ✅ DO: Создание release ветки
+git checkout develop
+git checkout -b release/v1.2.0
+
+# ✅ DO: Завершение release
+git checkout main
+git merge release/v1.2.0
+git tag -a v1.2.0 -m "Release version 1.2.0"
+git checkout develop
+git merge release/v1.2.0
+git branch -d release/v1.2.0
+```
+
+### **Hotfix ветки**
+
+```bash
+# ✅ DO: Создание hotfix от main
+git checkout main
+git checkout -b hotfix/critical-bug-fix
+
+# ✅ DO: Завершение hotfix
+git checkout main
+git merge hotfix/critical-bug-fix
+git tag -a v1.2.1 -m "Hotfix critical bug"
+git checkout develop
+git merge hotfix/critical-bug-fix
+git branch -d hotfix/critical-bug-fix
+```
+
+## **Стандарты именования**
+
+### **Ветки**
+
+```bash
+# ✅ DO: Правильные имена веток
+feature/user-authentication
+feature/add-payment-gateway
+bugfix/login-validation-error
+hotfix/security-vulnerability
+release/v1.2.0
+
+# ❌ DON'T: Неправильные имена
+feature/user auth
+bugfix/bug
+hotfix/fix
+```
+
+### **Коммиты**
+
+```bash
+# ✅ DO: Conventional Commits
+feat: add user authentication system
+fix: resolve login validation error
+docs: update API documentation
+style: format code according to standards
+refactor: simplify authentication logic
+test: add unit tests for user service
+chore: update dependencies
+
+# ❌ DON'T: Неправильные сообщения
+fixed bug
+updated code
+wip
+```
+
+## **Pull Request процесс**
+
+### **Создание PR**
+
+1. **Подготовка ветки**
+
+   ```bash
+   git checkout develop
+   git pull origin develop
+   git checkout -b feature/your-feature
+   ```
+
+2. **Разработка и коммиты**
+
+   ```bash
+   # Делайте частые коммиты с осмысленными сообщениями
+   git add .
+   git commit -m "feat: add user registration form"
+   ```
+
+3. **Push и создание PR**
+   ```bash
+   git push -u origin feature/your-feature
+   # Создайте PR в GitHub/GitLab
+   ```
+
+### **Code Review**
+
+- **Обязательные проверки:**
+
+  - Код соответствует стандартам проекта
+  - Все тесты проходят
+  - Документация обновлена
+  - Нет конфликтов с основной веткой
+
+- **Процесс ревью:**
+  - Минимум 1 одобрение от команды
+  - Все комментарии должны быть исправлены
+  - Squash commits перед merge
+
+## **Разрешение конфликтов**
+
+### **Алгоритм разрешения**
+
+```bash
+# ✅ DO: Обновление ветки перед merge
+git checkout feature/your-feature
+git fetch origin
+git rebase origin/develop
+
+# Если есть конфликты:
+# 1. Решите конфликты в файлах
+# 2. Добавьте разрешенные файлы
+git add <resolved-files>
+# 3. Продолжите rebase
+git rebase --continue
+```
+
+### **Стратегии разрешения**
+
+```bash
+# ✅ DO: Используйте merge tool
+git mergetool
+
+# ✅ DO: Ручное разрешение
+# Откройте файлы с конфликтами и выберите нужные изменения
+# Удалите маркеры конфликтов (<<<<<<, =======, >>>>>>>)
+```
+
+## **Сообщения коммитов**
+
+### **Структура сообщения**
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+### **Типы коммитов**
+
+- **feat** - новая функция
+- **fix** - исправление бага
+- **docs** - изменения в документации
+- **style** - форматирование кода
+- **refactor** - рефакторинг кода
+- **test** - добавление тестов
+- **chore** - обновление зависимостей, конфигурации
+
+### **Примеры хороших сообщений**
+
+```bash
+# ✅ DO: Конкретные и описательные
+feat(auth): add OAuth2 authentication with Google
+fix(api): resolve user data validation error
+docs(readme): update installation instructions
+refactor(utils): simplify date formatting logic
+test(user): add unit tests for user service
+
+# ❌ DON'T: Расплывчатые сообщения
+fix bug
+update code
+wip
+```
+
+## **Поддержание чистоты истории**
+
+### **Rebase vs Merge**
+
+```bash
+# ✅ DO: Используйте rebase для feature веток
+git checkout feature/your-feature
+git rebase develop
+
+# ✅ DO: Используйте merge для main/develop
+git checkout develop
+git merge feature/your-feature
+```
+
+### **Squash коммиты**
+
+```bash
+# ✅ DO: Объедините коммиты перед merge
+git rebase -i HEAD~3
+# Выберите 'squash' для объединения коммитов
+```
+
+### **Очистка истории**
+
+```bash
+# ✅ DO: Удалите мертвые ветки
+git branch -d feature/completed-feature
+git push origin --delete feature/completed-feature
+
+# ✅ DO: Очистите локальные ветки
+git remote prune origin
+```
+
+## **Важные команды**
+
+### **Проверка состояния**
+
+```bash
+# ✅ DO: Регулярно проверяйте статус
+git status
+git log --oneline -10
+git branch -a
+```
+
+### **Отмена изменений**
+
+```bash
+# ✅ DO: Отмена последнего коммита
+git reset --soft HEAD~1
+
+# ✅ DO: Отмена изменений в файле
+git checkout -- <filename>
+
+# ✅ DO: Отмена всех изменений
+git reset --hard HEAD
+```
+
+### **Работа с тегами**
+
+```bash
+# ✅ DO: Создание тегов для релизов
+git tag -a v1.2.0 -m "Release version 1.2.0"
+git push origin v1.2.0
+
+# ✅ DO: Просмотр тегов
+git tag -l
+git show v1.2.0
+```
+
+## **Лучшие практики**
+
+### **✅ DO:**
+
+- Делайте частые коммиты с осмысленными сообщениями
+- Используйте feature ветки для каждой задачи
+- Обновляйте ветки перед созданием PR
+- Пишите подробные описания в PR
+- Используйте conventional commits
+- Регулярно синхронизируйтесь с основной веткой
+
+### **❌ DON'T:**
+
+- Не коммитьте в main/master напрямую
+- Не оставляйте конфликты неразрешенными
+- Не используйте расплывчатые сообщения коммитов
+- Не забывайте удалять мертвые ветки
+- Не игнорируйте code review
+
+## **Полезные алиасы**
+
+```bash
+# Добавьте в ~/.gitconfig
+[alias]
+    st = status
+    co = checkout
+    br = branch
+    ci = commit
+    lg = log --oneline --graph --decorate
+    unstage = reset HEAD --
+    last = log -1 HEAD
+```
+
+## **Ссылки**
+
+- [Git Documentation](https://git-scm.com/doc)
+- [Conventional Commits](https://www.conventionalcommits.org/)
+- [Git Flow](https://nvie.com/posts/a-successful-git-branching-model/)
+  description:
+  globs:
+  alwaysApply: false
+
+---
