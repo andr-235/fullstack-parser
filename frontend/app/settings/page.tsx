@@ -8,8 +8,8 @@ import { Suspense } from 'react'
 import { SettingsTabs } from '@/features/settings/ui/SettingsTabs'
 import { SettingsHeader } from '@/features/settings/ui/SettingsHeader'
 import { SettingsHealthWidget } from '@/features/settings/ui/SettingsHealthWidget'
-import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent } from '@/shared/ui'
+import { Skeleton } from '@/shared/ui'
 
 export default function SettingsPage() {
   return (

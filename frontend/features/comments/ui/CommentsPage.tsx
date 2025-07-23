@@ -4,14 +4,13 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { useInfiniteComments, useMarkCommentAsViewed, useArchiveComment, useUnarchiveComment } from '@/entities/comment'
 import { useGroups } from '@/entities/group'
 import { useKeywords } from '@/entities/keyword'
-import { useGlobalStats } from '@/features/dashboard'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from '@/shared/ui'
 import {
   Table,
   TableBody,
@@ -19,19 +18,19 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@/shared/ui'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
+} from '@/shared/ui'
+import { Input } from '@/shared/ui'
+import { Button } from '@/shared/ui'
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
+import { LoadingSpinner } from '@/shared/ui'
 import { formatDistanceToNow, format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import {
@@ -228,7 +227,6 @@ export default function CommentsPage() {
 
   const { data: groupsData } = useGroups()
   const { data: keywordsData } = useKeywords()
-  const { data: globalStats } = useGlobalStats()
   const comments = useMemo(
     () => data?.pages.flatMap((page) => page.items) ?? [],
     [data]
@@ -298,9 +296,9 @@ export default function CommentsPage() {
     loadingComments[`unarchive-${commentId}`] || false
 
   // Статистика
-  const totalComments = globalStats?.total_comments || 0
-  const totalGroups = globalStats?.total_groups || 0
-  const totalKeywords = globalStats?.total_keywords || 0
+  const totalComments = 0 // Global stats are removed, so this will be 0
+  const totalGroups = 0 // Global stats are removed, so this will be 0
+  const totalKeywords = 0 // Global stats are removed, so this will be 0
 
   return (
     <div className="space-y-4">

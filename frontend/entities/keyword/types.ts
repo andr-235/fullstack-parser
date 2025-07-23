@@ -1,28 +1,11 @@
-import { BaseEntity } from '@/shared/types/api'
+import { BaseEntity, KeywordBase, KeywordCreate, KeywordUpdate, KeywordResponse } from '@/shared/types/api'
 
-// Keyword типы
-export interface KeywordBase {
-  word: string
-  category?: string
-  description?: string
-  is_active: boolean
-  is_case_sensitive: boolean
-  is_whole_word: boolean
-}
-
-export interface KeywordCreate extends KeywordBase {}
-
-export interface KeywordUpdate {
-  word?: string
-  category?: string
-  description?: string
-  is_active?: boolean
-  is_case_sensitive?: boolean
-  is_whole_word?: boolean
-}
-
-export interface KeywordResponse extends KeywordBase, BaseEntity {
-  total_matches: number
+// Re-export types from shared
+export type {
+  KeywordBase,
+  KeywordCreate,
+  KeywordUpdate,
+  KeywordResponse
 }
 
 export interface KeywordStats {

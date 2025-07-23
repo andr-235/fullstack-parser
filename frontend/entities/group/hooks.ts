@@ -84,3 +84,26 @@ export function useGroupStats(groupId: number) {
     staleTime: 2 * 60 * 1000, // 2 минуты
   })
 }
+
+/**
+ * Хук для загрузки групп из файла
+ */
+export function useUploadGroupsFromFile() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      file,
+      options,
+    }: {
+      file: File
+      options?: {
+        is_active?: boolean
+        max_posts_to_check?: number
+      }
+    }) => api.uploadGroupsFromFile(file, options),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+    },
+  })
+}

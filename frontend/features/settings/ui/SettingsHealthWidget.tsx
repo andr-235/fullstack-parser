@@ -3,8 +3,8 @@
  */
 
 import { useSettingsHealth } from '../hooks'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
 import {
   Activity,
   Database,

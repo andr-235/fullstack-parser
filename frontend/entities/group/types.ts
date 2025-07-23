@@ -1,33 +1,11 @@
-import { BaseEntity } from '@/shared/types/api'
+import { BaseEntity, VKGroupBase, VKGroupCreate, VKGroupUpdate, VKGroupResponse } from '@/shared/types/api'
 
-// VK Group типы
-export interface VKGroupBase {
-  screen_name: string
-  name: string
-  description?: string
-  is_active: boolean
-  max_posts_to_check: number
-}
-
-export interface VKGroupCreate extends VKGroupBase {
-  vk_id_or_screen_name: string
-}
-
-export interface VKGroupUpdate {
-  name?: string
-  description?: string
-  is_active?: boolean
-  max_posts_to_check?: number
-}
-
-export interface VKGroupResponse extends VKGroupBase, BaseEntity {
-  vk_id: number
-  last_parsed_at?: string
-  total_posts_parsed: number
-  total_comments_found: number
-  members_count?: number
-  is_closed: boolean
-  photo_url?: string
+// Re-export types from shared
+export type {
+  VKGroupBase,
+  VKGroupCreate,
+  VKGroupUpdate,
+  VKGroupResponse
 }
 
 export interface VKGroupStats {

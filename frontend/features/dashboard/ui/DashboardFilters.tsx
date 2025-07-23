@@ -1,17 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+import { Button } from '@/shared/ui'
+import { Input } from '@/shared/ui'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
+} from '@/shared/ui'
+import { Badge } from '@/shared/ui'
 import {
   Search,
   Filter,

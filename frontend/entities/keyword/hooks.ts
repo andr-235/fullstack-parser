@@ -110,3 +110,29 @@ export function useDeleteKeyword() {
     },
   })
 }
+
+/**
+ * Хук для загрузки ключевых слов из файла
+ */
+export function useUploadKeywordsFromFile() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      file,
+      options,
+    }: {
+      file: File
+      options?: {
+        default_category?: string
+        is_active?: boolean
+        is_case_sensitive?: boolean
+        is_whole_word?: boolean
+      }
+    }) => api.uploadKeywordsFromFile(file, options),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['keywords'] })
+      queryClient.invalidateQueries({ queryKey: ['keywords', 'categories'] })
+    },
+  })
+}

@@ -10,7 +10,7 @@ import {
 import {
   Card,
   CardContent,
-} from '@/components/ui/card'
+} from '@/shared/ui'
 import {
   Table,
   TableBody,
@@ -18,10 +18,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
+} from '@/shared/ui'
+import { Button } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
+import { LoadingSpinner } from '@/shared/ui'
 import {
   Play,
   Pause,

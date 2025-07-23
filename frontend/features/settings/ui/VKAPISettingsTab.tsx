@@ -10,9 +10,9 @@ import {
   useUpdateSettings,
   useTestVKAPIConnection,
 } from '../hooks'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Button } from '@/shared/ui'
+import { Input } from '@/shared/ui'
+import { Label } from '@/shared/ui'
 import {
   Card,
   CardContent,
@@ -20,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/shared/ui'
 import { Wifi, Eye, EyeOff, TestTube } from 'lucide-react'
 import { SETTINGS_VALIDATION } from '@/types/settings'
 

@@ -9,12 +9,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { FileUpload } from '@/components/ui/file-upload'
-import { useUploadKeywordsFromFile } from '@/features/keywords/hooks/use-keywords'
+import { Button } from '@/shared/ui'
+import { Input } from '@/shared/ui'
+import { Label } from '@/shared/ui'
+import { Switch } from '@/shared/ui'
+import { FileUpload } from '@/shared/ui'
+import { useUploadKeywordsFromFile } from '@/entities/keyword'
 import { Upload, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import type { KeywordUploadResponse } from '@/types/api'

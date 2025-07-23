@@ -1,13 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
+import { Button } from '@/shared/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui'
 import { useGlobalStats, useDashboardStats } from '../hooks'
 import { useDashboardData } from '../hooks/use-dashboard-data'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { LoadingSpinner } from '@/shared/ui'
 import type { KeywordResponse, VKGroupResponse } from '@/types/api'
 import {
   Users,

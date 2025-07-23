@@ -1,52 +1,199 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend - VK Parser
 
-## Getting Started
+Frontend приложение для парсинга комментариев ВКонтакте, построенное на основе Feature-Sliced Design (FSD) архитектуры.
 
-First, run the development server:
+## Архитектура FSD
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Проект следует принципам Feature-Sliced Design с четким разделением на слои:
+
+### 📁 Структура проекта
+
+```
+frontend/
+├── app/                    # App layer - инициализация приложения
+│   ├── layout.tsx         # Корневой layout
+│   ├── providers.tsx      # Провайдеры приложения
+│   └── globals.css        # Глобальные стили
+├── pages/                 # Pages layer - страницы приложения
+│   └── index.ts           # Экспорты страниц
+├── widgets/               # Widgets layer - композитные блоки
+│   ├── comments-table/    # Виджет таблицы комментариев
+│   └── index.ts           # Экспорты виджетов
+├── features/              # Features layer - функциональные модули
+│   ├── comments/          # Управление комментариями
+│   ├── groups/            # Управление группами
+│   ├── keywords/          # Управление ключевыми словами
+│   ├── monitoring/        # Мониторинг групп
+│   ├── parser/            # Парсинг данных
+│   ├── dashboard/         # Дашборд
+│   └── settings/          # Настройки
+├── entities/              # Entities layer - бизнес-сущности
+│   ├── comment/           # Сущность комментария
+│   ├── group/             # Сущность группы
+│   ├── keyword/           # Сущность ключевого слова
+│   └── index.ts           # Экспорты сущностей
+├── shared/                # Shared layer - переиспользуемый код
+│   ├── ui/                # UI компоненты
+│   ├── hooks/             # Переиспользуемые хуки
+│   ├── types/             # Общие типы
+│   └── store/             # Глобальное состояние
+├── processes/             # Processes layer - бизнес-процессы
+│   ├── comment-processing.ts
+│   └── index.ts
+└── lib/                   # Внешние библиотеки и утилиты
+    ├── api.ts             # API клиент
+    └── utils.ts           # Утилиты
 ```
 
-Open [https://parser.mysite.ru](https://parser.mysite.ru) with your browser to see the result.
+### 🔄 Правила импортов
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Слои могут импортировать только слои ниже себя:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app → pages → widgets → features → entities → shared
+```
 
-## Learn More
+**✅ Правильно:**
 
-To learn more about Next.js, take a look at the following resources:
+```typescript
+// features может импортировать entities и shared
+import { useComments } from '@/entities/comment'
+import { Button } from '@/shared/ui'
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+// entities может импортировать только shared
+import { formatDate } from '@/shared/utils'
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**❌ Неправильно:**
 
-## Deploy on Vercel
+```typescript
+// Нарушение FSD - features импортирует features
+import { useGroups } from '@/features/groups/hooks/use-groups'
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+// Нарушение FSD - entities импортирует features
+import { useDashboard } from '@/features/dashboard'
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 🏗️ Структура слоев
 
-## Переменные окружения (Next.js + Docker)
+#### **App Layer** (`app/`)
 
-- Для локальной разработки используй `.env.local` в папке frontend:
-  ```
-  NEXT_PUBLIC_API_URL=https://parser.mysite.ru
-  ```
-- Для production/staging — переменные задаются через docker-compose или `.env.production`.
-- После изменения переменных всегда пересобирай контейнер:
-  ```
-  docker compose up -d --build frontend
-  ```
-- Все переменные с префиксом `NEXT_PUBLIC_` доступны на клиенте и "зашиваются" в js-бандл на этапе build.
-- Не храни секреты в переменных с этим префиксом!
+- Инициализация приложения
+- Провайдеры (React Query, Toast, etc.)
+- Глобальные стили и конфигурация
 
-Подробнее: https://nextjs.org/docs/app/building-your-application/configuring/environment-variables
+#### **Pages Layer** (`pages/`)
+
+- Страницы приложения
+- Композиция виджетов и фич
+- Роутинг
+
+#### **Widgets Layer** (`widgets/`)
+
+- Композитные UI блоки
+- Объединение нескольких фич
+- Переиспользуемые виджеты
+
+#### **Features Layer** (`features/`)
+
+- Функциональные модули
+- UI компоненты фич
+- Хуки для работы с данными
+- Типы фич
+
+#### **Entities Layer** (`entities/`)
+
+- Бизнес-сущности
+- Модели данных
+- Хуки для работы с сущностями
+- Типы сущностей
+
+#### **Shared Layer** (`shared/`)
+
+- Переиспользуемый код
+- UI компоненты
+- Утилиты
+- Хуки
+- Типы
+
+#### **Processes Layer** (`processes/`)
+
+- Бизнес-процессы
+- Сложная логика
+- Оркестрация фич
+
+### 🎯 Принципы FSD
+
+1. **Слоистая архитектура** - четкое разделение ответственности
+2. **Правила импортов** - только вниз по слоям
+3. **Изоляция фич** - фичи не зависят друг от друга
+4. **Переиспользование** - shared слой для общего кода
+5. **Модели данных** - entities содержат бизнес-логику
+
+### 🚀 Разработка
+
+#### Добавление новой фичи:
+
+```bash
+# Создание структуры фичи
+mkdir -p features/new-feature/{ui,hooks,types}
+touch features/new-feature/index.ts
+```
+
+#### Добавление нового UI компонента:
+
+```bash
+# В shared/ui для переиспользуемых компонентов
+touch shared/ui/new-component.tsx
+# Обновить shared/ui/index.ts
+```
+
+#### Добавление новой сущности:
+
+```bash
+# Создание структуры сущности
+mkdir -p entities/new-entity/{model,hooks,types}
+touch entities/new-entity/index.ts
+```
+
+### 📦 Технологии
+
+- **Next.js 14** - React фреймворк
+- **TypeScript** - типизация
+- **Tailwind CSS** - стилизация
+- **React Query** - управление состоянием
+- **Lucide React** - иконки
+- **Date-fns** - работа с датами
+
+### 🔧 Команды
+
+```bash
+# Установка зависимостей
+pnpm install
+
+# Запуск в режиме разработки
+pnpm dev
+
+# Сборка для продакшена
+pnpm build
+
+# Запуск тестов
+pnpm test
+
+# Линтинг
+pnpm lint
+
+# Форматирование кода
+pnpm format
+```
+
+### 📋 Checklist для FSD
+
+- [x] Правильная структура слоев
+- [x] Корректные импорты между слоями
+- [x] Модели в entities
+- [x] UI компоненты в shared/ui
+- [x] Изоляция фич
+- [x] Переиспользуемые виджеты
+- [x] Бизнес-процессы в processes
+- [x] Провайдеры в app слое

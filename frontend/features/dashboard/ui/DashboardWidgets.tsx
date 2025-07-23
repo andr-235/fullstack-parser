@@ -1,9 +1,9 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
+import { Button } from '@/shared/ui'
+import { Progress } from '@/shared/ui'
 import {
   TrendingUp,
   TrendingDown,

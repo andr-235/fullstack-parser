@@ -1,6 +1,8 @@
-import { BaseEntity } from '@/shared/types/api'
-import { VKGroupResponse } from '@/entities/group/types'
-import { KeywordResponse } from '@/entities/keyword/types'
+import {
+  BaseEntity,
+  VKGroupResponse,
+  KeywordResponse,
+} from '@/shared/types/api'
 
 // VK Comment типы
 export interface VKCommentBase {

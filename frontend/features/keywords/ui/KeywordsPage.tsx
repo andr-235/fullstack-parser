@@ -16,7 +16,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from '@/shared/ui'
 import {
   Table,
   TableBody,
@@ -24,12 +24,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
-import { Badge } from '@/components/ui/badge'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
+} from '@/shared/ui'
+import { Button } from '@/shared/ui'
+import { Input } from '@/shared/ui'
+import { Switch } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
+import { LoadingSpinner } from '@/shared/ui'
 import {
   Plus,
   Trash2,
@@ -50,8 +50,8 @@ import {
   SelectContent,
   SelectItem,
   SelectValue,
-} from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
+} from '@/shared/ui'
+import { Label } from '@/shared/ui'
 import { useKeywordCategories } from '@/entities/keyword'
 import { cn } from '@/lib/utils'
 import UploadKeywordsModal from './UploadKeywordsModal'

@@ -56,7 +56,7 @@ import {
 } from '@/lib/time-utils'
 import GroupsMonitoringTable from './GroupsMonitoringTable'
 import { toast } from 'react-hot-toast'
-import { useGroups } from '@/features/groups/hooks/use-groups'
+import { useGroups } from '@/entities/group'
 import MonitoringHistory from './MonitoringHistory'
 
 export default function MonitoringPage() {

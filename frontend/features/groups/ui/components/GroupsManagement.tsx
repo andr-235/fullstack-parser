@@ -5,11 +5,11 @@ import {
  CardHeader,
  CardTitle,
 } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { Input } from '@/shared/ui'
+import { Button } from '@/shared/ui'
+import { LoadingSpinner } from '@/shared/ui'
 import { Search, Plus } from 'lucide-react'
-import UploadGroupsModal from '../UploadGroupsModal'
+import UploadGroupsModal from './UploadGroupsModal'
 import { useCreateGroup } from '../../hooks'
 import { toast } from 'react-hot-toast'
 import type { GroupsManagementProps } from '../../types'

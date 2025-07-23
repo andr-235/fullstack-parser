@@ -4,8 +4,8 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Bell, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/shared/ui'
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui'
 import { AppIcon } from '@/shared/ui'
 
 interface HeaderProps {

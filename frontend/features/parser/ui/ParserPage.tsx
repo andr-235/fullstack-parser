@@ -15,7 +15,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from '@/shared/ui'
 import {
   Table,
   TableBody,
@@ -23,17 +23,17 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
-import { Badge, BadgeProps } from '@/components/ui/badge'
+} from '@/shared/ui'
+import { Button } from '@/shared/ui'
+import { Badge, BadgeProps } from '@/shared/ui'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
+} from '@/shared/ui'
+import { LoadingSpinner } from '@/shared/ui'
 import {
   Play,
   Pause,
@@ -47,7 +47,7 @@ import {
   Clock,
   Target,
 } from 'lucide-react'
-import { Progress } from '@/components/ui/progress'
+import { Progress } from '@/shared/ui'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import type { ParseTaskResponse } from '@/types/api'
@@ -285,8 +285,8 @@ export default function ParserPage() {
               ) : (
                 <Button
                   className={`w-full flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105 ${isProcessing || startParserMutation.isPending
-                      ? 'bg-yellow-600 hover:bg-yellow-700 cursor-wait'
-                      : 'bg-blue-600 hover:bg-blue-700'
+                    ? 'bg-yellow-600 hover:bg-yellow-700 cursor-wait'
+                    : 'bg-blue-600 hover:bg-blue-700'
                     }`}
                   onClick={handleStart}
                   disabled={!selectedGroupId || isActionInProgress}
