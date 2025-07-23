@@ -1,0 +1,525 @@
+# TypeScript Best Practices
+
+## **Основные принципы**
+
+### **Строгая типизация**
+
+- **Всегда включайте строгий режим**: Используйте `"strict": true` в tsconfig.json
+- **Избегайте `any`**: Используйте `unknown` для неизвестных типов
+- **Явно типизируйте функции**: Всегда указывайте типы параметров и возвращаемых значений
+- **Используйте union types**: Вместо `any` для ограниченного набора значений
+
+```typescript
+// ✅ DO: Строгая типизация
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: "admin" | "user" | "moderator";
+}
+
+function getUser(id: string): Promise<User | null> {
+  return api.get(`/users/${id}`);
+}
+
+// ❌ DON'T: Слабая типизация
+function getUser(id: any): any {
+  return api.get(`/users/${id}`);
+}
+```
+
+## **Конфигурация TypeScript**
+
+### **Рекомендуемые настройки tsconfig.json**
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false
+  }
+}
+```
+
+## **Типизация функций**
+
+### **Явные типы возвращаемых значений**
+
+```typescript
+// ✅ DO: Явные типы возвращаемых значений
+function calculateTotal(items: CartItem[]): number {
+  return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+}
+
+async function fetchUserData(id: string): Promise<User | null> {
+  try {
+    const response = await api.get(`/users/${id}`);
+    return response.data;
+  } catch {
+    return null;
+  }
+}
+
+// ❌ DON'T: Неявные типы
+function calculateTotal(items) {
+  return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+}
+```
+
+### **Типизация параметров**
+
+```typescript
+// ✅ DO: Строгая типизация параметров
+interface CreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
+function createUser(data: CreateUserRequest): Promise<User> {
+  return api.post("/users", data);
+}
+
+// ❌ DON'T: Слабая типизация
+function createUser(data: any): any {
+  return api.post("/users", data);
+}
+```
+
+## **Интерфейсы и типы**
+
+### **Использование интерфейсов для объектов**
+
+```typescript
+// ✅ DO: Интерфейсы для объектов
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface UserCreateRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
+interface UserUpdateRequest {
+  name?: string;
+  email?: string;
+}
+
+// ❌ DON'T: Типы для простых объектов
+type User = {
+  id: string;
+  name: string;
+  email: string;
+};
+```
+
+### **Union и Intersection типы**
+
+```typescript
+// ✅ DO: Union типы для ограниченных значений
+type UserRole = "admin" | "user" | "moderator";
+type UserStatus = "active" | "inactive" | "suspended";
+
+interface User {
+  id: string;
+  role: UserRole;
+  status: UserStatus;
+}
+
+// ✅ DO: Intersection типы для композиции
+interface BaseUser {
+  id: string;
+  name: string;
+}
+
+interface AdminUser extends BaseUser {
+  permissions: string[];
+}
+
+type SuperAdmin = AdminUser & {
+  canDeleteUsers: true;
+  canManageSystem: true;
+};
+```
+
+## **Обработка null и undefined**
+
+### **Strict null checks**
+
+```typescript
+// ✅ DO: Правильная обработка null/undefined
+function getUserName(user: User | null): string {
+  if (user === null) {
+    return "Unknown User";
+  }
+  return user.name;
+}
+
+function processUserData(user: User | undefined): void {
+  if (!user) {
+    throw new Error("User is required");
+  }
+
+  // TypeScript знает, что user не null/undefined
+  console.log(user.name);
+}
+
+// ❌ DON'T: Игнорирование null/undefined
+function getUserName(user: User): string {
+  return user.name; // Может вызвать ошибку runtime
+}
+```
+
+### **Optional chaining и nullish coalescing**
+
+```typescript
+// ✅ DO: Безопасный доступ к свойствам
+function getUserEmail(user: User | null): string | undefined {
+  return user?.email;
+}
+
+function getNestedValue(obj: any): string {
+  return obj?.user?.profile?.email ?? "default@example.com";
+}
+
+// ❌ DON'T: Небезопасный доступ
+function getUserEmail(user: User | null): string {
+  return user.email; // Ошибка компиляции
+}
+```
+
+## **Генерики**
+
+### **Типобезопасные генерики**
+
+```typescript
+// ✅ DO: Генерики с ограничениями
+interface ApiResponse<T> {
+  data: T;
+  status: number;
+  message: string;
+}
+
+async function fetchData<T>(url: string): Promise<ApiResponse<T>> {
+  const response = await fetch(url);
+  return response.json();
+}
+
+// Использование
+const userResponse = await fetchData<User>("/api/users/1");
+const usersResponse = await fetchData<User[]>("/api/users");
+
+// ✅ DO: Генерики с ограничениями
+function mergeObjects<T extends object, U extends object>(
+  obj1: T,
+  obj2: U
+): T & U {
+  return { ...obj1, ...obj2 };
+}
+```
+
+## **Type Guards**
+
+### **Пользовательские type guards**
+
+```typescript
+// ✅ DO: Type guards для безопасной типизации
+function isUser(obj: unknown): obj is User {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    "id" in obj &&
+    "name" in obj &&
+    "email" in obj
+  );
+}
+
+function processData(data: unknown): void {
+  if (isUser(data)) {
+    // TypeScript знает, что data это User
+    console.log(data.name);
+  } else {
+    console.log("Invalid user data");
+  }
+}
+
+// ✅ DO: In operator type guard
+function processShape(shape: Circle | Square): void {
+  if ("radius" in shape) {
+    // TypeScript знает, что это Circle
+    console.log(shape.radius);
+  } else {
+    // TypeScript знает, что это Square
+    console.log(shape.side);
+  }
+}
+```
+
+## **Обработка ошибок**
+
+### **Типизированные ошибки**
+
+```typescript
+// ✅ DO: Типизированные ошибки
+class ValidationError extends Error {
+  constructor(message: string, public field: string, public value: unknown) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
+
+class ApiError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number,
+    public endpoint: string
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+function validateUser(data: unknown): User {
+  if (!isUser(data)) {
+    throw new ValidationError("Invalid user data", "user", data);
+  }
+  return data;
+}
+```
+
+## **React и TypeScript**
+
+### **Типизация компонентов**
+
+```typescript
+// ✅ DO: Типизированные React компоненты
+interface UserCardProps {
+  user: User;
+  onEdit?: (user: User) => void;
+  onDelete?: (userId: string) => void;
+  className?: string;
+}
+
+const UserCard: React.FC<UserCardProps> = ({
+  user,
+  onEdit,
+  onDelete,
+  className,
+}) => {
+  return (
+    <div className={className}>
+      <h3>{user.name}</h3>
+      <p>{user.email}</p>
+      {onEdit && <button onClick={() => onEdit(user)}>Edit</button>}
+      {onDelete && <button onClick={() => onDelete(user.id)}>Delete</button>}
+    </div>
+  );
+};
+
+// ✅ DO: Типизированные хуки
+function useUser(userId: string) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    fetchUser(userId)
+      .then(setUser)
+      .catch(setError)
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  return { user, loading, error };
+}
+```
+
+## **Утилитарные типы**
+
+### **Полезные утилитарные типы**
+
+```typescript
+// ✅ DO: Использование утилитарных типов
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Для создания пользователя не нужны id, createdAt, updatedAt
+type CreateUserRequest = Omit<User, "id" | "createdAt" | "updatedAt">;
+
+// Для обновления пользователя все поля опциональны
+type UpdateUserRequest = Partial<Omit<User, "id" | "createdAt" | "updatedAt">>;
+
+// Только для чтения
+type ReadonlyUser = Readonly<User>;
+
+// Выборка определенных полей
+type UserPublicInfo = Pick<User, "id" | "name" | "email">;
+```
+
+## **Константы и литералы**
+
+### **Типизированные константы**
+
+```typescript
+// ✅ DO: Типизированные константы
+const USER_ROLES = {
+  ADMIN: "admin",
+  USER: "user",
+  MODERATOR: "moderator",
+} as const;
+
+type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
+
+const API_ENDPOINTS = {
+  USERS: "/api/users",
+  POSTS: "/api/posts",
+  COMMENTS: "/api/comments",
+} as const;
+
+// ❌ DON'T: Небезопасные константы
+const USER_ROLES = ["admin", "user", "moderator"];
+```
+
+## **Импорты и экспорты**
+
+### **Типизированные импорты**
+
+```typescript
+// ✅ DO: Типизированные импорты
+import type { User, CreateUserRequest } from "./types";
+import { createUser, updateUser } from "./api";
+
+// ✅ DO: Re-export типов
+export type { User, CreateUserRequest } from "./types";
+export { createUser, updateUser } from "./api";
+
+// ❌ DON'T: Смешивание типов и значений
+import { User, createUser } from "./types";
+```
+
+## **Тестирование**
+
+### **Типизированные тесты**
+
+```typescript
+// ✅ DO: Типизированные тесты
+import { render, screen } from "@testing-library/react";
+import { UserCard } from "./UserCard";
+
+const mockUser: User = {
+  id: "1",
+  name: "John Doe",
+  email: "john@example.com",
+  role: "user",
+  status: "active",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+describe("UserCard", () => {
+  it("отображает информацию о пользователе", () => {
+    render(<UserCard user={mockUser} />);
+
+    expect(screen.getByText("John Doe")).toBeInTheDocument();
+    expect(screen.getByText("john@example.com")).toBeInTheDocument();
+  });
+});
+```
+
+## **Производительность**
+
+### **Оптимизация типов**
+
+```typescript
+// ✅ DO: Эффективные типы
+// Используйте const assertions для литералов
+const STATUSES = ["active", "inactive"] as const;
+type Status = (typeof STATUSES)[number];
+
+// Используйте mapped types для больших объектов
+type ApiResponse<T> = {
+  data: T;
+  status: number;
+  message: string;
+};
+
+// ❌ DON'T: Неэффективные типы
+type Status = "active" | "inactive"; // Дублирование
+```
+
+## **Лучшие практики**
+
+### **✅ DO:**
+
+- **Используйте строгий режим**: Всегда включайте `strict: true`
+- **Явно типизируйте**: Все функции, параметры и возвращаемые значения
+- **Используйте интерфейсы**: Для объектов и API контрактов
+- **Обрабатывайте null/undefined**: Используйте strict null checks
+- **Применяйте type guards**: Для безопасной типизации
+- **Используйте утилитарные типы**: Pick, Omit, Partial, Readonly
+- **Типизируйте константы**: Используйте const assertions
+- **Разделяйте типы и значения**: В импортах и экспортах
+
+### **❌ DON'T:**
+
+- **Не используйте `any`**: Заменяйте на `unknown` или конкретные типы
+- **Не игнорируйте null/undefined**: Всегда обрабатывайте их явно
+- **Не смешивайте типы и значения**: В импортах
+- **Не используйте небезопасные type assertions**: Без проверок
+- **Не забывайте про strict mode**: Всегда включайте строгие проверки
+- **Не дублируйте типы**: Используйте утилитарные типы
+- **Не игнорируйте ошибки компилятора**: Исправляйте все TypeScript ошибки
+
+## **Инструменты и линтеры**
+
+### **ESLint правила для TypeScript**
+
+```json
+{
+  "@typescript-eslint/no-explicit-any": "error",
+  "@typescript-eslint/explicit-function-return-type": "error",
+  "@typescript-eslint/explicit-module-boundary-types": "error",
+  "@typescript-eslint/no-unused-vars": "error",
+  "@typescript-eslint/no-non-null-assertion": "error",
+  "@typescript-eslint/prefer-nullish-coalescing": "error",
+  "@typescript-eslint/prefer-optional-chain": "error"
+}
+```
+
+## **Ссылки**
+
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+- [TypeScript Playground](https://www.typescriptlang.org/play)
+- [TypeScript ESLint](https://typescript-eslint.io/)
+- [TypeScript Performance](https://github.com/microsoft/TypeScript/wiki/Performance)
+  description:
+  globs:
+  alwaysApply: false
+
+---
