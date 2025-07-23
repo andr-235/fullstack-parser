@@ -2,16 +2,11 @@
 const nextConfig = {
   // Экспериментальные функции
   experimental: {
-    // Оптимизация бандла
-    optimizePackageImports: [
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-select',
-      '@radix-ui/react-tabs',
-      '@radix-ui/react-checkbox',
-      'lucide-react',
-      'date-fns',
-    ],
-    // Улучшенная производительность
+    // Включаем новые функции React 19
+    reactCompiler: true,
+    // Улучшенная оптимизация изображений
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    // Улучшенная обработка CSS
     turbo: {
       rules: {
         '*.svg': {
@@ -24,54 +19,18 @@ const nextConfig = {
 
   // Оптимизация изображений
   images: {
-    domains: ['vk.com', 'sun9-*.userapi.com'],
     formats: ['image/webp', 'image/avif'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60,
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
-  // Webpack конфигурация
-  webpack: (config, { dev, isServer }) => {
-    // Оптимизация для продакшена
-    if (!dev && !isServer) {
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        cacheGroups: {
-          // Отдельный чанк для React
-          react: {
-            test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
-            name: 'react',
-            chunks: 'all',
-            priority: 40,
-          },
-          // Отдельный чанк для UI библиотек
-          ui: {
-            test: /[\\/]node_modules[\\/](@radix-ui|lucide-react)[\\/]/,
-            name: 'ui',
-            chunks: 'all',
-            priority: 30,
-          },
-          // Отдельный чанк для утилит
-          utils: {
-            test: /[\\/]node_modules[\\/](date-fns|clsx|tailwind-merge)[\\/]/,
-            name: 'utils',
-            chunks: 'all',
-            priority: 20,
-          },
-          // Отдельный чанк для остальных зависимостей
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendor',
-            chunks: 'all',
-            priority: 10,
-          },
-        },
-      }
-    }
-
-    return config
-  },
-
-  // Компрессия
+  // Оптимизация сборки
+  swcMinify: true,
   compress: true,
+  poweredByHeader: false,
 
   // Заголовки безопасности
   async headers() {
@@ -91,6 +50,19 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
           },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+        ],
+      },
+      {
+        source: '/api/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, max-age=0',
+          },
         ],
       },
     ]
@@ -106,6 +78,59 @@ const nextConfig = {
       },
     ]
   },
+
+  // Переменные окружения
+  env: {
+    CUSTOM_KEY: process.env.CUSTOM_KEY,
+  },
+
+  // Webpack конфигурация
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    // Оптимизация для production
+    if (!dev && !isServer) {
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+          },
+          common: {
+            name: 'common',
+            minChunks: 2,
+            chunks: 'all',
+            enforce: true,
+          },
+        },
+      }
+    }
+
+    // Обработка SVG
+    config.module.rules.push({
+      test: /\.svg$/,
+      use: ['@svgr/webpack'],
+    })
+
+    return config
+  },
+
+  // Настройки для разработки
+  ...(process.env.NODE_ENV === 'development' && {
+    // Включаем подробные логи в разработке
+    logging: {
+      fetches: {
+        fullUrl: true,
+      },
+    },
+  }),
+
+  // Настройки для production
+  ...(process.env.NODE_ENV === 'production' && {
+    // Оптимизация для production
+    output: 'standalone',
+    trailingSlash: false,
+  }),
 }
 
 module.exports = nextConfig

@@ -1,58 +1,45 @@
-import type { Metadata, Viewport } from 'next'
-import localFont from 'next/font/local'
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
+import { QueryProvider } from '@/providers/QueryProvider'
+import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
+import { APP_CONFIG } from '@/shared/config'
 
-import { ReactQueryProvider } from '@/providers/react-query-provider'
-import { Sidebar } from '@/widgets/layout'
-import { Header } from '@/widgets/layout'
-
-const inter = localFont({
-  src: './fonts/Inter-VariableFont_opsz,wght.ttf',
-  display: 'swap',
-  variable: '--font-inter',
-})
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'ВК Парсер',
-  description: 'Fullstack приложение для парсинга комментариев ВКонтакте',
-  icons: {
-    icon: [
-      { url: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-    ],
-    shortcut: '/favicon.ico',
-    apple: '/apple-touch-icon.png',
+  title: APP_CONFIG.name,
+  description: APP_CONFIG.description,
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  openGraph: {
+    title: APP_CONFIG.name,
+    description: APP_CONFIG.description,
+    type: 'website',
   },
-  manifest: '/site.webmanifest',
-  robots: 'index, follow',
-}
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  themeColor: '#0f172a', // slate-900
+  twitter: {
+    card: 'summary_large_image',
+    title: APP_CONFIG.name,
+    description: APP_CONFIG.description,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
-    <html lang="ru" className="dark">
-      <body
-        className={`${inter.variable} bg-slate-900 font-sans text-slate-50`}
-      >
-        <ReactQueryProvider>
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <div className="flex-1 flex flex-col">
-              <Header />
-              <main className="flex-1 overflow-auto p-6">{children}</main>
-            </div>
-          </div>
-        </ReactQueryProvider>
+    <html lang="ru" suppressHydrationWarning>
+      <body className={inter.className}>
+        <ErrorBoundary>
+          <QueryProvider>
+            {children}
+          </QueryProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

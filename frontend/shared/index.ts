@@ -1,6 +1,18 @@
-// Shared layer exports
+// Конфигурация и константы
+export * from './config'
+export * from './constants'
+
+// API и утилиты
+export * from './lib/api'
+
+// Хуки
+export * from './hooks/useApi'
+
+// UI компоненты
 export * from './ui'
-export * from './hooks'
-export * from './types'
+
+// Store
 export * from './store'
-export * from './lib'
+
+// Типы
+export * from './types'
