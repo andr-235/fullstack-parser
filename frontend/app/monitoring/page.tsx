@@ -1,6 +1,6 @@
 import { MonitoringPage } from '@/widgets/monitoring-page'
 
-export default function MonitoringPage() {
+export default function MonitoringPageComponent() {
   return <MonitoringPage />
 }
 

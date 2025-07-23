@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/shared/lib'
+import { api } from '@/shared/lib/api'
 import type { VKCommentResponse } from '@/types/api'
 
 /**
@@ -9,10 +9,14 @@ export function useBulkMarkAsViewed() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (commentIds: number[]) => api.bulkMarkCommentsAsViewed(commentIds),
+    mutationFn: (commentIds: number[]) =>
+      api.bulkMarkCommentsAsViewed(commentIds),
     onMutate: async (commentIds) => {
       await queryClient.cancelQueries({ queryKey: ['comments'] })
-      const previousComments = queryClient.getQueryData(['comments', 'infinite'])
+      const previousComments = queryClient.getQueryData([
+        'comments',
+        'infinite',
+      ])
 
       queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
         if (!old) return old
@@ -37,9 +41,15 @@ export function useBulkMarkAsViewed() {
       return { previousComments }
     },
     onError: (err, variables, context) => {
-      console.error('Ошибка при массовой отметке комментариев как просмотренных:', err)
+      console.error(
+        'Ошибка при массовой отметке комментариев как просмотренных:',
+        err
+      )
       if (context?.previousComments) {
-        queryClient.setQueryData(['comments', 'infinite'], context.previousComments)
+        queryClient.setQueryData(
+          ['comments', 'infinite'],
+          context.previousComments
+        )
       }
     },
     onSettled: () => {
@@ -58,7 +68,10 @@ export function useBulkArchive() {
     mutationFn: (commentIds: number[]) => api.bulkArchiveComments(commentIds),
     onMutate: async (commentIds) => {
       await queryClient.cancelQueries({ queryKey: ['comments'] })
-      const previousComments = queryClient.getQueryData(['comments', 'infinite'])
+      const previousComments = queryClient.getQueryData([
+        'comments',
+        'infinite',
+      ])
 
       queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
         if (!old) return old
@@ -87,7 +100,10 @@ export function useBulkArchive() {
     onError: (err, variables, context) => {
       console.error('Ошибка при массовом архивировании комментариев:', err)
       if (context?.previousComments) {
-        queryClient.setQueryData(['comments', 'infinite'], context.previousComments)
+        queryClient.setQueryData(
+          ['comments', 'infinite'],
+          context.previousComments
+        )
       }
     },
     onSettled: () => {
@@ -106,7 +122,10 @@ export function useBulkUnarchive() {
     mutationFn: (commentIds: number[]) => api.bulkUnarchiveComments(commentIds),
     onMutate: async (commentIds) => {
       await queryClient.cancelQueries({ queryKey: ['comments'] })
-      const previousComments = queryClient.getQueryData(['comments', 'infinite'])
+      const previousComments = queryClient.getQueryData([
+        'comments',
+        'infinite',
+      ])
 
       queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
         if (!old) return old
@@ -133,7 +152,10 @@ export function useBulkUnarchive() {
     onError: (err, variables, context) => {
       console.error('Ошибка при массовом разархивировании комментариев:', err)
       if (context?.previousComments) {
-        queryClient.setQueryData(['comments', 'infinite'], context.previousComments)
+        queryClient.setQueryData(
+          ['comments', 'infinite'],
+          context.previousComments
+        )
       }
     },
     onSettled: () => {
@@ -152,7 +174,10 @@ export function useBulkDelete() {
     mutationFn: (commentIds: number[]) => api.bulkDeleteComments(commentIds),
     onMutate: async (commentIds) => {
       await queryClient.cancelQueries({ queryKey: ['comments'] })
-      const previousComments = queryClient.getQueryData(['comments', 'infinite'])
+      const previousComments = queryClient.getQueryData([
+        'comments',
+        'infinite',
+      ])
 
       queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
         if (!old) return old
@@ -161,8 +186,8 @@ export function useBulkDelete() {
           ...old,
           pages: old.pages.map((page: any) => ({
             ...page,
-            items: page.items.filter((comment: VKCommentResponse) => 
-              !commentIds.includes(comment.id)
+            items: page.items.filter(
+              (comment: VKCommentResponse) => !commentIds.includes(comment.id)
             ),
           })),
         }
@@ -173,11 +198,14 @@ export function useBulkDelete() {
     onError: (err, variables, context) => {
       console.error('Ошибка при массовом удалении комментариев:', err)
       if (context?.previousComments) {
-        queryClient.setQueryData(['comments', 'infinite'], context.previousComments)
+        queryClient.setQueryData(
+          ['comments', 'infinite'],
+          context.previousComments
+        )
       }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
     },
   })
-} 
+}

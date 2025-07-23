@@ -73,7 +73,10 @@ export function VirtualizedList<T>({
        }
 
        const item = items[index]
-       return renderItem({ index, style, data: item })
+       if (item) {
+        return renderItem({ index, style, data: item })
+       }
+       return null
       }}
      </List>
     )}

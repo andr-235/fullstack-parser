@@ -4,7 +4,7 @@ export class Comment {
   id: number
   text: string
   authorId: number
-  authorName?: string
+  authorName: string | undefined
   publishedAt: string
   vkId: number
   postId: number
@@ -19,7 +19,7 @@ export class Comment {
     this.id = data.id
     this.text = data.text
     this.authorId = data.author_id
-    this.authorName = data.author_name
+    this.authorName = data.author_name || undefined
     this.publishedAt = data.published_at
     this.vkId = data.vk_id
     this.postId = data.post_id

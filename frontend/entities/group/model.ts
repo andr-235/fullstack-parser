@@ -5,15 +5,15 @@ export class Group {
   vkId: number
   screenName: string
   name: string
-  description?: string
+  description: string | undefined
   isActive: boolean
   maxPostsToCheck: number
-  lastParsedAt?: string
+  lastParsedAt: string | undefined
   totalPostsParsed: number
   totalCommentsFound: number
-  membersCount?: number
+  membersCount: number | undefined
   isClosed: boolean
-  photoUrl?: string
+  photoUrl: string | undefined
 
   constructor(data: VKGroupResponse) {
     this.id = data.id

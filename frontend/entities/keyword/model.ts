@@ -3,8 +3,8 @@ import type { KeywordResponse } from '@/types/api'
 export class Keyword {
   id: number
   word: string
-  category?: string
-  description?: string
+  category: string | undefined
+  description: string | undefined
   isActive: boolean
   isCaseSensitive: boolean
   isWholeWord: boolean
