@@ -11,29 +11,41 @@ import type {
   VKGroupUpdate,
   PaginationParams,
 } from '@/types/api'
+import type {
+  UseGroupsParams,
+  UseInfiniteGroupsParams,
+  UseGroupParams,
+  UseGroupStatsParams,
+  CreateGroupParams,
+  UpdateGroupParams,
+  DeleteGroupParams,
+  RefreshGroupParams,
+  GroupsCacheConfig,
+} from '../types'
+
+// Константы для оптимизации
+const GROUPS_STALE_TIME = 5 * 60 * 1000 // 5 минут
+const GROUP_STATS_STALE_TIME = 2 * 60 * 1000 // 2 минуты
+const DEFAULT_PAGE_SIZE = 50
 
 /**
  * Хук для получения списка групп
  */
-export function useGroups(
-  params?: PaginationParams & { active_only?: boolean }
-) {
+export function useGroups(params?: UseGroupsParams) {
   return useQuery({
     queryKey: createQueryKey.groups(params),
     queryFn: () => api.getGroups(params),
-    staleTime: 5 * 60 * 1000, // 5 минут
+    staleTime: GROUPS_STALE_TIME,
+    gcTime: 10 * 60 * 1000, // 10 минут для garbage collection
   })
 }
 
 /**
  * Хук для бесконечной загрузки групп (infinite scroll)
  */
-export function useInfiniteGroups(params?: {
-  active_only?: boolean
-  search?: string
-  pageSize?: number
-}) {
-  const pageSize = params?.pageSize || 1000 // Увеличиваем лимит для загрузки большего количества записей
+export function useInfiniteGroups(params?: UseInfiniteGroupsParams) {
+  const pageSize = params?.pageSize || DEFAULT_PAGE_SIZE
+
   return useInfiniteQuery({
     queryKey: createQueryKey.groups({ ...params, pageSize }),
     queryFn: async ({ pageParam = 1 }) => {
@@ -53,18 +65,21 @@ export function useInfiniteGroups(params?: {
       return undefined
     },
     initialPageParam: 1,
-    staleTime: 5 * 60 * 1000,
+    staleTime: GROUPS_STALE_TIME,
+    gcTime: 10 * 60 * 1000,
   })
 }
 
 /**
  * Хук для получения конкретной группы
  */
-export function useGroup(groupId: number) {
+export function useGroup({ groupId, enabled = true }: UseGroupParams) {
   return useQuery({
     queryKey: createQueryKey.group(groupId),
     queryFn: () => api.getGroup(groupId),
     enabled: !!groupId,
+    staleTime: GROUPS_STALE_TIME,
+    gcTime: 10 * 60 * 1000,
   })
 }
 
@@ -75,10 +90,13 @@ export function useCreateGroup() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: VKGroupCreate) => api.createGroup(data),
+    mutationFn: (data: CreateGroupParams) => api.createGroup(data),
     onSuccess: () => {
       // Инвалидируем список групп
       queryClient.invalidateQueries({ queryKey: ['groups'] })
+    },
+    onError: (error) => {
+      console.error('Error creating group:', error)
     },
   })
 }
@@ -90,12 +108,15 @@ export function useUpdateGroup() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ groupId, data }: { groupId: number; data: VKGroupUpdate }) =>
+    mutationFn: ({ groupId, data }: UpdateGroupParams) =>
       api.updateGroup(groupId, data),
     onSuccess: (_, { groupId }) => {
       // Инвалидируем конкретную группу и список групп
       queryClient.invalidateQueries({ queryKey: ['groups', groupId] })
       queryClient.invalidateQueries({ queryKey: ['groups'] })
+    },
+    onError: (error) => {
+      console.error('Error updating group:', error)
     },
   })
 }
@@ -107,9 +128,12 @@ export function useDeleteGroup() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (groupId: number) => api.deleteGroup(groupId),
+    mutationFn: ({ groupId }: DeleteGroupParams) => api.deleteGroup(groupId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
+    },
+    onError: (error) => {
+      console.error('Error deleting group:', error)
     },
   })
 }
@@ -140,12 +164,16 @@ export function useUploadGroupsFromFile() {
 /**
  * Хук для получения статистики группы
  */
-export function useGroupStats(groupId: number) {
+export function useGroupStats({
+  groupId,
+  enabled = true,
+}: UseGroupStatsParams) {
   return useQuery({
     queryKey: createQueryKey.groupStats(groupId),
     queryFn: () => api.getGroupStats(groupId),
     enabled: !!groupId,
-    staleTime: 2 * 60 * 1000, // 2 минуты
+    staleTime: GROUP_STATS_STALE_TIME,
+    gcTime: 5 * 60 * 1000,
   })
 }
 
@@ -156,8 +184,11 @@ export function useRefreshGroupInfo() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (groupId: number) => api.refreshGroupInfo(groupId),
-    onSuccess: () => {
+    mutationFn: ({ groupId }: RefreshGroupParams) =>
+      api.refreshGroupInfo(groupId),
+    onSuccess: (_, { groupId }) => {
+      // Инвалидируем конкретную группу и список групп
+      queryClient.invalidateQueries({ queryKey: ['groups', groupId] })
       queryClient.invalidateQueries({ queryKey: ['groups'] })
     },
   })
