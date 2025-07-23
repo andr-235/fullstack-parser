@@ -24,6 +24,8 @@ from app.schemas.vk_group import (
 )
 from app.services.base import BaseService
 from app.services.vk_api_service import VKAPIService
+from app.services.error_reporting_service import error_reporting_service
+from app.schemas.error_report import ErrorContext, ErrorSeverity, ErrorType
 
 # Типы для улучшения читаемости
 GroupData = Dict[str, Any]  # Данные группы от VK API
@@ -83,6 +85,20 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
             group_data.vk_id_or_screen_name
         )
         if not screen_name:
+            error_entry = error_reporting_service.create_error_entry(
+                error_type=ErrorType.VALIDATION,
+                severity=ErrorSeverity.HIGH,
+                message="Не указан ID или короткое имя группы",
+                context=ErrorContext(
+                    screen_name=group_data.vk_id_or_screen_name,
+                    operation="create_group",
+                ),
+            )
+            error_reporting_service.log_error_report(
+                error_reporting_service.create_error_report(
+                    operation="create_group", errors=[error_entry]
+                )
+            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Не указан ID или короткое имя группы.",
@@ -283,27 +299,96 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
             max_posts_to_check: Максимум постов для проверки
 
         Returns:
-            Результат загрузки
+            Результат загрузки с подробным отчетом об ошибках
 
         Raises:
             HTTPException: При ошибках валидации файла
         """
-        # Валидируем файл
-        self._validate_upload_file(file)
+        import time
 
-        # Читаем содержимое файла
-        content_str = await self._read_file_content(file)
+        start_time = time.time()
 
-        # Парсим данные в зависимости от формата
-        groups_data = await self._parse_file_content(
-            content_str,
-            file.filename or "unknown.txt",
-            is_active,
-            max_posts_to_check,
+        errors = []
+
+        try:
+            # Валидируем файл
+            self._validate_upload_file(file)
+        except HTTPException as e:
+            error_entry = error_reporting_service.create_error_entry(
+                error_type=ErrorType.VALIDATION,
+                severity=ErrorSeverity.HIGH,
+                message=f"Ошибка валидации файла: {e.detail}",
+                context=ErrorContext(
+                    operation="upload_groups_from_file",
+                    additional_data={"filename": file.filename},
+                ),
+                exception=e,
+            )
+            errors.append(error_entry)
+            raise
+
+        try:
+            # Читаем содержимое файла
+            content_str = await self._read_file_content(file)
+        except HTTPException as e:
+            error_entry = error_reporting_service.create_error_entry(
+                error_type=ErrorType.VALIDATION,
+                severity=ErrorSeverity.HIGH,
+                message=f"Ошибка чтения файла: {e.detail}",
+                context=ErrorContext(
+                    operation="upload_groups_from_file",
+                    additional_data={"filename": file.filename},
+                ),
+                exception=e,
+            )
+            errors.append(error_entry)
+            raise
+
+        try:
+            # Парсим данные в зависимости от формата
+            groups_data = await self._parse_file_content(
+                content_str,
+                file.filename or "unknown.txt",
+                is_active,
+                max_posts_to_check,
+            )
+        except HTTPException as e:
+            error_entry = error_reporting_service.create_error_entry(
+                error_type=ErrorType.VALIDATION,
+                severity=ErrorSeverity.HIGH,
+                message=f"Ошибка парсинга файла: {e.detail}",
+                context=ErrorContext(
+                    operation="upload_groups_from_file",
+                    additional_data={"filename": file.filename},
+                ),
+                exception=e,
+            )
+            errors.append(error_entry)
+            raise
+
+        # Создаем группы с детальным отслеживанием ошибок
+        result = await self._create_groups_from_data_with_errors(
+            db, groups_data, errors
         )
 
-        # Создаем группы
-        result = await self._create_groups_from_data(db, groups_data)
+        processing_time = time.time() - start_time
+
+        # Создаем подробный отчет об ошибках
+        if errors:
+            error_report = (
+                error_reporting_service.create_group_load_error_report(
+                    errors=errors,
+                    groups_processed=result["total_processed"],
+                    groups_successful=result["created"],
+                    groups_failed=result.get("failed", 0),
+                    groups_skipped=result["skipped"],
+                    processing_time_seconds=processing_time,
+                )
+            )
+            error_reporting_service.log_error_report(error_report)
+
+            # Добавляем отчет в результат
+            result["error_report"] = error_report
 
         return VKGroupUploadResponse(**result)
 
@@ -398,13 +483,17 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
         """
         # Фильтрация только нужных полей для VKGroup
         vk_group_fields = {c.name for c in VKGroup.__table__.columns}
+        # Исключаем поле 'id' из VK API, так как оно конфликтует с автоинкрементным id в БД
+        vk_group_fields.discard("id")
         filtered_data = {
             k: v for k, v in vk_group_data.items() if k in vk_group_fields
         }
 
-        # Маппинг id -> vk_id
+        # Маппинг id -> vk_id (исключаем id из filtered_data)
         if "id" in vk_group_data:
             filtered_data["vk_id"] = vk_group_data["id"]
+            # Убеждаемся, что id не попадает в filtered_data
+            filtered_data.pop("id", None)
 
         # Исправляем поле is_closed - VK API возвращает 0/1/2, нужно преобразовать в boolean
         if "is_closed" in filtered_data:
@@ -429,6 +518,9 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
                 "max_posts_to_check": group_data.max_posts_to_check,
             }
         )
+
+        # Убеждаемся, что id не попадает в данные для создания модели
+        filtered_data.pop("id", None)
 
         new_group = VKGroup(**filtered_data)
         db.add(new_group)
@@ -601,20 +693,33 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
     async def _create_groups_from_data(
         self, db: AsyncSession, groups_data: List[VKGroupCreate]
     ) -> UploadResult:
+        """Создает группы из данных (устаревший метод)"""
+        return await self._create_groups_from_data_with_errors(
+            db, groups_data, []
+        )
+
+    async def _create_groups_from_data_with_errors(
+        self,
+        db: AsyncSession,
+        groups_data: List[VKGroupCreate],
+        existing_errors: List,
+    ) -> UploadResult:
         """
-        Создает группы из списка данных
+        Создает группы из списка данных с детальным отслеживанием ошибок
 
         Args:
             db: Сессия базы данных
             groups_data: Список данных групп
+            existing_errors: Существующие ошибки
 
         Returns:
             Результат загрузки
         """
         created_groups = []
         skipped_count = 0
-        errors = []
+        failed_count = 0
         total_processed = len(groups_data)
+        all_errors = existing_errors.copy()
 
         for group_data in groups_data:
             try:
@@ -623,9 +728,17 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
                     group_data.vk_id_or_screen_name
                 )
                 if not screen_name:
-                    errors.append(
-                        f"Ошибка создания группы '{group_data.vk_id_or_screen_name}': не удалось извлечь screen_name"
+                    error_entry = error_reporting_service.create_error_entry(
+                        error_type=ErrorType.VALIDATION,
+                        severity=ErrorSeverity.MEDIUM,
+                        message=f"Не удалось извлечь screen_name из '{group_data.vk_id_or_screen_name}'",
+                        context=ErrorContext(
+                            screen_name=group_data.vk_id_or_screen_name,
+                            operation="create_group_from_data",
+                        ),
                     )
+                    all_errors.append(error_entry)
+                    failed_count += 1
                     continue
 
                 existing = await db.execute(
@@ -641,18 +754,41 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
                 new_group = await self.create_group_with_vk(db, group_data)
                 created_groups.append(new_group)
 
-            except Exception as e:
-                errors.append(
-                    f"Ошибка создания группы '{group_data.vk_id_or_screen_name}': {str(e)}"
+            except HTTPException as e:
+                error_entry = error_reporting_service.create_error_entry(
+                    error_type=ErrorType.VALIDATION,
+                    severity=ErrorSeverity.HIGH,
+                    message=f"Ошибка создания группы '{group_data.vk_id_or_screen_name}': {e.detail}",
+                    context=ErrorContext(
+                        screen_name=group_data.vk_id_or_screen_name,
+                        operation="create_group_from_data",
+                    ),
+                    exception=e,
                 )
+                all_errors.append(error_entry)
+                failed_count += 1
+            except Exception as e:
+                error_entry = error_reporting_service.create_error_entry(
+                    error_type=ErrorType.UNKNOWN,
+                    severity=ErrorSeverity.HIGH,
+                    message=f"Неожиданная ошибка создания группы '{group_data.vk_id_or_screen_name}': {str(e)}",
+                    context=ErrorContext(
+                        screen_name=group_data.vk_id_or_screen_name,
+                        operation="create_group_from_data",
+                    ),
+                    exception=e,
+                )
+                all_errors.append(error_entry)
+                failed_count += 1
 
         return {
-            "status": "success",
+            "status": "success" if failed_count == 0 else "partial_success",
             "message": f"Загружено {len(created_groups)} групп из {total_processed} строк",
             "total_processed": total_processed,
             "created": len(created_groups),
             "skipped": skipped_count,
-            "errors": errors,
+            "failed": failed_count,
+            "errors": [error.message for error in all_errors],
             "created_groups": [
                 VKGroupRead.model_validate(group) for group in created_groups
             ],

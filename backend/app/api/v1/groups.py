@@ -87,7 +87,10 @@ async def create_group(
         members_count=members_count,
     )
 
-    # Проверка на существование группы в БД (case-insensitive)
+    # Проверка на существование группы в БД по screen_name и vk_id
+    vk_id = vk_group_data.get("id")
+
+    # Проверяем по screen_name
     existing_group_result = await db.execute(
         select(VKGroup).where(
             func.lower(VKGroup.screen_name) == screen_name.lower()
@@ -100,15 +103,31 @@ async def create_group(
             detail=f"Группа '{existing_group.name}' ({screen_name}) уже существует в системе.",
         )
 
+    # Проверяем по vk_id
+    if vk_id:
+        existing_group_result = await db.execute(
+            select(VKGroup).where(VKGroup.vk_id == vk_id)
+        )
+        existing_group = existing_group_result.scalar_one_or_none()
+        if existing_group:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Группа с VK ID {vk_id} уже существует в системе как '{existing_group.name}' ({existing_group.screen_name}).",
+            )
+
     # Создаем объект группы, объединяя данные из VK API и пользовательские настройки
     vk_group_fields = {c.name for c in VKGroup.__table__.columns}
+    # Исключаем поле 'id' из VK API, так как оно конфликтует с автоинкрементным id в БД
+    vk_group_fields.discard("id")
     filtered_data = {
         k: v for k, v in vk_group_data.items() if k in vk_group_fields
     }
 
-    # Маппинг id -> vk_id
+    # Маппинг id -> vk_id (исключаем id из filtered_data)
     if "id" in vk_group_data:
         filtered_data["vk_id"] = vk_group_data["id"]
+        # Убеждаемся, что id не попадает в filtered_data
+        filtered_data.pop("id", None)
 
     # Переопределяем поля пользовательскими данными (только если они переданы)
     update_data = {
@@ -126,6 +145,20 @@ async def create_group(
         update_data["description"] = group_data.description
 
     filtered_data.update(update_data)
+
+    # Убеждаемся, что id не попадает в данные для создания модели
+    filtered_data.pop("id", None)
+
+    # Отладочная информация
+    import structlog
+
+    logger = structlog.get_logger()
+    logger.info(
+        "Создание группы",
+        filtered_data_keys=list(filtered_data.keys()),
+        has_id="id" in filtered_data,
+        vk_group_data_keys=list(vk_group_data.keys()),
+    )
 
     new_group = VKGroup(**filtered_data)
     db.add(new_group)
