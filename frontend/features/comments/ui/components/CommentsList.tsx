@@ -17,6 +17,8 @@ interface CommentsListProps {
  onUnarchive: (commentId: number) => void
  onLoadMore: () => void
  onRefresh: () => void
+ selectedComments?: number[]
+ onCommentSelect?: (commentId: number, selected: boolean) => void
 }
 
 export function CommentsList({
@@ -29,6 +31,8 @@ export function CommentsList({
  onUnarchive,
  onLoadMore,
  onRefresh,
+ selectedComments = [],
+ onCommentSelect,
 }: CommentsListProps) {
  if (isLoading) {
   return (
@@ -58,6 +62,8 @@ export function CommentsList({
     onArchive={onArchive}
     onUnarchive={onUnarchive}
     isLoading={isLoading}
+    selectedComments={selectedComments}
+    onCommentSelect={onCommentSelect}
    />
 
    {hasNextPage && (
