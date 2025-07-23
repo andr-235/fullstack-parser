@@ -12,7 +12,7 @@ from typing import Sequence, Union
 revision: str = "33ad0550f6f8"
 down_revision: Union[str, Sequence[str], None] = (
     "20250115000000",
-    "999999999999",
+    "51fcd6f1165b",
 )
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
