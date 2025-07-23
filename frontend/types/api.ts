@@ -148,6 +148,10 @@ export interface VKCommentResponse extends VKCommentBase, BaseEntity {
   matched_keywords_count: number
   is_processed: boolean
   processed_at?: string
+  is_viewed: boolean
+  viewed_at?: string
+  is_archived: boolean
+  archived_at?: string
   group?: VKGroupResponse
   matched_keywords?: string[]
 }
@@ -162,6 +166,11 @@ export interface CommentWithKeywords extends VKCommentResponse {
   }>
 }
 
+export interface CommentUpdateRequest {
+  is_viewed?: boolean
+  is_archived?: boolean
+}
+
 export interface CommentSearchParams {
   text?: string
   group_id?: number
@@ -169,6 +178,8 @@ export interface CommentSearchParams {
   author_id?: number
   date_from?: string
   date_to?: string
+  is_viewed?: boolean
+  is_archived?: boolean
 }
 
 // Parser типы
