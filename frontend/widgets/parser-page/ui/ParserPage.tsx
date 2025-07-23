@@ -3,5 +3,5 @@
 import { ParserPage as ParserPageFeature } from '@/features/parser'
 
 export function ParserPage() {
- return <ParserPageFeature />
-} 
+  return <ParserPageFeature />
+}

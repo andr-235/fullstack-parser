@@ -1,12 +1,13 @@
-import { BaseEntity, VKGroupBase, VKGroupCreate, VKGroupUpdate, VKGroupResponse } from '@/shared/types/api'
-
-// Re-export types from shared
-export type {
+import {
+  BaseEntity,
   VKGroupBase,
   VKGroupCreate,
   VKGroupUpdate,
-  VKGroupResponse
-}
+  VKGroupResponse,
+} from '@/shared/types/api'
+
+// Re-export types from shared
+export type { VKGroupBase, VKGroupCreate, VKGroupUpdate, VKGroupResponse }
 
 export interface VKGroupStats {
   group_id: number

@@ -11,10 +11,7 @@ import {
   Button,
   Badge,
 } from '@/shared/ui'
-import {
-  useEnableGroupMonitoring,
-  useRunGroupMonitoring,
-} from '../hooks'
+import { useEnableGroupMonitoring, useRunGroupMonitoring } from '../hooks'
 
 import { Play, Settings, Plus, Clock } from 'lucide-react'
 
@@ -67,7 +64,9 @@ export default function AvailableGroupsTable({
 
   const getLastActivityTime = (group: VKGroupMonitoring) => {
     if (group.last_monitoring_success) {
-      const displayTime = group.last_monitoring_success_local || formatDateTimeShort(group.last_monitoring_success)
+      const displayTime =
+        group.last_monitoring_success_local ||
+        formatDateTimeShort(group.last_monitoring_success)
       return `Последний запуск: ${displayTime}`
     }
     return 'Никогда не запускался'

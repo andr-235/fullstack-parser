@@ -1,16 +1,21 @@
-import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+
+import type { Metadata } from 'next'
+
 import './globals.css'
-import { QueryProvider } from '@/providers/QueryProvider'
-import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 import { APP_CONFIG } from '@/shared/config'
+import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
+
+import { QueryProvider } from '@/providers/QueryProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: APP_CONFIG.name,
   description: APP_CONFIG.description,
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  ),
   openGraph: {
     title: APP_CONFIG.name,
     description: APP_CONFIG.description,
@@ -36,9 +41,7 @@ export default function RootLayout({
     <html lang="ru" suppressHydrationWarning>
       <body className={inter.className}>
         <ErrorBoundary>
-          <QueryProvider>
-            {children}
-          </QueryProvider>
+          <QueryProvider>{children}</QueryProvider>
         </ErrorBoundary>
       </body>
     </html>

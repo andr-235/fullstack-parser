@@ -158,7 +158,8 @@ export default function MonitoringSettings({
                 <span className="text-slate-400">Последний успех:</span>
                 <span className="ml-2 font-medium">
                   {group.last_monitoring_success
-                    ? (group.last_monitoring_success_local || formatDateTimeShort(group.last_monitoring_success))
+                    ? group.last_monitoring_success_local ||
+                      formatDateTimeShort(group.last_monitoring_success)
                     : 'Нет'}
                 </span>
               </div>

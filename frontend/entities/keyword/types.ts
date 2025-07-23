@@ -1,12 +1,13 @@
-import { BaseEntity, KeywordBase, KeywordCreate, KeywordUpdate, KeywordResponse } from '@/shared/types/api'
-
-// Re-export types from shared
-export type {
+import {
+  BaseEntity,
   KeywordBase,
   KeywordCreate,
   KeywordUpdate,
-  KeywordResponse
-}
+  KeywordResponse,
+} from '@/shared/types/api'
+
+// Re-export types from shared
+export type { KeywordBase, KeywordCreate, KeywordUpdate, KeywordResponse }
 
 export interface KeywordStats {
   keyword_id: number

@@ -64,21 +64,21 @@ export function MonitoringSettingsTab() {
 
   const isIntervalValid =
     formData.scheduler_interval_seconds >=
-    SETTINGS_VALIDATION.monitoring.scheduler_interval_seconds.min &&
+      SETTINGS_VALIDATION.monitoring.scheduler_interval_seconds.min &&
     formData.scheduler_interval_seconds <=
-    SETTINGS_VALIDATION.monitoring.scheduler_interval_seconds.max
+      SETTINGS_VALIDATION.monitoring.scheduler_interval_seconds.max
 
   const isGroupsValid =
     formData.max_concurrent_groups >=
-    SETTINGS_VALIDATION.monitoring.max_concurrent_groups.min &&
+      SETTINGS_VALIDATION.monitoring.max_concurrent_groups.min &&
     formData.max_concurrent_groups <=
-    SETTINGS_VALIDATION.monitoring.max_concurrent_groups.max
+      SETTINGS_VALIDATION.monitoring.max_concurrent_groups.max
 
   const isDelayValid =
     formData.group_delay_seconds >=
-    SETTINGS_VALIDATION.monitoring.group_delay_seconds.min &&
+      SETTINGS_VALIDATION.monitoring.group_delay_seconds.min &&
     formData.group_delay_seconds <=
-    SETTINGS_VALIDATION.monitoring.group_delay_seconds.max
+      SETTINGS_VALIDATION.monitoring.group_delay_seconds.max
 
   if (isLoading) {
     return <div>Загрузка настроек...</div>

@@ -1,7 +1,12 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { useInfiniteComments, useMarkCommentAsViewed, useArchiveComment, useUnarchiveComment } from '@/entities/comment'
+import {
+  useInfiniteComments,
+  useMarkCommentAsViewed,
+  useArchiveComment,
+  useUnarchiveComment,
+} from '@/entities/comment'
 import { useGroups } from '@/entities/group'
 import { useKeywords } from '@/entities/keyword'
 import {
@@ -143,7 +148,9 @@ const CollapsibleSection = ({
 export default function CommentsPage() {
   const [textFilter, setTextFilter] = useState('')
   const [groupFilter, setGroupFilter] = useState<string>('all')
-  const [keywordFilter, setKeywordFilter] = useState<string | undefined>(undefined)
+  const [keywordFilter, setKeywordFilter] = useState<string | undefined>(
+    undefined
+  )
   const [statusFilter, setStatusFilter] = useState<string>('new')
   const [specialAuthor, setSpecialAuthor] = useState<string | null>(null)
   const [authorFilter, setAuthorFilter] = useState<string>('all')
@@ -194,12 +201,20 @@ export default function CommentsPage() {
     console.log('statusParams:', statusParams)
     console.log('all filters:', {
       text: debouncedText,
-      group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
+      group_id:
+        groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
       keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
       ...statusParams,
       ...authorParams,
     })
-  }, [groupFilter, debouncedText, keywordFilter, statusFilter, authorFilter, specialAuthor])
+  }, [
+    groupFilter,
+    debouncedText,
+    keywordFilter,
+    statusFilter,
+    authorFilter,
+    specialAuthor,
+  ])
 
   const statusParams = getStatusParams(statusFilter)
   const authorParams = getAuthorParams()
@@ -214,7 +229,8 @@ export default function CommentsPage() {
     refetch,
   } = useInfiniteComments({
     text: debouncedText,
-    group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
+    group_id:
+      groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
     keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
     ...statusParams,
     ...authorParams,
@@ -249,7 +265,7 @@ export default function CommentsPage() {
 
   const handleMarkAsViewed = async (commentId: number) => {
     const key = `view-${commentId}`
-    setLoadingComments(prev => ({ ...prev, [key]: true }))
+    setLoadingComments((prev) => ({ ...prev, [key]: true }))
     try {
       // Сначала отмечаем как просмотренный, затем сразу архивируем
       await markAsViewed.mutateAsync(commentId)
@@ -257,31 +273,31 @@ export default function CommentsPage() {
     } catch (error) {
       // Ошибка уже обрабатывается в хуке
     } finally {
-      setLoadingComments(prev => ({ ...prev, [key]: false }))
+      setLoadingComments((prev) => ({ ...prev, [key]: false }))
     }
   }
 
   const handleArchiveComment = async (commentId: number) => {
     const key = `archive-${commentId}`
-    setLoadingComments(prev => ({ ...prev, [key]: true }))
+    setLoadingComments((prev) => ({ ...prev, [key]: true }))
     try {
       await archiveComment.mutateAsync(commentId)
     } catch (error) {
       // Ошибка уже обрабатывается в хуке
     } finally {
-      setLoadingComments(prev => ({ ...prev, [key]: false }))
+      setLoadingComments((prev) => ({ ...prev, [key]: false }))
     }
   }
 
   const handleUnarchiveComment = async (commentId: number) => {
     const key = `unarchive-${commentId}`
-    setLoadingComments(prev => ({ ...prev, [key]: true }))
+    setLoadingComments((prev) => ({ ...prev, [key]: true }))
     try {
       await unarchiveComment.mutateAsync(commentId)
     } catch (error) {
       // Ошибка уже обрабатывается в хуке
     } finally {
-      setLoadingComments(prev => ({ ...prev, [key]: false }))
+      setLoadingComments((prev) => ({ ...prev, [key]: false }))
     }
   }
 
@@ -311,7 +327,8 @@ export default function CommentsPage() {
           <h1 className="text-xl font-bold">Просмотр комментариев</h1>
         </div>
         <p className="text-slate-300 text-sm">
-          Фильтрация и просмотр комментариев с ключевыми словами. По умолчанию показываются новые комментарии.
+          Фильтрация и просмотр комментариев с ключевыми словами. По умолчанию
+          показываются новые комментарии.
         </p>
       </div>
 
@@ -586,8 +603,9 @@ export default function CommentsPage() {
                 {comments.map((comment: VKCommentResponse, index: number) => (
                   <TableRow
                     key={comment.id}
-                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${comment.is_viewed ? 'opacity-60' : ''
-                      }`}
+                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${
+                      comment.is_viewed ? 'opacity-60' : ''
+                    }`}
                     style={{ animationDelay: `${index * 30}ms` }}
                   >
                     <TableCell>
@@ -659,12 +677,18 @@ export default function CommentsPage() {
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
                         {comment.is_viewed ? (
-                          <Badge variant="secondary" className="text-xs bg-gray-900 text-gray-300">
+                          <Badge
+                            variant="secondary"
+                            className="text-xs bg-gray-900 text-gray-300"
+                          >
                             <Archive className="h-3 w-3 mr-1" />
                             Архив
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="text-xs bg-yellow-900 text-yellow-300">
+                          <Badge
+                            variant="secondary"
+                            className="text-xs bg-yellow-900 text-yellow-300"
+                          >
                             <EyeOff className="h-3 w-3 mr-1" />
                             Новый
                           </Badge>
@@ -692,7 +716,10 @@ export default function CommentsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => comment.author_screen_name && handleAddSpecialAuthor(comment.author_screen_name)}
+                          onClick={() =>
+                            comment.author_screen_name &&
+                            handleAddSpecialAuthor(comment.author_screen_name)
+                          }
                           className="hover:bg-purple-900 text-purple-400 hover:text-purple-300 transition-all duration-200 hover:scale-110 h-8 w-8"
                           title="Добавить автора в особый статус"
                         >
