@@ -1,3 +1,9 @@
+---
+description: Краткая справка по Feature-Sliced Design
+globs: frontend/**/*.{ts,tsx,js,jsx}
+alwaysApply: true
+---
+
 # FSD Quick Reference
 
 ## **Слои (сверху вниз)**
@@ -174,8 +180,6 @@ npx fsd shared ui button --segments ui
 npx fsd features auth --segments ui api model
 ```
 
-description:
-globs:
-alwaysApply: false
+```
 
----
+```

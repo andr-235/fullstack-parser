@@ -1,3 +1,9 @@
+---
+description: Интеграция Feature-Sliced Design с Next.js App Router
+globs: frontend/**/*.{ts,tsx,js,jsx}
+alwaysApply: true
+---
+
 # FSD + Next.js App Router
 
 ## **Структура проекта**
@@ -497,8 +503,3 @@ module.exports = nextConfig;
 - [Next.js App Router](https://nextjs.org/docs/app)
 - [Server Components](https://nextjs.org/docs/getting-started/react-essentials#server-components)
 - [FSD + Next.js Guide](https://feature-sliced.design/docs/guides/tech/with-nextjs)
-  description:
-  globs:
-  alwaysApply: false
-
----

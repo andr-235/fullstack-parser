@@ -1,3 +1,9 @@
+---
+description: Feature-Sliced Design архитектурная организация фронтенда
+globs: frontend/**/*.{ts,tsx,js,jsx}
+alwaysApply: true
+---
+
 # Feature-Sliced Design (FSD) Архитектура
 
 ## **Основные принципы**
@@ -450,8 +456,3 @@ export const UserCard = memo(({ user }: { user: User }) => (
 - [FSD Documentation](https://feature-sliced.design/)
 - [FSD Examples](https://github.com/feature-sliced/examples)
 - [FSD CLI](https://github.com/feature-sliced/cli)
-  description:
-  globs:
-  alwaysApply: false
-
----
