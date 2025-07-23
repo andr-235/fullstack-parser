@@ -11,8 +11,7 @@
     "format": "prettier --write .",
     "type-check": "tsc --noEmit",
     "test": "jest",
-    "test:watch": "jest --watch",
-    "check-fsd": "node scripts/check-fsd.js"
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",
