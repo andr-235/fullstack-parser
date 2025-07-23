@@ -211,7 +211,7 @@ export default function GroupsPage() {
                       <TableHead className="text-slate-200 text-xs font-bold whitespace-nowrap">
                         ID
                       </TableHead>
-                      <TableHead className="text-slate-200 text-xs font-bold min-w-0">
+                      <TableHead className="text-slate-200 text-xs font-bold w-80 max-w-80">
                         <div className="flex items-center gap-2 cursor-pointer hover:bg-slate-600 transition-colors select-none" onClick={() => handleSort('name')}>
                           Группа
                           <div className="flex flex-col">
@@ -296,7 +296,7 @@ export default function GroupsPage() {
                         <TableCell className="font-mono text-blue-400 font-semibold whitespace-nowrap">
                           {group.vk_id}
                         </TableCell>
-                        <TableCell className="min-w-0">
+                        <TableCell className="w-80 max-w-80">
                           <div className="flex items-center gap-1">
                             <div className="relative flex-shrink-0">
                               <img
