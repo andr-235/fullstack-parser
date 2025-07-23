@@ -850,7 +850,10 @@ class ParserService:
     def _build_comments_query(self, search_params: CommentSearchParams):
         """Строит SQL запрос для фильтрации комментариев"""
         query = select(VKComment).options(
-            selectinload(VKComment.post).selectinload(VKPost.group)
+            selectinload(VKComment.post).selectinload(VKPost.group),
+            selectinload(VKComment.keyword_matches).selectinload(
+                CommentKeywordMatch.keyword
+            ),
         )
 
         # Применяем фильтры
@@ -917,6 +920,13 @@ class ParserService:
         if post_vk_id and not group and comment.post and comment.post.group:
             group = VKGroupResponse.model_validate(comment.post.group)
 
+        # Извлекаем ключевые слова из совпадений
+        matched_keywords = []
+        if comment.keyword_matches:
+            for match in comment.keyword_matches:
+                if match.keyword:
+                    matched_keywords.append(match.keyword.word)
+
         # Отладочная информация
         self.logger.info(
             "Converting comment to response",
@@ -929,11 +939,13 @@ class ParserService:
                 if comment.post and comment.post.group
                 else None
             ),
+            matched_keywords_count=len(matched_keywords),
         )
 
         comment_data = VKCommentResponse.model_validate(comment)
         comment_data.group = group
         comment_data.post_vk_id = post_vk_id
+        comment_data.matched_keywords = matched_keywords
 
         return comment_data
 

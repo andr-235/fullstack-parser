@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { useInfiniteComments, useMarkCommentAsViewed, useArchiveComment, useUnarchiveComment } from '@/hooks/use-comments'
 import { useGroups } from '@/hooks/use-groups'
 import { useKeywords } from '@/hooks/use-keywords'
+import { useGlobalStats } from '@/hooks/use-stats'
 import {
   Card,
   CardContent,
@@ -227,6 +228,7 @@ export default function CommentsPage() {
 
   const { data: groupsData } = useGroups()
   const { data: keywordsData } = useKeywords()
+  const { data: globalStats } = useGlobalStats()
   const comments = useMemo(
     () => data?.pages.flatMap((page) => page.items) ?? [],
     [data]
@@ -296,9 +298,9 @@ export default function CommentsPage() {
     loadingComments[`unarchive-${commentId}`] || false
 
   // Статистика
-  const totalComments = comments.length
-  const totalGroups = groupsData?.items?.length || 0
-  const totalKeywords = keywordsData?.items?.length || 0
+  const totalComments = globalStats?.total_comments || 0
+  const totalGroups = globalStats?.total_groups || 0
+  const totalKeywords = globalStats?.total_keywords || 0
 
   return (
     <div className="space-y-4">
