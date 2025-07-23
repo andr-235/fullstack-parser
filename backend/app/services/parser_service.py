@@ -867,14 +867,7 @@ class ParserService:
                 )
             )
         if search_params.author_id:
-            if isinstance(search_params.author_id, list):
-                query = query.where(
-                    VKComment.author_id.in_(search_params.author_id)
-                )
-            else:
-                query = query.where(
-                    VKComment.author_id == search_params.author_id
-                )
+            query = query.where(VKComment.author_id == search_params.author_id)
         if search_params.author_screen_name:
             query = query.where(
                 VKComment.author_screen_name.in_(

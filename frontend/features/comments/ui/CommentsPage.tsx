@@ -145,7 +145,7 @@ export default function CommentsPage() {
   const [groupFilter, setGroupFilter] = useState<string>('all')
   const [keywordFilter, setKeywordFilter] = useState<string | undefined>(undefined)
   const [statusFilter, setStatusFilter] = useState<string>('new')
-  const [specialAuthors, setSpecialAuthors] = useState<string[]>([])
+  const [specialAuthor, setSpecialAuthor] = useState<string | null>(null)
   const [authorFilter, setAuthorFilter] = useState<string>('all')
 
   // Локальное состояние для отслеживания загружающихся комментариев
@@ -160,31 +160,26 @@ export default function CommentsPage() {
   const archiveComment = useArchiveComment()
   const unarchiveComment = useUnarchiveComment()
 
-  // Функция для преобразования статусного фильтра в параметры API
   const getStatusParams = (status: string) => {
     switch (status) {
       case 'new':
         return { is_viewed: false }
-      case 'archived':
+      case 'viewed':
         return { is_viewed: true }
-      case 'all':
-        return {}
+      case 'archived':
+        return { is_archived: true }
       default:
-        return { is_viewed: false }
+        return {}
     }
   }
 
-  // Функция для получения параметров фильтра по автору
   const getAuthorParams = () => {
-    if (authorFilter === 'special' && specialAuthors.length > 0) {
+    if (authorFilter === 'special' && specialAuthor) {
       // Преобразуем author_screen_name в author_id
-      const authorIds = specialAuthors.map(screenName => {
-        // Извлекаем ID из screen_name (например, "id217878560" -> 217878560)
-        const match = screenName.match(/^id(\d+)$/)
-        return match ? parseInt(match[1]) : null
-      }).filter(id => id !== null)
+      const match = specialAuthor.match(/^id(\d+)$/)
+      const authorId = match ? parseInt(match[1]) : null
 
-      return { author_id: authorIds }
+      return authorId ? { author_id: authorId } : {}
     }
     return {}
   }
@@ -194,7 +189,7 @@ export default function CommentsPage() {
     const authorParams = getAuthorParams()
     console.log('=== FILTERS DEBUG ===')
     console.log('authorFilter:', authorFilter)
-    console.log('specialAuthors:', specialAuthors)
+    console.log('specialAuthor:', specialAuthor)
     console.log('authorParams:', authorParams)
     console.log('statusParams:', statusParams)
     console.log('all filters:', {
@@ -204,7 +199,7 @@ export default function CommentsPage() {
       ...statusParams,
       ...authorParams,
     })
-  }, [groupFilter, debouncedText, keywordFilter, statusFilter, authorFilter, specialAuthors])
+  }, [groupFilter, debouncedText, keywordFilter, statusFilter, authorFilter, specialAuthor])
 
   const statusParams = getStatusParams(statusFilter)
   const authorParams = getAuthorParams()
@@ -228,7 +223,7 @@ export default function CommentsPage() {
   // Принудительно обновляем при изменении фильтров
   useEffect(() => {
     refetch()
-  }, [authorFilter, specialAuthors, refetch])
+  }, [authorFilter, specialAuthor, refetch])
 
   const { data: groupsData } = useGroups()
   const { data: keywordsData } = useKeywords()
@@ -243,17 +238,13 @@ export default function CommentsPage() {
     setKeywordFilter(undefined)
     setStatusFilter('new')
     setAuthorFilter('all')
+    setSpecialAuthor(null)
   }
 
   const handleAddSpecialAuthor = (authorScreenName: string) => {
-    if (!specialAuthors.includes(authorScreenName)) {
-      setSpecialAuthors(prev => {
-        const newAuthors = [...prev, authorScreenName]
-        return newAuthors
-      })
-      // Автоматически переключаем фильтр на особые авторы
-      setAuthorFilter('special')
-    }
+    setSpecialAuthor(authorScreenName)
+    // Автоматически переключаем фильтр на особые авторы
+    setAuthorFilter('special')
   }
 
   const handleMarkAsViewed = async (commentId: number) => {
@@ -479,6 +470,12 @@ export default function CommentsPage() {
                   Новые
                 </SelectItem>
                 <SelectItem
+                  value="viewed"
+                  className="text-slate-200 hover:bg-slate-700 text-sm"
+                >
+                  Просмотренные
+                </SelectItem>
+                <SelectItem
                   value="archived"
                   className="text-slate-200 hover:bg-slate-700 text-sm"
                 >
@@ -514,9 +511,9 @@ export default function CommentsPage() {
                 <SelectItem
                   value="special"
                   className="text-slate-200 hover:bg-slate-700 text-sm"
-                  disabled={specialAuthors.length === 0}
+                  disabled={!specialAuthor}
                 >
-                  Особые авторы ({specialAuthors.length})
+                  Особый автор: {specialAuthor || 'Не выбран'}
                 </SelectItem>
               </SelectContent>
             </Select>
