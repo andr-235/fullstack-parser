@@ -48,6 +48,7 @@ import {
   Archive,
   ArchiveRestore,
   CheckCircle,
+  Edit,
 } from 'lucide-react'
 import useDebounce from '@/hooks/use-debounce'
 import Link from 'next/link'
@@ -143,8 +144,14 @@ export default function CommentsPage() {
   const [textFilter, setTextFilter] = useState('')
   const [groupFilter, setGroupFilter] = useState<string>('all')
   const [keywordFilter, setKeywordFilter] = useState<string | undefined>(undefined)
-  const [viewedFilter, setViewedFilter] = useState<string>('all')
-  const [archivedFilter, setArchivedFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('new')
+  const [specialAuthors, setSpecialAuthors] = useState<string[]>([])
+  const [authorFilter, setAuthorFilter] = useState<string>('all')
+
+  // Локальное состояние для отслеживания загружающихся комментариев
+  const [loadingComments, setLoadingComments] = useState<{
+    [key: string]: boolean
+  }>({})
 
   const debouncedText = useDebounce(textFilter, 500)
 
@@ -153,16 +160,43 @@ export default function CommentsPage() {
   const archiveComment = useArchiveComment()
   const unarchiveComment = useUnarchiveComment()
 
+  // Функция для преобразования статусного фильтра в параметры API
+  const getStatusParams = (status: string) => {
+    switch (status) {
+      case 'new':
+        return { is_viewed: false }
+      case 'archived':
+        return { is_viewed: true }
+      case 'all':
+        return {}
+      default:
+        return { is_viewed: false }
+    }
+  }
+
+  // Функция для получения параметров фильтра по автору
+  const getAuthorParams = () => {
+    if (authorFilter === 'special' && specialAuthors.length > 0) {
+      return { author_screen_name: specialAuthors }
+    }
+    return {}
+  }
+
   useEffect(() => {
+    const statusParams = getStatusParams(statusFilter)
+    const authorParams = getAuthorParams()
     console.log('CommentsPage rendered')
     console.log('filters:', {
       text: debouncedText,
       group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
       keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
-      is_viewed: viewedFilter === 'viewed' ? true : viewedFilter === 'unviewed' ? false : undefined,
-      is_archived: archivedFilter === 'archived' ? true : archivedFilter === 'unarchived' ? false : undefined,
+      ...statusParams,
+      ...authorParams,
     })
-  }, [groupFilter, debouncedText, keywordFilter, viewedFilter, archivedFilter])
+  }, [groupFilter, debouncedText, keywordFilter, statusFilter, authorFilter, specialAuthors])
+
+  const statusParams = getStatusParams(statusFilter)
+  const authorParams = getAuthorParams()
 
   const {
     data,
@@ -175,8 +209,8 @@ export default function CommentsPage() {
     text: debouncedText,
     group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
     keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
-    is_viewed: viewedFilter === 'viewed' ? true : viewedFilter === 'unviewed' ? false : undefined,
-    is_archived: archivedFilter === 'archived' ? true : archivedFilter === 'unarchived' ? false : undefined,
+    ...statusParams,
+    ...authorParams,
   })
 
   const { data: groupsData } = useGroups()
@@ -190,33 +224,63 @@ export default function CommentsPage() {
     setTextFilter('')
     setGroupFilter('all')
     setKeywordFilter(undefined)
-    setViewedFilter('all')
-    setArchivedFilter('all')
+    setStatusFilter('new')
+    setAuthorFilter('all')
+  }
+
+  const handleAddSpecialAuthor = (authorScreenName: string) => {
+    if (!specialAuthors.includes(authorScreenName)) {
+      setSpecialAuthors(prev => [...prev, authorScreenName])
+    }
   }
 
   const handleMarkAsViewed = async (commentId: number) => {
+    const key = `view-${commentId}`
+    setLoadingComments(prev => ({ ...prev, [key]: true }))
     try {
+      // Сначала отмечаем как просмотренный, затем сразу архивируем
       await markAsViewed.mutateAsync(commentId)
+      await archiveComment.mutateAsync(commentId)
     } catch (error) {
-      console.error('Ошибка при отметке комментария как просмотренного:', error)
+      // Ошибка уже обрабатывается в хуке
+    } finally {
+      setLoadingComments(prev => ({ ...prev, [key]: false }))
     }
   }
 
   const handleArchiveComment = async (commentId: number) => {
+    const key = `archive-${commentId}`
+    setLoadingComments(prev => ({ ...prev, [key]: true }))
     try {
       await archiveComment.mutateAsync(commentId)
     } catch (error) {
-      console.error('Ошибка при архивировании комментария:', error)
+      // Ошибка уже обрабатывается в хуке
+    } finally {
+      setLoadingComments(prev => ({ ...prev, [key]: false }))
     }
   }
 
   const handleUnarchiveComment = async (commentId: number) => {
+    const key = `unarchive-${commentId}`
+    setLoadingComments(prev => ({ ...prev, [key]: true }))
     try {
       await unarchiveComment.mutateAsync(commentId)
     } catch (error) {
-      console.error('Ошибка при разархивировании комментария:', error)
+      // Ошибка уже обрабатывается в хуке
+    } finally {
+      setLoadingComments(prev => ({ ...prev, [key]: false }))
     }
   }
+
+  // Функции для проверки состояния загрузки конкретного комментария
+  const isMarkingAsViewed = (commentId: number) =>
+    loadingComments[`view-${commentId}`] || false
+
+  const isArchiving = (commentId: number) =>
+    loadingComments[`archive-${commentId}`] || false
+
+  const isUnarchiving = (commentId: number) =>
+    loadingComments[`unarchive-${commentId}`] || false
 
   // Статистика
   const totalComments = comments.length
@@ -234,7 +298,7 @@ export default function CommentsPage() {
           <h1 className="text-xl font-bold">Просмотр комментариев</h1>
         </div>
         <p className="text-slate-300 text-sm">
-          Фильтрация и просмотр всех найденных комментариев с ключевыми словами
+          Фильтрация и просмотр комментариев с ключевыми словами. По умолчанию показываются новые комментарии.
         </p>
       </div>
 
@@ -376,52 +440,21 @@ export default function CommentsPage() {
               </SelectContent>
             </Select>
             <Select
-              value={viewedFilter}
-              onValueChange={(val) => setViewedFilter(val)}
+              value={statusFilter}
+              onValueChange={(val) => setStatusFilter(val)}
             >
               <SelectTrigger
                 className="border-slate-600 bg-slate-700 text-slate-200 text-sm"
-                aria-label="Статус просмотра"
+                aria-label="Статус комментария"
               >
-                <SelectValue placeholder="Все комментарии" />
+                <SelectValue placeholder="Статус" />
               </SelectTrigger>
               <SelectContent className="bg-slate-800 border-slate-600">
                 <SelectItem
-                  value="all"
+                  value="new"
                   className="text-slate-200 hover:bg-slate-700 text-sm"
                 >
-                  Все комментарии
-                </SelectItem>
-                <SelectItem
-                  value="viewed"
-                  className="text-slate-200 hover:bg-slate-700 text-sm"
-                >
-                  Просмотренные
-                </SelectItem>
-                <SelectItem
-                  value="unviewed"
-                  className="text-slate-200 hover:bg-slate-700 text-sm"
-                >
-                  Не просмотренные
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={archivedFilter}
-              onValueChange={(val) => setArchivedFilter(val)}
-            >
-              <SelectTrigger
-                className="border-slate-600 bg-slate-700 text-slate-200 text-sm"
-                aria-label="Статус архивирования"
-              >
-                <SelectValue placeholder="Все комментарии" />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-600">
-                <SelectItem
-                  value="all"
-                  className="text-slate-200 hover:bg-slate-700 text-sm"
-                >
-                  Все комментарии
+                  Новые
                 </SelectItem>
                 <SelectItem
                   value="archived"
@@ -430,10 +463,36 @@ export default function CommentsPage() {
                   Архивные
                 </SelectItem>
                 <SelectItem
-                  value="unarchived"
+                  value="all"
                   className="text-slate-200 hover:bg-slate-700 text-sm"
                 >
-                  Не архивные
+                  Все
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={authorFilter}
+              onValueChange={(val) => setAuthorFilter(val)}
+            >
+              <SelectTrigger
+                className="border-slate-600 bg-slate-700 text-slate-200 text-sm"
+                aria-label="Фильтр по автору"
+              >
+                <SelectValue placeholder="Все авторы" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-800 border-slate-600">
+                <SelectItem
+                  value="all"
+                  className="text-slate-200 hover:bg-slate-700 text-sm"
+                >
+                  Все авторы
+                </SelectItem>
+                <SelectItem
+                  value="special"
+                  className="text-slate-200 hover:bg-slate-700 text-sm"
+                  disabled={specialAuthors.length === 0}
+                >
+                  Особые авторы ({specialAuthors.length})
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -445,7 +504,7 @@ export default function CommentsPage() {
               className="border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-slate-200 text-sm"
             >
               <XCircle className="h-3 w-3 mr-2" />
-              Сбросить фильтры
+              Сбросить к новым
             </Button>
           </div>
         </div>
@@ -479,38 +538,38 @@ export default function CommentsPage() {
               </div>
             </div>
           ) : (
-            <table className="min-w-full table-fixed">
-              <thead className="bg-gradient-to-r from-slate-700 to-slate-600 shadow-md">
-                <tr>
-                  <th className="px-3 py-2 text-left font-bold text-slate-200 text-xs w-48">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gradient-to-r from-slate-700 to-slate-600 shadow-md hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600">
+                  <TableHead className="text-slate-200 text-xs font-bold w-48">
                     Автор
-                  </th>
-                  <th className="px-3 py-2 text-left font-bold text-slate-200 text-xs w-96">
+                  </TableHead>
+                  <TableHead className="text-slate-200 text-xs font-bold w-96">
                     Комментарий
-                  </th>
-                  <th className="px-3 py-2 text-left font-bold text-slate-200 text-xs w-32">
+                  </TableHead>
+                  <TableHead className="text-slate-200 text-xs font-bold w-32">
                     Группа
-                  </th>
-                  <th className="px-3 py-2 text-left font-bold text-slate-200 text-xs w-24">
+                  </TableHead>
+                  <TableHead className="text-slate-200 text-xs font-bold w-24">
                     Дата
-                  </th>
-                  <th className="px-3 py-2 text-center font-bold text-slate-200 text-xs w-20">
+                  </TableHead>
+                  <TableHead className="text-slate-200 text-xs font-bold w-20 text-center">
                     Статус
-                  </th>
-                  <th className="px-3 py-2 text-right font-bold text-slate-200 text-xs w-32">
+                  </TableHead>
+                  <TableHead className="text-slate-200 text-xs font-bold w-32 text-right">
                     Действия
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700">
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {comments.map((comment: VKCommentResponse, index: number) => (
-                  <tr
+                  <TableRow
                     key={comment.id}
-                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${comment.is_archived ? 'opacity-60' : ''
+                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${comment.is_viewed ? 'opacity-60' : ''
                       }`}
                     style={{ animationDelay: `${index * 30}ms` }}
                   >
-                    <td className="px-3 py-2">
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="w-6 h-6 border border-slate-600">
                           <AvatarImage src={comment.author_photo_url} />
@@ -527,16 +586,16 @@ export default function CommentsPage() {
                           </div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-3 py-2 align-top">
+                    </TableCell>
+                    <TableCell className="align-top">
                       <div className="max-w-lg w-full">
                         <HighlightedText
                           text={comment.text}
                           keywords={comment.matched_keywords || []}
                         />
                       </div>
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         {comment.group ? (
                           <>
@@ -563,8 +622,8 @@ export default function CommentsPage() {
                           </>
                         )}
                       </div>
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
                         <span className="text-sm text-slate-400 text-xs">
@@ -575,13 +634,13 @@ export default function CommentsPage() {
                           )}
                         </span>
                       </div>
-                    </td>
-                    <td className="px-3 py-2 text-center">
+                    </TableCell>
+                    <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
                         {comment.is_viewed ? (
-                          <Badge variant="secondary" className="text-xs bg-green-900 text-green-300">
-                            <Eye className="h-3 w-3 mr-1" />
-                            Просмотрен
+                          <Badge variant="secondary" className="text-xs bg-gray-900 text-gray-300">
+                            <Archive className="h-3 w-3 mr-1" />
+                            Архив
                           </Badge>
                         ) : (
                           <Badge variant="secondary" className="text-xs bg-yellow-900 text-yellow-300">
@@ -589,86 +648,75 @@ export default function CommentsPage() {
                             Новый
                           </Badge>
                         )}
-                        {comment.is_archived && (
-                          <Badge variant="secondary" className="text-xs bg-gray-900 text-gray-300">
-                            <Archive className="h-3 w-3 mr-1" />
-                            Архив
-                          </Badge>
-                        )}
                       </div>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
                         {comment.group?.vk_id && comment.post_vk_id ? (
                           <Button
                             asChild
                             variant="ghost"
                             size="icon"
-                            className="hover:bg-blue-900 text-blue-400 hover:text-blue-300 transition-all duration-200 hover:scale-110 h-6 w-6"
+                            className="hover:bg-blue-900 text-blue-400 hover:text-blue-300 transition-all duration-200 hover:scale-110 h-8 w-8"
                           >
                             <Link
                               href={`https://vk.com/wall-${comment.group.vk_id}_${comment.post_vk_id}?reply=${comment.vk_id}`}
                               target="_blank"
                             >
-                              <ExternalLink className="h-3 w-3" />
+                              <ExternalLink className="h-4 w-4" />
                             </Link>
                           </Button>
                         ) : null}
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => comment.author_screen_name && handleAddSpecialAuthor(comment.author_screen_name)}
+                          className="hover:bg-purple-900 text-purple-400 hover:text-purple-300 transition-all duration-200 hover:scale-110 h-8 w-8"
+                          title="Добавить автора в особый статус"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
 
                         {!comment.is_viewed && (
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleMarkAsViewed(comment.id)}
-                            disabled={markAsViewed.isPending}
-                            className="hover:bg-green-900 text-green-400 hover:text-green-300 transition-all duration-200 hover:scale-110 h-6 w-6"
-                            title="Отметить как просмотренный"
+                            disabled={isMarkingAsViewed(comment.id)}
+                            className="hover:bg-green-900 text-green-400 hover:text-green-300 transition-all duration-200 hover:scale-110 h-8 w-8"
+                            title="Отметить как просмотренный и архивировать"
                           >
-                            {markAsViewed.isPending ? (
-                              <LoadingSpinner className="h-3 w-3" />
+                            {isMarkingAsViewed(comment.id) ? (
+                              <LoadingSpinner className="h-4 w-4" />
                             ) : (
-                              <CheckCircle className="h-3 w-3" />
+                              <CheckCircle className="h-4 w-4" />
                             )}
                           </Button>
                         )}
 
-                        {!comment.is_archived ? (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleArchiveComment(comment.id)}
-                            disabled={archiveComment.isPending}
-                            className="hover:bg-orange-900 text-orange-400 hover:text-orange-300 transition-all duration-200 hover:scale-110 h-6 w-6"
-                            title="Архивировать"
-                          >
-                            {archiveComment.isPending ? (
-                              <LoadingSpinner className="h-3 w-3" />
-                            ) : (
-                              <Archive className="h-3 w-3" />
-                            )}
-                          </Button>
-                        ) : (
+                        {comment.is_viewed && (
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleUnarchiveComment(comment.id)}
-                            disabled={unarchiveComment.isPending}
-                            className="hover:bg-blue-900 text-blue-400 hover:text-blue-300 transition-all duration-200 hover:scale-110 h-6 w-6"
+                            disabled={isUnarchiving(comment.id)}
+                            className="hover:bg-blue-900 text-blue-400 hover:text-blue-300 transition-all duration-200 hover:scale-110 h-8 w-8"
                             title="Разархивировать"
                           >
-                            {unarchiveComment.isPending ? (
-                              <LoadingSpinner className="h-3 w-3" />
+                            {isUnarchiving(comment.id) ? (
+                              <LoadingSpinner className="h-4 w-4" />
                             ) : (
-                              <ArchiveRestore className="h-3 w-3" />
+                              <ArchiveRestore className="h-4 w-4" />
                             )}
                           </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
 
           {/* Пагинация */}

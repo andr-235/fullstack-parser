@@ -55,9 +55,11 @@ async def start_parsing(
 
 @router.get("/comments", response_model=PaginatedResponse[VKCommentResponse])
 async def get_comments(
+    text: Optional[str] = None,
     group_id: Optional[int] = None,
     keyword_id: Optional[int] = None,
     author_id: Optional[int] = None,
+    author_screen_name: Optional[List[str]] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     is_viewed: Optional[bool] = None,
@@ -73,9 +75,11 @@ async def get_comments(
 
     # Создаем объект параметров поиска
     search_params = CommentSearchParams(
+        text=text,
         group_id=group_id,
         keyword_id=keyword_id,
         author_id=author_id,
+        author_screen_name=author_screen_name,
         date_from=date_from,
         date_to=date_to,
         is_viewed=is_viewed,

@@ -58,8 +58,55 @@ export function useUpdateCommentStatus() {
       commentId: number
       statusUpdate: CommentUpdateRequest
     }) => api.updateCommentStatus(commentId, statusUpdate),
-    onSuccess: () => {
-      // Инвалидируем кеш комментариев
+    onMutate: async ({ commentId, statusUpdate }) => {
+      // Отменяем исходящие запросы
+      await queryClient.cancelQueries({ queryKey: ['comments'] })
+
+      // Сохраняем предыдущее состояние
+      const previousComments = queryClient.getQueryData([
+        'comments',
+        'infinite',
+      ])
+
+      // Оптимистично обновляем кеш
+      queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
+        if (!old) return old
+
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            items: page.items.map((comment: VKCommentResponse) =>
+              comment.id === commentId
+                ? {
+                    ...comment,
+                    ...statusUpdate,
+                    viewed_at: statusUpdate.is_viewed
+                      ? new Date().toISOString()
+                      : comment.viewed_at,
+                    archived_at: statusUpdate.is_archived
+                      ? new Date().toISOString()
+                      : comment.archived_at,
+                  }
+                : comment
+            ),
+          })),
+        }
+      })
+
+      return { previousComments }
+    },
+    onError: (err, variables, context) => {
+      // Восстанавливаем предыдущее состояние при ошибке
+      if (context?.previousComments) {
+        queryClient.setQueryData(
+          ['comments', 'infinite'],
+          context.previousComments
+        )
+      }
+    },
+    onSettled: () => {
+      // Инвалидируем кеш для синхронизации с сервером
       queryClient.invalidateQueries({ queryKey: ['comments'] })
     },
   })
@@ -73,7 +120,51 @@ export function useMarkCommentAsViewed() {
 
   return useMutation({
     mutationFn: (commentId: number) => api.markCommentAsViewed(commentId),
-    onSuccess: () => {
+    onMutate: async (commentId) => {
+      // Отменяем исходящие запросы
+      await queryClient.cancelQueries({ queryKey: ['comments'] })
+
+      // Сохраняем предыдущее состояние
+      const previousComments = queryClient.getQueryData([
+        'comments',
+        'infinite',
+      ])
+
+      // Оптимистично обновляем кеш
+      queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
+        if (!old) return old
+
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            items: page.items.map((comment: VKCommentResponse) =>
+              comment.id === commentId
+                ? {
+                    ...comment,
+                    is_viewed: true,
+                    viewed_at: new Date().toISOString(),
+                  }
+                : comment
+            ),
+          })),
+        }
+      })
+
+      return { previousComments }
+    },
+    onError: (err, variables, context) => {
+      console.error('Ошибка при отметке комментария как просмотренного:', err)
+      // Восстанавливаем предыдущее состояние при ошибке
+      if (context?.previousComments) {
+        queryClient.setQueryData(
+          ['comments', 'infinite'],
+          context.previousComments
+        )
+      }
+    },
+    onSettled: () => {
+      // Инвалидируем кеш для синхронизации с сервером
       queryClient.invalidateQueries({ queryKey: ['comments'] })
     },
   })
@@ -87,7 +178,53 @@ export function useArchiveComment() {
 
   return useMutation({
     mutationFn: (commentId: number) => api.archiveComment(commentId),
-    onSuccess: () => {
+    onMutate: async (commentId) => {
+      // Отменяем исходящие запросы
+      await queryClient.cancelQueries({ queryKey: ['comments'] })
+
+      // Сохраняем предыдущее состояние
+      const previousComments = queryClient.getQueryData([
+        'comments',
+        'infinite',
+      ])
+
+      // Оптимистично обновляем кеш
+      queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
+        if (!old) return old
+
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            items: page.items.map((comment: VKCommentResponse) =>
+              comment.id === commentId
+                ? {
+                    ...comment,
+                    is_viewed: true,
+                    is_archived: true,
+                    viewed_at: new Date().toISOString(),
+                    archived_at: new Date().toISOString(),
+                  }
+                : comment
+            ),
+          })),
+        }
+      })
+
+      return { previousComments }
+    },
+    onError: (err, variables, context) => {
+      console.error('Ошибка при архивировании комментария:', err)
+      // Восстанавливаем предыдущее состояние при ошибке
+      if (context?.previousComments) {
+        queryClient.setQueryData(
+          ['comments', 'infinite'],
+          context.previousComments
+        )
+      }
+    },
+    onSettled: () => {
+      // Инвалидируем кеш для синхронизации с сервером
       queryClient.invalidateQueries({ queryKey: ['comments'] })
     },
   })
@@ -101,7 +238,51 @@ export function useUnarchiveComment() {
 
   return useMutation({
     mutationFn: (commentId: number) => api.unarchiveComment(commentId),
-    onSuccess: () => {
+    onMutate: async (commentId) => {
+      // Отменяем исходящие запросы
+      await queryClient.cancelQueries({ queryKey: ['comments'] })
+
+      // Сохраняем предыдущее состояние
+      const previousComments = queryClient.getQueryData([
+        'comments',
+        'infinite',
+      ])
+
+      // Оптимистично обновляем кеш
+      queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
+        if (!old) return old
+
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            items: page.items.map((comment: VKCommentResponse) =>
+              comment.id === commentId
+                ? {
+                    ...comment,
+                    is_archived: false,
+                    archived_at: null,
+                  }
+                : comment
+            ),
+          })),
+        }
+      })
+
+      return { previousComments }
+    },
+    onError: (err, variables, context) => {
+      console.error('Ошибка при разархивировании комментария:', err)
+      // Восстанавливаем предыдущее состояние при ошибке
+      if (context?.previousComments) {
+        queryClient.setQueryData(
+          ['comments', 'infinite'],
+          context.previousComments
+        )
+      }
+    },
+    onSettled: () => {
+      // Инвалидируем кеш для синхронизации с сервером
       queryClient.invalidateQueries({ queryKey: ['comments'] })
     },
   })

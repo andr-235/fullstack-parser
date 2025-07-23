@@ -176,6 +176,7 @@ export interface CommentSearchParams {
   group_id?: number
   keyword_id?: number
   author_id?: number
+  author_screen_name?: string[]
   date_from?: string
   date_to?: string
   is_viewed?: boolean

@@ -854,6 +854,8 @@ class ParserService:
         )
 
         # Применяем фильтры
+        if search_params.text:
+            query = query.where(VKComment.text.like(f"%{search_params.text}%"))
         if search_params.group_id:
             query = query.join(VKComment.post).where(
                 VKComment.post.has(group_id=search_params.group_id)
@@ -866,6 +868,12 @@ class ParserService:
             )
         if search_params.author_id:
             query = query.where(VKComment.author_id == search_params.author_id)
+        if search_params.author_screen_name:
+            query = query.where(
+                VKComment.author_screen_name.in_(
+                    search_params.author_screen_name
+                )
+            )
         if search_params.date_from:
             query = query.where(
                 VKComment.published_at >= search_params.date_from

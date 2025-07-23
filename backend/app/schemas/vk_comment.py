@@ -3,7 +3,7 @@ Pydantic схемы для VK комментариев
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, Field
 
@@ -97,9 +97,11 @@ class CommentUpdateRequest(BaseModel):
 class CommentSearchParams(BaseModel):
     """Параметры поиска комментариев"""
 
+    text: Optional[str] = None
     group_id: Optional[int] = None
     keyword_id: Optional[int] = None
     author_id: Optional[int] = None
+    author_screen_name: Optional[List[str]] = None
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None
     is_viewed: Optional[bool] = None
