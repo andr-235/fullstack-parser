@@ -68,6 +68,21 @@ async def get_comments(
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[VKCommentResponse]:
     """Получить отфильтрованные комментарии"""
+    import structlog
+
+    logger = structlog.get_logger()
+
+    logger.info(
+        "API get_comments called",
+        text=text,
+        group_id=group_id,
+        keyword_id=keyword_id,
+        author_id=author_id,
+        author_screen_name=author_screen_name,
+        is_viewed=is_viewed,
+        is_archived=is_archived,
+    )
+
     vk_service = VKAPIService(
         token=settings.vk.access_token, api_version=settings.vk.api_version
     )
@@ -84,6 +99,15 @@ async def get_comments(
         date_to=date_to,
         is_viewed=is_viewed,
         is_archived=is_archived,
+    )
+
+    print(f"DEBUG: author_screen_name = {author_screen_name}")
+    print(
+        f"DEBUG: search_params.author_screen_name = {search_params.author_screen_name}"
+    )
+
+    logger.info(
+        "Search params created", search_params=search_params.model_dump()
     )
 
     # Получаем отфильтрованные комментарии

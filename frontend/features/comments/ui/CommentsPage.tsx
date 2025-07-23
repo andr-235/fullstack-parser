@@ -185,6 +185,18 @@ export default function CommentsPage() {
   useEffect(() => {
     const statusParams = getStatusParams(statusFilter)
     const authorParams = getAuthorParams()
+    console.log('=== FILTERS DEBUG ===')
+    console.log('authorFilter:', authorFilter)
+    console.log('specialAuthors:', specialAuthors)
+    console.log('authorParams:', authorParams)
+    console.log('statusParams:', statusParams)
+    console.log('all filters:', {
+      text: debouncedText,
+      group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
+      keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
+      ...statusParams,
+      ...authorParams,
+    })
   }, [groupFilter, debouncedText, keywordFilter, statusFilter, authorFilter, specialAuthors])
 
   const statusParams = getStatusParams(statusFilter)
@@ -232,6 +244,8 @@ export default function CommentsPage() {
         const newAuthors = [...prev, authorScreenName]
         return newAuthors
       })
+      // Автоматически переключаем фильтр на особые авторы
+      setAuthorFilter('special')
     }
   }
 
