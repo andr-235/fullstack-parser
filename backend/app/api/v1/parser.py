@@ -97,16 +97,9 @@ async def get_comments(
     from app.models.comment_keyword_match import CommentKeywordMatch
     from app.models.vk_comment import VKComment
 
-    logger = structlog.get_logger()
-    logger.info("Начинаем загрузку ключевых слов для комментариев")
-
     try:
         # Получаем комментарии с ключевыми словами
         comment_ids = [item.id for item in result.items]
-        logger.info(
-            "Загружаем ключевые слова для комментариев",
-            comment_ids=comment_ids,
-        )
 
         # Загружаем комментарии с ключевыми словами одним запросом
         query = (
@@ -121,52 +114,16 @@ async def get_comments(
         comments_result = await db.execute(query)
         comments = comments_result.scalars().all()
 
-        logger.info(
-            "Загружены комментарии с ключевыми словами",
-            total_comments=len(comments),
-            comment_ids=comment_ids,
-        )
-
         # Создаем словарь комментариев с ключевыми словами
         comments_dict = {}
         for comment in comments:
             matched_keywords = []
-            logger.info(
-                "Обрабатываем комментарий",
-                comment_id=comment.id,
-                has_keyword_matches=bool(comment.keyword_matches),
-                matches_count=(
-                    len(comment.keyword_matches)
-                    if comment.keyword_matches
-                    else 0
-                ),
-            )
             if comment.keyword_matches:
-                logger.info(
-                    "Найдены ключевые слова для комментария",
-                    comment_id=comment.id,
-                    matches_count=len(comment.keyword_matches),
-                )
                 for match in comment.keyword_matches:
-                    logger.info(
-                        "Обрабатываем совпадение",
-                        comment_id=comment.id,
-                        match_id=match.id,
-                        has_keyword=bool(match.keyword),
-                        keyword_word=(
-                            match.keyword.word if match.keyword else None
-                        ),
-                    )
                     if match.keyword:
                         # Добавляем только слово ключевого слова как строку
                         matched_keywords.append(match.keyword.word)
             comments_dict[comment.id] = matched_keywords
-
-        logger.info(
-            "Создан словарь ключевых слов",
-            comments_with_keywords=len(comments_dict),
-            total_keywords=sum(len(kw) for kw in comments_dict.values()),
-        )
 
         # Обновляем ответы с ключевыми словами
         updated_items = []
@@ -176,8 +133,6 @@ async def get_comments(
             item_dict["matched_keywords"] = matched_keywords
             updated_items.append(VKCommentResponse(**item_dict))
 
-        logger.info("Комментарии обновлены с ключевыми словами")
-
         return PaginatedResponse(
             total=result.total,
             page=result.page,
@@ -185,7 +140,6 @@ async def get_comments(
             items=updated_items,
         )
     except Exception as e:
-        logger.error(f"Ошибка при загрузке ключевых слов: {e}")
         # Возвращаем результат без ключевых слов в случае ошибки
         return PaginatedResponse(
             total=result.total,

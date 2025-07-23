@@ -22,7 +22,7 @@ export function useComments(params?: CommentSearchParams & PaginationParams) {
  */
 export function useInfiniteComments(filters?: CommentSearchParams) {
   return useInfiniteQuery({
-    queryKey: ['comments', 'infinite', filters],
+    queryKey: ['comments', 'infinite', JSON.stringify(filters)],
     queryFn: ({ pageParam = 1 }) =>
       api.getComments({
         ...filters,
@@ -35,6 +35,7 @@ export function useInfiniteComments(filters?: CommentSearchParams) {
     },
     initialPageParam: 1,
     staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   })
 }
 

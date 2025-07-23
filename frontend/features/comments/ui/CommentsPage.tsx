@@ -185,14 +185,6 @@ export default function CommentsPage() {
   useEffect(() => {
     const statusParams = getStatusParams(statusFilter)
     const authorParams = getAuthorParams()
-    console.log('CommentsPage rendered')
-    console.log('filters:', {
-      text: debouncedText,
-      group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
-      keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
-      ...statusParams,
-      ...authorParams,
-    })
   }, [groupFilter, debouncedText, keywordFilter, statusFilter, authorFilter, specialAuthors])
 
   const statusParams = getStatusParams(statusFilter)
@@ -205,6 +197,7 @@ export default function CommentsPage() {
     hasNextPage,
     isFetching,
     isFetchingNextPage,
+    refetch,
   } = useInfiniteComments({
     text: debouncedText,
     group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
@@ -212,6 +205,11 @@ export default function CommentsPage() {
     ...statusParams,
     ...authorParams,
   })
+
+  // Принудительно обновляем при изменении фильтров
+  useEffect(() => {
+    refetch()
+  }, [authorFilter, specialAuthors, refetch])
 
   const { data: groupsData } = useGroups()
   const { data: keywordsData } = useKeywords()
@@ -230,7 +228,10 @@ export default function CommentsPage() {
 
   const handleAddSpecialAuthor = (authorScreenName: string) => {
     if (!specialAuthors.includes(authorScreenName)) {
-      setSpecialAuthors(prev => [...prev, authorScreenName])
+      setSpecialAuthors(prev => {
+        const newAuthors = [...prev, authorScreenName]
+        return newAuthors
+      })
     }
   }
 
@@ -472,7 +473,9 @@ export default function CommentsPage() {
             </Select>
             <Select
               value={authorFilter}
-              onValueChange={(val) => setAuthorFilter(val)}
+              onValueChange={(val) => {
+                setAuthorFilter(val)
+              }}
             >
               <SelectTrigger
                 className="border-slate-600 bg-slate-700 text-slate-200 text-sm"
