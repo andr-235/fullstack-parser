@@ -43,7 +43,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import type { KeywordResponse, KeywordUpdate } from '@/types/api'
-import useDebounce from '@/hooks/use-debounce'
+import { useDebounce } from '@/shared/hooks'
 import {
   Select,
   SelectTrigger,
@@ -52,7 +52,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-import { useKeywordCategories } from '@/hooks/use-keywords'
+import { useKeywordCategories } from '@/entities/keyword'
 import { cn } from '@/lib/utils'
 import UploadKeywordsModal from './UploadKeywordsModal'
 
@@ -88,7 +88,7 @@ const KeywordRow = ({
       onUpdate(
         keyword.id,
         { word: editedWord },
-        { onSuccess: () => {}, onError: () => {} }
+        { onSuccess: () => { }, onError: () => { } }
       )
     }
     setIsEditing(false)
@@ -275,7 +275,7 @@ export default function KeywordsPage() {
           <div className="p-2 bg-white/10 rounded-lg">
             <Target className="h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold">Управление ключевыми словами</h1>
+          <h1 className="text-xl font-bold">Управление ключевыми словами</h1>
         </div>
         <p className="text-slate-300">
           Добавляйте, настраивайте и управляйте ключевыми словами для поиска в

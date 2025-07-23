@@ -19,6 +19,7 @@ import {
 import type { VKGroupMonitoring, MonitoringGroupUpdate } from '@/types/api'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import { formatDateTimeShort } from '@/lib/time-utils'
 
 interface MonitoringSettingsProps {
   group: VKGroupMonitoring
@@ -157,11 +158,7 @@ export default function MonitoringSettings({
                 <span className="text-slate-400">Последний успех:</span>
                 <span className="ml-2 font-medium">
                   {group.last_monitoring_success
-                    ? format(
-                        new Date(group.last_monitoring_success),
-                        'dd.MM.yyyy HH:mm',
-                        { locale: ru }
-                      )
+                    ? (group.last_monitoring_success_local || formatDateTimeShort(group.last_monitoring_success))
                     : 'Нет'}
                 </span>
               </div>

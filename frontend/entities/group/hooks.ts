@@ -38,7 +38,6 @@ export function useCreateGroup() {
   return useMutation({
     mutationFn: (data: VKGroupCreate) => api.createGroup(data),
     onSuccess: () => {
-      // Инвалидируем список групп
       queryClient.invalidateQueries({ queryKey: ['groups'] })
     },
   })
@@ -54,7 +53,6 @@ export function useUpdateGroup() {
     mutationFn: ({ groupId, data }: { groupId: number; data: VKGroupUpdate }) =>
       api.updateGroup(groupId, data),
     onSuccess: (_, { groupId }) => {
-      // Инвалидируем конкретную группу и список групп
       queryClient.invalidateQueries({ queryKey: ['groups', groupId] })
       queryClient.invalidateQueries({ queryKey: ['groups'] })
     },
@@ -70,7 +68,6 @@ export function useDeleteGroup() {
   return useMutation({
     mutationFn: (groupId: number) => api.deleteGroup(groupId),
     onSuccess: () => {
-      // Инвалидируем список групп
       queryClient.invalidateQueries({ queryKey: ['groups'] })
     },
   })

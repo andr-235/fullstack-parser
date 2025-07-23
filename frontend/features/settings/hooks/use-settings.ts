@@ -1,7 +1,3 @@
-/**
- * React Query хуки для работы с настройками
- */
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, createQueryKey } from '@/lib/api'
 import type {
@@ -33,13 +29,9 @@ export function useUpdateSettings() {
     mutationFn: (settings: SettingsUpdateRequest) =>
       api.updateSettings(settings),
     onSuccess: (data) => {
-      // Обновляем кеш настроек
       queryClient.setQueryData(createQueryKey.settings(), data)
-
-      // Инвалидируем связанные запросы
       queryClient.invalidateQueries({ queryKey: ['monitoring'] })
       queryClient.invalidateQueries({ queryKey: ['parser'] })
-
       toast.success('Настройки успешно обновлены')
     },
     onError: (error) => {
@@ -58,13 +50,9 @@ export function useResetSettings() {
   return useMutation({
     mutationFn: () => api.resetSettings(),
     onSuccess: (data) => {
-      // Обновляем кеш настроек
       queryClient.setQueryData(createQueryKey.settings(), data)
-
-      // Инвалидируем связанные запросы
       queryClient.invalidateQueries({ queryKey: ['monitoring'] })
       queryClient.invalidateQueries({ queryKey: ['parser'] })
-
       toast.success('Настройки сброшены к значениям по умолчанию')
     },
     onError: (error) => {

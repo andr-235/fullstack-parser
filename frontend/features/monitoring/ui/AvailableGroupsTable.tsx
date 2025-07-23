@@ -14,13 +14,14 @@ import {
 import {
   useEnableGroupMonitoring,
   useRunGroupMonitoring,
-} from '@/hooks/use-monitoring'
+} from '../hooks'
 
 import { Play, Settings, Plus, Clock } from 'lucide-react'
 
 import type { VKGroupMonitoring } from '@/types/api'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import { formatDateTimeShort } from '@/lib/time-utils'
 import MonitoringSettings from './MonitoringSettings'
 
 interface AvailableGroupsTableProps {
@@ -66,7 +67,8 @@ export default function AvailableGroupsTable({
 
   const getLastActivityTime = (group: VKGroupMonitoring) => {
     if (group.last_monitoring_success) {
-      return `Последний запуск: ${format(new Date(group.last_monitoring_success), 'dd.MM.yyyy HH:mm', { locale: ru })}`
+      const displayTime = group.last_monitoring_success_local || formatDateTimeShort(group.last_monitoring_success)
+      return `Последний запуск: ${displayTime}`
     }
     return 'Никогда не запускался'
   }

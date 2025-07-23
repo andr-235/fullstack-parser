@@ -41,8 +41,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import type { VKGroupResponse } from '@/types/api'
 import { toast } from 'react-hot-toast'
-import useDebounce from '@/hooks/use-debounce'
-import { useInfiniteScroll } from '@/hooks/use-infinite-scroll'
+import { useDebounce, useInfiniteScroll } from '@/shared/hooks'
 import { GroupsHeader, GroupsStatsComponent, GroupsManagement } from './components'
 
 const AVATAR_PLACEHOLDER =
@@ -390,7 +389,7 @@ export default function GroupsPage() {
                                 })
                               }}
                               disabled={refreshGroupMutation.isPending}
-                              className="h-7 w-7 hover:bg-slate-600/50 text-slate-400 hover:text-blue-400 transition-all duration-200 rounded-md"
+                              className="h-7 w-7 hover:bg-slate-600/50 text-blue-400 hover:text-blue-300 transition-all duration-200 rounded-md"
                               title="Обновить информацию о группе из VK"
                             >
                               <RefreshCw className={`h-3.5 w-3.5 ${refreshGroupMutation.isPending ? 'animate-spin' : ''}`} />
@@ -399,7 +398,7 @@ export default function GroupsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleCopyLink(group.screen_name)}
-                              className="h-7 w-7 hover:bg-slate-600/50 text-slate-400 hover:text-green-400 transition-all duration-200 rounded-md"
+                              className="h-7 w-7 hover:bg-slate-600/50 text-green-400 hover:text-green-300 transition-all duration-200 rounded-md"
                               title="Копировать ссылку"
                             >
                               {copiedGroup === group.screen_name ? (
@@ -412,7 +411,7 @@ export default function GroupsPage() {
                               variant="ghost"
                               size="icon"
                               asChild
-                              className="h-7 w-7 hover:bg-slate-600/50 text-slate-400 hover:text-blue-400 transition-all duration-200 rounded-md"
+                              className="h-7 w-7 hover:bg-slate-600/50 text-purple-400 hover:text-purple-300 transition-all duration-200 rounded-md"
                               title="Открыть в VK"
                             >
                               <a
@@ -438,7 +437,7 @@ export default function GroupsPage() {
                                 })
                               }
                               disabled={updateGroupMutation.isPending}
-                              className="h-8 w-8 hover:bg-slate-600/50 text-slate-400 hover:text-blue-400 transition-all duration-200 rounded-md"
+                              className="h-8 w-8 hover:bg-slate-600/50 text-blue-400 hover:text-blue-300 transition-all duration-200 rounded-md"
                               title={
                                 group.is_active ? 'Остановить' : 'Запустить'
                               }
@@ -452,7 +451,7 @@ export default function GroupsPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 hover:bg-slate-600/50 text-slate-400 hover:text-yellow-400 transition-all duration-200 rounded-md"
+                              className="h-8 w-8 hover:bg-slate-600/50 text-yellow-400 hover:text-yellow-300 transition-all duration-200 rounded-md"
                               title="Настройки"
                             >
                               <Settings className="h-4 w-4" />
@@ -464,7 +463,7 @@ export default function GroupsPage() {
                                 deleteGroupMutation.mutate({ groupId: group.id })
                               }
                               disabled={deleteGroupMutation.isPending}
-                              className="h-8 w-8 hover:bg-slate-600/50 text-slate-400 hover:text-red-400 transition-all duration-200 rounded-md"
+                              className="h-8 w-8 hover:bg-slate-600/50 text-red-400 hover:text-red-300 transition-all duration-200 rounded-md"
                               title="Удалить"
                             >
                               <Trash2 className="h-4 w-4" />

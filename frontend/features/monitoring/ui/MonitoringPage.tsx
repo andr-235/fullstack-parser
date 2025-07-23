@@ -21,7 +21,7 @@ import {
   useRunMonitoringCycle,
   useEnableGroupMonitoring,
   useSchedulerStatus,
-} from '@/hooks/use-monitoring'
+} from '../hooks'
 import {
   Activity,
   Play,
@@ -49,6 +49,11 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import {
+  formatDateTimeShort,
+  isOverdue,
+  calculateProgress,
+} from '@/lib/time-utils'
 import GroupsMonitoringTable from './GroupsMonitoringTable'
 import { toast } from 'react-hot-toast'
 import { useGroups } from '@/features/groups/hooks/use-groups'
@@ -163,28 +168,24 @@ export default function MonitoringPage() {
       }
     }
 
-    const nextTime = new Date(stats.next_monitoring_at)
-    const now = new Date()
-    const timeDiff = nextTime.getTime() - now.getTime()
-
-    // Если время в прошлом
-    if (timeDiff < 0) {
+    // Если время просрочено
+    if (isOverdue(stats.next_monitoring_at)) {
+      const displayTime = stats.next_monitoring_at_local || formatDateTimeShort(stats.next_monitoring_at)
       return {
-        text: `Просрочено ${format(nextTime, 'dd.MM.yyyy HH:mm', { locale: ru })}`,
+        text: `Просрочено ${displayTime}`,
         progress: 100,
         status: 'overdue',
       }
     }
 
     // Вычисляем прогресс (предполагаем интервал 5 минут)
-    const intervalMs = 5 * 60 * 1000 // 5 минут
-    const progress = Math.max(
-      0,
-      Math.min(100, ((intervalMs - timeDiff) / intervalMs) * 100)
-    )
+    const progress = calculateProgress(stats.next_monitoring_at, 5)
+
+    // Для отображения используем относительное время
+    const displayText = formatDistanceToNow(new Date(stats.next_monitoring_at), { addSuffix: true, locale: ru })
 
     return {
-      text: formatDistanceToNow(nextTime, { addSuffix: true, locale: ru }),
+      text: displayText,
       progress,
       status: 'running',
     }
@@ -398,13 +399,12 @@ export default function MonitoringPage() {
                   Следующий запуск
                 </p>
                 <p
-                  className={`text-sm font-medium ${
-                    nextMonitoringTime.status === 'overdue'
-                      ? 'text-red-400'
-                      : nextMonitoringTime.status === 'waiting'
-                        ? 'text-slate-400'
-                        : 'text-purple-400'
-                  }`}
+                  className={`text-sm font-medium ${nextMonitoringTime.status === 'overdue'
+                    ? 'text-red-400'
+                    : nextMonitoringTime.status === 'waiting'
+                      ? 'text-slate-400'
+                      : 'text-purple-400'
+                    }`}
                 >
                   {nextMonitoringTime.text}
                 </p>

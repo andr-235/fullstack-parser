@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api, createQueryKey } from '@/lib/api'
-import { useGlobalStats, useDashboardStats } from '@/hooks/use-stats'
+import { useGlobalStats, useDashboardStats } from './use-stats'
 import type {
   GlobalStats,
   DashboardStats,

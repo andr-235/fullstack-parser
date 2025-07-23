@@ -59,16 +59,12 @@ export function useUpdateCommentStatus() {
       statusUpdate: CommentUpdateRequest
     }) => api.updateCommentStatus(commentId, statusUpdate),
     onMutate: async ({ commentId, statusUpdate }) => {
-      // Отменяем исходящие запросы
       await queryClient.cancelQueries({ queryKey: ['comments'] })
-
-      // Сохраняем предыдущее состояние
       const previousComments = queryClient.getQueryData([
         'comments',
         'infinite',
       ])
 
-      // Оптимистично обновляем кеш
       queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
         if (!old) return old
 
@@ -97,7 +93,6 @@ export function useUpdateCommentStatus() {
       return { previousComments }
     },
     onError: (err, variables, context) => {
-      // Восстанавливаем предыдущее состояние при ошибке
       if (context?.previousComments) {
         queryClient.setQueryData(
           ['comments', 'infinite'],
@@ -106,7 +101,6 @@ export function useUpdateCommentStatus() {
       }
     },
     onSettled: () => {
-      // Инвалидируем кеш для синхронизации с сервером
       queryClient.invalidateQueries({ queryKey: ['comments'] })
     },
   })
@@ -121,16 +115,12 @@ export function useMarkCommentAsViewed() {
   return useMutation({
     mutationFn: (commentId: number) => api.markCommentAsViewed(commentId),
     onMutate: async (commentId) => {
-      // Отменяем исходящие запросы
       await queryClient.cancelQueries({ queryKey: ['comments'] })
-
-      // Сохраняем предыдущее состояние
       const previousComments = queryClient.getQueryData([
         'comments',
         'infinite',
       ])
 
-      // Оптимистично обновляем кеш
       queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
         if (!old) return old
 
@@ -155,7 +145,6 @@ export function useMarkCommentAsViewed() {
     },
     onError: (err, variables, context) => {
       console.error('Ошибка при отметке комментария как просмотренного:', err)
-      // Восстанавливаем предыдущее состояние при ошибке
       if (context?.previousComments) {
         queryClient.setQueryData(
           ['comments', 'infinite'],
@@ -164,7 +153,6 @@ export function useMarkCommentAsViewed() {
       }
     },
     onSettled: () => {
-      // Инвалидируем кеш для синхронизации с сервером
       queryClient.invalidateQueries({ queryKey: ['comments'] })
     },
   })
@@ -179,16 +167,12 @@ export function useArchiveComment() {
   return useMutation({
     mutationFn: (commentId: number) => api.archiveComment(commentId),
     onMutate: async (commentId) => {
-      // Отменяем исходящие запросы
       await queryClient.cancelQueries({ queryKey: ['comments'] })
-
-      // Сохраняем предыдущее состояние
       const previousComments = queryClient.getQueryData([
         'comments',
         'infinite',
       ])
 
-      // Оптимистично обновляем кеш
       queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
         if (!old) return old
 
@@ -215,7 +199,6 @@ export function useArchiveComment() {
     },
     onError: (err, variables, context) => {
       console.error('Ошибка при архивировании комментария:', err)
-      // Восстанавливаем предыдущее состояние при ошибке
       if (context?.previousComments) {
         queryClient.setQueryData(
           ['comments', 'infinite'],
@@ -224,7 +207,6 @@ export function useArchiveComment() {
       }
     },
     onSettled: () => {
-      // Инвалидируем кеш для синхронизации с сервером
       queryClient.invalidateQueries({ queryKey: ['comments'] })
     },
   })
@@ -239,16 +221,12 @@ export function useUnarchiveComment() {
   return useMutation({
     mutationFn: (commentId: number) => api.unarchiveComment(commentId),
     onMutate: async (commentId) => {
-      // Отменяем исходящие запросы
       await queryClient.cancelQueries({ queryKey: ['comments'] })
-
-      // Сохраняем предыдущее состояние
       const previousComments = queryClient.getQueryData([
         'comments',
         'infinite',
       ])
 
-      // Оптимистично обновляем кеш
       queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
         if (!old) return old
 
@@ -273,7 +251,6 @@ export function useUnarchiveComment() {
     },
     onError: (err, variables, context) => {
       console.error('Ошибка при разархивировании комментария:', err)
-      // Восстанавливаем предыдущее состояние при ошибке
       if (context?.previousComments) {
         queryClient.setQueryData(
           ['comments', 'infinite'],
@@ -282,7 +259,6 @@ export function useUnarchiveComment() {
       }
     },
     onSettled: () => {
-      // Инвалидируем кеш для синхронизации с сервером
       queryClient.invalidateQueries({ queryKey: ['comments'] })
     },
   })

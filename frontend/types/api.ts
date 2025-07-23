@@ -275,6 +275,7 @@ export interface MonitoringStats {
   monitored_groups: number
   ready_for_monitoring: number
   next_monitoring_at?: string
+  next_monitoring_at_local?: string // Локальное время Владивостока
 }
 
 export interface VKGroupMonitoring extends VKGroupResponse {
@@ -284,8 +285,10 @@ export interface VKGroupMonitoring extends VKGroupResponse {
   monitoring_interval_minutes: number
   monitoring_priority: number
   next_monitoring_at?: string
+  next_monitoring_at_local?: string // Локальное время Владивостока
   monitoring_runs_count: number
   last_monitoring_success?: string
+  last_monitoring_success_local?: string // Локальное время Владивостока
   last_monitoring_error?: string
 }
 

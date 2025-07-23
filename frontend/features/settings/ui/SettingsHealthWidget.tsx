@@ -2,7 +2,7 @@
  * Виджет здоровья системы
  */
 
-import { useSettingsHealth } from '@/hooks/use-settings'
+import { useSettingsHealth } from '../hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {

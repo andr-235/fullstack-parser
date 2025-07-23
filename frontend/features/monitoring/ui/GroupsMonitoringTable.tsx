@@ -22,7 +22,7 @@ import {
   useDisableGroupMonitoring,
   useRunGroupMonitoring,
   useUpdateGroupMonitoring,
-} from '@/hooks/use-monitoring'
+} from '../hooks'
 import {
   Play,
   Settings,
@@ -37,6 +37,11 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import {
+  formatDateTimeShort,
+  isOverdue,
+  calculateProgress,
+} from '@/lib/time-utils'
 import type { VKGroupMonitoring } from '@/types/api'
 import MonitoringSettings from './MonitoringSettings'
 
@@ -142,29 +147,28 @@ export default function GroupsMonitoringTable({
       }
     }
 
-    const nextTime = new Date(group.next_monitoring_at)
-    const now = new Date()
-    const timeDiff = nextTime.getTime() - now.getTime()
-
-    // Если время в прошлом
-    if (timeDiff < 0) {
+    // Если время просрочено
+    if (isOverdue(group.next_monitoring_at)) {
+      const displayTime = group.next_monitoring_at_local || formatDateTimeShort(group.next_monitoring_at)
       return {
-        text: `Просрочено ${format(nextTime, 'dd.MM.yyyy HH:mm', { locale: ru })}`,
+        text: `Просрочено ${displayTime}`,
         progress: 100,
         status: 'overdue',
         color: 'text-red-400',
       }
     }
 
-    // Вычисляем прогресс для интервала мониторинга
-    const intervalMs = (group.monitoring_interval_minutes || 60) * 60 * 1000
-    const progress = Math.max(
-      0,
-      Math.min(100, ((intervalMs - timeDiff) / intervalMs) * 100)
+    // Вычисляем прогресс для интервала мониторинга (используем UTC время)
+    const progress = calculateProgress(
+      group.next_monitoring_at,
+      group.monitoring_interval_minutes || 60
     )
 
+    // Для отображения используем относительное время
+    const displayText = formatDistanceToNow(new Date(group.next_monitoring_at), { addSuffix: true, locale: ru })
+
     return {
-      text: formatDistanceToNow(nextTime, { addSuffix: true, locale: ru }),
+      text: displayText,
       progress,
       status: 'running',
       color: 'text-blue-400',
@@ -173,9 +177,9 @@ export default function GroupsMonitoringTable({
 
   const getLastMonitoringTime = (group: VKGroupMonitoring) => {
     if (group.last_monitoring_success) {
-      const lastTime = new Date(group.last_monitoring_success)
+      const displayTime = group.last_monitoring_success_local || formatDateTimeShort(group.last_monitoring_success)
       return {
-        text: format(lastTime, 'dd.MM.yyyy HH:mm', { locale: ru }),
+        text: displayTime,
         status: 'success',
         color: 'text-green-400',
       }

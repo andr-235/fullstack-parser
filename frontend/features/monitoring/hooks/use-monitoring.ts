@@ -88,7 +88,6 @@ export function useEnableGroupMonitoring() {
     }) => api.enableGroupMonitoring(groupId, intervalMinutes, priority),
     onSuccess: () => {
       toast.success('Мониторинг группы включен')
-      // Инвалидируем кеш для обновления данных
       queryClient.invalidateQueries({
         queryKey: createQueryKey.monitoringStats(),
       })
@@ -118,7 +117,6 @@ export function useDisableGroupMonitoring() {
     mutationFn: (groupId: number) => api.disableGroupMonitoring(groupId),
     onSuccess: () => {
       toast.success('Мониторинг группы отключен')
-      // Инвалидируем кеш для обновления данных
       queryClient.invalidateQueries({
         queryKey: createQueryKey.monitoringStats(),
       })
@@ -154,7 +152,6 @@ export function useUpdateGroupMonitoring() {
     }) => api.updateGroupMonitoring(groupId, updateData),
     onSuccess: () => {
       toast.success('Настройки мониторинга обновлены')
-      // Инвалидируем кеш для обновления данных
       queryClient.invalidateQueries({
         queryKey: createQueryKey.monitoringStats(),
       })
@@ -184,7 +181,6 @@ export function useRunGroupMonitoring() {
     mutationFn: (groupId: number) => api.runGroupMonitoring(groupId),
     onSuccess: () => {
       toast.success('Мониторинг группы запущен')
-      // Инвалидируем кеш для обновления данных
       queryClient.invalidateQueries({
         queryKey: createQueryKey.monitoringStats(),
       })
@@ -216,7 +212,6 @@ export function useRunMonitoringCycle() {
       toast.success(
         `Цикл мониторинга завершён. Обработано групп: ${data.monitored_groups}, успешно: ${data.successful_runs}, ошибок: ${data.failed_runs}`
       )
-      // Инвалидируем кеш для обновления данных
       queryClient.invalidateQueries({
         queryKey: createQueryKey.monitoringStats(),
       })

@@ -5,7 +5,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useSettings, useUpdateSettings } from '@/hooks/use-settings'
+import { useSettings, useUpdateSettings } from '../hooks'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'

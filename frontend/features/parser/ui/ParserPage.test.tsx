@@ -7,8 +7,8 @@ import {
   useParserStats,
   useStartParser,
   useStopParser,
-} from '@/hooks/use-parser'
-import { useGroups } from '@/hooks/use-groups'
+} from '../hooks'
+import { useGroups } from '@/entities/group'
 import type {
   ParseTaskResponse,
   ParserState,

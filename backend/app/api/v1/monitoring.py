@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.time_utils import format_datetime_for_display
 from app.models.vk_group import VKGroup
 from app.schemas.base import (
     PaginatedResponse,
@@ -19,6 +20,7 @@ from app.schemas.monitoring import (
     GroupMonitoringConfig,
     GroupMonitoringResponse,
     MonitoringCycleResult,
+    MonitoringStats,
     SchedulerStatus,
 )
 from app.services.monitoring_service import MonitoringService
@@ -41,10 +43,10 @@ async def test_monitoring():
     return {"message": "Monitoring router works!"}
 
 
-@router.get("/stats")
+@router.get("/stats", response_model=MonitoringStats)
 async def get_monitoring_stats(
     db: AsyncSession = Depends(get_db),
-):
+) -> MonitoringStats:
     """Получить статистику мониторинга"""
     vk_service = _get_vk_service()
     monitoring_service = MonitoringService(db=db, vk_service=vk_service)
@@ -57,7 +59,7 @@ async def get_monitoring_stats(
     logger = structlog.get_logger()
     logger.info("API stats response", stats=stats)
 
-    return stats
+    return MonitoringStats(**stats)
 
 
 @router.get(
@@ -98,8 +100,18 @@ async def get_monitoring_groups(
                 monitoring_interval_minutes=group.monitoring_interval_minutes,
                 monitoring_priority=group.monitoring_priority,
                 next_monitoring_at=group.next_monitoring_at,
+                next_monitoring_at_local=(
+                    format_datetime_for_display(group.next_monitoring_at)
+                    if group.next_monitoring_at
+                    else None
+                ),
                 monitoring_runs_count=group.monitoring_runs_count,
                 last_monitoring_success=group.last_monitoring_success,
+                last_monitoring_success_local=(
+                    format_datetime_for_display(group.last_monitoring_success)
+                    if group.last_monitoring_success
+                    else None
+                ),
                 last_monitoring_error=group.last_monitoring_error,
             )
         )
@@ -145,8 +157,18 @@ async def get_available_groups_for_monitoring(
                 or 60,
                 monitoring_priority=group.monitoring_priority or 5,
                 next_monitoring_at=group.next_monitoring_at,
+                next_monitoring_at_local=(
+                    format_datetime_for_display(group.next_monitoring_at)
+                    if group.next_monitoring_at
+                    else None
+                ),
                 monitoring_runs_count=group.monitoring_runs_count or 0,
                 last_monitoring_success=group.last_monitoring_success,
+                last_monitoring_success_local=(
+                    format_datetime_for_display(group.last_monitoring_success)
+                    if group.last_monitoring_success
+                    else None
+                ),
                 last_monitoring_error=group.last_monitoring_error,
             )
         )
@@ -197,8 +219,18 @@ async def get_active_monitoring_groups(
                 monitoring_interval_minutes=group.monitoring_interval_minutes,
                 monitoring_priority=group.monitoring_priority,
                 next_monitoring_at=group.next_monitoring_at,
+                next_monitoring_at_local=(
+                    format_datetime_for_display(group.next_monitoring_at)
+                    if group.next_monitoring_at
+                    else None
+                ),
                 monitoring_runs_count=group.monitoring_runs_count,
                 last_monitoring_success=group.last_monitoring_success,
+                last_monitoring_success_local=(
+                    format_datetime_for_display(group.last_monitoring_success)
+                    if group.last_monitoring_success
+                    else None
+                ),
                 last_monitoring_error=group.last_monitoring_error,
             )
         )
@@ -438,8 +470,18 @@ async def get_group_monitoring_status(
         monitoring_interval_minutes=group.monitoring_interval_minutes,
         monitoring_priority=group.monitoring_priority,
         next_monitoring_at=group.next_monitoring_at,
+        next_monitoring_at_local=(
+            format_datetime_for_display(group.next_monitoring_at)
+            if group.next_monitoring_at
+            else None
+        ),
         monitoring_runs_count=group.monitoring_runs_count,
         last_monitoring_success=group.last_monitoring_success,
+        last_monitoring_success_local=(
+            format_datetime_for_display(group.last_monitoring_success)
+            if group.last_monitoring_success
+            else None
+        ),
         last_monitoring_error=group.last_monitoring_error,
     )
 

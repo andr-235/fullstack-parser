@@ -1,3 +1,3 @@
-// Shared hooks exports
-export * from './use-debounce'
-export * from './use-app-icon'
+export { default as useDebounce } from './use-debounce'
+export { useInfiniteScroll } from './use-infinite-scroll'
+export { useAppIcon } from './use-app-icon'

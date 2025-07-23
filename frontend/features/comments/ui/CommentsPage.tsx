@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { useInfiniteComments, useMarkCommentAsViewed, useArchiveComment, useUnarchiveComment } from '@/hooks/use-comments'
-import { useGroups } from '@/hooks/use-groups'
-import { useKeywords } from '@/hooks/use-keywords'
-import { useGlobalStats } from '@/hooks/use-stats'
+import { useInfiniteComments, useMarkCommentAsViewed, useArchiveComment, useUnarchiveComment } from '@/entities/comment'
+import { useGroups } from '@/entities/group'
+import { useKeywords } from '@/entities/keyword'
+import { useGlobalStats } from '@/features/dashboard'
 import {
   Card,
   CardContent,
@@ -51,7 +51,7 @@ import {
   CheckCircle,
   Edit,
 } from 'lucide-react'
-import useDebounce from '@/hooks/use-debounce'
+import { useDebounce } from '@/shared/hooks'
 import Link from 'next/link'
 import type { VKCommentResponse, KeywordResponse } from '@/types/api'
 

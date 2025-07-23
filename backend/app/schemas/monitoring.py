@@ -69,13 +69,19 @@ class GroupMonitoringResponse(BaseModel):
     )
     monitoring_priority: int = Field(description="Приоритет мониторинга")
     next_monitoring_at: Optional[datetime] = Field(
-        description="Время следующего мониторинга"
+        description="Время следующего мониторинга (UTC)"
+    )
+    next_monitoring_at_local: Optional[str] = Field(
+        description="Время следующего мониторинга (локальное время Владивостока)"
     )
     monitoring_runs_count: int = Field(
         description="Количество запусков мониторинга"
     )
     last_monitoring_success: Optional[datetime] = Field(
-        description="Последний успешный запуск"
+        description="Последний успешный запуск (UTC)"
+    )
+    last_monitoring_success_local: Optional[str] = Field(
+        description="Последний успешный запуск (локальное время Владивостока)"
     )
     last_monitoring_error: Optional[str] = Field(
         description="Последняя ошибка мониторинга"

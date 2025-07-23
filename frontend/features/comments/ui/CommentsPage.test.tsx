@@ -8,9 +8,9 @@ import {
 } from '@testing-library/react'
 import CommentsPage from '@/app/comments/page'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useInfiniteComments } from '@/hooks/use-comments'
-import { useGroups } from '@/hooks/use-groups'
-import { useKeywords } from '@/hooks/use-keywords'
+import { useInfiniteComments } from '@/entities/comment'
+import { useGroups } from '@/entities/group'
+import { useKeywords } from '@/entities/keyword'
 import type {
   VKCommentResponse,
   VKGroupResponse,
