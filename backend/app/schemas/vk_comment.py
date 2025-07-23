@@ -56,6 +56,18 @@ class VKCommentResponse(VKCommentBase, IDMixin, TimestampMixin, BaseSchema):
     processed_at: Optional[datetime] = Field(
         None, description="Когда был обработан"
     )
+    is_viewed: bool = Field(
+        default=False, description="Просмотрен ли комментарий"
+    )
+    viewed_at: Optional[datetime] = Field(
+        None, description="Когда был просмотрен"
+    )
+    is_archived: bool = Field(
+        default=False, description="Архивирован ли комментарий"
+    )
+    archived_at: Optional[datetime] = Field(
+        None, description="Когда был архивирован"
+    )
     group: Optional[VKGroupResponse] = None
     matched_keywords: Optional[list[str]] = Field(
         default=None, description="Найденные ключевые слова"
@@ -75,6 +87,13 @@ class CommentWithKeywords(VKCommentResponse):
     )
 
 
+class CommentUpdateRequest(BaseModel):
+    """Схема для обновления статуса комментария"""
+
+    is_viewed: Optional[bool] = None
+    is_archived: Optional[bool] = None
+
+
 class CommentSearchParams(BaseModel):
     """Параметры поиска комментариев"""
 
@@ -83,3 +102,5 @@ class CommentSearchParams(BaseModel):
     author_id: Optional[int] = None
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None
+    is_viewed: Optional[bool] = None
+    is_archived: Optional[bool] = None

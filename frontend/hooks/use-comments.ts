@@ -1,9 +1,15 @@
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query'
+import {
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { api, createQueryKey } from '@/lib/api'
 import type {
   VKCommentResponse,
   CommentSearchParams,
   PaginationParams,
+  CommentUpdateRequest,
 } from '@/types/api'
 
 /**
@@ -27,14 +33,77 @@ export function useInfiniteComments(filters?: CommentSearchParams) {
       api.getComments({
         ...filters,
         page: pageParam,
-        size: 1000, // Увеличиваем лимит для загрузки большего количества записей
+        size: 20,
       }),
     getNextPageParam: (lastPage, pages) => {
-      const totalLoaded = pages.length * 1000
+      const totalLoaded = pages.length * 20
       return lastPage.total > totalLoaded ? pages.length + 1 : undefined
     },
     initialPageParam: 1,
     staleTime: 2 * 60 * 1000,
+  })
+}
+
+/**
+ * Хук для обновления статуса комментария
+ */
+export function useUpdateCommentStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      commentId,
+      statusUpdate,
+    }: {
+      commentId: number
+      statusUpdate: CommentUpdateRequest
+    }) => api.updateCommentStatus(commentId, statusUpdate),
+    onSuccess: () => {
+      // Инвалидируем кеш комментариев
+      queryClient.invalidateQueries({ queryKey: ['comments'] })
+    },
+  })
+}
+
+/**
+ * Хук для отметки комментария как просмотренного
+ */
+export function useMarkCommentAsViewed() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (commentId: number) => api.markCommentAsViewed(commentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments'] })
+    },
+  })
+}
+
+/**
+ * Хук для архивирования комментария
+ */
+export function useArchiveComment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (commentId: number) => api.archiveComment(commentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments'] })
+    },
+  })
+}
+
+/**
+ * Хук для разархивирования комментария
+ */
+export function useUnarchiveComment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (commentId: number) => api.unarchiveComment(commentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments'] })
+    },
   })
 }
 

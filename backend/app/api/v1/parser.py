@@ -5,7 +5,7 @@ API endpoints для парсинга комментариев VK
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -24,6 +24,7 @@ from app.schemas.parser import (
 )
 from app.schemas.vk_comment import (
     CommentSearchParams,
+    CommentUpdateRequest,
     CommentWithKeywords,
     VKCommentResponse,
 )
@@ -45,7 +46,7 @@ async def start_parsing(
     parser_manager=Depends(get_redis_parser_manager),
 ) -> ParseTaskResponse:
     """Запустить парсинг группы"""
-    vk_service = VKBottleService(
+    vk_service = VKAPIService(
         token=settings.vk.access_token, api_version=settings.vk.api_version
     )
     service = ParserService(db, vk_service)
@@ -59,6 +60,8 @@ async def get_comments(
     author_id: Optional[int] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
+    is_viewed: Optional[bool] = None,
+    is_archived: Optional[bool] = None,
     pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[VKCommentResponse]:
@@ -75,6 +78,8 @@ async def get_comments(
         author_id=author_id,
         date_from=date_from,
         date_to=date_to,
+        is_viewed=is_viewed,
+        is_archived=is_archived,
     )
 
     # Получаем отфильтрованные комментарии
@@ -193,6 +198,94 @@ async def get_comment_with_keywords(
     vk_service = VKAPIService(token="stub", api_version="5.131")
     service = ParserService(db, vk_service)
     return await service.get_comment_with_keywords(comment_id)
+
+
+@router.put("/comments/{comment_id}/status", response_model=VKCommentResponse)
+async def update_comment_status(
+    comment_id: int,
+    status_update: CommentUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+) -> VKCommentResponse:
+    """Обновить статус комментария (просмотрен/архивирован)"""
+    from datetime import datetime, timezone
+    from sqlalchemy import select
+    from app.models.vk_comment import VKComment
+
+    # Получаем комментарий
+    result = await db.execute(
+        select(VKComment).where(VKComment.id == comment_id)
+    )
+    comment = result.scalar_one_or_none()
+
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Комментарий не найден",
+        )
+
+    # Обновляем статус
+    if status_update.is_viewed is not None:
+        comment.is_viewed = status_update.is_viewed
+        if status_update.is_viewed:
+            comment.viewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        else:
+            comment.viewed_at = None
+
+    if status_update.is_archived is not None:
+        comment.is_archived = status_update.is_archived
+        if status_update.is_archived:
+            comment.archived_at = datetime.now(timezone.utc).replace(
+                tzinfo=None
+            )
+        else:
+            comment.archived_at = None
+
+    await db.commit()
+    await db.refresh(comment)
+
+    # Конвертируем в ответ
+    vk_service = VKAPIService(
+        token=settings.vk.access_token, api_version=settings.vk.api_version
+    )
+    service = ParserService(db, vk_service)
+    return service._convert_comment_to_response(comment)
+
+
+@router.post("/comments/{comment_id}/view", response_model=VKCommentResponse)
+async def mark_comment_as_viewed(
+    comment_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> VKCommentResponse:
+    """Отметить комментарий как просмотренный"""
+    return await update_comment_status(
+        comment_id, CommentUpdateRequest(is_viewed=True), db
+    )
+
+
+@router.post(
+    "/comments/{comment_id}/archive", response_model=VKCommentResponse
+)
+async def archive_comment(
+    comment_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> VKCommentResponse:
+    """Архивировать комментарий (отметить как просмотренный и архивированный)"""
+    return await update_comment_status(
+        comment_id, CommentUpdateRequest(is_viewed=True, is_archived=True), db
+    )
+
+
+@router.post(
+    "/comments/{comment_id}/unarchive", response_model=VKCommentResponse
+)
+async def unarchive_comment(
+    comment_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> VKCommentResponse:
+    """Разархивировать комментарий"""
+    return await update_comment_status(
+        comment_id, CommentUpdateRequest(is_archived=False), db
+    )
 
 
 @router.get("/stats/global", response_model=GlobalStats)

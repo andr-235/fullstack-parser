@@ -478,7 +478,7 @@ export default function GroupsPage() {
                           currentSort={sortBy}
                           currentOrder={sortOrder}
                           onSort={handleSort}
-                          className="w-48"
+                          className="w-40"
                         >
                           Группа
                         </SortableHeader>
@@ -530,7 +530,7 @@ export default function GroupsPage() {
                           <td className="px-3 py-2 font-mono text-blue-400 font-semibold w-16">
                             {group.vk_id}
                           </td>
-                          <td className="px-3 py-2 w-48">
+                          <td className="px-3 py-2 w-40">
                             <div className="flex items-center gap-1">
                               <div className="relative flex-shrink-0">
                                 <img
@@ -539,16 +539,16 @@ export default function GroupsPage() {
                                     `${AVATAR_PLACEHOLDER}${encodeURIComponent(group.name)}`
                                   }
                                   alt={group.name}
-                                  className="w-5 h-5 rounded-full border border-slate-600 shadow-sm object-cover bg-slate-700 transition-transform duration-200 hover:scale-110"
+                                  className="w-6 h-6 rounded-full border border-slate-600 shadow-sm object-cover bg-slate-700 transition-transform duration-200 hover:scale-110"
                                   loading="lazy"
                                 />
                                 {group.is_active && (
-                                  <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-slate-800 animate-pulse"></div>
+                                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-slate-800 animate-pulse"></div>
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1">
-                                  <h3 className="font-semibold text-slate-200 truncate text-xs">
+                                  <h3 className="font-semibold text-slate-200 truncate text-sm">
                                     {group.name}
                                   </h3>
                                   <Button
@@ -566,13 +566,13 @@ export default function GroupsPage() {
                                       })
                                     }}
                                     disabled={refreshGroupMutation.isPending}
-                                    className="h-2.5 w-2.5 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                                    className="h-3 w-3 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
                                     title="Обновить информацию о группе из VK"
                                   >
-                                    <RefreshCw className="h-1.5 w-1.5" />
+                                    <RefreshCw className="h-2 w-2" />
                                   </Button>
                                 </div>
-                                <div className="flex items-center gap-0.5 mt-0.5">
+                                <div className="flex items-center gap-1 mt-0.5">
                                   <span className="text-xs text-slate-400 truncate">
                                     @{group.screen_name}
                                   </span>
@@ -580,26 +580,26 @@ export default function GroupsPage() {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => handleCopyLink(group.screen_name)}
-                                    className="h-2.5 w-2.5 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                                    className="h-3 w-3 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
                                   >
                                     {copiedGroup === group.screen_name ? (
-                                      <Check className="h-1 w-1" />
+                                      <Check className="h-1.5 w-1.5" />
                                     ) : (
-                                      <Copy className="h-1 w-1" />
+                                      <Copy className="h-1.5 w-1.5" />
                                     )}
                                   </Button>
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     asChild
-                                    className="h-2.5 w-2.5 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
+                                    className="h-3 w-3 hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all duration-200"
                                   >
                                     <a
                                       href={`https://vk.com/${group.screen_name}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
-                                      <ExternalLink className="h-1 w-1" />
+                                      <ExternalLink className="h-1.5 w-1.5" />
                                     </a>
                                   </Button>
                                 </div>

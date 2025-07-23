@@ -27,6 +27,7 @@ import type {
   MonitoringRunResult,
   VKGroupUploadResponse,
   SchedulerStatus,
+  CommentUpdateRequest,
 } from '@/types/api'
 import type {
   ApplicationSettings,
@@ -336,6 +337,39 @@ class APIClient {
   async getCommentWithKeywords(commentId: number) {
     const { data } = await this.client.get<CommentWithKeywords>(
       `/parser/comments/${commentId}`
+    )
+    return data
+  }
+
+  // Новые методы для управления статусом комментариев
+  async updateCommentStatus(
+    commentId: number,
+    statusUpdate: CommentUpdateRequest
+  ) {
+    const { data } = await this.client.put<VKCommentResponse>(
+      `/parser/comments/${commentId}/status`,
+      statusUpdate
+    )
+    return data
+  }
+
+  async markCommentAsViewed(commentId: number) {
+    const { data } = await this.client.post<VKCommentResponse>(
+      `/parser/comments/${commentId}/view`
+    )
+    return data
+  }
+
+  async archiveComment(commentId: number) {
+    const { data } = await this.client.post<VKCommentResponse>(
+      `/parser/comments/${commentId}/archive`
+    )
+    return data
+  }
+
+  async unarchiveComment(commentId: number) {
+    const { data } = await this.client.post<VKCommentResponse>(
+      `/parser/comments/${commentId}/unarchive`
     )
     return data
   }

@@ -73,6 +73,16 @@ class VKComment(BaseModel):
         Integer, default=0, comment="Количество найденных ключевых слов"
     )
 
+    # Статус просмотра и архивирования
+    is_viewed = Column(
+        Boolean, default=False, comment="Просмотрен ли комментарий"
+    )
+    viewed_at = Column(DateTime, comment="Когда был просмотрен")
+    is_archived = Column(
+        Boolean, default=False, comment="Архивирован ли комментарий"
+    )
+    archived_at = Column(DateTime, comment="Когда был архивирован")
+
     # Связи с ключевыми словами
     keyword_matches = relationship(
         "CommentKeywordMatch",

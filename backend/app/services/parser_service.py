@@ -875,6 +875,14 @@ class ParserService:
                 VKComment.published_at <= search_params.date_to
             )
 
+        # Новые фильтры для статуса просмотра и архивирования
+        if search_params.is_viewed is not None:
+            query = query.where(VKComment.is_viewed == search_params.is_viewed)
+        if search_params.is_archived is not None:
+            query = query.where(
+                VKComment.is_archived == search_params.is_archived
+            )
+
         # Базовые условия
         query = query.where(
             and_(VKComment.is_processed, VKComment.matched_keywords_count > 0)
