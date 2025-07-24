@@ -1,20 +1,29 @@
+---
+description: Комплексное правило по использованию Pydantic V2 для валидации данных, сериализации и интеграции с FastAPI
+globs: **/*.py
+alwaysApply: true
+---
+
 # Pydantic Best Practices
 
 ## **1. Общие рекомендации по использованию Pydantic**
 
 ### **Цель применения**
+
 - **Валидация данных**: Проверка типов, форматов и бизнес-правил
 - **Сериализация**: Преобразование объектов в JSON/словари и обратно
 - **Документация API**: Автоматическая генерация OpenAPI схем
 - **Типобезопасность**: Интеграция с TypeScript и статическими анализаторами
 
 ### **Преимущества Pydantic V2**
+
 - **Производительность**: В 5-50 раз быстрее V1 благодаря pydantic-core
 - **Строгая типизация**: Полная поддержка Python type hints
 - **Гибкость**: Множество способов настройки валидации
 - **Интеграция**: Отличная совместимость с FastAPI, SQLAlchemy
 
 ### **Базовые принципы**
+
 ```python
 # ✅ DO: Используйте современный синтаксис Pydantic V2
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,7 +36,7 @@ class User(BaseModel):
     email: str
     created_at: datetime
     is_active: bool = True
-    
+
     model_config = ConfigDict(
         str_max_length=100,
         validate_assignment=True
@@ -64,7 +73,7 @@ class UserResponse(UserBase):
     id: int
     created_at: datetime
     is_active: bool
-    
+
     model_config = ConfigDict(from_attributes=True)
 ```
 
@@ -76,21 +85,21 @@ class Product(BaseModel):
     # 1. Идентификаторы
     id: int
     sku: str
-    
+
     # 2. Основная информация
     name: str
     description: str
     price: float
-    
+
     # 3. Метаданные
     category_id: int
     brand: str
-    
+
     # 4. Статус и даты
     is_active: bool = True
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
+
     # 5. Связи (в конце)
     images: List[str] = []
     tags: List[str] = []
@@ -134,7 +143,7 @@ class User(BaseModel):
     name: Annotated[str, Field(min_length=2, max_length=50)]
     email: Annotated[str, Field(pattern=r'^[^@]+@[^@]+\.[^@]+$')]
     age: Annotated[int, Field(ge=0, le=120)]
-    
+
     # Валидаторы полей
     @field_validator('name')
     @classmethod
@@ -142,14 +151,14 @@ class User(BaseModel):
         if not v.strip():
             raise ValueError('Name cannot be empty')
         return v.title()
-    
+
     @field_validator('email')
     @classmethod
     def validate_email(cls, v: str) -> str:
         if not re.match(r'^[^@]+@[^@]+\.[^@]+$', v):
             raise ValueError('Invalid email format')
         return v.lower()
-    
+
     # Валидаторы модели
     @model_validator(mode='after')
     def validate_user_data(self) -> 'User':
@@ -164,7 +173,7 @@ class User(BaseModel):
 # ✅ DO: Строгая валидация для критичных данных
 class StrictUser(BaseModel):
     model_config = ConfigDict(strict=True)
-    
+
     id: int
     name: str
     age: int
@@ -172,7 +181,7 @@ class StrictUser(BaseModel):
 # ✅ DO: Мягкая валидация с преобразованиями
 class FlexibleUser(BaseModel):
     model_config = ConfigDict(strict=False)
-    
+
     id: int
     name: str
     age: int  # Примет '25' и преобразует в 25
@@ -189,7 +198,7 @@ class ComplexValidator(BaseModel):
     username: str
     password: str
     confirm_password: str
-    
+
     @field_validator('username')
     @classmethod
     def validate_username(cls, v: str) -> str:
@@ -198,7 +207,7 @@ class ComplexValidator(BaseModel):
         if not v.isalnum():
             raise ValueError('Username must be alphanumeric')
         return v.lower()
-    
+
     @field_validator('password')
     @classmethod
     def validate_password(cls, v: str) -> str:
@@ -209,7 +218,7 @@ class ComplexValidator(BaseModel):
         if not any(c.isdigit() for c in v):
             raise ValueError('Password must contain digit')
         return v
-    
+
     @model_validator(mode='after')
     def validate_passwords_match(self) -> 'ComplexValidator':
         if self.password != self.confirm_password:
@@ -227,7 +236,7 @@ class UserAPI(BaseModel):
     user_id: int = Field(alias='id')
     user_name: str = Field(alias='name')
     user_email: str = Field(alias='email')
-    
+
     model_config = ConfigDict(populate_by_name=True)
 
 # ✅ DO: Разные алиасы для валидации и сериализации
@@ -247,7 +256,7 @@ class UserWithAliases(BaseModel):
         alias_generator=lambda x: x.upper(),
         populate_by_name=True
     )
-    
+
     name: str
     email: str
     age: int
@@ -297,7 +306,7 @@ class UserProfile(BaseModel):
     address: Address
     contacts: List[Contact]
     preferences: Dict[str, Any] = {}
-    
+
     @field_validator('preferences')
     @classmethod
     def validate_preferences(cls, v: Dict[str, Any]) -> Dict[str, Any]:
@@ -359,20 +368,20 @@ class UserStrict(BaseModel):
     email: EmailStr
     website: Optional[HttpUrl] = None
     ip_address: IPvAnyAddress
-    
+
     # Временные типы
     created_at: datetime
     birth_date: date
     last_login: Optional[time] = None
-    
+
     # Числовые типы
     balance: Decimal = Field(max_digits=10, decimal_places=2)
     score: float = Field(ge=0.0, le=100.0)
-    
+
     # Коллекции
     tags: List[str] = []
     metadata: Dict[str, Any] = {}
-    
+
     # Enum типы
     status: Literal['active', 'inactive', 'suspended'] = 'active'
 ```
@@ -394,12 +403,12 @@ class UserWithEnum(BaseModel):
     name: str
     email: str
     status: UserStatus = UserStatus.ACTIVE
-    
+
     # Optional поля
     phone: Optional[str] = None
     avatar_url: Optional[HttpUrl] = None
     last_login: Optional[datetime] = None
-    
+
     # Union типы
     age: Union[int, None] = None  # Альтернатива Optional[int]
 ```
@@ -419,14 +428,14 @@ def create_user_safe(user_data: dict) -> User:
     except ValidationError as e:
         # Логирование ошибок
         logger.error(f"Validation error: {e.errors()}")
-        
+
         # Преобразование в HTTP ошибки
         error_messages = []
         for error in e.errors():
             field = '.'.join(str(x) for x in error['loc'])
             message = error['msg']
             error_messages.append(f"{field}: {message}")
-        
+
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={
@@ -451,7 +460,7 @@ class UserService:
     def create_user(self, user_data: dict) -> User:
         try:
             user = User.model_validate(user_data)
-            
+
             # Дополнительная бизнес-валидация
             if self.user_exists(user.email):
                 raise BusinessValidationError(
@@ -459,9 +468,9 @@ class UserService:
                     message='User with this email already exists',
                     code='EMAIL_EXISTS'
                 )
-            
+
             return user
-            
+
         except ValidationError as e:
             raise BusinessValidationError(
                 field='validation',
@@ -491,7 +500,7 @@ class UserResponse(BaseModel):
     name: str
     email: str
     created_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 @app.post("/users/", response_model=UserResponse)
@@ -513,7 +522,7 @@ Base = declarative_base()
 
 class UserORM(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
@@ -524,7 +533,7 @@ class UserPydantic(BaseModel):
     name: str
     email: str
     created_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 # Использование
@@ -550,10 +559,10 @@ class TaskData(BaseModel):
 def process_user_task(task_data: dict):
     # Валидация входных данных
     validated_data = TaskData.model_validate(task_data)
-    
+
     # Обработка задачи
     result = process_user_action(validated_data)
-    
+
     # Возврат результата
     return result.model_dump()
 ```
@@ -597,7 +606,7 @@ def migrate_user_v1_to_v2(user_v1: UserV1) -> UserV2:
 class User(BaseModel):
     """
     Модель пользователя системы.
-    
+
     Attributes:
         id: Уникальный идентификатор пользователя
         name: Полное имя пользователя (2-50 символов)
@@ -606,7 +615,7 @@ class User(BaseModel):
         is_active: Статус активности пользователя
         created_at: Дата и время создания записи
     """
-    
+
     id: int = Field(description="Уникальный идентификатор пользователя")
     name: str = Field(
         min_length=2,
@@ -635,26 +644,26 @@ class User(BaseModel):
 # ✅ DO: Глобальная конфигурация
 class BaseAppModel(BaseModel):
     """Базовая модель приложения с общей конфигурацией."""
-    
+
     model_config = ConfigDict(
         # Валидация
         strict=True,
         validate_assignment=True,
         revalidate_instances='always',
-        
+
         # Сериализация
         from_attributes=True,
         populate_by_name=True,
-        
+
         # Дополнительные поля
         extra='forbid',
-        
+
         # JSON настройки
         json_encoders={
             datetime: lambda v: v.isoformat(),
             UUID: str,
         },
-        
+
         # Схема
         json_schema_extra={
             "examples": [
@@ -704,7 +713,8 @@ class User(BaseAppModel):
 - [Pydantic Serialization](https://docs.pydantic.dev/latest/concepts/serialization/)
 - [FastAPI Pydantic Integration](https://fastapi.tiangolo.com/tutorial/body/)
 - [SQLAlchemy Pydantic Integration](https://docs.pydantic.dev/latest/integrations/sqlalchemy/)
-description:
-globs:
-alwaysApply: false
+  description:
+  globs:
+  alwaysApply: false
+
 ---
