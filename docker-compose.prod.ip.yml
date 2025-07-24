@@ -290,16 +290,18 @@ services:
         max_attempts: 3
         window: 120s
 
-  # DBeaver CloudBeaver для управления БД (только для администраторов)
-  dbeaver:
-    image: dbeaver/cloudbeaver:latest
-    container_name: fullstack_prod_dbeaver
+  # pgAdmin для управления БД (только для администраторов)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: fullstack_prod_pgadmin
     restart: unless-stopped
     ports:
-      - "8080:8978"
+      - "8080:80"
     environment:
-      - DBEAVER_USER=admin
-      - DBEAVER_PASSWORD=admin
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
     depends_on:
       postgres:
         condition: service_healthy
@@ -316,7 +318,7 @@ services:
           "--quiet",
           "--tries=1",
           "--spider",
-          "http://localhost:8080",
+          "http://localhost:80",
         ]
     deploy:
       resources:
