@@ -3,8 +3,7 @@
 # =============================================================================
 
 # ----------- Stage 1: Dependencies (with enhanced caching) -----------
-# Пиннинг версии для воспроизводимости
-FROM node:20-alpine@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c AS deps
+FROM node:20-alpine AS deps
 
 # Установка системных зависимостей
 RUN apk add --no-cache libc6-compat
@@ -27,6 +26,9 @@ RUN npm install -g pnpm@10.12.4 && \
 # ----------- Stage 2: Builder (optimized build) -----------
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# Установка pnpm в builder stage
+RUN npm install -g pnpm@10.12.4
 
 # Копирование зависимостей
 COPY --from=deps /app/node_modules ./node_modules
