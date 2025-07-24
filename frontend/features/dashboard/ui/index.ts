@@ -1,2 +1,2 @@
 // dashboard UI exports
-export const DashboardPage = () => null
+export { default as DashboardPage } from './DashboardPage'

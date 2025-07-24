@@ -1,2 +1,2 @@
 // parser UI exports
-export const ParserPage = () => null
+export { default as ParserPage } from './ParserPage'
