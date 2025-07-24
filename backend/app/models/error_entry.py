@@ -4,9 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import JSON, ForeignKey, Integer, Text, DateTime
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, Text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
