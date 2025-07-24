@@ -290,17 +290,16 @@ services:
         max_attempts: 3
         window: 120s
 
-  # Adminer для управления БД (только для администраторов)
-  adminer:
-    image: adminer:4.8.1
-    container_name: fullstack_prod_adminer
+  # DBeaver CloudBeaver для управления БД (только для администраторов)
+  dbeaver:
+    image: dbeaver/cloudbeaver:latest
+    container_name: fullstack_prod_dbeaver
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8080:8978"
     environment:
-      - ADMINER_DEFAULT_SERVER=postgres
-      - ADMINER_DESIGN=pepa-linha-dark
-      - ADMINER_PLUGINS=login-servers
+      - DBEAVER_USER=admin
+      - DBEAVER_PASSWORD=admin
     depends_on:
       postgres:
         condition: service_healthy
@@ -322,11 +321,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.25"
-          memory: 128M
+          cpus: "0.5"
+          memory: 512M
         reservations:
-          cpus: "0.1"
-          memory: 64M
+          cpus: "0.25"
+          memory: 256M
       restart_policy:
         condition: on-failure
         delay: 5s
