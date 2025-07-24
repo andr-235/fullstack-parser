@@ -3,22 +3,22 @@
 """
 
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
-from sqlalchemy import select, func, and_, or_, desc
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.error_report import ErrorReport
 from app.models.error_entry import ErrorEntry
+from app.models.error_report import ErrorReport
+from app.schemas.base import PaginatedResponse
+from app.schemas.error_report import ErrorEntry as ErrorEntrySchema
+from app.schemas.error_report import ErrorReport as ErrorReportSchema
 from app.schemas.error_report import (
-    ErrorReport as ErrorReportSchema,
-    ErrorEntry as ErrorEntrySchema,
-    ErrorType,
     ErrorSeverity,
+    ErrorType,
     GroupLoadErrorReport,
 )
-from app.schemas.base import PaginatedResponse
 
 
 class ErrorReportDBService:

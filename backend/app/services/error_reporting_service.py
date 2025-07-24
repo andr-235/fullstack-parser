@@ -5,7 +5,7 @@
 import traceback
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession

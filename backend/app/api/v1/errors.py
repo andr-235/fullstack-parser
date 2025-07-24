@@ -2,7 +2,7 @@
 API endpoints для работы с отчетами об ошибках
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -16,7 +16,6 @@ from app.schemas.error_report import (
     ErrorSeverity,
     ErrorType,
 )
-from app.services.error_reporting_service import error_reporting_service
 from app.services.error_report_db_service import ErrorReportDBService
 
 router = APIRouter(tags=["Error Reports"])
