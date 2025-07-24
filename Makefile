@@ -10,7 +10,7 @@
         adminer adminer-start adminer-stop
 
 # Переменные
-COMPOSE_PROD = docker-compose.yml
+COMPOSE_PROD = docker-compose.prod.ip.yml
 COMPOSE_DEV = docker-compose.dev.yml
 COMPOSE_PROD_IP = docker-compose.prod.ip.yml
 

@@ -32,7 +32,7 @@ x-security: &default-security
 services:
   # База данных PostgreSQL
   postgres:
-    image: postgres:15-alpine@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c
+    image: postgres:15-alpine
     container_name: fullstack_prod_postgres
     restart: unless-stopped
     env_file:
@@ -44,7 +44,6 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backup:/backup:ro
     networks:
       - prod-network
     logging: *default-logging
@@ -64,7 +63,7 @@ services:
 
   # Redis кеш
   redis:
-    image: redis:7-alpine@sha256:abcdef1234567890
+    image: redis:7-alpine
     container_name: fullstack_prod_redis
     restart: unless-stopped
     command: >
@@ -185,7 +184,7 @@ services:
 
   # Nginx reverse proxy
   nginx:
-    image: nginx:alpine@sha256:abcdef1234567890
+    image: nginx:alpine
     container_name: fullstack_prod_nginx
     restart: unless-stopped
     ports:
@@ -241,9 +240,6 @@ volumes:
       - "com.example.department=IT"
   redis_data:
     driver: local
-    driver_opts:
-      type: tmpfs
-      o: size=100m
   nginx_logs:
     driver: local
     driver_opts:
