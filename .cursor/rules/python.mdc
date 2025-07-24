@@ -1,0 +1,871 @@
+---
+description: Python Best Practices - стиль кода, именование, структура, обработка ошибок
+globs: **/*.py, **/pyproject.toml, **/requirements.txt
+alwaysApply: true
+---
+
+# Python Best Practices
+
+## **Основные принципы стиля кода (PEP 8)**
+
+### **Отступы и форматирование**
+
+- **Используйте 4 пробела для отступов**: Никогда не используйте табуляцию
+- **Максимальная длина строки**: 79 символов для кода, 72 для docstrings
+- **Разделение длинных строк**: Используйте скобки или обратный слеш
+
+```python
+# ✅ DO: Правильные отступы
+def long_function_name(
+    var_one: str,
+    var_two: str,
+    var_three: str,
+) -> str:
+    return var_one + var_two + var_three
+
+# ✅ DO: Разделение длинных строк
+long_string = (
+    "Это очень длинная строка, которая "
+    "должна быть разделена на несколько "
+    "строк для читаемости"
+)
+
+# ❌ DON'T: Неправильные отступы
+def bad_function():
+   return "использует 3 пробела"  # Неправильно
+```
+
+### **Пробелы и пустые строки**
+
+```python
+# ✅ DO: Правильное использование пробелов
+def function_with_spaces(x, y, z):
+    result = x + y * z
+    return result
+
+# ✅ DO: Две пустые строки между классами
+class MyClass:
+    """Документация класса."""
+
+    def __init__(self):
+        pass
+
+    def method(self):
+        pass
+
+
+class AnotherClass:
+    pass
+
+# ❌ DON'T: Лишние пробелы
+def bad_function( x , y ):  # Неправильно
+    return x+y  # Неправильно
+```
+
+## **Стандарты именования**
+
+### **Переменные и функции**
+
+```python
+# ✅ DO: snake_case для переменных и функций
+user_name = "john_doe"
+def calculate_total_price():
+    pass
+
+# ✅ DO: UPPER_CASE для констант
+MAX_RETRY_COUNT = 3
+DEFAULT_TIMEOUT = 30
+
+# ✅ DO: _private для внутренних переменных
+_internal_cache = {}
+def _helper_function():
+    pass
+
+# ❌ DON'T: camelCase или PascalCase для функций
+def calculateTotalPrice():  # Неправильно
+    pass
+```
+
+### **Классы и модули**
+
+```python
+# ✅ DO: PascalCase для классов
+class UserManager:
+    pass
+
+class DatabaseConnection:
+    pass
+
+# ✅ DO: snake_case для модулей
+# user_management.py
+# database_utils.py
+
+# ✅ DO: UPPER_CASE для констант модуля
+API_BASE_URL = "https://api.example.com"
+DEFAULT_HEADERS = {"Content-Type": "application/json"}
+
+# ❌ DON'T: Неправильные имена
+class userManager:  # Неправильно
+    pass
+```
+
+### **Специальные имена**
+
+```python
+# ✅ DO: Специальные методы Python
+class MyClass:
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        return "MyClass"
+
+    def __len__(self):
+        return 0
+
+# ✅ DO: Конвенции для исключений
+class ValidationError(Exception):
+    """Исключение для ошибок валидации."""
+    pass
+
+class DatabaseConnectionError(Exception):
+    """Исключение для ошибок подключения к БД."""
+    pass
+
+# ❌ DON'T: Неправильные имена исключений
+class validationError(Exception):  # Неправильно
+    pass
+```
+
+## **Docstrings и комментарии**
+
+### **Docstrings (PEP 257)**
+
+```python
+# ✅ DO: Docstrings для всех публичных функций и классов
+def calculate_discount(price: float, discount_percent: float) -> float:
+    """Вычисляет цену со скидкой.
+
+    Args:
+        price: Исходная цена товара
+        discount_percent: Процент скидки (0-100)
+
+    Returns:
+        Цена со скидкой
+
+    Raises:
+        ValueError: Если процент скидки вне диапазона 0-100
+    """
+    if not 0 <= discount_percent <= 100:
+        raise ValueError("Процент скидки должен быть от 0 до 100")
+
+    return price * (1 - discount_percent / 100)
+
+class UserService:
+    """Сервис для управления пользователями.
+
+    Предоставляет методы для создания, обновления и удаления
+    пользователей в системе.
+    """
+
+    def __init__(self, database_url: str):
+        """Инициализирует сервис пользователей.
+
+        Args:
+            database_url: URL подключения к базе данных
+        """
+        self.database_url = database_url
+
+# ❌ DON'T: Отсутствие docstrings
+def bad_function(x, y):
+    return x + y  # Нет документации
+```
+
+### **Комментарии**
+
+```python
+# ✅ DO: Объяснение сложной логики
+def complex_algorithm(data: list) -> list:
+    # Сортируем по приоритету, затем по времени создания
+    # Используем стабильную сортировку для сохранения порядка
+    sorted_data = sorted(data, key=lambda x: (x.priority, x.created_at))
+
+    # Фильтруем только активные элементы
+    active_items = [item for item in sorted_data if item.is_active]
+
+    return active_items
+
+# ✅ DO: TODO комментарии
+# TODO: Добавить кеширование для улучшения производительности
+# FIXME: Исправить утечку памяти в этом методе
+# NOTE: Этот код временный, заменить на асинхронную версию
+
+# ❌ DON'T: Очевидные комментарии
+x = x + 1  # Увеличиваем x на 1  # Не нужно
+```
+
+## **Структура файлов и модулей**
+
+### **Организация импортов**
+
+```python
+# ✅ DO: Стандартный порядок импортов
+# 1. Стандартная библиотека
+import os
+import sys
+from typing import List, Dict, Optional
+from datetime import datetime, timedelta
+
+# 2. Сторонние библиотеки
+import requests
+import sqlalchemy
+from fastapi import FastAPI, HTTPException
+
+# 3. Локальные модули
+from app.core.config import settings
+from app.models.user import User
+from app.services.auth import AuthService
+
+# ✅ DO: Группировка импортов
+import os
+import sys
+
+from typing import List, Dict, Optional
+
+import requests
+import sqlalchemy
+
+from app.core.config import settings
+from app.models.user import User
+
+# ❌ DON'T: Смешанные импорты
+import os
+from app.models import User
+import requests
+from typing import List
+```
+
+### **Структура модуля**
+
+```python
+# ✅ DO: Стандартная структура модуля
+"""
+Модуль для работы с пользователями.
+
+Этот модуль предоставляет функции и классы для управления
+пользователями в системе.
+"""
+
+# Импорты
+import logging
+from typing import Optional, List
+from datetime import datetime
+
+# Константы
+DEFAULT_USER_ROLE = "user"
+MAX_LOGIN_ATTEMPTS = 3
+
+# Настройка логирования
+logger = logging.getLogger(__name__)
+
+# Классы
+class UserManager:
+    """Менеджер пользователей."""
+
+    def __init__(self):
+        self.users = {}
+
+# Функции
+def create_user(username: str, email: str) -> User:
+    """Создает нового пользователя."""
+    pass
+
+def get_user_by_id(user_id: int) -> Optional[User]:
+    """Получает пользователя по ID."""
+    pass
+
+# Точка входа (если модуль запускается напрямую)
+if __name__ == "__main__":
+    # Тестовый код
+    pass
+```
+
+## **Обработка исключений**
+
+### **Принципы обработки ошибок**
+
+```python
+# ✅ DO: Специфичные исключения
+def divide_numbers(a: float, b: float) -> float:
+    """Делит два числа."""
+    try:
+        return a / b
+    except ZeroDivisionError:
+        raise ValueError("Деление на ноль недопустимо")
+    except TypeError:
+        raise TypeError("Аргументы должны быть числами")
+
+# ✅ DO: Контекстные менеджеры
+def read_file_safely(filename: str) -> str:
+    """Безопасно читает файл."""
+    try:
+        with open(filename, 'r', encoding='utf-8') as file:
+            return file.read()
+    except FileNotFoundError:
+        logger.error(f"Файл {filename} не найден")
+        raise
+    except PermissionError:
+        logger.error(f"Нет прав доступа к файлу {filename}")
+        raise
+
+# ✅ DO: Кастомные исключения
+class DatabaseError(Exception):
+    """Базовое исключение для ошибок базы данных."""
+    pass
+
+class ConnectionError(DatabaseError):
+    """Ошибка подключения к базе данных."""
+    pass
+
+class QueryError(DatabaseError):
+    """Ошибка выполнения запроса."""
+    pass
+
+# ❌ DON'T: Слишком широкие исключения
+try:
+    result = some_operation()
+except Exception:  # Слишком широко
+    pass
+```
+
+### **Логирование ошибок**
+
+```python
+# ✅ DO: Правильное логирование
+import logging
+
+logger = logging.getLogger(__name__)
+
+def process_data(data: List[dict]) -> List[dict]:
+    """Обрабатывает данные с логированием ошибок."""
+    processed = []
+
+    for item in data:
+        try:
+            result = transform_item(item)
+            processed.append(result)
+        except ValueError as e:
+            logger.warning(f"Пропущен элемент {item}: {e}")
+            continue
+        except Exception as e:
+            logger.error(f"Ошибка обработки элемента {item}: {e}")
+            raise
+
+    return processed
+
+# ✅ DO: Структурированное логирование
+logger.info(
+    "Пользователь создан",
+    extra={
+        "user_id": user.id,
+        "username": user.username,
+        "action": "user_created"
+    }
+)
+```
+
+## **Использование стандартных библиотек**
+
+### **Коллекции**
+
+```python
+# ✅ DO: Использование collections
+from collections import defaultdict, Counter, namedtuple
+
+# defaultdict для группировки
+user_groups = defaultdict(list)
+for user in users:
+    user_groups[user.role].append(user)
+
+# Counter для подсчета
+word_count = Counter(text.split())
+
+# namedtuple для простых структур данных
+User = namedtuple('User', ['id', 'name', 'email'])
+user = User(1, "John", "john@example.com")
+
+# ❌ DON'T: Ручная реализация
+# Вместо defaultdict
+groups = {}
+for user in users:
+    if user.role not in groups:
+        groups[user.role] = []
+    groups[user.role].append(user)
+```
+
+### **Контекстные менеджеры**
+
+```python
+# ✅ DO: Использование contextlib
+from contextlib import contextmanager
+import time
+
+@contextmanager
+def timer(name: str):
+    """Контекстный менеджер для измерения времени."""
+    start = time.time()
+    try:
+        yield
+    finally:
+        elapsed = time.time() - start
+        print(f"{name} заняло {elapsed:.2f} секунд")
+
+# Использование
+with timer("Обработка данных"):
+    process_large_dataset()
+
+# ✅ DO: Множественные контекстные менеджеры
+with open('input.txt') as input_file, open('output.txt', 'w') as output_file:
+    for line in input_file:
+        output_file.write(line.upper())
+```
+
+### **Функциональное программирование**
+
+```python
+# ✅ DO: Использование functools
+from functools import lru_cache, partial, reduce
+
+# Кеширование
+@lru_cache(maxsize=128)
+def expensive_calculation(n: int) -> int:
+    """Дорогостоящее вычисление с кешированием."""
+    return sum(i ** 2 for i in range(n))
+
+# Частичное применение
+def send_email(to: str, subject: str, body: str):
+    """Отправляет email."""
+    pass
+
+send_to_admin = partial(send_email, to="admin@example.com")
+send_to_admin("Отчет", "Ежедневный отчет готов")
+
+# Reduce для агрегации
+total = reduce(lambda acc, x: acc + x, numbers, 0)
+```
+
+## **Типизация (PEP 484)**
+
+### **Базовые типы**
+
+```python
+# ✅ DO: Явная типизация
+from typing import List, Dict, Optional, Union, Tuple
+
+def process_users(users: List[Dict[str, str]]) -> List[str]:
+    """Обрабатывает список пользователей."""
+    return [user['name'] for user in users]
+
+def get_user_by_id(user_id: int) -> Optional[Dict[str, str]]:
+    """Получает пользователя по ID."""
+    if user_id in user_database:
+        return user_database[user_id]
+    return None
+
+def parse_coordinates(data: Union[str, bytes]) -> Tuple[float, float]:
+    """Парсит координаты из строки или байтов."""
+    pass
+
+# ✅ DO: Type aliases
+UserId = int
+UserName = str
+UserDict = Dict[str, Union[UserId, UserName]]
+
+def create_user(user_data: UserDict) -> UserId:
+    pass
+
+# ❌ DON'T: Отсутствие типизации
+def bad_function(x, y):  # Неправильно
+    return x + y
+```
+
+### **Типизация классов**
+
+```python
+# ✅ DO: Типизация методов класса
+from typing import ClassVar, Protocol
+
+class UserService:
+    """Сервис для работы с пользователями."""
+
+    # Классовые переменные
+    DEFAULT_ROLE: ClassVar[str] = "user"
+
+    def __init__(self, database_url: str) -> None:
+        self.database_url = database_url
+        self._cache: Dict[int, 'User'] = {}
+
+    def get_user(self, user_id: int) -> Optional['User']:
+        """Получает пользователя по ID."""
+        pass
+
+# ✅ DO: Protocols для структурной типизации
+class Drawable(Protocol):
+    def draw(self) -> None: ...
+    def get_area(self) -> float: ...
+
+def render_shape(shape: Drawable) -> None:
+    """Отрисовывает любую фигуру."""
+    shape.draw()
+```
+
+## **Производительность и оптимизация**
+
+### **Эффективные конструкции**
+
+```python
+# ✅ DO: Генераторы для больших данных
+def process_large_file(filename: str):
+    """Обрабатывает большой файл построчно."""
+    with open(filename) as file:
+        for line in file:
+            yield process_line(line)
+
+# ✅ DO: List comprehensions
+squares = [x**2 for x in range(10) if x % 2 == 0]
+
+# ✅ DO: Set для уникальности
+unique_items = set(items)
+
+# ✅ DO: Dict comprehensions
+user_map = {user.id: user for user in users}
+
+# ❌ DON'T: Неэффективные конструкции
+# Вместо этого:
+result = []
+for i in range(1000):
+    if i % 2 == 0:
+        result.append(i**2)
+
+# Используйте:
+result = [i**2 for i in range(1000) if i % 2 == 0]
+```
+
+### **Профилирование и отладка**
+
+```python
+# ✅ DO: Использование профилировщика
+import cProfile
+import pstats
+
+def profile_function():
+    """Профилирует функцию."""
+    profiler = cProfile.Profile()
+    profiler.enable()
+
+    # Код для профилирования
+    expensive_operation()
+
+    profiler.disable()
+    stats = pstats.Stats(profiler)
+    stats.sort_stats('cumulative')
+    stats.print_stats(10)
+
+# ✅ DO: Декоратор для профилирования
+import time
+from functools import wraps
+
+def profile(func):
+    """Декоратор для профилирования функций."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        elapsed = time.time() - start
+        print(f"{func.__name__} выполнилась за {elapsed:.4f} секунд")
+        return result
+    return wrapper
+
+@profile
+def slow_function():
+    time.sleep(1)
+```
+
+## **Безопасность**
+
+### **Валидация входных данных**
+
+```python
+# ✅ DO: Строгая валидация
+import re
+from typing import Any
+
+def validate_email(email: str) -> bool:
+    """Валидирует email адрес."""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, email))
+
+def validate_user_input(data: Any) -> Dict[str, Any]:
+    """Валидирует пользовательский ввод."""
+    if not isinstance(data, dict):
+        raise ValueError("Данные должны быть словарем")
+
+    required_fields = ['username', 'email']
+    for field in required_fields:
+        if field not in data:
+            raise ValueError(f"Отсутствует обязательное поле: {field}")
+
+    if not validate_email(data['email']):
+        raise ValueError("Некорректный email")
+
+    return data
+
+# ✅ DO: Санитизация данных
+import html
+
+def sanitize_html(text: str) -> str:
+    """Очищает HTML от потенциально опасных тегов."""
+    return html.escape(text)
+```
+
+### **Безопасная работа с файлами**
+
+```python
+# ✅ DO: Безопасные пути
+import os
+from pathlib import Path
+
+def safe_file_operation(filename: str) -> str:
+    """Безопасно работает с файлами."""
+    # Нормализуем путь
+    safe_path = Path(filename).resolve()
+
+    # Проверяем, что файл в разрешенной директории
+    allowed_dir = Path("/var/www/uploads")
+    if not str(safe_path).startswith(str(allowed_dir)):
+        raise ValueError("Доступ к файлу запрещен")
+
+    return str(safe_path)
+
+# ✅ DO: Временные файлы
+import tempfile
+import shutil
+
+def process_file_safely(file_content: bytes) -> str:
+    """Безопасно обрабатывает файл."""
+    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        temp_file.write(file_content)
+        temp_path = temp_file.name
+
+    try:
+        # Обработка файла
+        result = process_file(temp_path)
+        return result
+    finally:
+        # Удаляем временный файл
+        os.unlink(temp_path)
+```
+
+## **Тестирование**
+
+### **Unit тесты**
+
+```python
+# ✅ DO: Структура тестов
+import unittest
+from unittest.mock import Mock, patch
+from app.services.user import UserService
+
+class TestUserService(unittest.TestCase):
+    """Тесты для UserService."""
+
+    def setUp(self):
+        """Настройка перед каждым тестом."""
+        self.service = UserService("test_db_url")
+        self.mock_user = {
+            "id": 1,
+            "name": "Test User",
+            "email": "test@example.com"
+        }
+
+    def test_create_user_success(self):
+        """Тест успешного создания пользователя."""
+        with patch('app.services.user.Database') as mock_db:
+            mock_db.return_value.create_user.return_value = self.mock_user
+
+            result = self.service.create_user("Test User", "test@example.com")
+
+            self.assertEqual(result["name"], "Test User")
+            self.assertEqual(result["email"], "test@example.com")
+
+    def test_create_user_invalid_email(self):
+        """Тест создания пользователя с некорректным email."""
+        with self.assertRaises(ValueError):
+            self.service.create_user("Test User", "invalid-email")
+
+    def tearDown(self):
+        """Очистка после каждого теста."""
+        pass
+
+# ✅ DO: Фикстуры
+import pytest
+
+@pytest.fixture
+def user_service():
+    """Фикстура для UserService."""
+    return UserService("test_db_url")
+
+@pytest.fixture
+def sample_user():
+    """Фикстура для тестового пользователя."""
+    return {
+        "id": 1,
+        "name": "Test User",
+        "email": "test@example.com"
+    }
+
+def test_create_user(user_service, sample_user):
+    """Тест создания пользователя с фикстурами."""
+    with patch('app.services.user.Database') as mock_db:
+        mock_db.return_value.create_user.return_value = sample_user
+
+        result = user_service.create_user("Test User", "test@example.com")
+
+        assert result["name"] == "Test User"
+```
+
+## **Документация и README**
+
+### **Структура документации**
+
+```python
+# ✅ DO: Подробные docstrings
+def complex_function(param1: str, param2: int, *,
+                    optional_param: bool = False) -> Dict[str, Any]:
+    """Выполняет сложную операцию с параметрами.
+
+    Эта функция обрабатывает входные данные и возвращает результат
+    в виде словаря с различными метриками.
+
+    Args:
+        param1: Строковый параметр для обработки
+        param2: Числовой параметр для вычислений
+        optional_param: Опциональный булевый параметр (по умолчанию False)
+
+    Returns:
+        Словарь с результатами обработки, содержащий:
+        - 'status': Статус выполнения ('success' или 'error')
+        - 'data': Обработанные данные
+        - 'metrics': Метрики производительности
+
+    Raises:
+        ValueError: Если param1 пустая строка или param2 отрицательный
+        TypeError: Если типы параметров некорректны
+
+    Example:
+        >>> result = complex_function("test", 42, optional_param=True)
+        >>> print(result['status'])
+        'success'
+
+    Note:
+        Эта функция является частью критического пути и должна
+        обрабатываться с особой осторожностью.
+    """
+    if not param1:
+        raise ValueError("param1 не может быть пустой строкой")
+
+    if param2 < 0:
+        raise ValueError("param2 должен быть положительным")
+
+    # Реализация функции
+    return {
+        'status': 'success',
+        'data': f"Processed: {param1} with {param2}",
+        'metrics': {'processing_time': 0.001}
+    }
+```
+
+## **Лучшие практики**
+
+### **✅ DO:**
+
+- **Следуйте PEP 8**: Используйте 4 пробела, ограничивайте длину строк
+- **Пишите docstrings**: Для всех публичных функций и классов
+- **Используйте типизацию**: Явно указывайте типы параметров и возвращаемых значений
+- **Обрабатывайте исключения**: Используйте специфичные исключения
+- **Логируйте ошибки**: Используйте структурированное логирование
+- **Тестируйте код**: Покрывайте код unit тестами
+- **Используйте стандартные библиотеки**: Не изобретайте велосипед
+- **Валидируйте входные данные**: Всегда проверяйте пользовательский ввод
+- **Документируйте код**: Пишите понятные комментарии и документацию
+
+### **❌ DON'T:**
+
+- **Не используйте табуляцию**: Только пробелы для отступов
+- **Не игнорируйте исключения**: Всегда обрабатывайте ошибки
+- **Не используйте глобальные переменные**: Передавайте данные через параметры
+- **Не дублируйте код**: Используйте функции и классы для переиспользования
+- **Не используйте магические числа**: Определяйте константы
+- **Не пишите нечитаемый код**: Приоритет читаемости над краткостью
+- **Не игнорируйте производительность**: Используйте эффективные конструкции
+- **Не забывайте про безопасность**: Валидируйте и санитизируйте данные
+
+## **Инструменты и линтеры**
+
+### **Настройка инструментов**
+
+```toml
+# pyproject.toml
+[tool.black]
+line-length = 79
+target-version = ['py311']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 79
+
+[tool.ruff]
+line-length = 79
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+]
+
+[tool.mypy]
+python_version = "3.11"
+check_untyped_defs = false
+ignore_missing_imports = true
+```
+
+### **Автоматизация**
+
+```bash
+# Форматирование кода
+black .
+isort .
+
+# Линтинг
+ruff check .
+mypy .
+
+# Тестирование
+pytest --cov=app --cov-report=html
+```
+
+## **Ссылки**
+
+- [PEP 8 - Style Guide](https://www.python.org/dev/peps/pep-0008/)
+- [PEP 257 - Docstring Conventions](https://www.python.org/dev/peps/pep-0257/)
+- [PEP 484 - Type Hints](https://www.python.org/dev/peps/pep-0484/)
+- [Python Documentation](https://docs.python.org/3/)
+- [Real Python](https://realpython.com/)
+- [Python Best Practices](https://gist.github.com/sloria/7001839)
