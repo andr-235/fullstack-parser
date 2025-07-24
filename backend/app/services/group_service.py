@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.vk_group import VKGroup
+from app.schemas.error_report import ErrorContext, ErrorSeverity, ErrorType
 from app.schemas.vk_group import (
     VKGroupCreate,
     VKGroupRead,
@@ -23,9 +24,8 @@ from app.schemas.vk_group import (
     VKGroupUploadResponse,
 )
 from app.services.base import BaseService
-from app.services.vk_api_service import VKAPIService
 from app.services.error_reporting_service import error_reporting_service
-from app.schemas.error_report import ErrorContext, ErrorSeverity, ErrorType
+from app.services.vk_api_service import VKAPIService
 
 # Типы для улучшения читаемости
 GroupData = Dict[str, Any]  # Данные группы от VK API
@@ -262,10 +262,11 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
             HTTPException: Если группа не найдена
         """
         from sqlalchemy import func, select
-        from app.models.vk_post import VKPost
-        from app.models.vk_comment import VKComment
+
         from app.models.comment_keyword_match import CommentKeywordMatch
         from app.models.keyword import Keyword
+        from app.models.vk_comment import VKComment
+        from app.models.vk_post import VKPost
 
         group = await db.get(VKGroup, group_id)
         if not group:

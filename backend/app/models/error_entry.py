@@ -4,18 +4,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
-from sqlalchemy import (
-    DateTime,
-    Integer,
-    String,
-    Text,
-    JSON,
-    Enum as SQLEnum,
-    ForeignKey,
-)
+from sqlalchemy import JSON, ForeignKey, Integer, Text
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel

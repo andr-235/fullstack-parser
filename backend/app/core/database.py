@@ -102,5 +102,7 @@ async def init_db() -> None:
                 )
                 break
             await asyncio.sleep(delay)
+
+
 # Updated $(date)
 # Updated Чт 24 июл 2025 10:31:33 +10

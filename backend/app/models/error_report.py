@@ -7,11 +7,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import DateTime, Integer, String, Text, JSON, Enum as SQLEnum
+from sqlalchemy import JSON, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
-from app.schemas.error_report import ErrorSeverity, ErrorType
 
 if TYPE_CHECKING:
     from app.models.error_entry import ErrorEntry
