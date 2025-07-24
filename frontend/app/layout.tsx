@@ -5,6 +5,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { APP_CONFIG } from '@/shared/config'
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
+import { DebugPanel } from '@/shared/ui/debug/DebugPanel'
 
 import { QueryProvider } from '@/providers/QueryProvider'
 
@@ -42,7 +43,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <div id="__next">
           <ErrorBoundary>
-            <QueryProvider>{children}</QueryProvider>
+            <QueryProvider>
+              {children}
+              <DebugPanel />
+            </QueryProvider>
           </ErrorBoundary>
         </div>
       </body>

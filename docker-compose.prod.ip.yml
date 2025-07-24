@@ -275,7 +275,7 @@ services:
     logging: *default-logging
     healthcheck:
       <<: *default-healthcheck
-      test: ["CMD", "curl", "-fsSL", "http://localhost/health"]
+      test: ["CMD", "curl", "-k", "-fsSL", "https://localhost/health"]
     deploy:
       resources:
         limits:
