@@ -17,12 +17,15 @@ from app.schemas.error_report import (
     ErrorType,
 )
 from app.services.error_reporting_service import error_reporting_service
+from app.services.error_report_db_service import ErrorReportDBService
 
 router = APIRouter(tags=["Error Reports"])
 
 
 @router.get("/reports", response_model=PaginatedResponse[ErrorReport])
 async def get_error_reports(
+    page: int = Query(1, ge=1, description="Номер страницы"),
+    size: int = Query(20, ge=1, le=100, description="Размер страницы"),
     error_type: Optional[ErrorType] = Query(
         None, description="Фильтр по типу ошибки"
     ),
@@ -32,29 +35,38 @@ async def get_error_reports(
     operation: Optional[str] = Query(None, description="Фильтр по операции"),
     start_date: Optional[datetime] = Query(None, description="Начальная дата"),
     end_date: Optional[datetime] = Query(None, description="Конечная дата"),
+    is_acknowledged: Optional[bool] = Query(
+        None, description="Фильтр по статусу подтверждения"
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[ErrorReport]:
     """
     Получить список отчетов об ошибках с фильтрацией
 
     Args:
+        page: Номер страницы
+        size: Размер страницы
         error_type: Тип ошибки для фильтрации
         severity: Уровень серьезности для фильтрации
         operation: Операция для фильтрации
         start_date: Начальная дата для фильтрации
         end_date: Конечная дата для фильтрации
+        is_acknowledged: Статус подтверждения для фильтрации
         db: Сессия базы данных
 
     Returns:
         Пагинированный список отчетов об ошибках
     """
-    # TODO: Реализовать получение отчетов из базы данных
-    # Пока возвращаем пустой список
-    return PaginatedResponse(
-        total=0,
-        page=1,
-        size=0,
-        items=[],
+    error_db_service = ErrorReportDBService(db)
+    return await error_db_service.get_error_reports(
+        page=page,
+        size=size,
+        error_type=error_type,
+        severity=severity,
+        operation=operation,
+        start_date=start_date,
+        end_date=end_date,
+        is_acknowledged=is_acknowledged,
     )
 
 
@@ -73,10 +85,19 @@ async def get_error_report(
     Returns:
         Отчет об ошибках
     """
-    # TODO: Реализовать получение отчета из базы данных
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Отчет не найден",
+    error_db_service = ErrorReportDBService(db)
+    report = await error_db_service.get_error_report(report_id)
+
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Отчет не найден",
+        )
+
+    return ErrorReportResponse(
+        success=True,
+        report=report,
+        message="Отчет успешно получен",
     )
 
 
@@ -95,24 +116,8 @@ async def get_error_stats(
     Returns:
         Статистика ошибок
     """
-    # TODO: Реализовать получение статистики из базы данных
-    end_date = datetime.utcnow()
-    start_date = end_date - timedelta(days=days)
-
-    return {
-        "period": {
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-        },
-        "total_errors": 0,
-        "errors_by_type": {},
-        "errors_by_severity": {},
-        "errors_by_operation": {},
-        "trends": {
-            "daily": [],
-            "hourly": [],
-        },
-    }
+    error_db_service = ErrorReportDBService(db)
+    return await error_db_service.get_error_stats(days)
 
 
 @router.delete("/reports/{report_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -127,11 +132,14 @@ async def delete_error_report(
         report_id: ID отчета
         db: Сессия базы данных
     """
-    # TODO: Реализовать удаление отчета из базы данных
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Отчет не найден",
-    )
+    error_db_service = ErrorReportDBService(db)
+    deleted = await error_db_service.delete_error_report(report_id)
+
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Отчет не найден",
+        )
 
 
 @router.post(
@@ -139,6 +147,9 @@ async def delete_error_report(
 )
 async def acknowledge_error_report(
     report_id: str,
+    acknowledged_by: str = Query(
+        ..., description="Имя пользователя, подтверждающего отчет"
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> ErrorReportResponse:
     """
@@ -146,13 +157,24 @@ async def acknowledge_error_report(
 
     Args:
         report_id: ID отчета
+        acknowledged_by: Имя пользователя, подтверждающего отчет
         db: Сессия базы данных
 
     Returns:
         Обновленный отчет
     """
-    # TODO: Реализовать подтверждение отчета
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Отчет не найден",
+    error_db_service = ErrorReportDBService(db)
+    report = await error_db_service.acknowledge_error_report(
+        report_id, acknowledged_by
+    )
+
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Отчет не найден",
+        )
+
+    return ErrorReportResponse(
+        success=True,
+        message="Отчет успешно подтвержден",
     )

@@ -87,19 +87,10 @@ async def init_db() -> None:
             # Проверяем подключение без создания таблиц
             async with async_engine.begin() as conn:
                 await conn.execute(text("SELECT 1"))
-            # Создаем таблицы только если их нет (lazy creation)
+            # Проверяем подключение к базе данных
+            # Таблицы создаются через миграции Alembic
             async with async_engine.begin() as conn:
-                result = await conn.execute(
-                    text(
-                        """
-                    SELECT EXISTS (SELECT FROM information_schema.tables
-                    WHERE table_schema = 'public' AND table_name = 'vk_groups')
-                    """
-                    )
-                )
-                tables_exist = result.scalar()
-                if not tables_exist:
-                    await conn.run_sync(Base.metadata.create_all)
+                await conn.execute(text("SELECT 1"))
             break  # успех, выходим из цикла
         except Exception as e:
             logging.warning(
@@ -111,3 +102,5 @@ async def init_db() -> None:
                 )
                 break
             await asyncio.sleep(delay)
+# Updated $(date)
+# Updated Чт 24 июл 2025 10:31:33 +10

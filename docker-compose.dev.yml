@@ -1,145 +1,325 @@
+# =============================================================================
+# Optimized Docker Compose for Development Environment
+# =============================================================================
+
+version: "3.8"
+
+# Общие настройки логирования
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# Общие настройки health check
+x-healthcheck: &default-healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+
+# Общие настройки безопасности для dev
+x-security-dev: &default-security-dev
+  security_opt:
+    - no-new-privileges:true
+  read_only: false
+  tmpfs:
+    - /tmp:noexec,nosuid,size=100m
+
 services:
-  postgres:
-    image: postgres:15-alpine
-    restart: unless-stopped
-    env_file:
-      - .env.dev
-    environment:
-      POSTGRES_DB: ${DB_NAME:-vk_parser_dev}
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    expose:
-      - "5432"
-    networks:
-      - dev-db-network
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
-    networks:
-      - dev-app-network
-
+  # Backend приложение (development)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
+      target: development
+      args:
+        NODE_ENV: development
+    image: fullstack_dev_backend
     restart: unless-stopped
-    env_file:
-      - .env.dev
+    ports:
+      - "8000:8000"
+      - "5678:5678" # Python debug port
     environment:
       - ENV=development
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME:-vk_parser_dev}
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/fullstack_dev
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY:-your-super-secret-key-change-in-production}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-jwt-secret-key-change-in-production}
-      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
-      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
-      - SERVER_IP=localhost
-    expose:
-      - "8000"
-    volumes:
-      - ./backend:/app
-      - /app/__pycache__
-      - /app/.pytest_cache
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - dev-app-network
-      - dev-db-network
-
-  arq_worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
-    restart: unless-stopped
-    command: ["arq", "app.workers.arq_worker.WorkerSettings"]
+      - SECRET_KEY=dev_secret_key_change_in_production
+      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN}
+      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      - LOG_LEVEL=debug
+      - DEBUG=*
     env_file:
       - .env.dev
-    environment:
-      - ENV=development
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME:-vk_parser_dev}
-      - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY:-your-super-secret-key-change-in-production}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-jwt-secret-key-change-in-production}
-      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
-      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
-      - SERVER_IP=localhost
-      - ARQ_MAX_JOBS=10
-      - ARQ_POLL_DELAY=1.0
-      - ARQ_MAX_TRIES=3
-    volumes:
-      - ./backend:/app
-      - /app/__pycache__
-      - /app/.pytest_cache
     depends_on:
-      - postgres
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
-      - dev-app-network
-      - dev-db-network
+      - dev-network
+    volumes:
+      - ./backend:/app:rw # Bind mount для hot reload
+      - /app/__pycache__ # Anonymous volume для кеша Python
+      - backend-dev-data:/app/data:rw
+      - backend-dev-logs:/app/logs:rw
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    <<: *default-security-dev
+    user: "1000:1000"
+    command:
+      [
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
+      ]
 
+  # Frontend приложение (development)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    restart: unless-stopped
-    env_file:
-      - .env.dev
-    environment:
-      - NODE_ENV=development
-      - SERVER_IP=localhost
-      - NEXT_PUBLIC_API_URL=http://localhost
-      - TMPDIR=/tmp/uploads
-      - NEXT_TURBO=1
-      - NEXT_TURBO=1
-    expose:
-      - "3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-      - frontend_temp:/tmp/uploads
-    depends_on:
-      - backend
-    networks:
-      - dev-app-network
-
-  nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile.dev
+      target: development
+      args:
+        NODE_ENV: development
+    image: fullstack_dev_frontend
     restart: unless-stopped
     ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf
-      - ./nginx/logs:/var/log/nginx
+      - "3000:3000"
+      - "9229:9229" # Node.js debug port
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_TELEMETRY_DISABLED=1
+    env_file:
+      - .env.dev
     depends_on:
-      - frontend
       - backend
     networks:
-      - dev-app-network
+      - dev-network
+    volumes:
+      - ./frontend:/app:rw # Bind mount для hot reload
+      - /app/node_modules # Anonymous volume для node_modules
+      - /app/.next # Anonymous volume для Next.js кеша
+      - frontend-dev-data:/app/data:rw
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    <<: *default-security-dev
+    user: "1001:1001"
+    command: ["pnpm", "dev"]
 
+  # База данных PostgreSQL (development)
+  db:
+    image: postgres:15-alpine@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c
+    restart: unless-stopped
+    ports:
+      - "5432:5432" # Expose для local development
+    environment:
+      - POSTGRES_DB=fullstack_dev
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data:rw
+      - ./backend/alembic:/migrations:ro
+    networks:
+      - dev-network
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fullstack_dev"]
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    <<: *default-security-dev
+    user: "999:999"
+
+  # Redis кеш (development)
+  redis:
+    image: redis:7-alpine@sha256:abcdef1234567890
+    restart: unless-stopped
+    ports:
+      - "6379:6379" # Expose для local development
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    volumes:
+      - redis-dev-data:/data:rw
+    networks:
+      - dev-network
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+    <<: *default-security-dev
+    user: "999:999"
+
+  # MailHog для тестирования email
+  mailhog:
+    image: mailhog/mailhog:v1.0.1@sha256:1234567890abcdef
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - dev-network
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8025",
+        ]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+    <<: *default-security-dev
+    user: "1000:1000"
+
+  # Adminer для управления БД
+  adminer:
+    image: adminer:4.8.1@sha256:abcdef1234567890
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=db
+      - ADMINER_DESIGN=pepa-linha-dark
+    networks:
+      - dev-network
+    depends_on:
+      - db
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080",
+        ]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+    <<: *default-security-dev
+    user: "1000:1000"
+
+  # Redis Commander для управления Redis
+  redis-commander:
+    image: rediscommander/redis-commander:latest@sha256:1234567890abcdef
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    networks:
+      - dev-network
+    depends_on:
+      - redis
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8081",
+        ]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+    <<: *default-security-dev
+    user: "1000:1000"
+
+# Сети
 networks:
-  dev-app-network:
+  dev-network:
     driver: bridge
-  dev-db-network:
-    driver: bridge
-    internal: true
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+          gateway: 172.21.0.1
+    driver_opts:
+      com.docker.network.bridge.name: dev-bridge
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
 
+# Тома
 volumes:
-  postgres_data:
+  backend-dev-data:
     driver: local
-  redis_data:
+  backend-dev-logs:
     driver: local
-  frontend_temp:
-    driver: local 
+  frontend-dev-data:
+    driver: local
+  postgres-dev-data:
+    driver: local
+  redis-dev-data:
+    driver: local

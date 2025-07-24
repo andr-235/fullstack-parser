@@ -5,14 +5,8 @@
       "args": ["-y", "@upstash/context7-mcp"]
     },
     "sequential-thinking": {
-      "command": "uvx",
-      "args": [
-        "--from",
-        "git+https://github.com/arben-adm/mcp-sequential-thinking",
-        "--with",
-        "portalocker",
-        "mcp-sequential-thinking"
-      ]
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     }
   }
 }

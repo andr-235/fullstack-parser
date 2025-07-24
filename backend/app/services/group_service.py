@@ -261,6 +261,12 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
         Raises:
             HTTPException: Если группа не найдена
         """
+        from sqlalchemy import func, select
+        from app.models.vk_post import VKPost
+        from app.models.vk_comment import VKComment
+        from app.models.comment_keyword_match import CommentKeywordMatch
+        from app.models.keyword import Keyword
+
         group = await db.get(VKGroup, group_id)
         if not group:
             raise HTTPException(
@@ -268,14 +274,47 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
                 detail="Группа не найдена",
             )
 
-        # TODO: Добавить получение детальной статистики из связанных таблиц
+        # Подсчитываем комментарии с ключевыми словами
+        comments_with_keywords_query = (
+            select(func.count(VKComment.id))
+            .select_from(VKComment)
+            .join(VKPost, VKComment.post_id == VKPost.id)
+            .where(VKPost.group_id == group_id)
+            .where(VKComment.matched_keywords_count > 0)
+        )
+        comments_with_keywords = (
+            await db.scalar(comments_with_keywords_query) or 0
+        )
+
+        # Получаем топ ключевых слов
+        top_keywords_query = (
+            select(
+                Keyword.text,
+                func.count(CommentKeywordMatch.id).label("match_count"),
+            )
+            .select_from(CommentKeywordMatch)
+            .join(VKComment, CommentKeywordMatch.comment_id == VKComment.id)
+            .join(VKPost, VKComment.post_id == VKPost.id)
+            .join(Keyword, CommentKeywordMatch.keyword_id == Keyword.id)
+            .where(VKPost.group_id == group_id)
+            .group_by(Keyword.text)
+            .order_by(func.count(CommentKeywordMatch.id).desc())
+            .limit(10)
+        )
+
+        top_keywords_result = await db.execute(top_keywords_query)
+        top_keywords = [
+            {"keyword": row.text, "count": row.match_count}
+            for row in top_keywords_result.all()
+        ]
+
         return VKGroupStats(
             group_id=group.vk_id,
             total_posts=group.total_posts_parsed,
             total_comments=group.total_comments_found,
-            comments_with_keywords=0,  # TODO: добавить подсчет
+            comments_with_keywords=comments_with_keywords,
             last_activity=group.last_parsed_at,
-            top_keywords=[],  # TODO: добавить топ ключевых слов
+            top_keywords=top_keywords,
         )
 
     async def upload_groups_from_file(
@@ -307,6 +346,9 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
         import time
 
         start_time = time.time()
+
+        # Устанавливаем сессию базы данных для сервиса отчетов об ошибках
+        error_reporting_service.set_db(db)
 
         errors = []
 
@@ -741,18 +783,43 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
                     failed_count += 1
                     continue
 
-                existing = await db.execute(
-                    select(VKGroup).where(
-                        func.lower(VKGroup.screen_name) == screen_name.lower()
+                # Проверяем существование группы по screen_name и vk_id
+                existing_query = select(VKGroup).where(
+                    or_(
+                        func.lower(VKGroup.screen_name) == screen_name.lower(),
+                        VKGroup.screen_name
+                        == screen_name,  # Точное совпадение
                     )
                 )
-                if existing.scalar_one_or_none():
+                existing = await db.execute(existing_query)
+                existing_group = existing.scalar_one_or_none()
+
+                if existing_group:
+                    self.logger.info(
+                        "Группа уже существует, пропускаем",
+                        screen_name=screen_name,
+                        existing_vk_id=existing_group.vk_id,
+                        existing_name=existing_group.name,
+                    )
                     skipped_count += 1
                     continue
 
                 # Создаем группу через VK API
-                new_group = await self.create_group_with_vk(db, group_data)
-                created_groups.append(new_group)
+                try:
+                    new_group = await self.create_group_with_vk(db, group_data)
+                    created_groups.append(new_group)
+                except HTTPException as e:
+                    # Если группа уже существует по vk_id, пропускаем её
+                    if "уже существует" in e.detail:
+                        self.logger.info(
+                            "Группа уже существует по vk_id, пропускаем",
+                            screen_name=screen_name,
+                            error_detail=e.detail,
+                        )
+                        skipped_count += 1
+                        continue
+                    else:
+                        raise
 
             except HTTPException as e:
                 error_entry = error_reporting_service.create_error_entry(

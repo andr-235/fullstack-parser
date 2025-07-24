@@ -1,0 +1,167 @@
+# =============================================================================
+# Optimized .dockerignore for better build performance
+# =============================================================================
+
+# Git и версионный контроль
+.git
+.gitignore
+.gitattributes
+.gitmessage
+
+# Документация
+README.md
+*.md
+docs/
+ai-docs/
+
+# Логи и временные файлы
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Кеши и временные файлы
+.cache/
+.tmp/
+.temp/
+*.tmp
+*.temp
+
+# IDE и редакторы
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS файлы
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.npm
+.eslintcache
+.stylelintcache
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Виртуальные окружения
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Тестирование
+.coverage
+.pytest_cache/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Линтинг и форматирование
+.ruff_cache/
+.ruff_cache
+.flake8
+.pylintrc
+.yapf
+.autopep8
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+.github/
+
+# Мониторинг и логи
+monitoring/
+backup/
+environments/
+
+# Скрипты и утилиты
+scripts/
+Makefile*
+*.sh
+
+# Конфигурационные файлы
+.env*
+!.env.example
+!.env.prod
+!.env.dev
+
+# Тесты
+tests/
+test_*
+*_test.py
+__tests__/
+
+# Примеры
+examples/
+samples/
+
+# Секреты
+.secrets*
+*.key
+*.pem
+*.crt
+*.p12
+
+# Другие
+*.bak
+*.backup
+*.old
+*.orig 

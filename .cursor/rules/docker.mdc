@@ -1,0 +1,756 @@
+---
+description: Docker и Docker Compose best practices для production-ready контейнеризации
+globs: docker-compose*.yml, Dockerfile*, .dockerignore, .env*
+alwaysApply: true
+---
+
+# Docker и Docker Compose Best Practices
+
+## **Основные принципы**
+
+### **Версии и совместимость**
+
+- **Docker Compose**: Используйте Compose Specification v2.4+ для современных возможностей
+- **Docker Engine**: Минимум 20.10+ для поддержки всех современных функций
+- **Multi-stage builds**: Обязательно для оптимизации образов
+- **BuildKit**: Включен по умолчанию в Docker 18.09+
+
+### **Архитектурные принципы**
+
+- **Разделение ответственности**: Один контейнер - одна служба
+- **Иммутабельность**: Образы не должны изменяться после сборки
+- **Минимальный attack surface**: Используйте минимальные базовые образы
+- **Безопасность**: Никогда не запускайте контейнеры от root
+
+## **Оптимальная структура docker-compose.yml**
+
+### **✅ DO: Правильная организация секций**
+
+```yaml
+# docker-compose.yml
+version: "3.8" # Используйте актуальную версию
+
+services:
+  # 1. Основные сервисы приложения
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: myapp:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    volumes:
+      - app-data:/app/data
+    secrets:
+      - db_password
+      - api_key
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # 2. База данных
+  db:
+    image: postgres:15-alpine@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    networks:
+      - app-network
+    secrets:
+      - db_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+
+  # 3. Кеш/Redis
+  redis:
+    image: redis:7-alpine@sha256:1234567890abcdef
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    secrets:
+      - redis_password
+
+  # 4. Reverse Proxy
+  nginx:
+    image: nginx:alpine@sha256:abcdef1234567890
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# 5. Секреты
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  api_key:
+    external: true
+
+# 6. Тома
+volumes:
+  postgres-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/docker/postgres-data
+  redis-data:
+    driver: local
+  app-data:
+    driver: local
+  nginx-logs:
+    driver: local
+
+# 7. Сети
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+    driver_opts:
+      com.docker.network.bridge.name: app-bridge
+```
+
+### **❌ DON'T: Неправильная организация**
+
+```yaml
+# Неправильно: смешивание конфигураций
+services:
+  app:
+    image: myapp
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://user:pass@db:5432/db # Хардкод
+    depends_on:
+      - db
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_PASSWORD=password # Пароль в открытом виде
+```
+
+## **Оптимизированный Dockerfile**
+
+### **✅ DO: Multi-stage build с оптимизацией**
+
+```dockerfile
+# syntax=docker/dockerfile:1.4
+# Этап 1: Базовый образ для зависимостей
+FROM node:18-alpine AS deps
+# Пиннинг версии для воспроизводимости
+FROM node:18-alpine@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c AS deps
+
+# Установка системных зависимостей
+RUN apk add --no-cache libc6-compat
+
+# Создание пользователя для безопасности
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
+
+WORKDIR /app
+
+# Копирование файлов зависимостей для кеширования
+COPY package.json package-lock.json* ./
+COPY yarn.lock* pnpm-lock.yaml* ./
+
+# Установка зависимостей с кешированием
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production && npm cache clean --force
+
+# Этап 2: Сборка приложения
+FROM node:18-alpine AS builder
+WORKDIR /app
+
+# Копирование исходного кода
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Сборка приложения
+RUN --mount=type=cache,target=/app/.next/cache \
+    npm run build
+
+# Этап 3: Продакшн образ
+FROM node:18-alpine AS runner
+WORKDIR /app
+
+# Создание пользователя
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
+
+# Копирование только необходимых файлов
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Настройка безопасности
+USER nextjs
+
+# Метаданные образа
+LABEL maintainer="team@company.com"
+LABEL version="1.0"
+LABEL description="Production Next.js application"
+
+# Проверка здоровья
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Экспорт порта
+EXPOSE 3000
+
+# Переменные окружения
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Точка входа
+ENTRYPOINT ["node"]
+CMD ["server.js"]
+```
+
+### **❌ DON'T: Неоптимизированный Dockerfile**
+
+```dockerfile
+# Неправильно: один этап, все в одном образе
+FROM node:18
+WORKDIR /app
+COPY . .
+RUN npm install
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+## **Управление переменными окружения**
+
+### **✅ DO: Безопасное управление env**
+
+```bash
+# .env.production
+NODE_ENV=production
+DATABASE_URL=postgresql://user:${DB_PASSWORD}@db:5432/mydb
+REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+API_KEY=${API_KEY_SECRET}
+LOG_LEVEL=info
+PORT=8000
+
+# .env.development
+NODE_ENV=development
+DATABASE_URL=postgresql://dev:dev@localhost:5432/devdb
+REDIS_URL=redis://localhost:6379
+LOG_LEVEL=debug
+PORT=3000
+```
+
+### **✅ DO: Docker secrets для чувствительных данных**
+
+```yaml
+# docker-compose.yml
+services:
+  app:
+    secrets:
+      - source: db_password
+        target: db_password
+        uid: "1000"
+        gid: "1000"
+        mode: 0400
+      - api_key
+      - redis_password
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  api_key:
+    external: true
+  redis_password:
+    external: true
+```
+
+### **❌ DON'T: Небезопасное управление env**
+
+```yaml
+# Неправильно: пароли в открытом виде
+services:
+  app:
+    environment:
+      - DATABASE_PASSWORD=mysecretpassword
+      - API_KEY=sk-1234567890abcdef
+```
+
+## **Настройка сетей и томов**
+
+### **✅ DO: Изолированные сети**
+
+```yaml
+networks:
+  # Основная сеть приложения
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+    driver_opts:
+      com.docker.network.bridge.name: app-bridge
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+
+  # Изолированная сеть для БД
+  db-network:
+    driver: bridge
+    internal: true # Нет доступа к интернету
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+  # Сеть для мониторинга
+  monitoring:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+```
+
+### **✅ DO: Управление томами**
+
+```yaml
+volumes:
+  # Постоянные данные БД
+  postgres-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/docker/postgres-data
+    labels:
+      - "com.example.description=Database data"
+      - "com.example.department=IT"
+
+  # Кеш Redis
+  redis-data:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      o: size=100m
+
+  # Логи приложения
+  app-logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/log/app
+
+  # Временные файлы
+  temp-data:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      o: size=50m
+```
+
+### **❌ DON'T: Неправильное управление данными**
+
+```yaml
+# Неправильно: анонимные тома и небезопасные монтирования
+services:
+  app:
+    volumes:
+      - /var/lib/postgresql/data # Анонимный том
+      - /etc/passwd:/etc/passwd:ro # Опасное монтирование
+```
+
+## **Безопасность**
+
+### **✅ DO: Минимизация attack surface**
+
+```dockerfile
+# Безопасный Dockerfile
+FROM node:18-alpine AS base
+
+# Создание непривилегированного пользователя
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# Установка только необходимых пакетов
+RUN apk add --no-cache dumb-init
+
+# Настройка рабочей директории
+WORKDIR /app
+
+# Копирование файлов с правильными правами
+COPY --chown=nextjs:nodejs package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+COPY --chown=nextjs:nodejs . .
+
+# Переключение на непривилегированного пользователя
+USER nextjs
+
+# Использование dumb-init для правильной обработки сигналов
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "server.js"]
+```
+
+### **✅ DO: Безопасные настройки в docker-compose.yml**
+
+```yaml
+services:
+  app:
+    # Безопасность
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:unconfined
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+```
+
+### **❌ DON'T: Небезопасные настройки**
+
+```yaml
+# Неправильно: привилегированный контейнер
+services:
+  app:
+    privileged: true
+    user: root
+    security_opt:
+      - seccomp:unconfined
+```
+
+## **Production deployment**
+
+### **✅ DO: Production конфигурация**
+
+```yaml
+# docker-compose.prod.yml
+version: "3.8"
+
+services:
+  app:
+    restart: unless-stopped
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        monitor: 60s
+        max_failure_ratio: 0.3
+        order: start-first
+      rollback_config:
+        parallelism: 0
+        delay: 5s
+        failure_action: pause
+        monitor: 60s
+        max_failure_ratio: 0.2
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "production_status"
+        env: "os,customer"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+### **✅ DO: Мониторинг и логирование**
+
+```yaml
+services:
+  # Prometheus для метрик
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
+
+  # Grafana для визуализации
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    depends_on:
+      - prometheus
+
+  # ELK Stack для логов
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.8.0
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.8.0
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+```
+
+## **Backup и восстановление**
+
+### **✅ DO: Автоматические бэкапы**
+
+```yaml
+services:
+  backup:
+    image: postgres:15-alpine
+    volumes:
+      - postgres-data:/var/lib/postgresql/data:ro
+      - ./backups:/backups
+    environment:
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+    secrets:
+      - db_password
+    command: |
+      sh -c '
+        while true; do
+          pg_dump -h db -U postgres -d mydb > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql
+          find /backups -name "backup_*.sql" -mtime +7 -delete
+          sleep 86400
+        done
+      '
+    depends_on:
+      - db
+```
+
+## **CI/CD интеграция**
+
+### **✅ DO: Автоматизация сборки**
+
+```yaml
+# .github/workflows/docker-build.yml
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            myapp:latest
+            myapp:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+```
+
+## **Лучшие практики**
+
+### **✅ DO:**
+
+- **Используйте multi-stage builds**: Для минимизации размера образов
+- **Пинните версии образов**: Используйте SHA256 диджесты
+- **Создавайте непривилегированных пользователей**: Никогда не запускайте от root
+- **Используйте Docker secrets**: Для чувствительных данных
+- **Настраивайте health checks**: Для всех сервисов
+- **Ограничивайте ресурсы**: CPU и память для каждого сервиса
+- **Используйте именованные тома**: Вместо анонимных
+- **Настраивайте логирование**: С ротацией логов
+- **Используйте restart policies**: Для автоматического восстановления
+- **Тестируйте образы**: Сканируйте на уязвимости
+
+### **❌ DON'T:**
+
+- **Не используйте latest теги**: Всегда пинните версии
+- **Не запускайте от root**: Создавайте непривилегированных пользователей
+- **Не храните секреты в образах**: Используйте Docker secrets
+- **Не используйте привилегированные контейнеры**: Минимизируйте права
+- **Не игнорируйте health checks**: Настраивайте для всех сервисов
+- **Не забывайте про ресурсы**: Ограничивайте CPU и память
+- **Не используйте анонимные тома**: Именуйте все тома
+- **Не игнорируйте логирование**: Настраивайте ротацию логов
+
+## **Полезные команды**
+
+```bash
+# Проверка конфигурации
+docker compose config
+
+# Сборка с кешем
+docker compose build --parallel
+
+# Запуск в production
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Просмотр логов
+docker compose logs -f --tail=100
+
+# Масштабирование
+docker compose up -d --scale app=3
+
+# Обновление сервиса
+docker compose pull app && docker compose up -d app
+
+# Бэкап тома
+docker run --rm -v myapp_postgres-data:/data -v $(pwd):/backup alpine tar czf /backup/postgres-backup.tar.gz -C /data .
+
+# Сканирование на уязвимости
+docker scout cves myapp:latest
+```
+
+## **Ссылки**
+
+- [Docker Compose Specification](https://docs.docker.com/compose/compose-file/)
+- [Docker Security Best Practices](https://docs.docker.com/develop/security-best-practices/)
+- [Docker Production Guidelines](https://docs.docker.com/config/containers/multi-service_container/)
+- [Docker Scout](https://docs.docker.com/scout/)
+- [Docker BuildKit](https://docs.docker.com/build/buildkit/)
+  description:
+  globs:
+  alwaysApply: false
+
+---

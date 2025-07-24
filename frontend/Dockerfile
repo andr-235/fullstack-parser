@@ -1,45 +1,92 @@
 # =============================================================================
-# Multi-stage Dockerfile for Next.js 15 Frontend Application
+# Optimized Multi-stage Dockerfile for Next.js 15 Frontend Application
 # =============================================================================
 
-# ----------- Stage 1: Install dependencies (with cache) -----------
-FROM node:20-alpine AS deps
-RUN npm install -g pnpm@10.12.4
-WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+# ----------- Stage 1: Dependencies (with enhanced caching) -----------
+# Пиннинг версии для воспроизводимости
+FROM node:20-alpine@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c AS deps
 
-# ----------- Stage 2: Build application -----------
-FROM node:20-alpine AS builder
-RUN npm install -g pnpm@10.12.4
+# Установка системных зависимостей
+RUN apk add --no-cache libc6-compat
+
+# Создание непривилегированного пользователя
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
 WORKDIR /app
+
+# Копирование файлов зависимостей для кеширования
+COPY package.json pnpm-lock.yaml* ./
+COPY yarn.lock* ./
+
+# Установка pnpm и зависимостей с кешированием
+RUN npm install -g pnpm@10.12.4 && \
+    pnpm install --frozen-lockfile --prod=false && \
+    pnpm store prune
+
+# ----------- Stage 2: Builder (optimized build) -----------
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Копирование зависимостей
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /root/.local/share/pnpm/store /root/.local/share/pnpm/store
+
+# Копирование исходного кода
 COPY . .
+
+# Настройка переменных окружения для сборки
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
-    DOCKER=true
-RUN pnpm build
+    DOCKER=true \
+    CI=true
 
-# ----------- Stage 3: Production image -----------
+# Сборка приложения с кешированием
+RUN --mount=type=cache,target=/app/.next/cache \
+    pnpm build
+
+# ----------- Stage 3: Production (minimal runtime) -----------
 FROM node:20-alpine AS runner
-RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 WORKDIR /app
-RUN apk add --no-cache dumb-init curl
-RUN npm install -g pnpm@10.12.4
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static/
-COPY --from=builder /app/package.json ./package.json
-# Копируем папку public с иконками
-COPY --from=builder /app/public ./public
-# Для dev-режима копируем node_modules
-COPY --from=deps /app/node_modules ./node_modules
+
+# Создание непривилегированного пользователя
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# Установка только необходимых пакетов
+RUN apk add --no-cache dumb-init curl && \
+    npm install -g pnpm@10.12.4
+
+# Копирование только необходимых файлов
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static/
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+
+# Настройка безопасности
 USER nextjs
+
+# Метаданные образа
+LABEL maintainer="team@company.com" \
+      version="1.0" \
+      description="Production Next.js application"
+
+# Проверка здоровья
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Экспорт порта
 EXPOSE 3000
+
+# Переменные окружения
 ENV PORT=3000 \
     HOSTNAME=0.0.0.0 \
     NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     NODE_OPTIONS="--max-old-space-size=512"
+
+# Точка входа с dumb-init для правильной обработки сигналов
 ENTRYPOINT ["dumb-init", "--"]
-# Запуск в зависимости от NODE_ENV
-CMD ["sh", "-c", "if [ \"$NODE_ENV\" = 'development' ]; then pnpm dev; else node server.js; fi"] 
+
+# Команда запуска
+CMD ["node", "server.js"] 

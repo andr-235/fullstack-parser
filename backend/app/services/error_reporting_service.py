@@ -18,6 +18,7 @@ from app.schemas.error_report import (
     ErrorType,
     GroupLoadErrorReport,
 )
+from app.services.error_report_db_service import ErrorReportDBService
 
 logger = structlog.get_logger(__name__)
 
@@ -25,8 +26,22 @@ logger = structlog.get_logger(__name__)
 class ErrorReportingService:
     """Сервис для создания и управления отчетами об ошибках"""
 
-    def __init__(self):
+    def __init__(self, db: Optional[AsyncSession] = None):
         self.logger = structlog.get_logger(__name__)
+        self.db = db
+        self._error_db_service = None
+
+    @property
+    def error_db_service(self) -> Optional[ErrorReportDBService]:
+        """Получает сервис для работы с базой данных"""
+        if self.db and not self._error_db_service:
+            self._error_db_service = ErrorReportDBService(self.db)
+        return self._error_db_service
+
+    def set_db(self, db: AsyncSession) -> None:
+        """Устанавливает сессию базы данных"""
+        self.db = db
+        self._error_db_service = None
 
     def create_error_entry(
         self,
@@ -96,7 +111,7 @@ class ErrorReportingService:
         auto_recommendations = self._generate_recommendations(errors)
         all_recommendations = (recommendations or []) + auto_recommendations
 
-        return ErrorReport(
+        report = ErrorReport(
             report_id=str(uuid.uuid4()),
             created_at=datetime.utcnow(),
             operation=operation,
@@ -105,6 +120,12 @@ class ErrorReportingService:
             summary=summary,
             recommendations=all_recommendations,
         )
+
+        # Сохраняем в базу данных, если доступна
+        if self.error_db_service:
+            self._save_report_to_db(report)
+
+        return report
 
     def create_group_load_error_report(
         self,
@@ -137,7 +158,7 @@ class ErrorReportingService:
             recommendations=recommendations,
         )
 
-        return GroupLoadErrorReport(
+        report = GroupLoadErrorReport(
             **base_report.model_dump(),
             groups_processed=groups_processed,
             groups_successful=groups_successful,
@@ -145,6 +166,12 @@ class ErrorReportingService:
             groups_skipped=groups_skipped,
             processing_time_seconds=processing_time_seconds,
         )
+
+        # Сохраняем в базу данных, если доступна
+        if self.error_db_service:
+            self._save_group_report_to_db(report)
+
+        return report
 
     def _generate_recommendations(self, errors: List[ErrorEntry]) -> List[str]:
         """
@@ -197,6 +224,97 @@ class ErrorReportingService:
             )
 
         return recommendations
+
+    async def _save_report_to_db(self, report: ErrorReport) -> None:
+        """Сохраняет отчет в базу данных"""
+        if not self.error_db_service:
+            return
+
+        try:
+            # Создаем отчет в базе данных
+            db_report = await self.error_db_service.create_error_report(
+                report_id=report.report_id,
+                operation=report.operation,
+                total_errors=report.total_errors,
+                summary=report.summary,
+                recommendations=report.recommendations,
+            )
+
+            # Создаем записи об ошибках
+            for error in report.errors:
+                await self.error_db_service.create_error_entry(
+                    error_report_id=db_report.id,
+                    error_type=error.error_type,
+                    severity=error.severity,
+                    message=error.message,
+                    details=error.details,
+                    context=(
+                        error.context.model_dump() if error.context else None
+                    ),
+                    stack_trace=error.stack_trace,
+                )
+
+            self.logger.info(
+                "Error report saved to database",
+                report_id=report.report_id,
+                total_errors=report.total_errors,
+            )
+        except Exception as e:
+            self.logger.error(
+                "Failed to save error report to database",
+                report_id=report.report_id,
+                error=str(e),
+            )
+
+    async def _save_group_report_to_db(
+        self, report: GroupLoadErrorReport
+    ) -> None:
+        """Сохраняет отчет о группах в базу данных"""
+        if not self.error_db_service:
+            return
+
+        try:
+            # Создаем отчет в базе данных
+            db_report = await self.error_db_service.create_error_report(
+                report_id=report.report_id,
+                operation=report.operation,
+                total_errors=report.total_errors,
+                summary=report.summary,
+                recommendations=report.recommendations,
+                groups_processed=report.groups_processed,
+                groups_successful=report.groups_successful,
+                groups_failed=report.groups_failed,
+                groups_skipped=report.groups_skipped,
+                processing_time_seconds=report.processing_time_seconds,
+            )
+
+            # Создаем записи об ошибках
+            for error in report.errors:
+                await self.error_db_service.create_error_entry(
+                    error_report_id=db_report.id,
+                    error_type=error.error_type,
+                    severity=error.severity,
+                    message=error.message,
+                    details=error.details,
+                    context=(
+                        error.context.model_dump() if error.context else None
+                    ),
+                    stack_trace=error.stack_trace,
+                )
+
+            self.logger.info(
+                "Group error report saved to database",
+                report_id=report.report_id,
+                groups_processed=report.groups_processed,
+                groups_successful=report.groups_successful,
+                groups_failed=report.groups_failed,
+            )
+        except Exception as e:
+            self.logger.error(
+                "Failed to save group error report to database",
+                report_id=report.report_id,
+                error=str(e),
+            )
 
     def log_error_report(self, report: ErrorReport) -> None:
         """

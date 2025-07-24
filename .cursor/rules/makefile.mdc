@@ -1,0 +1,284 @@
+---
+description: Правила использования Makefile для Docker и Docker Compose операций
+globs: Makefile
+alwaysApply: false
+---
+
+# Makefile Best Practices
+
+## **Основные принципы использования**
+
+### **Структура команд**
+
+- **Development команды**: Используйте префикс `dev-` для разработки
+- **Production команды**: Используйте префикс `prod-` для продакшена
+- **Утилиты**: Отдельные команды для бэкапа, мониторинга, безопасности
+
+### **Переменные окружения**
+
+```makefile
+# ✅ DO: Определение переменных в начале файла
+COMPOSE_FILE ?= docker-compose.yml
+COMPOSE_DEV_FILE = docker-compose.dev.yml
+COMPOSE_PROD_FILE = docker-compose.prod.yml
+```
+
+## **Команды для разработки**
+
+### **✅ DO: Development workflow**
+
+```bash
+# Запуск development окружения
+make dev-up
+
+# Остановка development окружения
+make dev-down
+
+# Просмотр логов development
+make dev-logs
+
+# Сборка development образов
+make dev-build
+```
+
+### **❌ DON'T: Неправильное использование**
+
+```bash
+# Не используйте production команды в development
+make prod-up  # В development режиме
+
+# Не забывайте про переменные окружения
+docker compose up -d  # Вместо make dev-up
+```
+
+## **Команды для production**
+
+### **✅ DO: Production workflow**
+
+```bash
+# Запуск production окружения
+make prod-up
+
+# Остановка production окружения
+make prod-down
+
+# Просмотр логов production
+make prod-logs
+
+# Сборка production образов
+make prod-build
+```
+
+### **❌ DON'T: Небезопасные операции**
+
+```bash
+# Не используйте development команды в production
+make dev-up  # В production режиме
+
+# Не забывайте про секреты
+make prod-up  # Без предварительного создания секретов
+```
+
+## **Утилитарные команды**
+
+### **✅ DO: Правильное использование утилит**
+
+```bash
+# Очистка неиспользуемых ресурсов
+make clean
+
+# Создание бэкапа томов
+make backup
+
+# Восстановление томов (с параметрами)
+make restore VOLUME=postgres-data FILE=postgres-data_20241201_120000.tar.gz
+
+# Создание секретов
+make secrets
+
+# Проверка здоровья сервисов
+make health
+
+# Мониторинг ресурсов
+make monitor
+```
+
+### **❌ DON'T: Неправильное использование утилит**
+
+```bash
+# Не восстанавливайте без указания параметров
+make restore  # Без VOLUME и FILE
+
+# Не создавайте секреты в production без проверки
+make secrets  # В production без проверки существующих секретов
+```
+
+## **Workflow для разработки**
+
+### **✅ DO: Полный цикл разработки**
+
+```bash
+# 1. Создание секретов (при первом запуске)
+make secrets
+
+# 2. Запуск development окружения
+make dev-up
+
+# 3. Проверка здоровья сервисов
+make health COMPOSE_FILE=docker-compose.dev.yml
+
+# 4. Просмотр логов
+make dev-logs
+
+# 5. Остановка после работы
+make dev-down
+
+# 6. Очистка ресурсов
+make clean
+```
+
+## **Workflow для production**
+
+### **✅ DO: Безопасный production workflow**
+
+```bash
+# 1. Проверка секретов
+ls -la secrets/
+
+# 2. Валидация конфигурации
+./scripts/docker-utils.sh validate docker-compose.prod.yml
+
+# 3. Создание бэкапа перед обновлением
+make backup
+
+# 4. Запуск production окружения
+make prod-up
+
+# 5. Проверка здоровья
+make health COMPOSE_FILE=docker-compose.prod.yml
+
+# 6. Мониторинг ресурсов
+make monitor
+```
+
+## **Интеграция с Docker Compose файлами**
+
+### **Ссылки на файлы конфигурации**
+
+- [Makefile](mdc:Makefile) - основной файл с командами
+- [docker-compose.dev.yml](mdc:docker-compose.dev.yml) - конфигурация для разработки
+- [docker-compose.prod.yml](mdc:docker-compose.prod.yml) - конфигурация для продакшена
+- [scripts/docker-utils.sh](mdc:scripts/docker-utils.sh) - утилитарный скрипт
+
+### **✅ DO: Использование правильных файлов**
+
+```bash
+# Development использует docker-compose.dev.yml
+make dev-up  # Автоматически использует COMPOSE_DEV_FILE
+
+# Production использует docker-compose.prod.yml
+make prod-up  # Автоматически использует COMPOSE_PROD_FILE
+
+# Общие команды используют docker-compose.yml
+make up  # Использует COMPOSE_FILE
+```
+
+## **Безопасность**
+
+### **✅ DO: Безопасные операции**
+
+```bash
+# Всегда проверяйте секреты перед запуском
+ls -la secrets/ || make secrets
+
+# Используйте health checks
+make health
+
+# Создавайте бэкапы перед критическими операциями
+make backup
+
+# Мониторьте ресурсы
+make monitor
+```
+
+### **❌ DON'T: Небезопасные операции**
+
+```bash
+# Не запускайте production без секретов
+make prod-up  # Без проверки secrets/
+
+# Не игнорируйте health checks
+make prod-up && echo "OK"  # Без проверки здоровья
+
+# Не забывайте про бэкапы
+make prod-up  # Без предварительного бэкапа
+```
+
+## **Отладка и мониторинг**
+
+### **✅ DO: Эффективная отладка**
+
+```bash
+# Просмотр логов конкретного сервиса
+docker compose -f docker-compose.dev.yml logs -f app
+
+# Проверка статуса сервисов
+docker compose -f docker-compose.dev.yml ps
+
+# Мониторинг ресурсов
+make monitor
+
+# Проверка здоровья
+make health
+```
+
+### **❌ DON'T: Неэффективная отладка**
+
+```bash
+# Не используйте прямые команды Docker
+docker compose up -d  # Вместо make dev-up
+
+# Не игнорируйте логи
+make dev-up && echo "Started"  # Без проверки логов
+```
+
+## **Лучшие практики**
+
+### **✅ DO:**
+
+- **Используйте префиксы**: `dev-` для разработки, `prod-` для продакшена
+- **Проверяйте секреты**: Всегда перед запуском production
+- **Создавайте бэкапы**: Перед критическими операциями
+- **Мониторьте ресурсы**: Регулярно используйте `make monitor`
+- **Проверяйте здоровье**: Используйте `make health` после запуска
+- **Используйте утилиты**: Применяйте `./scripts/docker-utils.sh`
+
+### **❌ DON'T:**
+
+- **Не смешивайте окружения**: Не используйте production команды в development
+- **Не игнорируйте секреты**: Всегда проверяйте их наличие
+- **Не забывайте про бэкапы**: Создавайте их перед обновлениями
+- **Не используйте прямые Docker команды**: Применяйте Makefile команды
+- **Не игнорируйте health checks**: Всегда проверяйте здоровье сервисов
+
+## **Полезные команды**
+
+```bash
+# Справка
+make help
+
+# Быстрый старт development
+make secrets && make dev-up
+
+# Быстрый старт production
+make secrets && make prod-up
+
+# Полная очистка
+make dev-down && make clean
+```
+
+description:
+globs:
+alwaysApply: false
+
+---

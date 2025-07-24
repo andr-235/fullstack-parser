@@ -83,7 +83,7 @@ class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8)
     full_name: Optional[str] = None
-    
+
     @validator('username')
     def username_alphanumeric(cls, v):
         if not v.isalnum():
@@ -97,7 +97,7 @@ class UserResponse(BaseModel):
     full_name: Optional[str]
     created_at: datetime
     is_active: bool
-    
+
     class Config:
         from_attributes = True
 ```
@@ -364,7 +364,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
     user = await UserService.get_by_username(username)
     if user is None:
         raise credentials_exception
@@ -495,7 +495,7 @@ class UserService:
         await db.commit()
         await db.refresh(user)
         return user
-    
+
     @staticmethod
     async def get_by_id(user_id: int, db: AsyncSession) -> User | None:
         result = await db.execute(
@@ -531,16 +531,16 @@ async def get_user(user_id: int):
     cached_user = await get_cached_user(user_id)
     if cached_user:
         return cached_user
-    
+
     # Получаем из БД
     user = await UserService.get_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     # Кешируем результат
     user_data = user.dict()
     await cache_user(user_id, user_data)
-    
+
     return user_data
 ```
 
@@ -559,9 +559,9 @@ logger = structlog.get_logger()
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
-    
+
     response = await call_next(request)
-    
+
     process_time = time.time() - start_time
     logger.info(
         "Request processed",
@@ -570,7 +570,7 @@ async def log_requests(request: Request, call_next):
         status_code=response.status_code,
         process_time=process_time
     )
-    
+
     return response
 ```
 

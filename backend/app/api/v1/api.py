@@ -61,6 +61,7 @@ async def api_info() -> dict[str, str | dict[str, str]]:
             "monitoring": "/monitoring - Автоматический мониторинг групп",
             "morphological": "/morphological - Морфологический анализ слов",
             "settings": "/settings - Управление настройками приложения",
+            "errors": "/errors - Отчеты об ошибках",
             "health": "/health - Состояние сервиса",
         },
     }
