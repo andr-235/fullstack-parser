@@ -3,261 +3,131 @@
 # =============================================================================
 # NGINX CONFIGURATION CHECK SCRIPT
 # =============================================================================
-# Проверка конфигурации Nginx и SSL сертификата
+# Скрипт для проверки конфигурации Nginx с self-signed сертификатом
 
 set -e
 
-DOMAIN="parser.mysite.ru"
-NGINX_CONF="/etc/nginx/nginx.conf"
+echo "🔍 Проверка конфигурации Nginx..."
 
 # Цвета для вывода
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Функция логирования
-log() {
-    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] $1${NC}"
-}
-
-warn() {
-    echo -e "${YELLOW}[$(date +'%Y-%m-%d %H:%M:%S')] WARNING: $1${NC}"
-}
-
-error() {
-    echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $1${NC}"
-}
-
-info() {
-    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')] INFO: $1${NC}"
-}
-
-# Проверка синтаксиса конфигурации Nginx
-check_nginx_syntax() {
-    log "Проверка синтаксиса конфигурации Nginx..."
-    
-    if nginx -t; then
-        log "✓ Синтаксис конфигурации Nginx корректен"
-        return 0
+# Функция для вывода с цветом
+print_status() {
+    local status=$1
+    local message=$2
+    if [ "$status" = "OK" ]; then
+        echo -e "${GREEN}✅ $message${NC}"
+    elif [ "$status" = "WARNING" ]; then
+        echo -e "${YELLOW}⚠️  $message${NC}"
     else
-        error "✗ Ошибка в синтаксисе конфигурации Nginx"
-        return 1
+        echo -e "${RED}❌ $message${NC}"
     fi
 }
 
-# Проверка статуса Nginx
-check_nginx_status() {
-    log "Проверка статуса Nginx..."
+# Проверка наличия конфигурационного файла
+if [ -f "nginx/nginx.prod.ip.conf" ]; then
+    print_status "OK" "Конфигурационный файл найден"
+else
+    print_status "ERROR" "Конфигурационный файл не найден"
+    exit 1
+fi
+
+# Проверка SSL сертификатов
+if [ -f "nginx/ssl/selfsigned.crt" ] && [ -f "nginx/ssl/selfsigned.key" ]; then
+    print_status "OK" "Self-signed SSL сертификаты найдены"
     
-    if systemctl is-active --quiet nginx; then
-        log "✓ Nginx запущен"
-        return 0
+    # Проверка прав доступа к ключу
+    if [ "$(stat -c %a nginx/ssl/selfsigned.key)" = "600" ]; then
+        print_status "OK" "Права доступа к SSL ключу корректны (600)"
     else
-        error "✗ Nginx не запущен"
-        return 1
+        print_status "WARNING" "Права доступа к SSL ключу должны быть 600"
+        chmod 600 nginx/ssl/selfsigned.key
     fi
-}
+else
+    print_status "ERROR" "SSL сертификаты не найдены"
+    exit 1
+fi
+
+# Проверка синтаксиса конфигурации
+echo "🔧 Проверка синтаксиса конфигурации..."
+if nginx -t -c "$(pwd)/nginx/nginx.prod.ip.conf" 2>/dev/null; then
+    print_status "OK" "Синтаксис конфигурации корректен"
+else
+    print_status "ERROR" "Ошибка в синтаксисе конфигурации"
+    nginx -t -c "$(pwd)/nginx/nginx.prod.ip.conf"
+    exit 1
+fi
 
 # Проверка SSL сертификата
-check_ssl_certificate() {
-    log "Проверка SSL сертификата для $DOMAIN..."
+echo "🔐 Проверка SSL сертификата..."
+if openssl x509 -in nginx/ssl/selfsigned.crt -text -noout >/dev/null 2>&1; then
+    print_status "OK" "SSL сертификат валиден"
     
-    local cert_path="/etc/letsencrypt/live/$DOMAIN/cert.pem"
-    local key_path="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
-    
-    # Проверка существования файлов
-    if [[ ! -f "$cert_path" ]]; then
-        error "✗ SSL сертификат не найден: $cert_path"
-        return 1
-    fi
-    
-    if [[ ! -f "$key_path" ]]; then
-        error "✗ SSL ключ не найден: $key_path"
-        return 1
-    fi
-    
-    log "✓ SSL файлы найдены"
-    
-    # Проверка срока действия сертификата
-    local expiry_date=$(openssl x509 -in "$cert_path" -noout -enddate 2>/dev/null | cut -d= -f2)
-    if [[ -n "$expiry_date" ]]; then
-        local expiry_timestamp=$(date -d "$expiry_date" +%s 2>/dev/null)
-        local current_timestamp=$(date +%s)
-        local days_until_expiry=$(( (expiry_timestamp - current_timestamp) / 86400 ))
-        
-        if [[ $days_until_expiry -gt 30 ]]; then
-            log "✓ Сертификат действителен до: $expiry_date (осталось $days_until_expiry дней)"
-        elif [[ $days_until_expiry -gt 0 ]]; then
-            warn "⚠ Сертификат истекает через $days_until_expiry дней: $expiry_date"
-        else
-            error "✗ Сертификат истек: $expiry_date"
-            return 1
-        fi
-    else
-        warn "⚠ Не удалось получить дату истечения сертификата"
-    fi
-    
-    return 0
-}
+    # Проверка даты истечения
+    expiry_date=$(openssl x509 -in nginx/ssl/selfsigned.crt -noout -enddate | cut -d= -f2)
+    echo "📅 Дата истечения сертификата: $expiry_date"
+else
+    print_status "ERROR" "SSL сертификат поврежден"
+    exit 1
+fi
 
-# Проверка доступности HTTP
-check_http_access() {
-    log "Проверка HTTP доступности..."
-    
-    local http_status=$(curl -s -o /dev/null -w "%{http_code}" "http://$DOMAIN" --connect-timeout 10)
-    
-    if [[ "$http_status" == "301" || "$http_status" == "302" ]]; then
-        log "✓ HTTP редирект работает (статус: $http_status)"
-        return 0
-    elif [[ "$http_status" == "200" ]]; then
-        warn "⚠ HTTP возвращает 200 (должен быть редирект на HTTPS)"
-        return 1
-    else
-        error "✗ HTTP недоступен (статус: $http_status)"
-        return 1
-    fi
-}
+# Проверка SSL ключа
+echo "🔑 Проверка SSL ключа..."
+if openssl rsa -in nginx/ssl/selfsigned.key -check -noout >/dev/null 2>&1; then
+    print_status "OK" "SSL ключ валиден"
+else
+    print_status "ERROR" "SSL ключ поврежден"
+    exit 1
+fi
 
-# Проверка доступности HTTPS
-check_https_access() {
-    log "Проверка HTTPS доступности..."
-    
-    local https_status=$(curl -s -o /dev/null -w "%{http_code}" "https://$DOMAIN" --connect-timeout 10)
-    
-    if [[ "$https_status" == "200" ]]; then
-        log "✓ HTTPS доступен (статус: $https_status)"
-        return 0
-    else
-        error "✗ HTTPS недоступен (статус: $https_status)"
-        return 1
-    fi
-}
+# Проверка соответствия сертификата и ключа
+echo "🔗 Проверка соответствия сертификата и ключа..."
+cert_modulus=$(openssl x509 -in nginx/ssl/selfsigned.crt -noout -modulus | openssl md5)
+key_modulus=$(openssl rsa -in nginx/ssl/selfsigned.key -noout -modulus | openssl md5)
 
-# Проверка SSL соединения
-check_ssl_connection() {
-    log "Проверка SSL соединения..."
-    
-    local ssl_info=$(echo | openssl s_client -servername "$DOMAIN" -connect "$DOMAIN:443" 2>/dev/null | openssl x509 -noout -subject -issuer -dates 2>/dev/null)
-    
-    if [[ -n "$ssl_info" ]]; then
-        log "✓ SSL соединение установлено"
-        echo "$ssl_info" | while read line; do
-            info "  $line"
-        done
-        return 0
-    else
-        error "✗ Не удалось установить SSL соединение"
-        return 1
-    fi
-}
+if [ "$cert_modulus" = "$key_modulus" ]; then
+    print_status "OK" "Сертификат и ключ соответствуют"
+else
+    print_status "ERROR" "Сертификат и ключ не соответствуют"
+    exit 1
+fi
 
-# Проверка заголовков безопасности
-check_security_headers() {
-    log "Проверка заголовков безопасности..."
-    
-    local headers=$(curl -s -I "https://$DOMAIN" --connect-timeout 10)
-    local missing_headers=()
-    
-    # Проверка HSTS
-    if ! echo "$headers" | grep -q "Strict-Transport-Security"; then
-        missing_headers+=("HSTS")
-    fi
-    
-    # Проверка X-Frame-Options
-    if ! echo "$headers" | grep -q "X-Frame-Options"; then
-        missing_headers+=("X-Frame-Options")
-    fi
-    
-    # Проверка X-Content-Type-Options
-    if ! echo "$headers" | grep -q "X-Content-Type-Options"; then
-        missing_headers+=("X-Content-Type-Options")
-    fi
-    
-    if [[ ${#missing_headers[@]} -eq 0 ]]; then
-        log "✓ Все основные заголовки безопасности присутствуют"
-        return 0
-    else
-        warn "⚠ Отсутствуют заголовки безопасности: ${missing_headers[*]}"
-        return 1
-    fi
-}
+# Проверка домена в сертификате
+echo "🌐 Проверка домена в сертификате..."
+cert_cn=$(openssl x509 -in nginx/ssl/selfsigned.crt -noout -subject | sed -n 's/.*CN = \(.*\)/\1/p')
+if [ "$cert_cn" = "parser.mysite.ru" ]; then
+    print_status "OK" "Домен в сертификате корректен: $cert_cn"
+else
+    print_status "WARNING" "Домен в сертификате: $cert_cn (ожидался: parser.mysite.ru)"
+fi
 
 # Проверка портов
-check_ports() {
-    log "Проверка открытых портов..."
-    
-    local ports=("80" "443")
-    
-    for port in "${ports[@]}"; do
-        if netstat -tlnp 2>/dev/null | grep -q ":$port "; then
-            log "✓ Порт $port открыт"
-        else
-            error "✗ Порт $port не открыт"
-        fi
-    done
-}
+echo "🔌 Проверка портов..."
+if netstat -tlnp 2>/dev/null | grep -q ":80 "; then
+    print_status "WARNING" "Порт 80 уже занят"
+else
+    print_status "OK" "Порт 80 свободен"
+fi
 
-# Проверка DNS
-check_dns() {
-    log "Проверка DNS записи для $DOMAIN..."
-    
-    local ip=$(nslookup "$DOMAIN" 2>/dev/null | grep -A1 "Name:" | tail -1 | awk '{print $2}')
-    
-    if [[ -n "$ip" ]]; then
-        log "✓ DNS резолвится в IP: $ip"
-        return 0
-    else
-        error "✗ DNS не резолвится"
-        return 1
-    fi
-}
+if netstat -tlnp 2>/dev/null | grep -q ":443 "; then
+    print_status "WARNING" "Порт 443 уже занят"
+else
+    print_status "OK" "Порт 443 свободен"
+fi
 
-# Основная функция проверки
-main() {
-    log "Начало проверки конфигурации Nginx для домена $DOMAIN"
-    echo
-    
-    local errors=0
-    
-    # Выполнение проверок
-    check_dns || ((errors++))
-    echo
-    
-    check_nginx_syntax || ((errors++))
-    echo
-    
-    check_nginx_status || ((errors++))
-    echo
-    
-    check_ports
-    echo
-    
-    check_ssl_certificate || ((errors++))
-    echo
-    
-    check_http_access || ((errors++))
-    echo
-    
-    check_https_access || ((errors++))
-    echo
-    
-    check_ssl_connection || ((errors++))
-    echo
-    
-    check_security_headers || ((errors++))
-    echo
-    
-    # Итоговый результат
-    if [[ $errors -eq 0 ]]; then
-        log "✓ Все проверки пройдены успешно!"
-        log "Домен $DOMAIN настроен корректно для HTTPS"
-    else
-        error "✗ Найдено $errors ошибок. Проверьте конфигурацию."
-        exit 1
-    fi
-}
-
-# Запуск основной функции
-main "$@" 
+echo ""
+echo "🎉 Проверка завершена успешно!"
+echo ""
+echo "📋 Следующие шаги:"
+echo "1. Скопируйте конфигурацию: sudo cp nginx/nginx.prod.ip.conf /etc/nginx/sites-available/parser.mysite.ru"
+echo "2. Активируйте сайт: sudo ln -s /etc/nginx/sites-available/parser.mysite.ru /etc/nginx/sites-enabled/"
+echo "3. Скопируйте SSL сертификаты: sudo cp -r nginx/ssl /etc/nginx/"
+echo "4. Проверьте конфигурацию: sudo nginx -t"
+echo "5. Перезапустите Nginx: sudo systemctl reload nginx"
+echo ""
+echo "⚠️  Внимание: Self-signed сертификат вызовет предупреждение в браузере!"
+echo "   Для продакшена рекомендуется использовать Let's Encrypt сертификаты." 
