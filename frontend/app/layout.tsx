@@ -40,9 +40,11 @@ export default function RootLayout({
   return (
     <html lang="ru" suppressHydrationWarning>
       <body className={inter.className}>
-        <ErrorBoundary>
-          <QueryProvider>{children}</QueryProvider>
-        </ErrorBoundary>
+        <div id="__next">
+          <ErrorBoundary>
+            <QueryProvider>{children}</QueryProvider>
+          </ErrorBoundary>
+        </div>
       </body>
     </html>
   )
