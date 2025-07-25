@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 import { DebugPanel } from '@/shared/ui/debug/DebugPanel'
 
 import { QueryProvider } from '@/providers/QueryProvider'
+import { Sidebar, Header } from '@/widgets/layout'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -44,7 +45,13 @@ export default function RootLayout({
         <div id="__next">
           <ErrorBoundary>
             <QueryProvider>
-              {children}
+              <div className="flex h-screen">
+                <Sidebar />
+                <div className="flex-1 flex flex-col">
+                  <Header />
+                  <main className="flex-1 overflow-auto">{children}</main>
+                </div>
+              </div>
               <DebugPanel />
             </QueryProvider>
           </ErrorBoundary>

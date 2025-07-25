@@ -1,51 +1,77 @@
-// Конфигурация приложения
-export const APP_CONFIG = {
-  name: 'Fullstack Parser',
-  version: '1.0.0',
-  description: 'VK Social Media Content Parser',
-} as const
-
 // API конфигурация
 export const API_CONFIG = {
   baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
-  timeout: 10000,
+  timeout: 30000,
   retries: 3,
-} as const
+  retryDelay: 1000,
+}
 
-// Пагинация
-export const PAGINATION_CONFIG = {
-  defaultPageSize: 20,
-  maxPageSize: 100,
-  pageSizeOptions: [10, 20, 50, 100],
-} as const
+// Настройки приложения
+export const APP_CONFIG = {
+  name: 'Fullstack Parser',
+  version: '1.0.0',
+  description: 'Парсер контента ВКонтакте',
+  author: 'Team',
+}
 
-// Кеширование
-export const CACHE_CONFIG = {
-  staleTime: 5 * 60 * 1000, // 5 минут
-  cacheTime: 10 * 60 * 1000, // 10 минут
-} as const
-
-// Валидация
-export const VALIDATION_CONFIG = {
-  maxCommentLength: 1000,
-  maxKeywordLength: 100,
-  maxGroupNameLength: 200,
-} as const
-
-// UI конфигурация
+// Настройки UI
 export const UI_CONFIG = {
   theme: {
-    primary: '#3b82f6',
-    secondary: '#64748b',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
+    default: 'dark' as const,
+    options: ['light', 'dark', 'system'] as const,
   },
-  breakpoints: {
-    sm: '640px',
-    md: '768px',
-    lg: '1024px',
-    xl: '1280px',
-    '2xl': '1536px',
+  pagination: {
+    defaultPageSize: 20,
+    pageSizeOptions: [10, 20, 50, 100],
   },
-} as const
+  refresh: {
+    defaultInterval: 30, // секунды
+    intervals: [15, 30, 60, 300],
+  },
+}
+
+// Настройки мониторинга
+export const MONITORING_CONFIG = {
+  intervals: {
+    fast: 30, // 30 секунд
+    normal: 300, // 5 минут
+    slow: 1800, // 30 минут
+  },
+  priorities: {
+    high: 1,
+    medium: 2,
+    low: 3,
+  },
+}
+
+// Настройки парсинга
+export const PARSING_CONFIG = {
+  maxPostsPerGroup: 1000,
+  maxCommentsPerPost: 100,
+  delayBetweenRequests: 1000, // миллисекунды
+}
+
+// Настройки уведомлений
+export const NOTIFICATION_CONFIG = {
+  duration: 5000, // миллисекунды
+  position: 'top-right' as const,
+  maxVisible: 5,
+}
+
+// Настройки кеширования
+export const CACHE_CONFIG = {
+  staleTime: 5 * 60 * 1000, // 5 минут
+  gcTime: 10 * 60 * 1000, // 10 минут
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: true,
+}
+
+export default {
+  API_CONFIG,
+  APP_CONFIG,
+  UI_CONFIG,
+  MONITORING_CONFIG,
+  PARSING_CONFIG,
+  NOTIFICATION_CONFIG,
+  CACHE_CONFIG,
+}

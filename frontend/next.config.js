@@ -1,46 +1,105 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Отключаем ESLint для сборки
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
-  // Отключаем TypeScript проверки для сборки
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-
   // Экспериментальные функции
   experimental: {
-    // Улучшенная оптимизация изображений
+    // Включаем оптимизации для production
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
-  },
-
-  // Turbopack настройки (стабильная версия)
-  turbopack: {
-    rules: {
-      '*.svg': {
-        loaders: ['@svgr/webpack'],
-        as: '*.js',
+    // Включаем turbo для быстрой сборки
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
       },
     },
   },
 
-  // Оптимизация изображений
+  // Настройки изображений
   images: {
+    domains: [
+      'vk.com',
+      'sun9-1.userapi.com',
+      'sun9-2.userapi.com',
+      'sun9-3.userapi.com',
+      'sun9-4.userapi.com',
+      'sun9-5.userapi.com',
+      'sun9-6.userapi.com',
+      'sun9-7.userapi.com',
+      'sun9-8.userapi.com',
+      'sun9-9.userapi.com',
+      'sun9-10.userapi.com',
+      'sun9-11.userapi.com',
+      'sun9-12.userapi.com',
+      'sun9-13.userapi.com',
+      'sun9-14.userapi.com',
+      'sun9-15.userapi.com',
+      'sun9-16.userapi.com',
+      'sun9-17.userapi.com',
+      'sun9-18.userapi.com',
+      'sun9-19.userapi.com',
+      'sun9-20.userapi.com',
+      'sun9-21.userapi.com',
+      'sun9-22.userapi.com',
+      'sun9-23.userapi.com',
+      'sun9-24.userapi.com',
+      'sun9-25.userapi.com',
+      'sun9-26.userapi.com',
+      'sun9-27.userapi.com',
+      'sun9-28.userapi.com',
+      'sun9-29.userapi.com',
+      'sun9-30.userapi.com',
+      'sun9-31.userapi.com',
+      'sun9-32.userapi.com',
+      'sun9-33.userapi.com',
+      'sun9-34.userapi.com',
+      'sun9-35.userapi.com',
+      'sun9-36.userapi.com',
+      'sun9-37.userapi.com',
+      'sun9-38.userapi.com',
+      'sun9-39.userapi.com',
+      'sun9-40.userapi.com',
+      'sun9-41.userapi.com',
+      'sun9-42.userapi.com',
+      'sun9-43.userapi.com',
+      'sun9-44.userapi.com',
+      'sun9-45.userapi.com',
+      'sun9-46.userapi.com',
+      'sun9-47.userapi.com',
+      'sun9-48.userapi.com',
+      'sun9-49.userapi.com',
+    ],
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    minimumCacheTTL: 60,
-    dangerouslyAllowSVG: true,
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
-  // Оптимизация сборки
-  compress: true,
-  poweredByHeader: false,
+  // Настройки webpack
+  webpack: (config, { dev, isServer }) => {
+    // Настройки для SVG
+    config.module.rules.push({
+      test: /\.svg$/,
+      use: ['@svgr/webpack'],
+    })
 
-  // Заголовки безопасности
+    // Оптимизации для production
+    if (!dev && !isServer) {
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+          },
+        },
+      }
+    }
+
+    return config
+  },
+
+  // Настройки заголовков
   async headers() {
     return [
       {
@@ -62,44 +121,29 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()',
           },
-          // Отключаем кеширование для всех страниц
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate, max-age=0',
-          },
-          {
-            key: 'Pragma',
-            value: 'no-cache',
-          },
-          {
-            key: 'Expires',
-            value: '0',
-          },
         ],
       },
       {
         source: '/api/(.*)',
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'no-store, max-age=0',
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
           },
-        ],
-      },
-      // Исключение для статических файлов - оставляем кеширование
-      {
-        source: '/_next/static/(.*)',
-        headers: [
           {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization',
           },
         ],
       },
     ]
   },
 
-  // Перенаправления
+  // Настройки редиректов
   async redirects() {
     return [
       {
@@ -110,58 +154,36 @@ const nextConfig = {
     ]
   },
 
-  // Переменные окружения
-  env: {
-    CUSTOM_KEY: process.env.CUSTOM_KEY,
-  },
-
-  // Webpack конфигурация
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Оптимизация для production
-    if (!dev && !isServer) {
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-          },
-          common: {
-            name: 'common',
-            minChunks: 2,
-            chunks: 'all',
-            enforce: true,
-          },
+  // API проксирование для разработки
+  async rewrites() {
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: '/api/v1/:path*',
+          destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/:path*`,
         },
-      }
+      ]
     }
-
-    // Обработка SVG
-    config.module.rules.push({
-      test: /\.svg$/,
-      use: ['@svgr/webpack'],
-    })
-
-    return config
+    return []
   },
 
-  // Настройки для разработки
-  ...(process.env.NODE_ENV === 'development' && {
-    // Включаем подробные логи в разработке
-    logging: {
-      fetches: {
-        fullUrl: true,
-      },
-    },
-  }),
+  // Настройки TypeScript
+  typescript: {
+    // Игнорируем ошибки TypeScript при сборке (для production)
+    ignoreBuildErrors: process.env.NODE_ENV === 'production',
+  },
 
-  // Настройки для production
-  ...(process.env.NODE_ENV === 'production' && {
-    // Оптимизация для production
-    output: 'standalone',
-    trailingSlash: false,
-  }),
+  // Настройки ESLint
+  eslint: {
+    // Игнорируем ошибки ESLint при сборке (для production)
+    ignoreDuringBuilds: process.env.NODE_ENV === 'production',
+  },
+
+  // Настройки для Docker
+  output: 'standalone',
+  poweredByHeader: false,
+  compress: true,
+  generateEtags: false,
 }
 
 module.exports = nextConfig

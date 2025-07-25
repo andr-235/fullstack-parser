@@ -1,7 +1,7 @@
 'use client'
 
-import { SettingsPage as SettingsPageFeature } from '@/features/settings'
+import { SettingsTabs } from '@/features/settings/ui/SettingsTabs'
 
 export function SettingsPage() {
-  return <SettingsPageFeature />
+  return <SettingsTabs />
 }

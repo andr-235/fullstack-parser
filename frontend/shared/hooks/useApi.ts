@@ -5,24 +5,9 @@ import {
   UseQueryOptions,
   UseMutationOptions,
 } from '@tanstack/react-query'
-import {
-  apiService,
-  apiUtils,
-  type ApiResponse,
-  type ApiError,
-} from '@/shared/lib/api'
-import { CACHE_CONFIG } from '@/shared/config'
+import { api, type ApiResponse, type ApiError } from '@/shared/lib/api'
 
-// Базовые опции для запросов
-const defaultQueryOptions = {
-  staleTime: CACHE_CONFIG.staleTime,
-  cacheTime: CACHE_CONFIG.cacheTime,
-  retry: 3,
-  retryDelay: (attemptIndex: number) =>
-    Math.min(1000 * 2 ** attemptIndex, 30000),
-}
-
-// Хук для GET запросов
+// Хук для API запросов
 export function useApiQuery<T>(
   key: readonly unknown[],
   url: string,
@@ -33,65 +18,45 @@ export function useApiQuery<T>(
 ) {
   return useQuery({
     queryKey: key,
-    queryFn: () => apiService.get<T>(url),
-    ...defaultQueryOptions,
+    queryFn: () => api.get<T>(url),
     ...options,
   })
 }
 
-// Хук для POST запросов
+// Хук для API мутаций
 export function useApiMutation<T, V = any>(
   url: string,
   options?: Omit<UseMutationOptions<ApiResponse<T>, ApiError, V>, 'mutationFn'>
 ) {
-  const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: (data: V) => apiService.post<T>(url, data),
+    mutationFn: (data: V) => api.post<T>(url, data),
     ...options,
-    onSuccess: (data, variables, context) => {
-      // Инвалидируем кеш после успешной мутации
-      queryClient.invalidateQueries()
-      options?.onSuccess?.(data, variables, context)
-    },
   })
 }
 
-// Хук для PUT запросов
+// Хук для API обновлений (PUT)
 export function useApiUpdate<T, V = any>(
   url: string,
   options?: Omit<UseMutationOptions<ApiResponse<T>, ApiError, V>, 'mutationFn'>
 ) {
-  const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: (data: V) => apiService.put<T>(url, data),
+    mutationFn: (data: V) => api.put<T>(url, data),
     ...options,
-    onSuccess: (data, variables, context) => {
-      queryClient.invalidateQueries()
-      options?.onSuccess?.(data, variables, context)
-    },
   })
 }
 
-// Хук для PATCH запросов
+// Хук для API обновлений (PATCH)
 export function useApiPatch<T, V = any>(
   url: string,
   options?: Omit<UseMutationOptions<ApiResponse<T>, ApiError, V>, 'mutationFn'>
 ) {
-  const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: (data: V) => apiService.patch<T>(url, data),
+    mutationFn: (data: V) => api.patch<T>(url, data),
     ...options,
-    onSuccess: (data, variables, context) => {
-      queryClient.invalidateQueries()
-      options?.onSuccess?.(data, variables, context)
-    },
   })
 }
 
-// Хук для DELETE запросов
+// Хук для API удалений
 export function useApiDelete<T>(
   url: string,
   options?: Omit<
@@ -99,15 +64,9 @@ export function useApiDelete<T>(
     'mutationFn'
   >
 ) {
-  const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: () => apiService.delete<T>(url),
+    mutationFn: () => api.delete<T>(url),
     ...options,
-    onSuccess: (data, variables, context) => {
-      queryClient.invalidateQueries()
-      options?.onSuccess?.(data, variables, context)
-    },
   })
 }
 
@@ -123,16 +82,26 @@ export function useApiUpload<T>(
     'mutationFn'
   >
 ) {
-  const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: ({ file, onProgress }) =>
-      apiService.upload<T>(url, file, onProgress),
-    ...options,
-    onSuccess: (data, variables, context) => {
-      queryClient.invalidateQueries()
-      options?.onSuccess?.(data, variables, context)
+    mutationFn: ({ file, onProgress }) => {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      return api.post<T>(url, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const progress = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            )
+            onProgress(progress)
+          }
+        },
+      })
     },
+    ...options,
   })
 }
 
@@ -148,7 +117,7 @@ export function useOptimisticUpdate<T, V = any>(
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: V) => apiService.put<ApiResponse<T>>(url, data),
+    mutationFn: (data: V) => api.patch<T>(url, data),
     onMutate: async (newData) => {
       // Отменяем исходящие запросы
       await queryClient.cancelQueries({ queryKey })
@@ -156,7 +125,7 @@ export function useOptimisticUpdate<T, V = any>(
       // Сохраняем предыдущее значение
       const previousData = queryClient.getQueryData<T>(queryKey)
 
-      // Оптимистично обновляем кеш
+      // Оптимистично обновляем
       if (options?.updateFn) {
         queryClient.setQueryData<T>(queryKey, (old) =>
           options.updateFn!(old, newData)
@@ -172,13 +141,13 @@ export function useOptimisticUpdate<T, V = any>(
       }
     },
     onSettled: () => {
-      // Всегда инвалидируем кеш после завершения
+      // Всегда инвалидируем кеш
       queryClient.invalidateQueries({ queryKey })
     },
   })
 }
 
-// Хук для бесконечной прокрутки
+// Хук для бесконечных запросов
 export function useInfiniteQuery<T>(
   key: readonly unknown[],
   url: string,
@@ -189,46 +158,11 @@ export function useInfiniteQuery<T>(
   return useQuery({
     queryKey: key,
     queryFn: ({ pageParam = 1 }) => {
-      const urlWithParams = apiUtils.createUrl(url, { page: pageParam })
-      return apiService.get<T>(urlWithParams)
+      const urlWithPage = url.includes('?')
+        ? `${url}&page=${pageParam}`
+        : `${url}?page=${pageParam}`
+      return api.get<T>(urlWithPage)
     },
-    ...defaultQueryOptions,
+    ...options,
   })
-}
-
-// Утилиты для работы с кешем
-export const queryUtils = {
-  // Инвалидация конкретного запроса
-  invalidateQuery: (queryKey: readonly unknown[]) => {
-    const queryClient = useQueryClient()
-    return queryClient.invalidateQueries({ queryKey })
-  },
-
-  // Удаление запроса из кеша
-  removeQuery: (queryKey: readonly unknown[]) => {
-    const queryClient = useQueryClient()
-    return queryClient.removeQueries({ queryKey })
-  },
-
-  // Обновление данных в кеше
-  setQueryData: <T>(queryKey: readonly unknown[], data: T) => {
-    const queryClient = useQueryClient()
-    return queryClient.setQueryData<T>(queryKey, data)
-  },
-
-  // Получение данных из кеша
-  getQueryData: <T>(queryKey: readonly unknown[]) => {
-    const queryClient = useQueryClient()
-    return queryClient.getQueryData<T>(queryKey)
-  },
-
-  // Предварительная загрузка данных
-  prefetchQuery: <T>(queryKey: readonly unknown[], url: string) => {
-    const queryClient = useQueryClient()
-    return queryClient.prefetchQuery({
-      queryKey,
-      queryFn: () => apiService.get<T>(url),
-      ...defaultQueryOptions,
-    })
-  },
 }

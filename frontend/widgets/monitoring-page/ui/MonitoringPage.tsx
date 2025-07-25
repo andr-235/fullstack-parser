@@ -1,6 +1,6 @@
 'use client'
 
-import { MonitoringPage as MonitoringPageFeature } from '@/features/monitoring'
+import MonitoringPageFeature from '@/features/monitoring/ui/MonitoringPage'
 
 export function MonitoringPage() {
   return <MonitoringPageFeature />

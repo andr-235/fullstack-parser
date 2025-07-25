@@ -1,277 +1,157 @@
 import {
   useQuery,
-  useInfiniteQuery,
   useMutation,
   useQueryClient,
+  useInfiniteQuery,
 } from '@tanstack/react-query'
-import { api, createQueryKey } from '@/shared/lib/api'
+import { api } from '@/shared/lib/api'
 import type {
   VKCommentResponse,
   CommentSearchParams,
   PaginationParams,
-  CommentUpdateRequest,
+  PaginatedResponse,
 } from '@/types/api'
 
-/**
- * Хук для получения комментариев с пагинацией
- */
+// Хук для получения комментариев
 export function useComments(params?: CommentSearchParams & PaginationParams) {
+  const { page = 1, size = 20, ...filters } = params || {}
+
   return useQuery({
-    queryKey: createQueryKey.comments(params),
-    queryFn: () => api.getComments(params),
+    queryKey: ['comments', { page, size, ...filters }],
+    queryFn: () => {
+      const searchParams = new URLSearchParams()
+      searchParams.append('page', page.toString())
+      searchParams.append('size', size.toString())
+
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            value.forEach((v) => searchParams.append(key, v))
+          } else {
+            searchParams.append(key, value.toString())
+          }
+        }
+      })
+
+      return api.get<PaginatedResponse<VKCommentResponse>>(
+        `/comments?${searchParams.toString()}`
+      )
+    },
     staleTime: 2 * 60 * 1000, // 2 минуты
   })
 }
 
-/**
- * Хук для бесконечной загрузки комментариев
- */
+// Хук для бесконечной прокрутки комментариев
 export function useInfiniteComments(filters?: CommentSearchParams) {
   return useInfiniteQuery({
-    queryKey: ['comments', 'infinite', filters],
-    queryFn: ({ pageParam = 1 }) =>
-      api.getComments({
-        ...filters,
-        page: pageParam,
-        size: 20,
-      }),
-    getNextPageParam: (lastPage, pages) => {
-      const totalLoaded = pages.length * 20
-      return lastPage.total > totalLoaded ? pages.length + 1 : undefined
+    queryKey: ['infinite-comments', filters],
+    queryFn: ({ pageParam = 1 }) => {
+      const searchParams = new URLSearchParams()
+      searchParams.append('page', pageParam.toString())
+      searchParams.append('size', '20')
+
+      Object.entries(filters || {}).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            value.forEach((v) => searchParams.append(key, v))
+          } else {
+            searchParams.append(key, value.toString())
+          }
+        }
+      })
+
+      return api.get<PaginatedResponse<VKCommentResponse>>(
+        `/comments?${searchParams.toString()}`
+      )
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce(
+        (acc, page) => acc + page.data.items.length,
+        0
+      )
+      if (loaded < (lastPage?.data.total || 0)) {
+        return allPages.length + 1
+      }
+      return undefined
     },
     initialPageParam: 1,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 2 * 60 * 1000, // 2 минуты
   })
 }
 
-/**
- * Хук для обновления статуса комментария
- */
+// Хук для обновления статуса комментария
 export function useUpdateCommentStatus() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: ({
       commentId,
-      statusUpdate,
+      data,
     }: {
       commentId: number
-      statusUpdate: CommentUpdateRequest
-    }) => api.updateCommentStatus(commentId, statusUpdate),
-    onMutate: async ({ commentId, statusUpdate }) => {
-      await queryClient.cancelQueries({ queryKey: ['comments'] })
-      const previousComments = queryClient.getQueryData([
-        'comments',
-        'infinite',
-      ])
-
-      queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
-        if (!old) return old
-
-        return {
-          ...old,
-          pages: old.pages.map((page: any) => ({
-            ...page,
-            items: page.items.map((comment: VKCommentResponse) =>
-              comment.id === commentId
-                ? {
-                    ...comment,
-                    ...statusUpdate,
-                    viewed_at: statusUpdate.is_viewed
-                      ? new Date().toISOString()
-                      : comment.viewed_at,
-                    archived_at: statusUpdate.is_archived
-                      ? new Date().toISOString()
-                      : comment.archived_at,
-                  }
-                : comment
-            ),
-          })),
-        }
-      })
-
-      return { previousComments }
-    },
-    onError: (err, variables, context) => {
-      if (context?.previousComments) {
-        queryClient.setQueryData(
-          ['comments', 'infinite'],
-          context.previousComments
-        )
-      }
-    },
-    onSettled: () => {
+      data: { is_viewed?: boolean; is_archived?: boolean }
+    }) => api.patch<VKCommentResponse>(`/comments/${commentId}`, data),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
+      queryClient.invalidateQueries({ queryKey: ['infinite-comments'] })
     },
   })
 }
 
-/**
- * Хук для отметки комментария как просмотренного
- */
+// Хук для отметки комментария как просмотренного
 export function useMarkCommentAsViewed() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (commentId: number) => api.markCommentAsViewed(commentId),
-    onMutate: async (commentId) => {
-      await queryClient.cancelQueries({ queryKey: ['comments'] })
-      const previousComments = queryClient.getQueryData([
-        'comments',
-        'infinite',
-      ])
-
-      queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
-        if (!old) return old
-
-        return {
-          ...old,
-          pages: old.pages.map((page: any) => ({
-            ...page,
-            items: page.items.map((comment: VKCommentResponse) =>
-              comment.id === commentId
-                ? {
-                    ...comment,
-                    is_viewed: true,
-                    viewed_at: new Date().toISOString(),
-                  }
-                : comment
-            ),
-          })),
-        }
-      })
-
-      return { previousComments }
-    },
-    onError: (err, variables, context) => {
-      console.error('Ошибка при отметке комментария как просмотренного:', err)
-      if (context?.previousComments) {
-        queryClient.setQueryData(
-          ['comments', 'infinite'],
-          context.previousComments
-        )
-      }
-    },
-    onSettled: () => {
+    mutationFn: (commentId: number) =>
+      api.patch<VKCommentResponse>(`/comments/${commentId}`, {
+        is_viewed: true,
+      }),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
+      queryClient.invalidateQueries({ queryKey: ['infinite-comments'] })
     },
   })
 }
 
-/**
- * Хук для архивирования комментария
- */
+// Хук для архивирования комментария
 export function useArchiveComment() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (commentId: number) => api.archiveComment(commentId),
-    onMutate: async (commentId) => {
-      await queryClient.cancelQueries({ queryKey: ['comments'] })
-      const previousComments = queryClient.getQueryData([
-        'comments',
-        'infinite',
-      ])
-
-      queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
-        if (!old) return old
-
-        return {
-          ...old,
-          pages: old.pages.map((page: any) => ({
-            ...page,
-            items: page.items.map((comment: VKCommentResponse) =>
-              comment.id === commentId
-                ? {
-                    ...comment,
-                    is_viewed: true,
-                    is_archived: true,
-                    viewed_at: new Date().toISOString(),
-                    archived_at: new Date().toISOString(),
-                  }
-                : comment
-            ),
-          })),
-        }
-      })
-
-      return { previousComments }
-    },
-    onError: (err, variables, context) => {
-      console.error('Ошибка при архивировании комментария:', err)
-      if (context?.previousComments) {
-        queryClient.setQueryData(
-          ['comments', 'infinite'],
-          context.previousComments
-        )
-      }
-    },
-    onSettled: () => {
+    mutationFn: (commentId: number) =>
+      api.patch<VKCommentResponse>(`/comments/${commentId}`, {
+        is_archived: true,
+      }),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
+      queryClient.invalidateQueries({ queryKey: ['infinite-comments'] })
     },
   })
 }
 
-/**
- * Хук для разархивирования комментария
- */
+// Хук для разархивирования комментария
 export function useUnarchiveComment() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (commentId: number) => api.unarchiveComment(commentId),
-    onMutate: async (commentId) => {
-      await queryClient.cancelQueries({ queryKey: ['comments'] })
-      const previousComments = queryClient.getQueryData([
-        'comments',
-        'infinite',
-      ])
-
-      queryClient.setQueryData(['comments', 'infinite'], (old: any) => {
-        if (!old) return old
-
-        return {
-          ...old,
-          pages: old.pages.map((page: any) => ({
-            ...page,
-            items: page.items.map((comment: VKCommentResponse) =>
-              comment.id === commentId
-                ? {
-                    ...comment,
-                    is_archived: false,
-                    archived_at: null,
-                  }
-                : comment
-            ),
-          })),
-        }
-      })
-
-      return { previousComments }
-    },
-    onError: (err, variables, context) => {
-      console.error('Ошибка при разархивировании комментария:', err)
-      if (context?.previousComments) {
-        queryClient.setQueryData(
-          ['comments', 'infinite'],
-          context.previousComments
-        )
-      }
-    },
-    onSettled: () => {
+    mutationFn: (commentId: number) =>
+      api.patch<VKCommentResponse>(`/comments/${commentId}`, {
+        is_archived: false,
+      }),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
+      queryClient.invalidateQueries({ queryKey: ['infinite-comments'] })
     },
   })
 }
 
-/**
- * Хук для получения конкретного комментария с ключевыми словами
- */
+// Хук для получения комментария с ключевыми словами
 export function useCommentWithKeywords(commentId: number) {
   return useQuery({
-    queryKey: createQueryKey.comment(commentId),
-    queryFn: () => api.getCommentWithKeywords(commentId),
+    queryKey: ['comment-with-keywords', commentId],
+    queryFn: () => api.get<any>(`/comments/${commentId}/keywords`),
     enabled: !!commentId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 минут
   })
 }

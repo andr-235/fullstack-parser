@@ -1,6 +1,6 @@
 'use client'
 
-import { KeywordsPage as KeywordsPageFeature } from '@/features/keywords'
+import KeywordsPageFeature from '@/features/keywords/ui/KeywordsPage'
 
 export function KeywordsPage() {
   return <KeywordsPageFeature />

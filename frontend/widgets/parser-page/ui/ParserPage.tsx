@@ -1,6 +1,6 @@
 'use client'
 
-import { ParserPage as ParserPageFeature } from '@/features/parser'
+import ParserPageFeature from '@/features/parser/ui/ParserPage'
 
 export function ParserPage() {
   return <ParserPageFeature />

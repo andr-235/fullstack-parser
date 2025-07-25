@@ -1,18 +1,17 @@
-// Конфигурация и константы
-export * from './config'
-export * from './constants'
-
-// API и утилиты
-export * from './lib/api'
-
-// Хуки
-export * from './hooks/useApi'
-
-// UI компоненты
+// Экспорт UI компонентов
 export * from './ui'
 
-// Store
+// Экспорт хуков
+export * from './hooks'
+
+// Экспорт типов
+export * from './types'
+
+// Экспорт store
 export * from './store'
 
-// Типы
-export * from './types'
+// Экспорт конфигурации
+export * from './config'
+
+// Экспорт констант
+export * from './constants'

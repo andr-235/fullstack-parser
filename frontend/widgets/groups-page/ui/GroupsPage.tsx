@@ -1,6 +1,6 @@
 'use client'
 
-import { GroupsPage as GroupsPageFeature } from '@/features/groups'
+import GroupsPageFeature from '@/features/groups/ui/GroupsPage'
 
 export function GroupsPage() {
   return <GroupsPageFeature />

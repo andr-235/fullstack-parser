@@ -1,2 +1,6 @@
-// Comments hooks exports
-export * from './use-comments'
+// Экспортируем хуки из entities вместо дублирования
+export {
+  useComments,
+  useInfiniteComments,
+  useCommentWithKeywords,
+} from '@/entities/comment'
