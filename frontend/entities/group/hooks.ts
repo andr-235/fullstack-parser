@@ -130,7 +130,7 @@ export function useUploadGroupsWithProgress() {
           )
 
         // Отправляем файл и получаем upload_id
-        fetch('/api/v1/groups/upload-with-progress/', {
+        fetch('/groups/upload-with-progress/', {
           method: 'POST',
           body: formData,
         })
@@ -140,7 +140,7 @@ export function useUploadGroupsWithProgress() {
 
             // Функция для проверки прогресса
             const checkProgress = () => {
-              fetch(`/api/v1/groups/upload-progress/${uploadId}`)
+              fetch(`/groups/upload-progress/${uploadId}`)
                 .then((response) => {
                   if (response.ok) {
                     return response.json()
