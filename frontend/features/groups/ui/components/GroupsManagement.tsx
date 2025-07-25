@@ -22,6 +22,12 @@ export function GroupsManagement({
     e.preventDefault()
     if (!newGroupUrl.trim()) return
 
+    console.log('🚀 Отправка запроса на создание группы:', {
+      vk_id_or_screen_name: newGroupUrl,
+      is_active: true,
+      max_posts_to_check: 100,
+    })
+
     createGroupMutation.mutate(
       {
         vk_id_or_screen_name: newGroupUrl,
@@ -29,24 +35,35 @@ export function GroupsManagement({
         max_posts_to_check: 100,
       },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          console.log('✅ Группа успешно создана:', data)
           setNewGroupUrl('')
           toast.success('Группа успешно добавлена! 🎉')
         },
         onError: (error: any) => {
-          console.error('Ошибка создания группы:', error)
+          console.error('❌ Ошибка создания группы:', error)
+          console.error('❌ Детали ошибки:', {
+            status: error?.status,
+            responseStatus: error?.response?.status,
+            responseData: error?.response?.data,
+            message: error?.message,
+          })
+
           let errorMessage = 'Ошибка при создании группы'
 
           if (error?.status === 409 || error?.response?.status === 409) {
-            errorMessage =
-              error?.response?.data?.detail || 'Группа уже существует в системе'
+            // Группа уже существует
+            errorMessage = error?.response?.data?.detail || 'Группа уже существует в системе'
+            toast.error(errorMessage)
           } else if (error?.response?.data?.detail) {
             errorMessage = error.response.data.detail
+            toast.error(errorMessage)
           } else if (error?.message) {
             errorMessage = error.message
+            toast.error(errorMessage)
+          } else {
+            toast.error(errorMessage)
           }
-
-          toast.error(errorMessage)
         },
       }
     )
@@ -83,7 +100,7 @@ export function GroupsManagement({
               <span>Только активные</span>
             </label>
 
-            <UploadGroupsModal onSuccess={() => {}} />
+            <UploadGroupsModal onSuccess={() => { }} />
           </div>
         </div>
 

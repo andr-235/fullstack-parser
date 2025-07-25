@@ -165,7 +165,7 @@ services:
 
   # Redis кеш (development)
   redis:
-    image: redis:7-alpine@sha256:abcdef1234567890
+    image: redis:7-alpine
     restart: unless-stopped
     ports:
       - "6379:6379" # Expose для local development

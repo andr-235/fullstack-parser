@@ -63,27 +63,22 @@ export function useInfiniteGroups(params?: UseInfiniteGroupsParams) {
   const { active_only, search, pageSize = 20 } = params || {}
 
   return useInfiniteQuery({
-    queryKey: ['infinite-groups', { active_only, search, pageSize }],
-    queryFn: ({ pageParam = 1 }) => {
-      return apiService.getGroups({
+    queryKey: ['groups', active_only, search],
+    queryFn: ({ pageParam = 1 }) =>
+      apiService.getGroups({
         page: pageParam,
-        size: pageSize,
+        size: 20,
         active_only,
         search,
-      })
-    },
-    getNextPageParam: (lastPage: any, allPages) => {
-      const loaded = allPages.reduce(
-        (acc, page) => acc + page.data.items.length,
-        0
-      )
-      if (loaded < (lastPage?.data.total || 0)) {
-        return allPages.length + 1
-      }
-      return undefined
+      }),
+    getNextPageParam: (lastPage) => {
+      const currentPage = lastPage?.page || 1
+      const total = lastPage?.total || 0
+      const size = lastPage?.size || 20
+      const hasNextPage = currentPage * size < total
+      return hasNextPage ? currentPage + 1 : undefined
     },
     initialPageParam: 1,
-    staleTime: 5 * 60 * 1000, // 5 минут
   })
 }
 

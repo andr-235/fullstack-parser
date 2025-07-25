@@ -65,8 +65,9 @@ export default function GroupsPage() {
     hasNextPage,
     isFetching,
     isFetchingNextPage,
+    isLoading,
   } = useInfiniteGroups({
-    activeOnly: activeOnly,
+    active_only: activeOnly,
     search: debouncedSearch,
   })
 
@@ -75,7 +76,11 @@ export default function GroupsPage() {
   const refreshGroupMutation = useRefreshGroupInfo()
 
   const groups = useMemo(() => {
+    console.log('🔍 Данные от useInfiniteGroups:', data)
+    console.log('🔍 Страницы данных:', data?.pages)
+
     const allGroups = data?.pages.flatMap((page) => page.items) ?? []
+    console.log('🔍 Все группы после flatMap:', allGroups)
 
     return allGroups.sort((a, b) => {
       let aValue: any
@@ -170,7 +175,7 @@ export default function GroupsPage() {
       {/* Таблица групп */}
       <Card className="border-slate-700 bg-slate-800 shadow-lg">
         <CardContent className="p-0">
-          {isFetching && !data ? (
+          {isLoading ? (
             <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
               <div className="relative">
                 <LoadingSpinner className="h-8 w-8 text-blue-500" />
@@ -335,11 +340,10 @@ export default function GroupsPage() {
                               variant={
                                 group.is_active ? 'default' : 'secondary'
                               }
-                              className={`${
-                                group.is_active
-                                  ? 'bg-green-600 hover:bg-green-700'
-                                  : 'bg-slate-600 hover:bg-slate-700'
-                              } text-white`}
+                              className={`${group.is_active
+                                ? 'bg-green-600 hover:bg-green-700'
+                                : 'bg-slate-600 hover:bg-slate-700'
+                                } text-white`}
                             >
                               {group.is_active ? 'Активна' : 'Неактивна'}
                             </Badge>
@@ -387,7 +391,7 @@ export default function GroupsPage() {
                               size="icon"
                               onClick={() => {
                                 refreshGroupMutation.mutate(
-                                  { groupId: group.id },
+                                  group.id,
                                   {
                                     onSuccess: () => {
                                       toast.success(
@@ -480,9 +484,9 @@ export default function GroupsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() =>
-                                deleteGroupMutation.mutate({
-                                  groupId: group.id,
-                                })
+                                deleteGroupMutation.mutate(
+                                  group.id
+                                )
                               }
                               disabled={deleteGroupMutation.isPending}
                               className="h-8 w-8 hover:bg-slate-600/50 text-red-400 hover:text-red-300 transition-all duration-200 rounded-md"
