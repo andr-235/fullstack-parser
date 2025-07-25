@@ -35,6 +35,12 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
 
+  // Новые состояния для отслеживания прогресса
+  const [currentGroup, setCurrentGroup] = useState<string>('')
+  const [totalGroups, setTotalGroups] = useState(0)
+  const [processedGroups, setProcessedGroups] = useState(0)
+  const [uploadError, setUploadError] = useState<string>('')
+
   const uploadMutation = useUploadGroupsFromFile()
 
   const handleFileSelect = (file: File) => {
@@ -42,6 +48,10 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
     setUploadResult(null)
     setUploadProgress(0)
     setUploadStatus('idle')
+    setCurrentGroup('')
+    setTotalGroups(0)
+    setProcessedGroups(0)
+    setUploadError('')
   }
 
   const handleUpload = async () => {
@@ -68,21 +78,40 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
 
     // Начинаем загрузку
     setUploadStatus('uploading')
-    setUploadProgress(10)
+    setUploadProgress(0)
+    setUploadError('')
+
+    // Читаем файл для подсчета групп
+    const fileContent = await selectedFile.text()
+    const lines = fileContent.split('\n').filter(line => line.trim())
+    const estimatedGroups = lines.length
+    setTotalGroups(estimatedGroups)
+    setProcessedGroups(0)
 
     let progressInterval: NodeJS.Timeout | null = null
 
     try {
-      // Симуляция прогресса загрузки
+      // Симуляция прогресса с информацией о группах
       progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            if (progressInterval) clearInterval(progressInterval)
-            return 90
+        setProcessedGroups(prev => {
+          const newProcessed = Math.min(prev + 1, estimatedGroups)
+          const progress = Math.round((newProcessed / estimatedGroups) * 90)
+          setUploadProgress(progress)
+
+          // Симулируем название текущей группы
+          if (newProcessed <= estimatedGroups) {
+            const currentLine = lines[newProcessed - 1] || ''
+            const groupName = currentLine.split(',')[1] || currentLine.split(',')[0] || `Группа ${newProcessed}`
+            setCurrentGroup(groupName.trim())
           }
-          return prev + 10
+
+          if (newProcessed >= estimatedGroups) {
+            if (progressInterval) clearInterval(progressInterval)
+            return estimatedGroups
+          }
+          return newProcessed
         })
-      }, 200)
+      }, 300)
 
       const response = await uploadMutation.mutateAsync({
         file: selectedFile,
@@ -99,6 +128,7 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
       setUploadProgress(100)
       setUploadStatus('success')
       setUploadResult(result)
+      setCurrentGroup('Завершено')
 
       // Показываем результат
       if (result.created > 0) {
@@ -127,21 +157,27 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
       console.error('Upload error:', error)
 
       // Улучшенная обработка ошибок
-      let errorMessage = 'Ошибка загрузки файла'
+      let errorMessage = 'Неизвестная ошибка загрузки'
 
       if (error instanceof Error) {
         if (error.message.includes('FILE_ERROR_NO_SPACE')) {
-          errorMessage =
-            'Недостаточно места на диске. Обратитесь к администратору.'
+          errorMessage = 'Недостаточно места на диске. Обратитесь к администратору.'
         } else if (error.message.includes('404')) {
           errorMessage = 'Сервер недоступен. Попробуйте позже.'
         } else if (error.message.includes('413')) {
           errorMessage = 'Файл слишком большой.'
+        } else if (error.message.includes('422')) {
+          errorMessage = 'Некорректный формат файла. Проверьте структуру данных.'
+        } else if (error.message.includes('500')) {
+          errorMessage = 'Ошибка сервера. Попробуйте позже или обратитесь к администратору.'
+        } else if (error.message.includes('Network Error')) {
+          errorMessage = 'Ошибка сети. Проверьте подключение к интернету.'
         } else {
           errorMessage = error.message
         }
       }
 
+      setUploadError(errorMessage)
       toast.error(errorMessage)
     }
   }
@@ -153,6 +189,10 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
     setUploadResult(null)
     setUploadProgress(0)
     setUploadStatus('idle')
+    setCurrentGroup('')
+    setTotalGroups(0)
+    setProcessedGroups(0)
+    setUploadError('')
   }
 
   const handleOpenChange = (open: boolean) => {
@@ -178,7 +218,7 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
   const getStatusText = () => {
     switch (uploadStatus) {
       case 'uploading':
-        return 'Загрузка файла...'
+        return 'Обработка групп...'
       case 'success':
         return 'Загрузка завершена'
       case 'error':
@@ -186,6 +226,16 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
       default:
         return ''
     }
+  }
+
+  const getProgressText = () => {
+    if (uploadStatus === 'uploading' && totalGroups > 0) {
+      if (currentGroup) {
+        return `${currentGroup} (${processedGroups}/${totalGroups})`
+      }
+      return `Обработано: ${processedGroups}/${totalGroups}`
+    }
+    return ''
   }
 
   return (
@@ -225,8 +275,20 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
                 <div className="space-y-2">
                   <Progress value={uploadProgress} className="w-full" />
                   <p className="text-sm text-gray-600">
-                    Прогресс: {uploadProgress}%
+                    {getProgressText()}
                   </p>
+                </div>
+              )}
+
+              {uploadStatus === 'error' && uploadError && (
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2 p-3 bg-red-50 rounded border border-red-200">
+                    <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-red-700">
+                      <p className="font-medium mb-1">Причина ошибки:</p>
+                      <p>{uploadError}</p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
