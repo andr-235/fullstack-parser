@@ -7,6 +7,7 @@ import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui'
 import { AppIcon } from '@/shared/ui'
+import { ThemeToggle } from '@/shared/ui/theme-toggle'
 
 interface HeaderProps {
   className?: string
@@ -80,6 +81,7 @@ export function Header({ className }: HeaderProps) {
             API активно
           </span>
         </div>
+        <ThemeToggle />
         <Button variant="ghost" size="icon">
           <Bell className="h-5 w-5" />
           <span className="sr-only">Уведомления</span>

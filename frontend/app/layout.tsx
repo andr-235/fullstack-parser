@@ -6,6 +6,7 @@ import './globals.css'
 import { APP_CONFIG } from '@/shared/config'
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 import { DebugPanel } from '@/shared/ui/debug/DebugPanel'
+import { ThemeProvider } from '@/shared/ui/theme-provider'
 
 import { QueryProvider } from '@/providers/QueryProvider'
 import { Sidebar, Header } from '@/widgets/layout'
@@ -57,16 +58,23 @@ export default function RootLayout({
       <body className={inter.className}>
         <div id="__next">
           <ErrorBoundary>
-            <QueryProvider>
-              <div className="flex h-screen">
-                <Sidebar />
-                <div className="flex-1 flex flex-col">
-                  <Header />
-                  <main className="flex-1 overflow-auto">{children}</main>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <QueryProvider>
+                <div className="flex h-screen">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col">
+                    <Header />
+                    <main className="flex-1 overflow-auto">{children}</main>
+                  </div>
                 </div>
-              </div>
-              <DebugPanel />
-            </QueryProvider>
+                <DebugPanel />
+              </QueryProvider>
+            </ThemeProvider>
           </ErrorBoundary>
         </div>
       </body>
