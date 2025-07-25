@@ -527,48 +527,62 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
         Returns:
             Созданная группа
         """
-        # Фильтрация только нужных полей для VKGroup
-        vk_group_fields = {c.name for c in VKGroup.__table__.columns}
-        # Исключаем поле 'id' из VK API, так как оно конфликтует с автоинкрементным id в БД
-        vk_group_fields.discard("id")
-        filtered_data = {
-            k: v for k, v in vk_group_data.items() if k in vk_group_fields
-        }
+        # Маппинг полей VK API в поля модели
+        mapped_data = {}
 
-        # Маппинг id -> vk_id (исключаем id из filtered_data)
+        # Основные поля
         if "id" in vk_group_data:
-            filtered_data["vk_id"] = vk_group_data["id"]
-            # Убеждаемся, что id не попадает в filtered_data
-            filtered_data.pop("id", None)
+            mapped_data["vk_id"] = vk_group_data["id"]
 
-        # Исправляем поле is_closed - VK API возвращает 0/1/2, нужно преобразовать в boolean
-        if "is_closed" in filtered_data:
-            is_closed_value = filtered_data["is_closed"]
+        if "name" in vk_group_data:
+            mapped_data["name"] = vk_group_data["name"]
+
+        if "description" in vk_group_data:
+            mapped_data["description"] = vk_group_data["description"]
+
+        # Количество участников
+        if "members_count" in vk_group_data:
+            mapped_data["members_count"] = vk_group_data["members_count"]
+
+        # Статус группы (is_closed)
+        if "is_closed" in vk_group_data:
+            is_closed_value = vk_group_data["is_closed"]
             if isinstance(is_closed_value, int):
                 # 0 = открытая, 1 = закрытая, 2 = частная
-                filtered_data["is_closed"] = is_closed_value in [1, 2]
+                mapped_data["is_closed"] = is_closed_value in [1, 2]
             elif isinstance(is_closed_value, bool):
-                filtered_data["is_closed"] = is_closed_value
+                mapped_data["is_closed"] = is_closed_value
             else:
-                filtered_data["is_closed"] = False
+                mapped_data["is_closed"] = False
+
+        # Фото группы
+        if "photo_100" in vk_group_data:
+            mapped_data["photo_url"] = vk_group_data["photo_100"]
+        elif "photo_200" in vk_group_data:
+            mapped_data["photo_url"] = vk_group_data["photo_200"]
+        elif "photo_50" in vk_group_data:
+            mapped_data["photo_url"] = vk_group_data["photo_50"]
 
         # Переопределяем поля пользовательскими данными
-        filtered_data.update(
+        mapped_data.update(
             {
                 "screen_name": self._extract_screen_name(
                     group_data.vk_id_or_screen_name
                 ),
-                "name": group_data.name,
-                "description": group_data.description,
+                "name": group_data.name or mapped_data.get("name", ""),
+                "description": group_data.description
+                or mapped_data.get("description"),
                 "is_active": group_data.is_active,
                 "max_posts_to_check": group_data.max_posts_to_check,
             }
         )
 
-        # Убеждаемся, что id не попадает в данные для создания модели
-        filtered_data.pop("id", None)
+        # Устанавливаем значения по умолчанию для полей, которые могут отсутствовать
+        mapped_data.setdefault("is_closed", False)
+        mapped_data.setdefault("members_count", None)
+        mapped_data.setdefault("photo_url", None)
 
-        new_group = VKGroup(**filtered_data)
+        new_group = VKGroup(**mapped_data)
         db.add(new_group)
         await db.commit()
         await db.refresh(new_group)
