@@ -20,5 +20,6 @@ export {
   useUpdateKeyword,
   useDeleteKeyword,
   useUploadKeywordsFromFile,
+  useUploadKeywordsWithProgress,
   useInfiniteKeywords,
 } from './hooks'

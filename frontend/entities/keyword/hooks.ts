@@ -5,11 +5,13 @@ import {
   useInfiniteQuery,
 } from '@tanstack/react-query'
 import { apiService, createQueryKey } from '@/shared/lib/api-compat'
+import { api } from '@/shared/lib/api'
 import type {
   KeywordResponse,
   KeywordCreate,
   KeywordUpdate,
   PaginationParams,
+  KeywordUploadResponse,
 } from '@/types/api'
 
 /**
@@ -137,6 +139,105 @@ export function useDeleteKeyword() {
     mutationFn: (keywordId: number) => apiService.deleteKeyword(keywordId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['keywords'] })
+    },
+  })
+}
+
+/**
+ * Хук для загрузки ключевых слов из файла с отслеживанием прогресса
+ */
+export function useUploadKeywordsWithProgress() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      file,
+      options,
+      onProgress,
+    }: {
+      file: File
+      options?: {
+        default_category?: string
+        is_active?: boolean
+        is_case_sensitive?: boolean
+        is_whole_word?: boolean
+      }
+      onProgress?: (progress: {
+        status: string
+        progress: number
+        current_keyword: string
+        total_keywords: number
+        processed_keywords: number
+        created: number
+        skipped: number
+        errors: string[]
+      }) => void
+    }) => {
+      return new Promise<KeywordUploadResponse>((resolve, reject) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        if (options?.default_category && options.default_category.trim())
+          formData.append('default_category', options.default_category)
+        if (options?.is_active !== undefined)
+          formData.append('is_active', options.is_active.toString())
+        if (options?.is_case_sensitive !== undefined)
+          formData.append(
+            'is_case_sensitive',
+            options.is_case_sensitive.toString()
+          )
+        if (options?.is_whole_word !== undefined)
+          formData.append('is_whole_word', options.is_whole_word.toString())
+
+        // Симулируем прогресс для ключевых слов
+        let progress = 0
+        const progressInterval = setInterval(() => {
+          progress += Math.random() * 10
+          if (progress > 90) progress = 90
+
+          onProgress?.({
+            status: 'processing',
+            progress: Math.round(progress),
+            current_keyword: `Обработка ключевых слов...`,
+            total_keywords: 0,
+            processed_keywords: 0,
+            created: 0,
+            skipped: 0,
+            errors: [],
+          })
+        }, 200)
+
+        api
+          .post<KeywordUploadResponse>('/keywords/upload', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          })
+          .then((response) => {
+            clearInterval(progressInterval)
+
+            // Финальный прогресс
+            onProgress?.({
+              status: 'completed',
+              progress: 100,
+              current_keyword: '',
+              total_keywords: response.data.total_processed,
+              processed_keywords: response.data.total_processed,
+              created: response.data.created,
+              skipped: response.data.skipped,
+              errors: response.data.errors,
+            })
+
+            resolve(response.data)
+          })
+          .catch((error) => {
+            clearInterval(progressInterval)
+            reject(error)
+          })
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['keywords'] })
+      queryClient.invalidateQueries({ queryKey: ['keywords', 'categories'] })
     },
   })
 }

@@ -5,7 +5,15 @@ API endpoints для управления VK группами
 import re
 from typing import Optional, Dict, List, Any, TypedDict
 
-from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    Form,
+    HTTPException,
+    UploadFile,
+    status,
+    BackgroundTasks,
+)
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -82,6 +90,7 @@ async def upload_groups_from_file(
 @router.post("/upload-with-progress/")
 async def upload_groups_with_progress(
     file: UploadFile,
+    background_tasks: BackgroundTasks,
     is_active: bool = Form(True, description="Активны ли группы"),
     max_posts_to_check: int = Form(
         100, description="Максимум постов для проверки"
@@ -105,28 +114,119 @@ async def upload_groups_with_progress(
         "errors": [],
     }
 
-    # Запускаем обработку в фоне
-    asyncio.create_task(
-        process_upload_background(
-            upload_id, file, is_active, max_posts_to_check, db
-        )
+    file_content = await file.read()
+    background_tasks.add_task(
+        process_upload_background,
+        upload_id=upload_id,
+        file_content=file_content,
+        is_active=is_active,
+        max_posts_to_check=max_posts_to_check,
+        db=db,
     )
 
     return {"upload_id": upload_id, "status": "started"}
 
 
+async def create_group_from_screen_name(
+    screen_name: str,
+    is_active: bool,
+    max_posts_to_check: int,
+    db: AsyncSession,
+) -> Optional[str]:
+    """Создает группу из screen_name, возвращает имя группы или None при ошибке"""
+    try:
+        # Извлекаем screen_name
+        clean_screen_name = _extract_screen_name(screen_name)
+        if not clean_screen_name:
+            return None
+
+        # Проверяем существование группы в БД
+        existing_group_result = await db.execute(
+            select(VKGroup).where(
+                func.lower(VKGroup.screen_name) == clean_screen_name.lower()
+            )
+        )
+        existing_group = existing_group_result.scalar_one_or_none()
+        if existing_group:
+            return None  # Группа уже существует
+
+        # Получаем данные из VK API
+        vk_service = VKAPIService(
+            token=settings.vk.access_token, api_version=settings.vk.api_version
+        )
+        vk_group_data = await vk_service.get_group_info(clean_screen_name)
+
+        if not vk_group_data:
+            return None  # Группа не найдена в VK
+
+        # Получаем количество участников
+        members_count = await vk_service.get_group_members_count(
+            clean_screen_name
+        )
+        if members_count is not None:
+            vk_group_data["members_count"] = members_count
+
+        # Проверяем по vk_id
+        vk_id = vk_group_data.get("id")
+        if vk_id:
+            existing_group_result = await db.execute(
+                select(VKGroup).where(VKGroup.vk_id == vk_id)
+            )
+            existing_group = existing_group_result.scalar_one_or_none()
+            if existing_group:
+                return None  # Группа с таким VK ID уже существует
+
+        # Подготавливаем данные для создания
+        vk_group_fields = {c.name for c in VKGroup.__table__.columns}
+        vk_group_fields.discard("id")
+        filtered_data = {
+            k: v for k, v in vk_group_data.items() if k in vk_group_fields
+        }
+
+        # Маппинг id -> vk_id
+        if "id" in vk_group_data:
+            filtered_data["vk_id"] = vk_group_data["id"]
+            filtered_data.pop("id", None)
+
+        # Добавляем пользовательские настройки
+        filtered_data.update(
+            {
+                "screen_name": clean_screen_name,
+                "is_active": is_active,
+                "max_posts_to_check": max_posts_to_check,
+            }
+        )
+
+        # Убеждаемся, что id не попадает в данные
+        filtered_data.pop("id", None)
+
+        # Создаем группу
+        new_group = VKGroup(**filtered_data)
+        db.add(new_group)
+        await db.commit()
+        await db.refresh(new_group)
+
+        return new_group.name
+
+    except Exception as e:
+        await db.rollback()
+        raise e
+
+
 async def process_upload_background(
     upload_id: str,
-    file: UploadFile,
+    file_content: bytes,
     is_active: bool,
     max_posts_to_check: int,
     db: AsyncSession,
 ):
     """Фоновая обработка загрузки файла"""
     try:
+        # Небольшая задержка чтобы фронтенд успел получить начальный статус
+        await asyncio.sleep(0.5)
+
         # Читаем файл для подсчета групп и сохраняем содержимое
-        content = await file.read()
-        content_str = content.decode("utf-8")
+        content_str = file_content.decode("utf-8")
         lines = [
             line.strip() for line in content_str.split("\n") if line.strip()
         ]
@@ -150,10 +250,26 @@ async def process_upload_background(
 
                 # Пытаемся создать группу
                 try:
-                    # Здесь будет реальная логика создания группы
-                    # Пока что имитируем успешную обработку
-                    await asyncio.sleep(0.1)
-                    created_count += 1
+                    group_name = await create_group_from_screen_name(
+                        screen_name=line,
+                        is_active=is_active,
+                        max_posts_to_check=max_posts_to_check,
+                        db=db,
+                    )
+
+                    if group_name:
+                        created_count += 1
+                        upload_progress[upload_id][
+                            "current_group"
+                        ] = f"Создана группа: {group_name}"
+                    else:
+                        skipped_count += 1
+                        upload_progress[upload_id][
+                            "current_group"
+                        ] = f"Пропущена группа: {line} (уже существует или не найдена)"
+
+                    # Небольшая задержка для реалистичности
+                    await asyncio.sleep(0.2)
 
                 except Exception as group_error:
                     upload_progress[upload_id]["errors"].append(

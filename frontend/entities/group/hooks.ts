@@ -169,7 +169,7 @@ export function useUploadGroupsWithProgress() {
                     reject(new Error(progressData.errors.join(', ')))
                   } else {
                     // Продолжаем проверять прогресс
-                    setTimeout(checkProgress, 1000)
+                    setTimeout(checkProgress, 500) // Уменьшаем интервал до 500мс
                   }
                 })
                 .catch((error) => {

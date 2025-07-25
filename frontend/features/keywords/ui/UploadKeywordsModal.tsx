@@ -15,8 +15,9 @@ import { Input } from '@/shared/ui'
 import { Label } from '@/shared/ui'
 import { Switch } from '@/shared/ui'
 import { FileUpload } from '@/shared/ui'
-import { useUploadKeywordsFromFile } from '@/entities/keyword'
-import { Upload, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
+import { Progress } from '@/shared/ui'
+import { useUploadKeywordsWithProgress } from '@/entities/keyword'
+import { Upload, AlertCircle, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import type { KeywordUploadResponse } from '@/types/api'
 
@@ -35,12 +36,20 @@ export default function UploadKeywordsModal({
   const [isWholeWord, setIsWholeWord] = useState(false)
   const [uploadResult, setUploadResult] =
     useState<KeywordUploadResponse | null>(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
 
-  const uploadMutation = useUploadKeywordsFromFile()
+  // Новые состояния для отслеживания прогресса
+  const [currentKeyword, setCurrentKeyword] = useState<string>('')
+  const [totalKeywords, setTotalKeywords] = useState(0)
+  const [processedKeywords, setProcessedKeywords] = useState(0)
+  const [uploadError, setUploadError] = useState<string>('')
+
+  const uploadMutation = useUploadKeywordsWithProgress()
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
-    setUploadResult(null)
+    setUploadError('')
   }
 
   const handleUpload = async () => {
@@ -65,48 +74,86 @@ export default function UploadKeywordsModal({
       return
     }
 
+    // Начинаем загрузку
+    setUploadStatus('uploading')
+    setUploadProgress(0)
+    setUploadError('')
+    setCurrentKeyword('Инициализация...')
+
     try {
       const result = await uploadMutation.mutateAsync({
         file: selectedFile,
         options: {
-          default_category: defaultCategory || undefined,
+          default_category: defaultCategory,
           is_active: isActive,
           is_case_sensitive: isCaseSensitive,
           is_whole_word: isWholeWord,
         },
+        onProgress: (progress) => {
+          setUploadProgress(progress.progress)
+          setCurrentKeyword(progress.current_keyword)
+          setTotalKeywords(progress.total_keywords)
+          setProcessedKeywords(progress.processed_keywords)
+
+          // Обновляем результат в реальном времени
+          if (progress.status === 'completed') {
+            setUploadResult({
+              status: 'success',
+              message: 'Загрузка завершена',
+              total_processed: progress.total_keywords,
+              created: progress.created,
+              skipped: progress.skipped,
+              errors: progress.errors,
+              created_keywords: [],
+            })
+          }
+        },
       })
 
       setUploadResult(result)
-      toast.success(result.message)
+      setUploadStatus('success')
+      setUploadProgress(100)
+      setCurrentKeyword('')
 
-      if (onSuccess) {
-        onSuccess()
-      }
+      toast.success(`Успешно загружено ${result.created} ключевых слов`)
+      onSuccess?.()
+    } catch (error: any) {
+      setUploadStatus('error')
+      setCurrentKeyword('')
 
-      // Закрываем модальное окно через 2 секунды
-      setTimeout(() => {
-        setIsOpen(false)
-        resetForm()
-      }, 2000)
-    } catch (error) {
-      console.error('Upload error:', error)
+      // Детальная обработка ошибок
+      let errorMessage = 'Ошибка загрузки'
 
-      // Улучшенная обработка ошибок
-      let errorMessage = 'Ошибка загрузки файла'
-
-      if (error instanceof Error) {
-        if (error.message.includes('FILE_ERROR_NO_SPACE')) {
-          errorMessage =
-            'Недостаточно места на диске. Обратитесь к администратору.'
-        } else if (error.message.includes('404')) {
-          errorMessage = 'Сервер недоступен. Попробуйте позже.'
-        } else if (error.message.includes('413')) {
-          errorMessage = 'Файл слишком большой.'
+      if (error?.response?.status) {
+        switch (error.response.status) {
+          case 404:
+            errorMessage = 'Сервер недоступен. Проверьте подключение к интернету'
+            break
+          case 413:
+            errorMessage = 'Файл слишком большой. Максимальный размер: 5MB'
+            break
+          case 422:
+            errorMessage = 'Некорректный формат файла. Проверьте структуру данных'
+            break
+          case 500:
+            errorMessage = 'Ошибка сервера. Попробуйте позже'
+            break
+          default:
+            errorMessage = `Ошибка сервера (${error.response.status})`
+        }
+      } else if (error?.message) {
+        if (error.message.includes('Network Error')) {
+          errorMessage = 'Ошибка сети. Проверьте подключение к интернету'
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Превышено время ожидания. Попробуйте позже'
+        } else if (error.message.includes('FILE_ERROR_NO_SPACE')) {
+          errorMessage = 'Недостаточно места на диске. Обратитесь к администратору'
         } else {
           errorMessage = error.message
         }
       }
 
+      setUploadError(errorMessage)
       toast.error(errorMessage)
     }
   }
@@ -118,12 +165,44 @@ export default function UploadKeywordsModal({
     setIsCaseSensitive(false)
     setIsWholeWord(false)
     setUploadResult(null)
+    setUploadProgress(0)
+    setUploadStatus('idle')
+    setCurrentKeyword('')
+    setTotalKeywords(0)
+    setProcessedKeywords(0)
+    setUploadError('')
   }
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
     if (!open) {
       resetForm()
+    }
+  }
+
+  const getStatusIcon = () => {
+    switch (uploadStatus) {
+      case 'uploading':
+        return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+      case 'success':
+        return <CheckCircle className="h-5 w-5 text-green-500" />
+      case 'error':
+        return <XCircle className="h-5 w-5 text-red-500" />
+      default:
+        return null
+    }
+  }
+
+  const getStatusText = () => {
+    switch (uploadStatus) {
+      case 'uploading':
+        return 'Обработка ключевых слов...'
+      case 'success':
+        return 'Загрузка завершена'
+      case 'error':
+        return 'Ошибка загрузки'
+      default:
+        return ''
     }
   }
 
@@ -158,6 +237,11 @@ export default function UploadKeywordsModal({
               className="mt-2"
               placeholder="Перетащите CSV или TXT файл сюда"
             />
+            {selectedFile && (
+              <p className="text-sm text-gray-600 mt-2">
+                Выбран файл: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+              </p>
+            )}
           </div>
 
           {/* Настройки */}
@@ -201,53 +285,92 @@ export default function UploadKeywordsModal({
             </div>
           </div>
 
-          {/* Результат загрузки */}
-          {uploadResult && (
+          {/* Статус загрузки */}
+          {(uploadStatus === 'uploading' || uploadStatus === 'success' || uploadStatus === 'error') && (
             <div className="border rounded-lg p-4 bg-gray-50">
               <div className="flex items-center gap-2 mb-3">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <h4 className="font-medium text-green-700">
-                  Загрузка завершена
+                {getStatusIcon()}
+                <h4 className={`font-medium ${uploadStatus === 'success' ? 'text-green-700' :
+                  uploadStatus === 'error' ? 'text-red-700' :
+                    'text-blue-700'
+                  }`}>
+                  {getStatusText()}
                 </h4>
               </div>
-              <div className="space-y-2 text-sm">
-                <p>
-                  <strong>Обработано строк:</strong>{' '}
-                  {uploadResult.total_processed}
-                </p>
-                <p>
-                  <strong>Создано:</strong> {uploadResult.created}
-                </p>
-                <p>
-                  <strong>Пропущено (дубликаты):</strong> {uploadResult.skipped}
-                </p>
-                {uploadResult.errors.length > 0 && (
-                  <div>
-                    <p className="font-medium text-red-600">Ошибки:</p>
-                    <ul className="list-disc list-inside text-red-600 space-y-1">
-                      {uploadResult.errors.map((error, index) => (
-                        <li key={index}>{error}</li>
-                      ))}
-                    </ul>
+
+              {uploadStatus === 'uploading' && (
+                <div className="space-y-2">
+                  <Progress value={uploadProgress} className="w-full" />
+                  <p className="text-sm text-gray-600">
+                    {currentKeyword ? (
+                      <>
+                        Обрабатывается: <span className="font-medium">{currentKeyword}</span>
+                        {totalKeywords > 0 && (
+                          <span className="text-gray-500">
+                            {' '}({processedKeywords}/{totalKeywords})
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      'Подготовка к загрузке...'
+                    )}
+                  </p>
+                </div>
+              )}
+
+              {uploadStatus === 'success' && uploadResult && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-green-600">Создано:</span> {uploadResult.created}
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Пропущено:</span> {uploadResult.skipped}
+                    </div>
                   </div>
-                )}
-              </div>
+                  {uploadResult.errors.length > 0 && (
+                    <div>
+                      <p className="font-medium text-red-600">Ошибки:</p>
+                      <ul className="list-disc list-inside text-red-600 space-y-1">
+                        {uploadResult.errors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {uploadStatus === 'error' && uploadError && (
+                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-red-700">
+                    <p className="font-medium">Ошибка загрузки:</p>
+                    <p>{uploadError}</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-
-          {/* Кнопки */}
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
-              Отмена
-            </Button>
-            <Button
-              onClick={handleUpload}
-              disabled={!selectedFile || uploadMutation.isPending}
-            >
-              {uploadMutation.isPending ? 'Загрузка...' : 'Загрузить'}
-            </Button>
-          </div>
         </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            disabled={uploadStatus === 'uploading'}
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={handleUpload}
+            disabled={!selectedFile || uploadStatus === 'uploading'}
+            className="gap-2"
+          >
+            {uploadStatus === 'uploading' && <Loader2 className="h-4 w-4 animate-spin" />}
+            Загрузить
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
