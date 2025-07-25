@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 
 import structlog
 from fastapi import HTTPException, UploadFile, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -496,7 +496,10 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
         """
         existing_group_result = await db.execute(
             select(VKGroup).where(
-                func.lower(VKGroup.screen_name) == screen_name.lower()
+                or_(
+                    func.lower(VKGroup.screen_name) == screen_name.lower(),
+                    VKGroup.screen_name == screen_name,  # Точное совпадение
+                )
             )
         )
         existing_group = existing_group_result.scalar_one_or_none()
@@ -667,6 +670,30 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
             for row_num, row in enumerate(csv_reader, 1):
                 if not row or not row[0].strip():
                     continue  # Пропускаем пустые строки
+
+                # Пропускаем заголовки (первая строка)
+                if row_num == 1 and (
+                    row[0].lower()
+                    in [
+                        "screen_name",
+                        "name",
+                        "description",
+                        "vk_id",
+                        "vk_id_or_screen_name",
+                    ]
+                    or any(
+                        header.lower()
+                        in [
+                            "screen_name",
+                            "name",
+                            "description",
+                            "vk_id",
+                            "vk_id_or_screen_name",
+                        ]
+                        for header in row
+                    )
+                ):
+                    continue
 
                 try:
                     screen_name = row[0].strip()
