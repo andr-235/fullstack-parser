@@ -6,6 +6,7 @@ import type {
   VKGroupUpdate,
   PaginationParams,
   PaginatedResponse,
+  VKGroupUploadResponse,
 } from '@/types/api'
 
 // Хук для получения групп
@@ -116,7 +117,7 @@ export function useUploadGroupsFromFile() {
           options.max_posts_to_check.toString()
         )
 
-      return api.post<any>('/groups/upload', formData, {
+      return api.post<VKGroupUploadResponse>('/groups/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
