@@ -197,7 +197,7 @@ services:
 
   # MailHog для тестирования email
   mailhog:
-    image: mailhog/mailhog:v1.0.1@sha256:1234567890abcdef
+    image: mailhog/mailhog:v1.0.1
     restart: unless-stopped
     ports:
       - "1025:1025" # SMTP
@@ -229,7 +229,7 @@ services:
 
   # Adminer для управления БД
   adminer:
-    image: adminer:4.8.1@sha256:abcdef1234567890
+    image: adminer:4.8.1
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -265,7 +265,7 @@ services:
 
   # Redis Commander для управления Redis
   redis-commander:
-    image: rediscommander/redis-commander:latest@sha256:1234567890abcdef
+    image: rediscommander/redis-commander:latest
     restart: unless-stopped
     ports:
       - "8081:8081"
@@ -292,11 +292,6 @@ services:
         limits:
           cpus: "0.25"
           memory: 128M
-        reservations:
-          cpus: "0.1"
-          memory: 64M
-    <<: *default-security-dev
-    user: "1000:1000"
 
 # Сети
 networks:
