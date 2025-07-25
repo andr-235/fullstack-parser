@@ -3,14 +3,12 @@ Pydantic схемы для VK групп
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
 from app.schemas.base import BaseSchema, IDMixin, TimestampMixin
-
-if TYPE_CHECKING:
-    from app.schemas.error_report import GroupLoadErrorReport
+from app.schemas.error_report import GroupLoadErrorReport
 
 
 # 1. Базовая схема с общими, валидируемыми полями
@@ -148,6 +146,6 @@ class VKGroupUploadResponse(BaseModel):
     created_groups: list[VKGroupRead] = Field(
         default_factory=list, description="Созданные группы"
     )
-    error_report: Optional["GroupLoadErrorReport"] = Field(
+    error_report: Optional[GroupLoadErrorReport] = Field(
         None, description="Подробный отчет об ошибках"
     )
