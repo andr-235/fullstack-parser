@@ -92,6 +92,97 @@ export function useGroupStats(groupId: number) {
   })
 }
 
+// Хук для загрузки групп из файла с отслеживанием прогресса
+export function useUploadGroupsWithProgress() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      file,
+      options,
+      onProgress,
+    }: {
+      file: File
+      options?: {
+        is_active?: boolean
+        max_posts_to_check?: number
+      }
+      onProgress?: (progress: {
+        status: string
+        progress: number
+        current_group: string
+        total_groups: number
+        processed_groups: number
+        created: number
+        skipped: number
+        errors: string[]
+      }) => void
+    }) => {
+      return new Promise<VKGroupUploadResponse>((resolve, reject) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        if (options?.is_active !== undefined)
+          formData.append('is_active', options.is_active.toString())
+        if (options?.max_posts_to_check)
+          formData.append(
+            'max_posts_to_check',
+            options.max_posts_to_check.toString()
+          )
+
+        // Сначала отправляем файл через fetch, затем подключаемся к SSE
+        fetch('/api/v1/groups/upload-with-progress', {
+          method: 'POST',
+          body: formData,
+        })
+          .then(() => {
+            // После отправки файла подключаемся к SSE для отслеживания прогресса
+            const eventSource = new EventSource(
+              '/api/v1/groups/upload-progress'
+            )
+
+            eventSource.onmessage = (event) => {
+              try {
+                const data = JSON.parse(event.data)
+
+                if (data.type === 'progress') {
+                  onProgress?.(data.data)
+                } else if (data.type === 'complete') {
+                  // Получаем финальный результат
+                  const result: VKGroupUploadResponse = {
+                    status: 'success',
+                    message: 'Загрузка завершена',
+                    total_processed: data.data.total_groups,
+                    created: data.data.created,
+                    skipped: data.data.skipped,
+                    errors: data.data.errors,
+                    created_groups: [],
+                  }
+                  eventSource.close()
+                  resolve(result)
+                } else if (data.type === 'error') {
+                  eventSource.close()
+                  reject(new Error(data.error))
+                }
+              } catch (error) {
+                eventSource.close()
+                reject(error)
+              }
+            }
+
+            eventSource.onerror = (error) => {
+              eventSource.close()
+              reject(new Error('Ошибка подключения к серверу'))
+            }
+          })
+          .catch(reject)
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+    },
+  })
+}
+
 // Хук для загрузки групп из файла
 export function useUploadGroupsFromFile() {
   const queryClient = useQueryClient()
@@ -128,12 +219,14 @@ export function useUploadGroupsFromFile() {
             if (onProgress && progressEvent_1.total) {
               const progress_1 = Math.round(
                 (progressEvent_1.loaded * 100) / progressEvent_1.total
-              );
-              onProgress(progress_1);
+              )
+              onProgress(progress_1)
             }
           },
-        });
-      return res.data;
+        })
+        .then((response) => response.data)
+
+      return res
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })

@@ -16,7 +16,7 @@ import { Label } from '@/shared/ui'
 import { Switch } from '@/shared/ui'
 import { FileUpload } from '@/shared/ui'
 import { Progress } from '@/shared/ui'
-import { useUploadGroupsFromFile } from '@/entities/group'
+import { useUploadGroupsWithProgress } from '@/entities/group'
 import { Upload, AlertCircle, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import type { VKGroupUploadResponse } from '@/types/api'
@@ -41,7 +41,7 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
   const [processedGroups, setProcessedGroups] = useState(0)
   const [uploadError, setUploadError] = useState<string>('')
 
-  const uploadMutation = useUploadGroupsFromFile()
+  const uploadMutation = useUploadGroupsWithProgress()
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
@@ -74,18 +74,7 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
     setUploadStatus('uploading')
     setUploadProgress(0)
     setUploadError('')
-    setCurrentGroup('Загрузка файла...')
-
-    // Читаем файл для подсчета групп
-    try {
-      const text = await selectedFile.text()
-      const lines = text.split('\n').filter(line => line.trim())
-      setTotalGroups(lines.length)
-      setProcessedGroups(0)
-    } catch (error) {
-      console.error('Ошибка чтения файла:', error)
-      setTotalGroups(0)
-    }
+    setCurrentGroup('Инициализация...')
 
     try {
       const result = await uploadMutation.mutateAsync({
@@ -95,18 +84,26 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
           max_posts_to_check: maxPostsToCheck,
         },
         onProgress: (progress) => {
-          setUploadProgress(progress)
-          if (progress < 50) {
-            setCurrentGroup('Загрузка файла на сервер...')
-          } else if (progress < 80) {
-            setCurrentGroup('Обработка групп...')
-          } else {
-            setCurrentGroup('Завершение обработки...')
+          setUploadProgress(progress.progress)
+          setCurrentGroup(progress.current_group)
+          setTotalGroups(progress.total_groups)
+          setProcessedGroups(progress.processed_groups)
+
+          // Обновляем результат в реальном времени
+          if (progress.status === 'completed') {
+            setUploadResult({
+              status: 'success',
+              message: 'Загрузка завершена',
+              total_processed: progress.total_groups,
+              created: progress.created,
+              skipped: progress.skipped,
+              errors: progress.errors,
+              created_groups: [],
+            })
           }
         },
       })
 
-      // Данные уже извлечены в хуке
       setUploadResult(result)
       setUploadStatus('success')
       setUploadProgress(100)

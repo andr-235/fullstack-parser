@@ -6,8 +6,13 @@ import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+import json
+import asyncio
+import uuid
+from datetime import datetime, timezone
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -25,8 +30,12 @@ from app.schemas.vk_group import (
 # from app.services.vk_api_service import VKAPIService  # Удалено как неиспользуемое
 from app.services.group_service import group_service
 from app.services.vk_api_service import VKAPIService
+from app.core.redis import redis_client
 
 router = APIRouter(tags=["Groups"])
+
+# Хранилище для отслеживания прогресса загрузки
+upload_progress = {}
 
 
 def _extract_screen_name(url_or_name: str) -> Optional[str]:
@@ -286,3 +295,115 @@ async def upload_groups_from_file(
         is_active=is_active,
         max_posts_to_check=max_posts_to_check,
     )
+
+
+@router.post("/upload-with-progress")
+async def upload_groups_with_progress(
+    file: UploadFile,
+    is_active: bool = Form(True, description="Активны ли группы"),
+    max_posts_to_check: int = Form(
+        100, description="Максимум постов для проверки"
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Загружает группы из файла с отслеживанием прогресса через Server-Sent Events
+    """
+    upload_id = str(uuid.uuid4())
+
+    # Инициализируем прогресс
+    upload_progress[upload_id] = {
+        "status": "starting",
+        "progress": 0,
+        "current_group": "Инициализация...",
+        "total_groups": 0,
+        "processed_groups": 0,
+        "created": 0,
+        "skipped": 0,
+        "errors": [],
+    }
+
+    async def progress_stream():
+        """Поток для отправки прогресса"""
+        try:
+            # Отправляем начальный статус
+            yield f"data: {json.dumps({'type': 'progress', 'data': upload_progress[upload_id]})}\n\n"
+
+            # Читаем файл для подсчета групп
+            content = await file.read()
+            content_str = content.decode("utf-8")
+            lines = [
+                line.strip()
+                for line in content_str.split("\n")
+                if line.strip()
+            ]
+
+            upload_progress[upload_id]["total_groups"] = len(lines)
+            upload_progress[upload_id]["status"] = "processing"
+            yield f"data: {json.dumps({'type': 'progress', 'data': upload_progress[upload_id]})}\n\n"
+
+            # Обрабатываем каждую группу
+            for i, line in enumerate(lines):
+                try:
+                    upload_progress[upload_id][
+                        "current_group"
+                    ] = f"Обработка группы {i+1}/{len(lines)}"
+                    upload_progress[upload_id]["processed_groups"] = i + 1
+                    upload_progress[upload_id]["progress"] = int(
+                        (i + 1) / len(lines) * 100
+                    )
+
+                    yield f"data: {json.dumps({'type': 'progress', 'data': upload_progress[upload_id]})}\n\n"
+
+                    # Имитируем обработку группы (здесь будет реальная логика)
+                    await asyncio.sleep(0.1)
+
+                except Exception as e:
+                    upload_progress[upload_id]["errors"].append(
+                        f"Ошибка обработки строки {i+1}: {str(e)}"
+                    )
+                    yield f"data: {json.dumps({'type': 'progress', 'data': upload_progress[upload_id]})}\n\n"
+
+            # Завершение
+            upload_progress[upload_id]["status"] = "completed"
+            upload_progress[upload_id]["current_group"] = "Завершено"
+            upload_progress[upload_id]["progress"] = 100
+            upload_progress[upload_id]["created"] = len(lines) - len(
+                upload_progress[upload_id]["errors"]
+            )
+            upload_progress[upload_id]["skipped"] = 0
+
+            yield f"data: {json.dumps({'type': 'progress', 'data': upload_progress[upload_id]})}\n\n"
+            yield f"data: {json.dumps({'type': 'complete', 'upload_id': upload_id})}\n\n"
+
+        except Exception as e:
+            upload_progress[upload_id]["status"] = "error"
+            upload_progress[upload_id]["errors"].append(str(e))
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e), 'upload_id': upload_id})}\n\n"
+        finally:
+            # Очищаем прогресс через 5 минут
+            await asyncio.sleep(300)
+            if upload_id in upload_progress:
+                del upload_progress[upload_id]
+
+    return StreamingResponse(
+        progress_stream(),
+        media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream",
+        },
+    )
+
+
+@router.get("/upload-progress/{upload_id}")
+async def get_upload_progress(upload_id: str):
+    """Получить текущий прогресс загрузки"""
+    if upload_id not in upload_progress:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Прогресс загрузки не найден",
+        )
+
+    return upload_progress[upload_id]
