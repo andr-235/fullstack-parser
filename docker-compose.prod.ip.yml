@@ -29,7 +29,7 @@ x-security: &default-security
 services:
   # База данных PostgreSQL
   postgres:
-    image: postgres:15-alpine@sha256:1414298ea93186123a6dcf872f778ba3bd2347edcbd2f31aa7bb2d9814ff5393
+    image: postgres:15-alpine
     container_name: fullstack_prod_postgres
     restart: unless-stopped
     env_file:
@@ -67,25 +67,29 @@ services:
 
   # Redis кеш
   redis:
-    image: redis:7-alpine@sha256:bb186d083732f669da90be8b0f975a37812b15e913465bb14d845db72a4e3e08
+    image: redis:7-alpine
     container_name: fullstack_prod_redis
     restart: unless-stopped
     command: >
       redis-server
       --appendonly yes
       --maxmemory 256mb
-      --maxmemory-policy allkeys-lru
+      --maxmemory-policy noeviction
       --save 900 1
       --save 300 10
       --save 60 10000
+      --replicaof no one
     volumes:
       - redis_data:/data
     networks:
       - prod-app-network
     logging: *default-logging
     healthcheck:
-      <<: *default-healthcheck
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+      test: ["CMD", "redis-cli", "ping"]
     deploy:
       resources:
         limits:
@@ -124,8 +128,8 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
       - SERVER_IP=${SERVER_IP}
       - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN}
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -189,7 +193,10 @@ services:
       - prod-db-network
     logging: *default-logging
     healthcheck:
-      <<: *default-healthcheck
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
       test:
         [
           "CMD",
