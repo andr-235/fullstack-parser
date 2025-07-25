@@ -450,10 +450,21 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
         if not url_or_name:
             return None
 
-        # Паттерн для поиска screen_name в URL
-        # Используем [\w.-]+ для предотвращения ReDoS-уязвимости
-        match = re.search(r"(?:vk\.com/)?([\w.-]+)$", url_or_name)
-        return match.group(1) if match else url_or_name
+        # Если это URL, извлекаем screen_name
+        if "vk.com/" in url_or_name:
+            match = re.search(r"vk\.com/([^/?]+)", url_or_name)
+            if match:
+                screen_name = match.group(1)
+                # Убираем префикс "club" если есть
+                if screen_name.startswith("club"):
+                    return screen_name[4:]  # Убираем "club"
+                return screen_name
+
+        # Если это уже screen_name, убираем префикс "club" если есть
+        if url_or_name.startswith("club"):
+            return url_or_name[4:]  # Убираем "club"
+
+        return url_or_name
 
     async def _fetch_group_from_vk(self, screen_name: str) -> GroupData:
         """
@@ -477,6 +488,20 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Группа ВКонтакте не найдена.",
+            )
+
+        # Дополнительно получаем количество участников
+        try:
+            members_count = await vk_service.get_group_members_count(
+                screen_name
+            )
+            if members_count is not None:
+                vk_group_data["members_count"] = members_count
+        except Exception as e:
+            self.logger.warning(
+                "Не удалось получить количество участников группы",
+                screen_name=screen_name,
+                error=str(e),
             )
 
         return vk_group_data
@@ -530,64 +555,62 @@ class GroupService(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
         # Маппинг полей VK API в поля модели
         mapped_data = {}
 
-        # Основные поля
+        # Основные поля из VK API (приоритет VK API над пользовательскими данными)
         if "id" in vk_group_data:
             mapped_data["vk_id"] = vk_group_data["id"]
 
+        # Название группы берем из VK API, а не из пользовательских данных
         if "name" in vk_group_data:
             mapped_data["name"] = vk_group_data["name"]
+        elif group_data.name:
+            mapped_data["name"] = group_data.name
 
-        if "description" in vk_group_data:
+        # Описание берем из VK API, если есть, иначе из пользовательских данных
+        if "description" in vk_group_data and vk_group_data["description"]:
             mapped_data["description"] = vk_group_data["description"]
+        elif group_data.description:
+            mapped_data["description"] = group_data.description
 
-        # Количество участников
+        # Screen name из пользовательских данных
+        if group_data.vk_id_or_screen_name:
+            screen_name = self._extract_screen_name(
+                group_data.vk_id_or_screen_name
+            )
+            if screen_name:
+                mapped_data["screen_name"] = screen_name
+
+        # Остальные поля из VK API
         if "members_count" in vk_group_data:
             mapped_data["members_count"] = vk_group_data["members_count"]
 
-        # Статус группы (is_closed)
         if "is_closed" in vk_group_data:
+            # Преобразуем числовое значение в boolean
             is_closed_value = vk_group_data["is_closed"]
             if isinstance(is_closed_value, int):
-                # 0 = открытая, 1 = закрытая, 2 = частная
-                mapped_data["is_closed"] = is_closed_value in [1, 2]
-            elif isinstance(is_closed_value, bool):
-                mapped_data["is_closed"] = is_closed_value
+                mapped_data["is_closed"] = is_closed_value in [
+                    1,
+                    2,
+                ]  # 1 - закрытая, 2 - частная
             else:
-                mapped_data["is_closed"] = False
+                mapped_data["is_closed"] = bool(is_closed_value)
 
         # Фото группы
-        if "photo_100" in vk_group_data:
-            mapped_data["photo_url"] = vk_group_data["photo_100"]
-        elif "photo_200" in vk_group_data:
-            mapped_data["photo_url"] = vk_group_data["photo_200"]
-        elif "photo_50" in vk_group_data:
-            mapped_data["photo_url"] = vk_group_data["photo_50"]
+        for photo_field in ["photo_200", "photo_100", "photo_50"]:
+            if photo_field in vk_group_data and vk_group_data[photo_field]:
+                mapped_data["photo_url"] = vk_group_data[photo_field]
+                break
 
-        # Переопределяем поля пользовательскими данными
-        mapped_data.update(
-            {
-                "screen_name": self._extract_screen_name(
-                    group_data.vk_id_or_screen_name
-                ),
-                "name": group_data.name or mapped_data.get("name", ""),
-                "description": group_data.description
-                or mapped_data.get("description"),
-                "is_active": group_data.is_active,
-                "max_posts_to_check": group_data.max_posts_to_check,
-            }
-        )
+        # Пользовательские настройки
+        mapped_data["is_active"] = group_data.is_active
+        mapped_data["max_posts_to_check"] = group_data.max_posts_to_check
 
-        # Устанавливаем значения по умолчанию для полей, которые могут отсутствовать
-        mapped_data.setdefault("is_closed", False)
-        mapped_data.setdefault("members_count", None)
-        mapped_data.setdefault("photo_url", None)
-
-        new_group = VKGroup(**mapped_data)
-        db.add(new_group)
+        # Создаем группу
+        group = VKGroup(**mapped_data)
+        db.add(group)
         await db.commit()
-        await db.refresh(new_group)
+        await db.refresh(group)
 
-        return new_group
+        return group
 
     def _validate_upload_file(self, file: UploadFile) -> None:
         """
