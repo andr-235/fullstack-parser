@@ -1,0 +1,341 @@
+# Общие настройки логирования
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    labels: "production_status"
+    env: "os,customer"
+
+# Общие настройки health check
+x-healthcheck: &default-healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+
+# Общие настройки безопасности (упрощенные для snap/docker)
+x-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+  tmpfs:
+    - /tmp:noexec,nosuid,size=100m
+    - /var/tmp:noexec,nosuid,size=50m
+
+services:
+  # База данных PostgreSQL
+  postgres:
+    image: postgres:15-alpine@sha256:1414298ea93186123a6dcf872f778ba3bd2347edcbd2f31aa7bb2d9814ff5393
+    container_name: fullstack_prod_postgres
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      POSTGRES_HOST_AUTH_METHOD: "md5"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - /var/snap/docker/common/backup:/backup:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - prod-db-network
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "1.0"
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # Redis кеш
+  redis:
+    image: redis:7-alpine@sha256:bb186d083732f669da90be8b0f975a37812b15e913465bb14d845db72a4e3e08
+    container_name: fullstack_prod_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    volumes:
+      - redis_data:/data
+    networks:
+      - prod-app-network
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # Backend приложение
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    container_name: fullstack_prod_backend
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      - ENV=production
+      - TZ=Asia/Vladivostok
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      - SERVER_IP=${SERVER_IP}
+      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN}
+    expose:
+      - "8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - prod-app-network
+      - prod-db-network
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "curl", "-fsSL", "http://localhost:8000/api/v1/health/"]
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # ARQ Worker для фоновых задач
+  arq_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.arq
+      target: production
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    container_name: fullstack_prod_arq_worker
+    restart: unless-stopped
+    command: ["arq", "app.workers.arq_worker.WorkerSettings"]
+    env_file:
+      - .env.prod
+    environment:
+      - ENV=production
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      - SERVER_IP=${SERVER_IP}
+      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN}
+      - ARQ_MAX_JOBS=10
+      - ARQ_POLL_DELAY=1.0
+      - ARQ_MAX_TRIES=3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - prod-app-network
+      - prod-db-network
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import redis; redis.Redis.from_url('redis://redis:6379/0').ping()",
+        ]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # Frontend приложение
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    container_name: fullstack_prod_frontend
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      - NODE_ENV=production
+      - SERVER_IP=${SERVER_IP}
+      - NEXT_PUBLIC_API_URL=${DOMAIN}
+      - TMPDIR=/tmp/uploads
+    expose:
+      - "3000"
+    ports:
+      - "3000:3000"
+    volumes:
+      - frontend_temp:/tmp/uploads
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - prod-app-network
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # pgAdmin для управления БД (только для администраторов)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: fullstack_prod_pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - prod-app-network
+      - prod-db-network
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:80",
+        ]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    profiles:
+      - admin
+
+# Сети
+networks:
+  prod-app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+    driver_opts:
+      com.docker.network.bridge.name: prod-app-bridge
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+  prod-db-network:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+          gateway: 172.21.0.1
+    driver_opts:
+      com.docker.network.bridge.name: prod-db-bridge
+      com.docker.network.bridge.enable_icc: "true"
+
+# Тома
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/snap/docker/common/postgres-data
+    labels:
+      - "com.example.description=Database data"
+      - "com.example.department=IT"
+  redis_data:
+    driver: local
+  frontend_temp:
+    driver: local
