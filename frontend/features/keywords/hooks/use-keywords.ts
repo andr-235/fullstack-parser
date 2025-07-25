@@ -127,7 +127,7 @@ export function useKeywords(
     queryFn: () => {
       const searchParams = buildQueryParams(queryParams)
       return api.get<PaginatedResponse<KeywordResponse>>(
-        `/keywords?${searchParams}`
+        `/api/v1/keywords?${searchParams}`
       )
     },
     ...defaultQueryConfig,
@@ -145,7 +145,7 @@ export function useKeyword(
 ) {
   return useQuery({
     queryKey: createQueryKey(QUERY_KEYS.keyword, { id }),
-    queryFn: () => api.get<KeywordResponse>(`/keywords/${id}`),
+    queryFn: () => api.get<KeywordResponse>(`/api/v1/keywords/${id}`),
     enabled: Boolean(id),
     staleTime: 10 * 60 * 1000, // 10 минут для отдельных элементов
     ...options,
@@ -161,7 +161,8 @@ export function useKeywordCategories(
 ) {
   return useQuery({
     queryKey: [QUERY_KEYS.categories],
-    queryFn: () => api.get<{ categories: string[] }>('/keywords/categories'),
+    queryFn: () =>
+      api.get<{ categories: string[] }>('/api/v1/keywords/categories'),
     staleTime: 30 * 60 * 1000, // 30 минут для категорий
     ...options,
   })
@@ -178,7 +179,7 @@ export function useCreateKeyword(
 
   return useMutation({
     mutationFn: (data: KeywordCreate) =>
-      api.post<KeywordResponse>('/keywords', data),
+      api.post<KeywordResponse>('/api/v1/keywords', data),
     onSuccess: (data) => {
       // Инвалидируем списки и добавляем новый элемент в кеш
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.keywords] })
@@ -206,7 +207,10 @@ export function useCreateKeywordsBulk(
 
   return useMutation({
     mutationFn: (data: { words: string[]; default_category?: string }) =>
-      api.post<{ created_keywords: KeywordResponse[] }>('/keywords/bulk', data),
+      api.post<{ created_keywords: KeywordResponse[] }>(
+        '/api/v1/keywords/bulk',
+        data
+      ),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.keywords] })
       // Добавляем новые элементы в кеш
@@ -274,11 +278,15 @@ export function useUploadKeywordsFromFile(
         formData.append('is_whole_word', options.is_whole_word.toString())
       }
 
-      return api.post<KeywordUploadResponse>('/keywords/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
+      return api.post<KeywordUploadResponse>(
+        '/api/v1/keywords/upload',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      )
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.keywords] })
@@ -314,7 +322,7 @@ export function useUpdateKeyword(
     }: {
       keywordId: number
       data: KeywordUpdate
-    }) => api.patch<KeywordResponse>(`/keywords/${keywordId}`, data),
+    }) => api.patch<KeywordResponse>(`/api/v1/keywords/${keywordId}`, data),
     onSuccess: (data, { keywordId }) => {
       // Обновляем кеш для конкретного элемента
       queryClient.setQueryData(
@@ -335,7 +343,8 @@ export function useDeleteKeyword(
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (keywordId: number) => api.delete(`/keywords/${keywordId}`),
+    mutationFn: (keywordId: number) =>
+      api.delete(`/api/v1/keywords/${keywordId}`),
     onSuccess: (_, keywordId) => {
       // Удаляем элемент из кеша
       queryClient.removeQueries({
@@ -358,7 +367,8 @@ export function useUpdateKeywordsStats(
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: () => api.post<{ message: string }>('/keywords/update-stats'),
+    mutationFn: () =>
+      api.post<{ message: string }>('/api/v1/keywords/update-stats'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.keywords] })
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.totalMatches] })
@@ -377,7 +387,7 @@ export function useTotalMatches(
   return useQuery({
     queryKey: [QUERY_KEYS.totalMatches],
     queryFn: () =>
-      api.get<{ total_matches: number }>('/keywords/total-matches'),
+      api.get<{ total_matches: number }>('/api/v1/keywords/total-matches'),
     ...defaultQueryConfig,
     ...options,
   })
@@ -421,7 +431,7 @@ export function useInfiniteKeywords(
       })
 
       return api.get<PaginatedResponse<KeywordResponse>>(
-        `/keywords?${searchParams}`
+        `/api/v1/keywords?${searchParams}`
       )
     },
     getNextPageParam: (lastPage, allPages) => {
