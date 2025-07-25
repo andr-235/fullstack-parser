@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <title>Modern Dark UI Demo</title>
+ <link rel="stylesheet" href="./modern-dark.module.css" />
+ <style>
+  body {
+   background: var(--color-bg);
+   font-family: var(--font-main);
+   color: var(--color-text);
+   min-height: 100vh;
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   justify-content: center;
+   gap: 2.5rem;
+  }
+
+  .demo-row {
+   display: flex;
+   gap: 2rem;
+   flex-wrap: wrap;
+  }
+
+  .demo-col {
+   display: flex;
+   flex-direction: column;
+   gap: 1.2rem;
+   align-items: flex-start;
+  }
+ </style>
+</head>
+
+<body>
+ <div class="demo-col">
+  <div class="h1">Заголовок H1</div>
+  <div class="h2">Заголовок H2</div>
+  <div class="h3">Заголовок H3</div>
+  <div class="h4">Заголовок H4</div>
+ </div>
+ <div class="demo-row">
+  <button class="btn">Современная кнопка</button>
+  <input class="input" placeholder="Введите текст..." />
+ </div>
+ <div class="card" style="max-width: 340px;">
+  <div class="h3">Карточка</div>
+  <div style="color: var(--color-text-secondary); font-size: 1rem;">Это пример карточки с глассморфизмом и
+   нейроморфизмом. Глубина, мягкие тени, стеклянный фон и плавные анимации.</div>
+  <button class="btn" style="margin-top: 1.5em;">Действие</button>
+ </div>
+</body>
+
+</html>
