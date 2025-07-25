@@ -97,15 +97,17 @@ export function useUploadGroupsFromFile() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       file,
       options,
+      onProgress,
     }: {
       file: File
       options?: {
         is_active?: boolean
         max_posts_to_check?: number
       }
+      onProgress?: (progress: number) => void
     }) => {
       const formData = new FormData()
       formData.append('file', file)
@@ -117,11 +119,21 @@ export function useUploadGroupsFromFile() {
           options.max_posts_to_check.toString()
         )
 
-      return api.post<VKGroupUploadResponse>('/groups/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
+      const res = await api
+        .post<VKGroupUploadResponse>('/groups/upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          onUploadProgress: (progressEvent_1) => {
+            if (onProgress && progressEvent_1.total) {
+              const progress_1 = Math.round(
+                (progressEvent_1.loaded * 100) / progressEvent_1.total
+              );
+              onProgress(progress_1);
+            }
+          },
+        });
+      return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })

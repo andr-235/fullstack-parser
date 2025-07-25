@@ -45,12 +45,6 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
-    setUploadResult(null)
-    setUploadProgress(0)
-    setUploadStatus('idle')
-    setCurrentGroup('')
-    setTotalGroups(0)
-    setProcessedGroups(0)
     setUploadError('')
   }
 
@@ -80,99 +74,75 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
     setUploadStatus('uploading')
     setUploadProgress(0)
     setUploadError('')
+    setCurrentGroup('Загрузка файла...')
 
     // Читаем файл для подсчета групп
-    const fileContent = await selectedFile.text()
-    const lines = fileContent.split('\n').filter(line => line.trim())
-    const estimatedGroups = lines.length
-    setTotalGroups(estimatedGroups)
-    setProcessedGroups(0)
-    setCurrentGroup('Подготовка файла...')
-
-    let progressInterval: NodeJS.Timeout | null = null
+    try {
+      const text = await selectedFile.text()
+      const lines = text.split('\n').filter(line => line.trim())
+      setTotalGroups(lines.length)
+      setProcessedGroups(0)
+    } catch (error) {
+      console.error('Ошибка чтения файла:', error)
+      setTotalGroups(0)
+    }
 
     try {
-      // Симуляция прогресса с информацией о группах
-      progressInterval = setInterval(() => {
-        setProcessedGroups(prev => {
-          const newProcessed = Math.min(prev + 1, estimatedGroups)
-          const progress = Math.round((newProcessed / estimatedGroups) * 90)
-          setUploadProgress(progress)
-
-          // Симулируем название текущей группы
-          if (newProcessed <= estimatedGroups) {
-            const currentLine = lines[newProcessed - 1] || ''
-            const groupName = currentLine.split(',')[1] || currentLine.split(',')[0] || `Группа ${newProcessed}`
-            setCurrentGroup(groupName.trim())
-          }
-
-          if (newProcessed >= estimatedGroups) {
-            if (progressInterval) clearInterval(progressInterval)
-            return estimatedGroups
-          }
-          return newProcessed
-        })
-      }, 800) // Увеличили интервал для более заметного прогресса
-
-      const response = await uploadMutation.mutateAsync({
+      const result = await uploadMutation.mutateAsync({
         file: selectedFile,
         options: {
           is_active: isActive,
           max_posts_to_check: maxPostsToCheck,
         },
+        onProgress: (progress) => {
+          setUploadProgress(progress)
+          if (progress < 50) {
+            setCurrentGroup('Загрузка файла на сервер...')
+          } else if (progress < 80) {
+            setCurrentGroup('Обработка групп...')
+          } else {
+            setCurrentGroup('Завершение обработки...')
+          }
+        },
       })
 
-      // Извлекаем данные из ответа API
-      const result = response.data as VKGroupUploadResponse
-
-      if (progressInterval) clearInterval(progressInterval)
-      setUploadProgress(100)
-      setUploadStatus('success')
+      // Данные уже извлечены в хуке
       setUploadResult(result)
-      setCurrentGroup('Завершено')
+      setUploadStatus('success')
+      setUploadProgress(100)
+      setCurrentGroup('')
 
-      // Показываем результат
-      if (result.created > 0) {
-        toast.success(`Успешно создано ${result.created} групп`)
-      }
-      if (result.skipped > 0) {
-        toast.success(`Пропущено ${result.skipped} дубликатов`)
-      }
-      if (result.errors && result.errors.length > 0) {
-        toast.error(`Ошибок: ${result.errors.length}`)
-      }
-
-      if (onSuccess) {
-        onSuccess()
-      }
-
-      // Закрываем модальное окно через 5 секунд
-      setTimeout(() => {
-        setIsOpen(false)
-        resetForm()
-      }, 5000)
-    } catch (error) {
-      if (progressInterval) clearInterval(progressInterval)
-      setUploadProgress(0)
+      toast.success(`Успешно загружено ${result.created} групп`)
+      onSuccess?.()
+    } catch (error: any) {
       setUploadStatus('error')
-      console.error('Upload error:', error)
+      setCurrentGroup('')
 
-      // Улучшенная обработка ошибок
-      let errorMessage = 'Неизвестная ошибка загрузки'
+      // Детальная обработка ошибок
+      let errorMessage = 'Ошибка загрузки'
 
-      if (error instanceof Error) {
-        if (error.message.includes('FILE_ERROR_NO_SPACE')) {
-          errorMessage = 'Недостаточно места на диске. Обратитесь к администратору.'
-        } else if (error.message.includes('404')) {
-          errorMessage = 'Сервер недоступен. Попробуйте позже.'
-        } else if (error.message.includes('413')) {
-          errorMessage = 'Файл слишком большой.'
-        } else if (error.message.includes('422')) {
-          errorMessage = 'Некорректный формат файла. Проверьте структуру данных.'
-        } else if (error.message.includes('500')) {
-          errorMessage = 'Ошибка сервера. Попробуйте позже или обратитесь к администратору.'
-        } else if (error.message.includes('Network Error')) {
-          errorMessage = 'Ошибка сети. Проверьте подключение к интернету.'
+      if (error?.response?.status) {
+        switch (error.response.status) {
+          case 404:
+            errorMessage = 'Сервер недоступен. Проверьте подключение к интернету'
+            break
+          case 413:
+            errorMessage = 'Файл слишком большой. Максимальный размер: 5MB'
+            break
+          case 422:
+            errorMessage = 'Некорректный формат файла. Проверьте структуру данных'
+            break
+          case 500:
+            errorMessage = 'Ошибка сервера. Попробуйте позже'
+            break
+          default:
+            errorMessage = `Ошибка сервера (${error.response.status})`
+        }
+      } else if (error?.message) {
+        if (error.message.includes('Network Error')) {
+          errorMessage = 'Ошибка сети. Проверьте подключение к интернету'
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Превышено время ожидания. Попробуйте позже'
         } else {
           errorMessage = error.message
         }
@@ -229,43 +199,64 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
     }
   }
 
-  const getProgressText = () => {
-    if (uploadStatus === 'uploading' && totalGroups > 0) {
-      if (currentGroup) {
-        return `${currentGroup} (${processedGroups}/${totalGroups})`
-      }
-      return `Обработано: ${processedGroups}/${totalGroups}`
-    }
-    return ''
-  }
-
-  const getProgressPercentage = () => {
-    if (totalGroups > 0) {
-      return Math.round((processedGroups / totalGroups) * 100)
-    }
-    return uploadProgress
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-2">
           <Upload className="h-4 w-4" />
-          Загрузить из файла
+          Загрузить группы
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Загрузка групп из файла</DialogTitle>
           <DialogDescription>
-            Загрузите группы из CSV или TXT файла. Поддерживаются форматы:
-            <br />
-            • CSV: screen_name,name,description
-            <br />• TXT: одно screen_name на строку
+            Загрузите файл с группами ВКонтакте для мониторинга
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
+          {/* Загрузка файла */}
+          <div className="space-y-2">
+            <Label htmlFor="file">Файл с группами</Label>
+            <FileUpload
+              onFileSelect={handleFileSelect}
+              acceptedFileTypes={['.csv', '.txt']}
+              maxSize={5 * 1024 * 1024}
+            />
+            {selectedFile && (
+              <p className="text-sm text-gray-600">
+                Выбран файл: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+              </p>
+            )}
+          </div>
+
+          {/* Настройки */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is-active"
+                checked={isActive}
+                onCheckedChange={setIsActive}
+              />
+              <Label htmlFor="is-active">Активные группы</Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="max-posts">
+                Максимальное количество постов для проверки
+              </Label>
+              <Input
+                id="max-posts"
+                type="number"
+                value={maxPostsToCheck}
+                onChange={(e) => setMaxPostsToCheck(Number(e.target.value))}
+                min={1}
+                max={1000}
+              />
+            </div>
+          </div>
+
           {/* Статус загрузки */}
           {(uploadStatus === 'uploading' || uploadStatus === 'success' || uploadStatus === 'error') && (
             <div className="border rounded-lg p-4 bg-gray-50">
@@ -281,172 +272,67 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
 
               {uploadStatus === 'uploading' && (
                 <div className="space-y-2">
-                  <Progress value={getProgressPercentage()} className="w-full" />
+                  <Progress value={uploadProgress} className="w-full" />
                   <p className="text-sm text-gray-600">
-                    {getProgressText()}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Прогресс: {getProgressPercentage()}%
+                    {currentGroup ? (
+                      <>
+                        Обрабатывается: <span className="font-medium">{currentGroup}</span>
+                        {totalGroups > 0 && (
+                          <span className="text-gray-500">
+                            {' '}({processedGroups}/{totalGroups})
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      'Подготовка к загрузке...'
+                    )}
                   </p>
                 </div>
               )}
 
-              {uploadStatus === 'error' && uploadError && (
+              {uploadStatus === 'success' && uploadResult && (
                 <div className="space-y-2">
-                  <div className="flex items-start gap-2 p-3 bg-red-50 rounded border border-red-200">
-                    <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm text-red-700">
-                      <p className="font-medium mb-1">Причина ошибки:</p>
-                      <p>{uploadError}</p>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-green-600">Создано:</span> {uploadResult.created}
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Пропущено:</span> {uploadResult.skipped}
                     </div>
                   </div>
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Загрузка файла */}
-          <div>
-            <Label>Файл с группами</Label>
-            <FileUpload
-              onFileSelect={handleFileSelect}
-              acceptedFileTypes={['.csv', '.txt']}
-              maxSize={5 * 1024 * 1024} // 5MB
-              className="mt-2"
-              placeholder="Перетащите CSV или TXT файл сюда"
-              disabled={uploadStatus === 'uploading'}
-            />
-          </div>
-
-          {/* Настройки */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is-active"
-                checked={isActive}
-                onCheckedChange={setIsActive}
-                disabled={uploadStatus === 'uploading'}
-              />
-              <Label htmlFor="is-active">Активные группы</Label>
-            </div>
-            <div>
-              <Label htmlFor="max-posts">Максимум постов для проверки</Label>
-              <Input
-                id="max-posts"
-                type="number"
-                min="1"
-                max="1000"
-                value={maxPostsToCheck}
-                onChange={(e) => setMaxPostsToCheck(Number(e.target.value))}
-                className="mt-1"
-                disabled={uploadStatus === 'uploading'}
-              />
-            </div>
-          </div>
-
-          {/* Детальный результат загрузки */}
-          {uploadResult && (
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <div className="flex items-center gap-2 mb-4">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <h4 className="font-medium text-green-700">
-                  Результат загрузки
-                </h4>
-              </div>
-
-              {/* Статистика */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div className="text-center p-3 bg-green-100 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">
-                    {uploadResult.total_processed}
-                  </div>
-                  <div className="text-sm text-green-700">Обработано</div>
-                </div>
-                <div className="text-center p-3 bg-blue-100 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {uploadResult.created}
-                  </div>
-                  <div className="text-sm text-blue-700">Создано</div>
-                </div>
-                <div className="text-center p-3 bg-yellow-100 rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {uploadResult.skipped}
-                  </div>
-                  <div className="text-sm text-yellow-700">Пропущено</div>
-                </div>
-                <div className="text-center p-3 bg-red-100 rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">
-                    {uploadResult.errors?.length || 0}
-                  </div>
-                  <div className="text-sm text-red-700">Ошибок</div>
-                </div>
-              </div>
-
-              {/* Созданные группы */}
-              {uploadResult.created_groups && uploadResult.created_groups.length > 0 && (
-                <div className="mb-4">
-                  <h5 className="font-medium text-gray-700 mb-2">
-                    Созданные группы:
-                  </h5>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {uploadResult.created_groups.map((group, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900">{group.name}</div>
-                          <div className="text-sm text-gray-500">@{group.screen_name}</div>
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {group.members_count?.toLocaleString()} участников
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Ошибки */}
-              {uploadResult.errors && uploadResult.errors.length > 0 && (
-                <div>
-                  <h5 className="font-medium text-red-600 mb-2">
-                    Ошибки ({uploadResult.errors.length}):
-                  </h5>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {uploadResult.errors.map((error, index) => (
-                      <div key={index} className="flex items-start gap-2 p-2 bg-red-50 rounded border border-red-200">
-                        <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-red-700">{error}</span>
-                      </div>
-                    ))}
+              {uploadStatus === 'error' && uploadError && (
+                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-red-700">
+                    <p className="font-medium">Ошибка загрузки:</p>
+                    <p>{uploadError}</p>
                   </div>
                 </div>
               )}
             </div>
           )}
-
-          {/* Кнопки */}
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setIsOpen(false)}
-              disabled={uploadStatus === 'uploading'}
-            >
-              Отмена
-            </Button>
-            <Button
-              onClick={handleUpload}
-              disabled={!selectedFile || uploadMutation.isPending || uploadStatus === 'uploading'}
-            >
-              {uploadStatus === 'uploading' ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Загрузка...
-                </>
-              ) : (
-                'Загрузить'
-              )}
-            </Button>
-          </div>
         </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            disabled={uploadStatus === 'uploading'}
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={handleUpload}
+            disabled={!selectedFile || uploadStatus === 'uploading'}
+            className="gap-2"
+          >
+            {uploadStatus === 'uploading' && <Loader2 className="h-4 w-4 animate-spin" />}
+            Загрузить
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
