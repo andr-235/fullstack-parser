@@ -129,50 +129,56 @@ export function useUploadGroupsWithProgress() {
             options.max_posts_to_check.toString()
           )
 
-        // Сначала отправляем файл через fetch, затем подключаемся к SSE
-        fetch('/api/v1/groups/upload-with-progress', {
+        // Отправляем файл и получаем upload_id
+        fetch('/api/v1/groups/upload-with-progress/', {
           method: 'POST',
           body: formData,
         })
-          .then(() => {
-            // После отправки файла подключаемся к SSE для отслеживания прогресса
-            const eventSource = new EventSource(
-              '/api/v1/groups/upload-progress'
-            )
+          .then((response) => response.json())
+          .then((data: { upload_id: string; status: string }) => {
+            const uploadId = data.upload_id
 
-            eventSource.onmessage = (event) => {
-              try {
-                const data = JSON.parse(event.data)
-
-                if (data.type === 'progress') {
-                  onProgress?.(data.data)
-                } else if (data.type === 'complete') {
-                  // Получаем финальный результат
-                  const result: VKGroupUploadResponse = {
-                    status: 'success',
-                    message: 'Загрузка завершена',
-                    total_processed: data.data.total_groups,
-                    created: data.data.created,
-                    skipped: data.data.skipped,
-                    errors: data.data.errors,
-                    created_groups: [],
+            // Функция для проверки прогресса
+            const checkProgress = () => {
+              fetch(`/api/v1/groups/upload-progress/${uploadId}`)
+                .then((response) => {
+                  if (response.ok) {
+                    return response.json()
+                  } else if (response.status === 404) {
+                    throw new Error('Прогресс загрузки не найден')
+                  } else {
+                    throw new Error('Ошибка получения прогресса')
                   }
-                  eventSource.close()
-                  resolve(result)
-                } else if (data.type === 'error') {
-                  eventSource.close()
-                  reject(new Error(data.error))
-                }
-              } catch (error) {
-                eventSource.close()
-                reject(error)
-              }
+                })
+                .then((progressData) => {
+                  onProgress?.(progressData)
+
+                  if (progressData.status === 'completed') {
+                    // Загрузка завершена
+                    const result: VKGroupUploadResponse = {
+                      status: 'success',
+                      message: 'Загрузка завершена',
+                      total_processed: progressData.total_groups,
+                      created: progressData.created,
+                      skipped: progressData.skipped,
+                      errors: progressData.errors,
+                      created_groups: [],
+                    }
+                    resolve(result)
+                  } else if (progressData.status === 'error') {
+                    reject(new Error(progressData.errors.join(', ')))
+                  } else {
+                    // Продолжаем проверять прогресс
+                    setTimeout(checkProgress, 1000)
+                  }
+                })
+                .catch((error) => {
+                  reject(error)
+                })
             }
 
-            eventSource.onerror = (error) => {
-              eventSource.close()
-              reject(new Error('Ошибка подключения к серверу'))
-            }
+            // Начинаем проверку прогресса
+            checkProgress()
           })
           .catch(reject)
       })
