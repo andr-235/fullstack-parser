@@ -53,7 +53,8 @@ export function GroupsManagement({
 
           if (error?.status === 409 || error?.response?.status === 409) {
             // Группа уже существует
-            errorMessage = error?.response?.data?.detail || 'Группа уже существует в системе'
+            errorMessage =
+              error?.response?.data?.detail || 'Группа уже существует в системе'
             toast.error(errorMessage)
           } else if (error?.response?.data?.detail) {
             errorMessage = error.response.data.detail
@@ -100,7 +101,7 @@ export function GroupsManagement({
               <span>Только активные</span>
             </label>
 
-            <UploadGroupsModal onSuccess={() => { }} />
+            <UploadGroupsModal onSuccess={() => {}} />
           </div>
         </div>
 

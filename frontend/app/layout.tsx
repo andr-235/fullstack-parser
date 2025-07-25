@@ -4,11 +4,12 @@ import type { Metadata } from 'next'
 
 import './globals.css'
 import { APP_CONFIG } from '@/shared/config'
-import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 import { DebugPanel } from '@/shared/ui/debug/DebugPanel'
+import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 import { ThemeProvider } from '@/shared/ui/theme-provider'
 
 import { QueryProvider } from '@/providers/QueryProvider'
+
 import { Sidebar, Header } from '@/widgets/layout'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -27,9 +28,7 @@ export const metadata: Metadata = {
     apple: [
       { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
-    other: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-    ],
+    other: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
   },
   manifest: '/site.webmanifest',
   openGraph: {

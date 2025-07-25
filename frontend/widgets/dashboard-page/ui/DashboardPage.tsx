@@ -14,7 +14,7 @@ import {
   CheckCircle,
   Clock,
   BarChart3,
-  Settings
+  Settings,
 } from 'lucide-react'
 import type { DashboardStats } from '@/types/api'
 
@@ -27,7 +27,7 @@ export function DashboardPage() {
     systemStatus,
     parsingProgress,
     isLoading,
-    error
+    error,
   } = useDashboardData()
 
   const { data: globalStats } = useGlobalStats()
@@ -52,7 +52,8 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              Не удалось загрузить данные дашборда. Попробуйте обновить страницу.
+              Не удалось загрузить данные дашборда. Попробуйте обновить
+              страницу.
             </p>
           </CardContent>
         </Card>
@@ -82,11 +83,15 @@ export function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Комментарии сегодня</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Комментарии сегодня
+            </CardTitle>
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats?.today_comments || 0}</div>
+            <div className="text-2xl font-bold">
+              {dashboardStats?.today_comments || 0}
+            </div>
             <p className="text-xs text-muted-foreground">
               +{dashboardStats?.today_matches || 0} совпадений
             </p>
@@ -95,11 +100,15 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Комментарии за неделю</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Комментарии за неделю
+            </CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats?.week_comments || 0}</div>
+            <div className="text-2xl font-bold">
+              {dashboardStats?.week_comments || 0}
+            </div>
             <p className="text-xs text-muted-foreground">
               +{dashboardStats?.week_matches || 0} совпадений
             </p>
@@ -108,11 +117,15 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Активных групп</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Активных групп
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{globalStats?.data?.active_groups || 0}</div>
+            <div className="text-2xl font-bold">
+              {globalStats?.data?.active_groups || 0}
+            </div>
             <p className="text-xs text-muted-foreground">
               из {globalStats?.data?.total_groups || 0} всего
             </p>
@@ -125,7 +138,9 @@ export function DashboardPage() {
             <Hash className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{globalStats?.data?.active_keywords || 0}</div>
+            <div className="text-2xl font-bold">
+              {globalStats?.data?.active_keywords || 0}
+            </div>
             <p className="text-xs text-muted-foreground">
               из {globalStats?.data?.total_keywords || 0} всего
             </p>
@@ -178,11 +193,14 @@ export function DashboardPage() {
             {parsingProgress?.data ? (
               <div className="space-y-2">
                 <div className="text-sm font-medium">
-                  {parsingProgress.data.status === 'running' ? 'Выполняется' : 'Остановлен'}
+                  {parsingProgress.data.status === 'running'
+                    ? 'Выполняется'
+                    : 'Остановлен'}
                 </div>
                 {parsingProgress.data.task && (
                   <div className="text-xs text-muted-foreground">
-                    Группа: {parsingProgress.data.task.group_name || 'Неизвестно'}
+                    Группа:{' '}
+                    {parsingProgress.data.task.group_name || 'Неизвестно'}
                   </div>
                 )}
               </div>
@@ -213,9 +231,7 @@ export function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-muted-foreground">
-                Нет данных
-              </div>
+              <div className="text-sm text-muted-foreground">Нет данных</div>
             )}
           </CardContent>
         </Card>
@@ -234,14 +250,14 @@ export function DashboardPage() {
                 {topKeywordsData.slice(0, 3).map((keyword, index) => (
                   <div key={index} className="flex justify-between text-sm">
                     <span className="truncate">{keyword.word}</span>
-                    <span className="text-muted-foreground">{keyword.count}</span>
+                    <span className="text-muted-foreground">
+                      {keyword.count}
+                    </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-muted-foreground">
-                Нет данных
-              </div>
+              <div className="text-sm text-muted-foreground">Нет данных</div>
             )}
           </CardContent>
         </Card>

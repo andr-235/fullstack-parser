@@ -96,7 +96,6 @@
 }
 
 @keyframes pulse {
-
   0%,
   100% {
     opacity: 1;
@@ -108,7 +107,6 @@
 }
 
 @keyframes bounce {
-
   0%,
   20%,
   53%,
@@ -132,7 +130,6 @@
 }
 
 @keyframes ping {
-
   75%,
   100% {
     transform: scale(2);

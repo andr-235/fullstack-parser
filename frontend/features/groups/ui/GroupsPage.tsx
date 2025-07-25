@@ -340,10 +340,11 @@ export default function GroupsPage() {
                               variant={
                                 group.is_active ? 'default' : 'secondary'
                               }
-                              className={`${group.is_active
-                                ? 'bg-green-600 hover:bg-green-700'
-                                : 'bg-slate-600 hover:bg-slate-700'
-                                } text-white`}
+                              className={`${
+                                group.is_active
+                                  ? 'bg-green-600 hover:bg-green-700'
+                                  : 'bg-slate-600 hover:bg-slate-700'
+                              } text-white`}
                             >
                               {group.is_active ? 'Активна' : 'Неактивна'}
                             </Badge>
@@ -390,25 +391,22 @@ export default function GroupsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => {
-                                refreshGroupMutation.mutate(
-                                  group.id,
-                                  {
-                                    onSuccess: () => {
-                                      toast.success(
-                                        'Информация о группе обновлена! 🔄'
-                                      )
-                                    },
-                                    onError: (error: any) => {
-                                      console.error(
-                                        'Ошибка обновления группы:',
-                                        error
-                                      )
-                                      toast.error(
-                                        'Ошибка обновления информации о группе'
-                                      )
-                                    },
-                                  }
-                                )
+                                refreshGroupMutation.mutate(group.id, {
+                                  onSuccess: () => {
+                                    toast.success(
+                                      'Информация о группе обновлена! 🔄'
+                                    )
+                                  },
+                                  onError: (error: any) => {
+                                    console.error(
+                                      'Ошибка обновления группы:',
+                                      error
+                                    )
+                                    toast.error(
+                                      'Ошибка обновления информации о группе'
+                                    )
+                                  },
+                                })
                               }}
                               disabled={refreshGroupMutation.isPending}
                               className="h-7 w-7 hover:bg-slate-600/50 text-blue-400 hover:text-blue-300 transition-all duration-200 rounded-md"
@@ -484,9 +482,7 @@ export default function GroupsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() =>
-                                deleteGroupMutation.mutate(
-                                  group.id
-                                )
+                                deleteGroupMutation.mutate(group.id)
                               }
                               disabled={deleteGroupMutation.isPending}
                               className="h-8 w-8 hover:bg-slate-600/50 text-red-400 hover:text-red-300 transition-all duration-200 rounded-md"
