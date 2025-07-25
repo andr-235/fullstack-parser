@@ -1,19 +1,17 @@
 // Совместимый API клиент для постепенной миграции
-import { apiService, apiUtils } from './api'
+import { api } from './api'
 
 // Экспортируем старый API для совместимости
-export const api = {
+export const apiService = {
   // VK Groups API
-  getGroups: (params?: any) => apiService.get('/api/v1/groups/', { params }),
-  getGroup: (groupId: number) => apiService.get(`/api/v1/groups/${groupId}`),
-  getGroupStats: (groupId: number) =>
-    apiService.get(`/api/v1/groups/${groupId}/stats`),
-  createGroup: (groupData: any) =>
-    apiService.post('/api/v1/groups/', groupData),
+  getGroups: (params?: any) => api.get('/groups/', { params }),
+  getGroup: (groupId: number) => api.get(`/groups/${groupId}`),
+  getGroupStats: (groupId: number) => api.get(`/groups/${groupId}/stats`),
+  createGroup: (groupData: any) => api.post('/groups/', groupData),
   updateGroup: (groupId: number, updateData: any) =>
-    apiService.put(`/api/v1/groups/${groupId}`, updateData),
-  deleteGroup: (groupId: number) =>
-    apiService.delete(`/api/v1/groups/${groupId}`),
+    api.put(`/groups/${groupId}`, updateData),
+  deleteGroup: (groupId: number) => api.delete(`/groups/${groupId}`),
+  refreshGroupInfo: (groupId: number) => api.post(`/groups/${groupId}/refresh`),
   uploadGroupsFromFile: (file: File, options?: any) => {
     const formData = new FormData()
     formData.append('file', file)
@@ -26,25 +24,21 @@ export const api = {
         options.max_posts_to_check.toString()
       )
     }
-    return apiService.post('/api/v1/groups/upload', formData, {
+    return api.post('/groups/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
 
   // Keywords API
-  getKeywords: (params?: any) =>
-    apiService.get('/api/v1/keywords/', { params }),
-  getKeyword: (keywordId: number) =>
-    apiService.get(`/api/v1/keywords/${keywordId}`),
-  createKeyword: (keywordData: any) =>
-    apiService.post('/api/v1/keywords/', keywordData),
+  getKeywords: (params?: any) => api.get('/keywords/', { params }),
+  getKeyword: (keywordId: number) => api.get(`/keywords/${keywordId}`),
+  createKeyword: (keywordData: any) => api.post('/keywords/', keywordData),
   updateKeyword: (keywordId: number, updateData: any) =>
-    apiService.put(`/api/v1/keywords/${keywordId}`, updateData),
-  deleteKeyword: (keywordId: number) =>
-    apiService.delete(`/api/v1/keywords/${keywordId}`),
+    api.put(`/keywords/${keywordId}`, updateData),
+  deleteKeyword: (keywordId: number) => api.delete(`/keywords/${keywordId}`),
   createKeywordsBulk: (keywordsData: any[]) =>
-    apiService.post('/api/v1/keywords/bulk/', keywordsData),
-  getKeywordCategories: () => apiService.get('/api/v1/keywords/categories'),
+    api.post('/keywords/bulk/', keywordsData),
+  getKeywordCategories: () => api.get('/keywords/categories'),
   uploadKeywordsFromFile: (file: File, options?: any) => {
     const formData = new FormData()
     formData.append('file', file)
@@ -60,116 +54,108 @@ export const api = {
     if (options?.is_whole_word !== undefined) {
       formData.append('is_whole_word', options.is_whole_word.toString())
     }
-    return apiService.post('/api/v1/keywords/upload', formData, {
+    return api.post('/keywords/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
 
   // Comments API
-  getComments: (params?: any) =>
-    apiService.get('/api/v1/parser/comments', { params }),
+  getComments: (params?: any) => api.get('/parser/comments', { params }),
   getCommentWithKeywords: (commentId: number) =>
-    apiService.get(`/api/v1/parser/comments/${commentId}`),
+    api.get(`/parser/comments/${commentId}`),
   updateCommentStatus: (commentId: number, statusUpdate: any) =>
-    apiService.put(`/api/v1/parser/comments/${commentId}/status`, statusUpdate),
+    api.put(`/parser/comments/${commentId}/status`, statusUpdate),
   markCommentAsViewed: (commentId: number) =>
-    apiService.post(`/api/v1/parser/comments/${commentId}/view`),
+    api.post(`/parser/comments/${commentId}/view`),
   archiveComment: (commentId: number) =>
-    apiService.post(`/api/v1/parser/comments/${commentId}/archive`),
+    api.post(`/parser/comments/${commentId}/archive`),
   unarchiveComment: (commentId: number) =>
-    apiService.post(`/api/v1/parser/comments/${commentId}/unarchive`),
+    api.post(`/parser/comments/${commentId}/unarchive`),
   bulkMarkCommentsAsViewed: (commentIds: number[]) =>
-    apiService.post('/api/v1/parser/comments/bulk/mark-viewed', {
+    api.post('/parser/comments/bulk/mark-viewed', {
       comment_ids: commentIds,
     }),
   bulkArchiveComments: (commentIds: number[]) =>
-    apiService.post('/api/v1/parser/comments/bulk/archive', {
+    api.post('/parser/comments/bulk/archive', {
       comment_ids: commentIds,
     }),
   bulkUnarchiveComments: (commentIds: number[]) =>
-    apiService.post('/api/v1/parser/comments/bulk/unarchive', {
+    api.post('/parser/comments/bulk/unarchive', {
       comment_ids: commentIds,
     }),
   bulkDeleteComments: (commentIds: number[]) =>
-    apiService.post('/api/v1/parser/comments/bulk/delete', {
+    api.post('/parser/comments/bulk/delete', {
       comment_ids: commentIds,
     }),
 
   // Parser API
-  startParser: (taskData: any) =>
-    apiService.post('/api/v1/parser/parse', taskData),
-  getParserState: () => apiService.get('/api/v1/parser/state'),
-  getParserStats: () => apiService.get('/api/v1/parser/stats'),
-  getRecentParseTasks: (params?: any) =>
-    apiService.get('/api/v1/parser/tasks', { params }),
-  stopParser: () => apiService.post('/api/v1/parser/stop'),
+  startParser: (taskData: any) => api.post('/parser/parse', taskData),
+  getParserState: () => api.get('/parser/state'),
+  getParserStats: () => api.get('/parser/stats'),
+  getRecentParseTasks: (params?: any) => api.get('/parser/tasks', { params }),
+  stopParser: () => api.post('/parser/stop'),
 
   // Stats API
-  getGlobalStats: () => apiService.get('/api/v1/stats/global'),
-  getDashboardStats: () => apiService.get('/api/v1/stats/dashboard'),
+  getGlobalStats: () => api.get('/stats/global'),
+  getDashboardStats: () => api.get('/stats/dashboard'),
 
   // Monitoring API
-  getMonitoringStats: () => apiService.get('/api/v1/monitoring/stats'),
+  getMonitoringStats: () => api.get('/monitoring/stats'),
   getMonitoringGroups: (params?: any) =>
-    apiService.get('/api/v1/monitoring/groups', { params }),
+    api.get('/monitoring/groups', { params }),
   getAvailableGroupsForMonitoring: (params?: any) =>
-    apiService.get('/api/v1/monitoring/groups/available', { params }),
+    api.get('/monitoring/groups/available', { params }),
   getActiveMonitoringGroups: (params?: any) =>
-    apiService.get('/api/v1/monitoring/groups/active', { params }),
+    api.get('/monitoring/groups/active', { params }),
   enableGroupMonitoring: (
     groupId: number,
     intervalMinutes: number = 60,
     priority: number = 5
   ) =>
-    apiService.post(`/api/v1/monitoring/groups/${groupId}/enable`, {
+    api.post(`/monitoring/groups/${groupId}/enable`, {
       interval_minutes: intervalMinutes,
       priority,
     }),
   disableGroupMonitoring: (groupId: number) =>
-    apiService.post(`/api/v1/monitoring/groups/${groupId}/disable`),
+    api.post(`/monitoring/groups/${groupId}/disable`),
   updateGroupMonitoring: (groupId: number, updateData: any) =>
-    apiService.put(`/api/v1/monitoring/groups/${groupId}/settings`, updateData),
+    api.put(`/monitoring/groups/${groupId}/settings`, updateData),
   runGroupMonitoring: (groupId: number) =>
-    apiService.post(`/api/v1/monitoring/groups/${groupId}/run`),
-  runMonitoringCycle: () => apiService.post('/api/v1/monitoring/run-cycle'),
-  getSchedulerStatus: () =>
-    apiService.get('/api/v1/monitoring/scheduler/status'),
+    api.post(`/monitoring/groups/${groupId}/run`),
+  runMonitoringCycle: () => api.post('/monitoring/run-cycle'),
+  getSchedulerStatus: () => api.get('/monitoring/scheduler/status'),
 
   // Settings API
-  getSettings: () => apiService.get('/api/v1/settings/'),
-  updateSettings: (settings: any) =>
-    apiService.put('/api/v1/settings/', settings),
-  resetSettings: () => apiService.post('/api/v1/settings/reset'),
-  getSettingsHealth: () => apiService.get('/api/v1/settings/health'),
+  getSettings: () => api.get('/settings/'),
+  updateSettings: (settings: any) => api.put('/settings/', settings),
+  resetSettings: () => api.post('/settings/reset'),
+  getSettingsHealth: () => api.get('/settings/health'),
 
   // Error Reports API
-  getErrorReports: (params?: any) =>
-    apiService.get('/api/v1/errors/reports', { params }),
-  getErrorReport: (reportId: string) =>
-    apiService.get(`/api/v1/errors/reports/${reportId}`),
-  getErrorStats: (days: number = 7) =>
-    apiService.get(`/api/v1/errors/stats?days=${days}`),
+  getErrorReports: (params?: any) => api.get('/errors/reports', { params }),
+  getErrorReport: (reportId: string) => api.get(`/errors/reports/${reportId}`),
+  getErrorStats: (days: number = 7) => api.get(`/errors/stats?days=${days}`),
   acknowledgeErrorReport: (reportId: string) =>
-    apiService.post(`/api/v1/errors/reports/${reportId}/acknowledge`),
+    api.post(`/errors/reports/${reportId}/acknowledge`),
   deleteErrorReport: (reportId: string) =>
-    apiService.delete(`/api/v1/errors/reports/${reportId}`),
+    api.delete(`/errors/reports/${reportId}`),
 
   // Health check
-  healthCheck: () => apiService.get('/api/v1/'),
+  healthCheck: () => api.get('/'),
 
   // Dashboard/DashboardPage API
   getActivityData: (params: { timeRange: string }) =>
-    apiService.get('/api/v1/stats/activity', { params }),
+    api.get('/stats/activity', { params }),
   getTopGroups: (params: { limit: number }) =>
-    apiService.get('/api/v1/stats/top-groups', { params }),
+    api.get('/stats/top-groups', { params }),
   getTopKeywords: (params: { limit: number }) =>
-    apiService.get('/api/v1/stats/top-keywords', { params }),
+    api.get('/stats/top-keywords', { params }),
   getRecentComments: (params: { limit: number }) =>
-    apiService.get('/api/v1/stats/recent-comments', { params }),
-  getSystemStatus: () => apiService.get('/api/v1/system/status'),
-  getParsingProgress: () => apiService.get('/api/v1/parser/progress'),
+    api.get('/stats/recent-comments', { params }),
+  getSystemStatus: () => api.get('/system/status'),
+  getParsingProgress: () => api.get('/parser/progress'),
   getRecentActivity: (params: { limit: number }) =>
-    apiService.get('/api/v1/activity/recent', { params }),
+    api.get('/activity/recent', { params }),
 }
 
 // Утилиты для создания query keys

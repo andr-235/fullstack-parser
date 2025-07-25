@@ -4,7 +4,7 @@ import {
   useQueryClient,
   useInfiniteQuery,
 } from '@tanstack/react-query'
-import { api } from '@/shared/lib/api'
+import { apiService } from '@/shared/lib/api-compat'
 import type {
   VKGroupResponse,
   VKGroupCreate,
@@ -52,9 +52,7 @@ export function useGroups(params?: UseGroupsParams) {
         searchParams.append('active_only', active_only.toString())
       if (search) searchParams.append('search', search)
 
-      return api.get<PaginatedResponse<VKGroupResponse>>(
-        `/groups?${searchParams.toString()}`
-      )
+      return apiService.getGroups({ page, size, active_only, search })
     },
     staleTime: 5 * 60 * 1000, // 5 минут
   })
@@ -67,18 +65,14 @@ export function useInfiniteGroups(params?: UseInfiniteGroupsParams) {
   return useInfiniteQuery({
     queryKey: ['infinite-groups', { active_only, search, pageSize }],
     queryFn: ({ pageParam = 1 }) => {
-      const searchParams = new URLSearchParams()
-      searchParams.append('page', pageParam.toString())
-      searchParams.append('size', pageSize.toString())
-      if (active_only !== undefined)
-        searchParams.append('active_only', active_only.toString())
-      if (search) searchParams.append('search', search)
-
-      return api.get<PaginatedResponse<VKGroupResponse>>(
-        `/groups?${searchParams.toString()}`
-      )
+      return apiService.getGroups({
+        page: pageParam,
+        size: pageSize,
+        active_only,
+        search,
+      })
     },
-    getNextPageParam: (lastPage, allPages) => {
+    getNextPageParam: (lastPage: any, allPages) => {
       const loaded = allPages.reduce(
         (acc, page) => acc + page.data.items.length,
         0
@@ -97,7 +91,7 @@ export function useInfiniteGroups(params?: UseInfiniteGroupsParams) {
 export function useGroup({ groupId, enabled = true }: UseGroupParams) {
   return useQuery({
     queryKey: ['group', groupId],
-    queryFn: () => api.get<VKGroupResponse>(`/groups/${groupId}`),
+    queryFn: () => apiService.getGroup(groupId),
     enabled: enabled && !!groupId,
     staleTime: 10 * 60 * 1000, // 10 минут
   })
@@ -108,8 +102,7 @@ export function useCreateGroup() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: VKGroupCreate) =>
-      api.post<VKGroupResponse>('/groups', data),
+    mutationFn: (data: VKGroupCreate) => apiService.createGroup(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
     },
@@ -122,7 +115,7 @@ export function useUpdateGroup() {
 
   return useMutation({
     mutationFn: ({ groupId, data }: { groupId: number; data: VKGroupUpdate }) =>
-      api.patch<VKGroupResponse>(`/groups/${groupId}`, data),
+      apiService.updateGroup(groupId, data),
     onSuccess: (_, { groupId }) => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
       queryClient.invalidateQueries({ queryKey: ['group', groupId] })
@@ -135,7 +128,7 @@ export function useDeleteGroup() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (groupId: number) => api.delete(`/groups/${groupId}`),
+    mutationFn: (groupId: number) => apiService.deleteGroup(groupId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
     },
@@ -149,7 +142,7 @@ export function useGroupStats({
 }: UseGroupStatsParams) {
   return useQuery({
     queryKey: ['group-stats', groupId],
-    queryFn: () => api.get<any>(`/groups/${groupId}/stats`),
+    queryFn: () => apiService.getGroupStats(groupId),
     enabled: enabled && !!groupId,
     staleTime: 5 * 60 * 1000, // 5 минут
   })
@@ -160,12 +153,32 @@ export function useRefreshGroupInfo() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (groupId: number) =>
-      api.post<VKGroupResponse>(`/groups/${groupId}/refresh`),
+    mutationFn: (groupId: number) => apiService.refreshGroupInfo(groupId),
     onSuccess: (_, groupId) => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
       queryClient.invalidateQueries({ queryKey: ['group', groupId] })
       queryClient.invalidateQueries({ queryKey: ['group-stats', groupId] })
+    },
+  })
+}
+
+// Хук для загрузки групп из файла
+export function useUploadGroupsFromFile() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      file,
+      options,
+    }: {
+      file: File
+      options?: {
+        is_active?: boolean
+        max_posts_to_check?: number
+      }
+    }) => apiService.uploadGroupsFromFile(file, options),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
     },
   })
 }

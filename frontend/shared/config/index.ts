@@ -1,6 +1,15 @@
-// API конфигурация
+// API конфигурация с поддержкой runtime переменных
+const getApiBaseUrl = () => {
+  // В браузере используем window.location для определения базового URL
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.host}`
+  }
+  // На сервере используем переменную окружения
+  return process.env.NEXT_PUBLIC_API_URL || 'https://parser.mysite.ru'
+}
+
 export const API_CONFIG = {
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  baseUrl: getApiBaseUrl(),
   timeout: 30000,
   retries: 3,
   retryDelay: 1000,

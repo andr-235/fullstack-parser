@@ -6,32 +6,25 @@ import type { DashboardStats, GlobalStats, ParserState } from '@/types/api'
 export function useActivityData(timeRange: string = '7d') {
   return useQuery({
     queryKey: ['activity', timeRange],
-    queryFn: () =>
-      api.get<DashboardStats>(`/stats/activity?timeRange=${timeRange}`),
+    queryFn: () => api.get<DashboardStats>(`/stats/dashboard`),
     staleTime: 5 * 60 * 1000, // 5 минут
   })
 }
 
 // Хук для получения топ групп
-export function useTopGroups(limit: number = 10) {
+export function useTopGroups(limit: number = 5) {
   return useQuery({
     queryKey: ['top-groups', limit],
-    queryFn: () =>
-      api.get<Array<{ name: string; count: number }>>(
-        `/stats/top-groups?limit=${limit}`
-      ),
+    queryFn: () => api.get<any[]>(`/stats/dashboard`),
     staleTime: 10 * 60 * 1000, // 10 минут
   })
 }
 
 // Хук для получения топ ключевых слов
-export function useTopKeywords(limit: number = 10) {
+export function useTopKeywords(limit: number = 5) {
   return useQuery({
     queryKey: ['top-keywords', limit],
-    queryFn: () =>
-      api.get<Array<{ word: string; count: number }>>(
-        `/stats/top-keywords?limit=${limit}`
-      ),
+    queryFn: () => api.get<any[]>(`/stats/dashboard`),
     staleTime: 10 * 60 * 1000, // 10 минут
   })
 }
@@ -40,18 +33,8 @@ export function useTopKeywords(limit: number = 10) {
 export function useRecentComments(limit: number = 20) {
   return useQuery({
     queryKey: ['recent-comments', limit],
-    queryFn: () => api.get<any[]>(`/activity/recent?limit=${limit}`),
+    queryFn: () => api.get<any[]>(`/stats/dashboard`),
     staleTime: 2 * 60 * 1000, // 2 минуты
-  })
-}
-
-// Хук для получения статистики группы
-export function useGroupStats(groupId: number) {
-  return useQuery({
-    queryKey: ['group-stats', groupId],
-    queryFn: () => api.get<any>(`/groups/${groupId}/stats`),
-    enabled: !!groupId,
-    staleTime: 5 * 60 * 1000, // 5 минут
   })
 }
 
@@ -59,7 +42,7 @@ export function useGroupStats(groupId: number) {
 export function useSystemStatus() {
   return useQuery({
     queryKey: ['system-status'],
-    queryFn: () => api.get<any>('/system/status'),
+    queryFn: () => api.get<any>('/health/'),
     refetchInterval: 30 * 1000, // 30 секунд
     staleTime: 10 * 1000, // 10 секунд
   })
@@ -69,7 +52,7 @@ export function useSystemStatus() {
 export function useParsingProgress() {
   return useQuery({
     queryKey: ['parser-progress'],
-    queryFn: () => api.get<ParserState>('/parser/progress'),
+    queryFn: () => api.get<ParserState>('/parser/state'),
     refetchInterval: 5 * 1000, // 5 секунд
     staleTime: 1 * 1000, // 1 секунда
   })
@@ -79,7 +62,7 @@ export function useParsingProgress() {
 export function useRecentActivity(limit: number = 10) {
   return useQuery({
     queryKey: ['recent-activity', limit],
-    queryFn: () => api.get<any[]>(`/activity/recent?limit=${limit}`),
+    queryFn: () => api.get<any[]>(`/stats/dashboard`),
     staleTime: 2 * 60 * 1000, // 2 минуты
   })
 }

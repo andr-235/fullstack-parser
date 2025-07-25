@@ -1,5 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, createQueryKey } from '@/shared/lib/api'
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+} from '@tanstack/react-query'
+import { apiService, createQueryKey } from '@/shared/lib/api-compat'
 import type {
   KeywordResponse,
   KeywordCreate,
@@ -19,7 +24,32 @@ export function useKeywords(
 ) {
   return useQuery({
     queryKey: createQueryKey.keywords(params),
-    queryFn: () => api.getKeywords(params),
+    queryFn: () => apiService.getKeywords(params),
+    staleTime: 10 * 60 * 1000, // 10 минут
+  })
+}
+
+/**
+ * Хук для бесконечной загрузки ключевых слов
+ */
+export function useInfiniteKeywords(
+  params?: Omit<PaginationParams, 'page'> & {
+    active_only?: boolean
+    category?: string
+    q?: string
+  }
+) {
+  return useInfiniteQuery({
+    queryKey: createQueryKey.keywords(params),
+    queryFn: ({ pageParam = 1 }) =>
+      apiService.getKeywords({ ...params, page: pageParam }),
+    getNextPageParam: (lastPage: any) => {
+      if (lastPage.next_page) {
+        return lastPage.next_page
+      }
+      return undefined
+    },
+    initialPageParam: 1,
     staleTime: 10 * 60 * 1000, // 10 минут
   })
 }
@@ -30,7 +60,7 @@ export function useKeywords(
 export function useKeyword(keywordId: number) {
   return useQuery({
     queryKey: createQueryKey.keyword(keywordId),
-    queryFn: () => api.getKeyword(keywordId),
+    queryFn: () => apiService.getKeyword(keywordId),
     enabled: !!keywordId,
   })
 }
@@ -41,7 +71,7 @@ export function useKeyword(keywordId: number) {
 export function useKeywordCategories() {
   return useQuery({
     queryKey: createQueryKey.keywordCategories(),
-    queryFn: () => api.getKeywordCategories(),
+    queryFn: () => apiService.getKeywordCategories(),
     staleTime: 30 * 60 * 1000, // 30 минут
   })
 }
@@ -53,7 +83,7 @@ export function useCreateKeyword() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: KeywordCreate) => api.createKeyword(data),
+    mutationFn: (data: KeywordCreate) => apiService.createKeyword(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['keywords'] })
       queryClient.invalidateQueries({ queryKey: ['keywords', 'categories'] })
@@ -68,7 +98,7 @@ export function useCreateKeywordsBulk() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: KeywordCreate[]) => api.createKeywordsBulk(data),
+    mutationFn: (data: KeywordCreate[]) => apiService.createKeywordsBulk(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['keywords'] })
       queryClient.invalidateQueries({ queryKey: ['keywords', 'categories'] })
@@ -89,7 +119,7 @@ export function useUpdateKeyword() {
     }: {
       keywordId: number
       data: KeywordUpdate
-    }) => api.updateKeyword(keywordId, data),
+    }) => apiService.updateKeyword(keywordId, data),
     onSuccess: (_, { keywordId }) => {
       queryClient.invalidateQueries({ queryKey: ['keywords', keywordId] })
       queryClient.invalidateQueries({ queryKey: ['keywords'] })
@@ -104,7 +134,7 @@ export function useDeleteKeyword() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (keywordId: number) => api.deleteKeyword(keywordId),
+    mutationFn: (keywordId: number) => apiService.deleteKeyword(keywordId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['keywords'] })
     },
@@ -129,7 +159,7 @@ export function useUploadKeywordsFromFile() {
         is_case_sensitive?: boolean
         is_whole_word?: boolean
       }
-    }) => api.uploadKeywordsFromFile(file, options),
+    }) => apiService.uploadKeywordsFromFile(file, options),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['keywords'] })
       queryClient.invalidateQueries({ queryKey: ['keywords', 'categories'] })

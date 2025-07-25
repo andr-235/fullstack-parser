@@ -24,7 +24,7 @@ export function useGlobalStats() {
 export function useAPIHealth() {
   return useQuery({
     queryKey: ['api-health'],
-    queryFn: () => api.get<any>('/health'),
+    queryFn: () => api.get<any>('/health/'),
     refetchInterval: 30 * 1000, // 30 секунд
     staleTime: 10 * 1000, // 10 секунд
   })

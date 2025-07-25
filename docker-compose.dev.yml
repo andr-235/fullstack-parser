@@ -103,7 +103,7 @@ services:
       - "9229:9229" # Node.js debug port
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=https://parser.mysite.ru
       - NEXT_TELEMETRY_DISABLED=1
     env_file:
       - .env.dev

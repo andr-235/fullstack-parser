@@ -79,7 +79,7 @@ pnpm install
 pnpm dev
 ```
 
-Приложение будет доступно по адресу [http://localhost:3000](http://localhost:3000)
+Приложение будет доступно по адресу [https://parser.mysite.ru](https://parser.mysite.ru)
 
 ### Сборка
 
@@ -113,8 +113,8 @@ pnpm test:watch   # Запуск тестов в watch режиме
 Создайте файл `.env.local`:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=https://parser.mysite.ru
+NEXT_PUBLIC_APP_URL=https://parser.mysite.ru
 ```
 
 ### TypeScript
