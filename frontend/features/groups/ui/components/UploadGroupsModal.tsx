@@ -87,6 +87,7 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
     const estimatedGroups = lines.length
     setTotalGroups(estimatedGroups)
     setProcessedGroups(0)
+    setCurrentGroup('Подготовка файла...')
 
     let progressInterval: NodeJS.Timeout | null = null
 
@@ -111,7 +112,7 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
           }
           return newProcessed
         })
-      }, 300)
+      }, 800) // Увеличили интервал для более заметного прогресса
 
       const response = await uploadMutation.mutateAsync({
         file: selectedFile,
@@ -238,6 +239,13 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
     return ''
   }
 
+  const getProgressPercentage = () => {
+    if (totalGroups > 0) {
+      return Math.round((processedGroups / totalGroups) * 100)
+    }
+    return uploadProgress
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -273,9 +281,12 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
 
               {uploadStatus === 'uploading' && (
                 <div className="space-y-2">
-                  <Progress value={uploadProgress} className="w-full" />
+                  <Progress value={getProgressPercentage()} className="w-full" />
                   <p className="text-sm text-gray-600">
                     {getProgressText()}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Прогресс: {getProgressPercentage()}%
                   </p>
                 </div>
               )}
