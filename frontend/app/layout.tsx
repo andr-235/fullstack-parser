@@ -28,9 +28,7 @@ export const metadata: Metadata = {
     apple: [
       { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
-    other: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-    ],
+    other: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
   },
   manifest: '/site.webmanifest',
   openGraph: {

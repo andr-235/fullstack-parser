@@ -1,30 +1,30 @@
 :root {
- /* Основная палитра */
- --color-primary: #6366f1;
- --color-secondary: #8b5cf6;
- --color-accent: #06b6d4;
- --color-bg: #0a0a0a;
- --color-surface: #1a1a1a;
- --color-border: #2a2a2a;
- --color-glass-bg: rgba(255, 255, 255, 0.05);
- --color-glass-border: rgba(255, 255, 255, 0.10);
- --color-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
- --color-text: #fff;
- --color-text-secondary: #a1a1aa;
- --color-text-muted: #71717a;
- --color-error: #ef4444;
- --color-success: #22c55e;
- --color-warning: #facc15;
+  /* Основная палитра */
+  --color-primary: #6366f1;
+  --color-secondary: #8b5cf6;
+  --color-accent: #06b6d4;
+  --color-bg: #0a0a0a;
+  --color-surface: #1a1a1a;
+  --color-border: #2a2a2a;
+  --color-glass-bg: rgba(255, 255, 255, 0.05);
+  --color-glass-border: rgba(255, 255, 255, 0.1);
+  --color-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  --color-text: #fff;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
+  --color-error: #ef4444;
+  --color-success: #22c55e;
+  --color-warning: #facc15;
 
- /* Шрифты */
- --font-main: 'Inter', 'Segoe UI', Arial, sans-serif;
- --font-mono: 'JetBrains Mono', 'Fira Mono', monospace;
+  /* Шрифты */
+  --font-main: 'Inter', 'Segoe UI', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Mono', monospace;
 
- /* Размеры */
- --radius: 18px;
- --radius-sm: 10px;
- --radius-lg: 28px;
- --transition: 0.22s cubic-bezier(.4, 0, .2, 1);
+  /* Размеры */
+  --radius: 18px;
+  --radius-sm: 10px;
+  --radius-lg: 28px;
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* --- Заголовки --- */
@@ -32,135 +32,157 @@
 .h2,
 .h3,
 .h4 {
- font-family: var(--font-main);
- font-weight: 700;
- color: var(--color-text);
- margin: 0 0 0.5em 0;
- line-height: 1.2;
+  font-family: var(--font-main);
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 0.5em 0;
+  line-height: 1.2;
 }
 
 .h1 {
- font-size: 2.5rem;
- background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
- -webkit-background-clip: text;
- -webkit-text-fill-color: transparent;
+  font-size: 2.5rem;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .h2 {
- font-size: 2rem;
+  font-size: 2rem;
 }
 
 .h3 {
- font-size: 1.5rem;
+  font-size: 1.5rem;
 }
 
 .h4 {
- font-size: 1.25rem;
+  font-size: 1.25rem;
 }
 
 /* --- Кнопка --- */
 .btn {
- font-family: var(--font-main);
- font-size: 1rem;
- font-weight: 600;
- color: var(--color-text);
- background: linear-gradient(120deg, var(--color-primary), var(--color-secondary));
- border: none;
- border-radius: var(--radius);
- padding: 0.75em 2em;
- box-shadow: 0 2px 12px 0 rgba(99, 102, 241, 0.12), 0 1.5px 8px 0 rgba(8, 8, 8, 0.18);
- cursor: pointer;
- transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
- outline: none;
- position: relative;
- overflow: hidden;
+  font-family: var(--font-main);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  background: linear-gradient(
+    120deg,
+    var(--color-primary),
+    var(--color-secondary)
+  );
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.75em 2em;
+  box-shadow:
+    0 2px 12px 0 rgba(99, 102, 241, 0.12),
+    0 1.5px 8px 0 rgba(8, 8, 8, 0.18);
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
+  outline: none;
+  position: relative;
+  overflow: hidden;
 }
 
 .btn::after {
- content: '';
- position: absolute;
- inset: 0;
- background: linear-gradient(90deg, var(--color-accent) 0%, transparent 100%);
- opacity: 0;
- transition: opacity var(--transition);
- z-index: 0;
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--color-accent) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity var(--transition);
+  z-index: 0;
 }
 
 .btn:hover,
 .btn:focus {
- background: linear-gradient(120deg, var(--color-secondary), var(--color-accent));
- box-shadow: 0 4px 24px 0 rgba(139, 92, 246, 0.18), 0 2px 12px 0 rgba(6, 182, 212, 0.12);
- transform: translateY(-2px) scale(1.03);
+  background: linear-gradient(
+    120deg,
+    var(--color-secondary),
+    var(--color-accent)
+  );
+  box-shadow:
+    0 4px 24px 0 rgba(139, 92, 246, 0.18),
+    0 2px 12px 0 rgba(6, 182, 212, 0.12);
+  transform: translateY(-2px) scale(1.03);
 }
 
 .btn:active {
- transform: scale(0.98);
+  transform: scale(0.98);
 }
 
 /* --- Поле ввода --- */
 .input {
- font-family: var(--font-main);
- font-size: 1rem;
- color: var(--color-text);
- background: var(--color-glass-bg);
- border: 1.5px solid var(--color-glass-border);
- border-radius: var(--radius-sm);
- padding: 0.7em 1.1em;
- box-shadow: var(--color-glass-shadow);
- backdrop-filter: blur(12px) saturate(1.2);
- outline: none;
- transition: border-color var(--transition), box-shadow var(--transition);
+  font-family: var(--font-main);
+  font-size: 1rem;
+  color: var(--color-text);
+  background: var(--color-glass-bg);
+  border: 1.5px solid var(--color-glass-border);
+  border-radius: var(--radius-sm);
+  padding: 0.7em 1.1em;
+  box-shadow: var(--color-glass-shadow);
+  backdrop-filter: blur(12px) saturate(1.2);
+  outline: none;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 .input:focus {
- border-color: var(--color-accent);
- box-shadow: 0 0 0 2px var(--color-accent), var(--color-glass-shadow);
+  border-color: var(--color-accent);
+  box-shadow:
+    0 0 0 2px var(--color-accent),
+    var(--color-glass-shadow);
 }
 
 .input::placeholder {
- color: var(--color-text-muted);
- opacity: 1;
+  color: var(--color-text-muted);
+  opacity: 1;
 }
 
 /* --- Карточка --- */
 .card {
- background: var(--color-glass-bg);
- border-radius: var(--radius-lg);
- border: 1.5px solid var(--color-glass-border);
- box-shadow: var(--color-glass-shadow);
- backdrop-filter: blur(18px) saturate(1.3);
- padding: 2em 1.5em;
- color: var(--color-text);
- transition: box-shadow var(--transition), border-color var(--transition);
- position: relative;
- overflow: hidden;
+  background: var(--color-glass-bg);
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--color-glass-border);
+  box-shadow: var(--color-glass-shadow);
+  backdrop-filter: blur(18px) saturate(1.3);
+  padding: 2em 1.5em;
+  color: var(--color-text);
+  transition:
+    box-shadow var(--transition),
+    border-color var(--transition);
+  position: relative;
+  overflow: hidden;
 }
 
 .card:hover {
- box-shadow: 0 8px 32px 0 rgba(99, 102, 241, 0.18), 0 2px 12px 0 rgba(6, 182, 212, 0.12);
- border-color: var(--color-primary);
+  box-shadow:
+    0 8px 32px 0 rgba(99, 102, 241, 0.18),
+    0 2px 12px 0 rgba(6, 182, 212, 0.12);
+  border-color: var(--color-primary);
 }
 
 /* --- Анимации --- */
 @media (hover: hover) {
-
- .btn,
- .card {
-  will-change: transform, box-shadow;
- }
+  .btn,
+  .card {
+    will-change: transform, box-shadow;
+  }
 }
 
 /* --- Адаптивность --- */
 @media (max-width: 600px) {
- .h1 {
-  font-size: 2rem;
- }
+  .h1 {
+    font-size: 2rem;
+  }
 
- .h2 {
-  font-size: 1.5rem;
- }
+  .h2 {
+    font-size: 1.5rem;
+  }
 
- .card {
-  padding: 1.2em 0.7em;
- }
+  .card {
+    padding: 1.2em 0.7em;
+  }
 }
