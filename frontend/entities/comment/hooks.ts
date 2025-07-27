@@ -34,7 +34,7 @@ export function useComments(params?: CommentSearchParams & PaginationParams) {
       })
 
       return api.get<PaginatedResponse<VKCommentResponse>>(
-        `/comments?${searchParams.toString()}`
+        `/comments/?${searchParams.toString()}`
       )
     },
     staleTime: 2 * 60 * 1000, // 2 минуты
@@ -61,15 +61,12 @@ export function useInfiniteComments(filters?: CommentSearchParams) {
       })
 
       return api.get<PaginatedResponse<VKCommentResponse>>(
-        `/comments?${searchParams.toString()}`
+        `/comments/?${searchParams.toString()}`
       )
     },
     getNextPageParam: (lastPage, allPages) => {
-      const loaded = allPages.reduce(
-        (acc, page) => acc + page.data.items.length,
-        0
-      )
-      if (loaded < (lastPage?.data.total || 0)) {
+      const loaded = allPages.reduce((acc, page) => acc + page.items.length, 0)
+      if (loaded < (lastPage?.total || 0)) {
         return allPages.length + 1
       }
       return undefined
@@ -90,7 +87,7 @@ export function useUpdateCommentStatus() {
     }: {
       commentId: number
       data: { is_viewed?: boolean; is_archived?: boolean }
-    }) => api.patch<VKCommentResponse>(`/comments/${commentId}`, data),
+    }) => api.patch<VKCommentResponse>(`/comments/${commentId}/`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
       queryClient.invalidateQueries({ queryKey: ['infinite-comments'] })
@@ -104,7 +101,7 @@ export function useMarkCommentAsViewed() {
 
   return useMutation({
     mutationFn: (commentId: number) =>
-      api.patch<VKCommentResponse>(`/comments/${commentId}`, {
+      api.patch<VKCommentResponse>(`/comments/${commentId}/`, {
         is_viewed: true,
       }),
     onSuccess: () => {
@@ -120,7 +117,7 @@ export function useArchiveComment() {
 
   return useMutation({
     mutationFn: (commentId: number) =>
-      api.patch<VKCommentResponse>(`/comments/${commentId}`, {
+      api.patch<VKCommentResponse>(`/comments/${commentId}/`, {
         is_archived: true,
       }),
     onSuccess: () => {
@@ -136,7 +133,7 @@ export function useUnarchiveComment() {
 
   return useMutation({
     mutationFn: (commentId: number) =>
-      api.patch<VKCommentResponse>(`/comments/${commentId}`, {
+      api.patch<VKCommentResponse>(`/comments/${commentId}/`, {
         is_archived: false,
       }),
     onSuccess: () => {
@@ -150,7 +147,7 @@ export function useUnarchiveComment() {
 export function useCommentWithKeywords(commentId: number) {
   return useQuery({
     queryKey: ['comment-with-keywords', commentId],
-    queryFn: () => api.get<any>(`/comments/${commentId}/keywords`),
+    queryFn: () => api.get<any>(`/comments/${commentId}/keywords/`),
     enabled: !!commentId,
     staleTime: 5 * 60 * 1000, // 5 минут
   })

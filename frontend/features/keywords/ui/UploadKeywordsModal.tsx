@@ -148,11 +148,14 @@ export default function UploadKeywordsModal({
           errorMessage = 'Превышено время ожидания. Попробуйте позже'
         } else if (error.message.includes('FILE_ERROR_NO_SPACE')) {
           errorMessage = 'Недостаточно места на диске. Обратитесь к администратору'
+        } else if (error.message.includes('total_processed')) {
+          errorMessage = 'Ошибка обработки ответа сервера. Попробуйте еще раз'
         } else {
           errorMessage = error.message
         }
       }
 
+      console.error('Upload error details:', error)
       setUploadError(errorMessage)
       toast.error(errorMessage)
     }

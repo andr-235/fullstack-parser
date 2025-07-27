@@ -20,7 +20,7 @@ import type {
 export function useKeywords(
   params?: PaginationParams & {
     active_only?: boolean
-    category?: string
+    category?: string | undefined
     q?: string
   }
 ) {
@@ -215,19 +215,24 @@ export function useUploadKeywordsWithProgress() {
           .then((response) => {
             clearInterval(progressInterval)
 
+            // Проверяем, что response существует и содержит нужные поля
+            if (!response || typeof response !== 'object') {
+              throw new Error('Неверный формат ответа от сервера')
+            }
+
             // Финальный прогресс
             onProgress?.({
               status: 'completed',
               progress: 100,
               current_keyword: '',
-              total_keywords: response.data.total_processed,
-              processed_keywords: response.data.total_processed,
-              created: response.data.created,
-              skipped: response.data.skipped,
-              errors: response.data.errors,
+              total_keywords: response.total_processed || 0,
+              processed_keywords: response.total_processed || 0,
+              created: response.created || 0,
+              skipped: response.skipped || 0,
+              errors: response.errors || [],
             })
 
-            resolve(response.data)
+            resolve(response)
           })
           .catch((error) => {
             clearInterval(progressInterval)
@@ -265,5 +270,31 @@ export function useUploadKeywordsFromFile() {
       queryClient.invalidateQueries({ queryKey: ['keywords'] })
       queryClient.invalidateQueries({ queryKey: ['keywords', 'categories'] })
     },
+  })
+}
+
+/**
+ * Хук для обновления статистики ключевых слов
+ */
+export function useUpdateKeywordsStats() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => api.post<{ message: string }>('/keywords/update-stats'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['keywords'] })
+    },
+  })
+}
+
+/**
+ * Хук для получения общего количества совпадений
+ */
+export function useTotalMatches() {
+  return useQuery({
+    queryKey: ['keywords', 'total-matches'],
+    queryFn: () =>
+      api.get<{ total_matches: number }>('/keywords/total-matches'),
+    staleTime: 5 * 60 * 1000, // 5 минут
   })
 }

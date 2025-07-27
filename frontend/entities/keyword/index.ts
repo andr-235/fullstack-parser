@@ -22,4 +22,6 @@ export {
   useUploadKeywordsFromFile,
   useUploadKeywordsWithProgress,
   useInfiniteKeywords,
+  useUpdateKeywordsStats,
+  useTotalMatches,
 } from './hooks'

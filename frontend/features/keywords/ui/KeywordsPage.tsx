@@ -9,7 +9,7 @@ import {
   useInfiniteKeywords,
   useUpdateKeywordsStats,
   useTotalMatches,
-} from '@/features/keywords/hooks/use-keywords'
+} from '@/entities/keyword'
 import {
   Card,
   CardContent,
@@ -88,7 +88,7 @@ const KeywordRow = ({
       onUpdate(
         keyword.id,
         { word: editedWord },
-        { onSuccess: () => {}, onError: () => {} }
+        { onSuccess: () => { }, onError: () => { } }
       )
     }
     setIsEditing(false)

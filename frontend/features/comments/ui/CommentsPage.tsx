@@ -184,7 +184,7 @@ export default function CommentsPage() {
     if (authorFilter === 'special' && specialAuthor) {
       // Преобразуем author_screen_name в author_id
       const match = specialAuthor.match(/^id(\d+)$/)
-      const authorId = match ? parseInt(match[1]) : null
+      const authorId = match && match[1] ? parseInt(match[1]) : null
 
       return authorId ? { author_id: authorId } : {}
     }
@@ -219,6 +219,13 @@ export default function CommentsPage() {
   const statusParams = getStatusParams(statusFilter)
   const authorParams = getAuthorParams()
 
+  // Функция для фильтрации undefined значений
+  const filterUndefined = (obj: Record<string, any>) => {
+    return Object.fromEntries(
+      Object.entries(obj).filter(([_, value]) => value !== undefined)
+    )
+  }
+
   const {
     data,
     error,
@@ -227,19 +234,15 @@ export default function CommentsPage() {
     isFetching,
     isFetchingNextPage,
     refetch,
-  } = useInfiniteComments({
-    text: debouncedText,
-    group_id:
-      groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
-    keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
-    ...statusParams,
-    ...authorParams,
-  })
-
-  // Принудительно обновляем при изменении фильтров
-  useEffect(() => {
-    refetch()
-  }, [authorFilter, specialAuthor, refetch])
+  } = useInfiniteComments(
+    filterUndefined({
+      text: debouncedText || undefined,
+      group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
+      keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
+      ...statusParams,
+      ...authorParams,
+    })
+  )
 
   const { data: groupsData } = useGroups()
   const { data: keywordsData } = useKeywords()
@@ -247,6 +250,38 @@ export default function CommentsPage() {
     () => data?.pages.flatMap((page) => page.items) ?? [],
     [data]
   )
+
+  // Детальная отладка API запросов
+  useEffect(() => {
+    console.log('=== API DEBUG ===')
+    console.log('useInfiniteComments params:', filterUndefined({
+      text: debouncedText || undefined,
+      group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
+      keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
+      ...statusParams,
+      ...authorParams,
+    }))
+    console.log('isFetching:', isFetching)
+    console.log('error:', error)
+    console.log('data pages count:', data?.pages?.length)
+    console.log('comments count:', comments.length)
+  }, [data, error, isFetching, comments.length, debouncedText, groupFilter, keywordFilter, statusParams, authorParams])
+
+  // Отладка групп и ключевых слов
+  useEffect(() => {
+    console.log('=== GROUPS & KEYWORDS DEBUG ===')
+    console.log('groupsData:', groupsData)
+    console.log('keywordsData:', keywordsData)
+    console.log('groups count:', groupsData?.items?.length || 0)
+    console.log('keywords count:', keywordsData?.items?.length || 0)
+  }, [groupsData, keywordsData])
+
+  // Принудительно обновляем при изменении фильтров
+  useEffect(() => {
+    console.log('=== REFETCH DEBUG ===')
+    console.log('Triggering refetch due to filter change')
+    refetch()
+  }, [authorFilter, specialAuthor, refetch])
 
   const handleResetFilters = () => {
     setTextFilter('')
@@ -458,7 +493,7 @@ export default function CommentsPage() {
                 >
                   Все ключевые слова
                 </SelectItem>
-                {keywordsData?.items?.map((keyword) => (
+                {keywordsData?.items?.map((keyword: KeywordResponse) => (
                   <SelectItem
                     key={keyword.id}
                     value={String(keyword.id)}
@@ -603,9 +638,8 @@ export default function CommentsPage() {
                 {comments.map((comment: VKCommentResponse, index: number) => (
                   <TableRow
                     key={comment.id}
-                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${
-                      comment.is_viewed ? 'opacity-60' : ''
-                    }`}
+                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${comment.is_viewed ? 'opacity-60' : ''
+                      }`}
                     style={{ animationDelay: `${index * 30}ms` }}
                   >
                     <TableCell>

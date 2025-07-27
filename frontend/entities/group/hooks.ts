@@ -216,21 +216,23 @@ export function useUploadGroupsFromFile() {
           options.max_posts_to_check.toString()
         )
 
-      const res = await api
-        .post<VKGroupUploadResponse>('/groups/upload', formData, {
+      const res = await api.post<VKGroupUploadResponse>(
+        '/groups/upload',
+        formData,
+        {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-          onUploadProgress: (progressEvent_1) => {
-            if (onProgress && progressEvent_1.total) {
-              const progress_1 = Math.round(
-                (progressEvent_1.loaded * 100) / progressEvent_1.total
+          onUploadProgress: (progressEvent) => {
+            if (onProgress && progressEvent.total) {
+              const progress = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
               )
-              onProgress(progress_1)
+              onProgress(progress)
             }
           },
-        })
-        .then((response) => response.data)
+        }
+      )
 
       return res
     },
