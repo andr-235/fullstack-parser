@@ -10,7 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.time_utils import format_datetime_for_display
+from app.core.time_utils import (
+    format_datetime_for_display,
+    format_monitoring_time_for_display,
+)
 from app.models.vk_group import VKGroup
 from app.schemas.base import PaginatedResponse, StatusResponse
 from app.schemas.monitoring import (
@@ -155,7 +158,9 @@ async def get_available_groups_for_monitoring(
                 monitoring_priority=group.monitoring_priority or 5,
                 next_monitoring_at=group.next_monitoring_at,
                 next_monitoring_at_local=(
-                    format_datetime_for_display(group.next_monitoring_at)
+                    format_monitoring_time_for_display(
+                        group.next_monitoring_at
+                    )
                     if group.next_monitoring_at
                     else None
                 ),
@@ -217,7 +222,9 @@ async def get_active_monitoring_groups(
                 monitoring_priority=group.monitoring_priority,
                 next_monitoring_at=group.next_monitoring_at,
                 next_monitoring_at_local=(
-                    format_datetime_for_display(group.next_monitoring_at)
+                    format_monitoring_time_for_display(
+                        group.next_monitoring_at
+                    )
                     if group.next_monitoring_at
                     else None
                 ),
@@ -468,7 +475,7 @@ async def get_group_monitoring_status(
         monitoring_priority=group.monitoring_priority,
         next_monitoring_at=group.next_monitoring_at,
         next_monitoring_at_local=(
-            format_datetime_for_display(group.next_monitoring_at)
+            format_monitoring_time_for_display(group.next_monitoring_at)
             if group.next_monitoring_at
             else None
         ),

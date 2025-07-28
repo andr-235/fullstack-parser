@@ -18,6 +18,10 @@ from app.models.vk_group import VKGroup
 from app.services.arq_enqueue import enqueue_run_parsing_task
 from app.services.vk_api_service import VKAPIService
 from app.core.config import settings
+from app.core.time_utils import (
+    format_datetime_for_display,
+    format_monitoring_time_for_display,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -374,7 +378,7 @@ class MonitoringService:
                         "Конвертируем время",
                         utc_time=next_monitoring_time.isoformat(),
                     )
-                    next_monitoring_local = format_datetime_for_display(
+                    next_monitoring_local = format_monitoring_time_for_display(
                         next_monitoring_time
                     )
                     self.logger.info(

@@ -58,6 +58,25 @@ def now_vladivostok() -> datetime:
     return datetime.now(get_vladivostok_timezone())
 
 
+def format_monitoring_time_for_display(dt: datetime) -> str:
+    """
+    Форматировать время мониторинга для отображения пользователю
+    Без дополнительной конвертации часового пояса, так как время уже содержит правильный интервал
+
+    Args:
+        dt: Дата и время мониторинга
+
+    Returns:
+        Отформатированная строка
+    """
+    if dt.tzinfo is None:
+        # Если время без часового пояса, считаем что это UTC
+        dt = dt.replace(tzinfo=timezone.utc)
+
+    # Отображаем время как есть, без конвертации в локальный часовой пояс
+    return dt.strftime("%d.%m.%Y %H:%M:%S")
+
+
 def format_datetime_for_display(
     dt: datetime, include_timezone: bool = False
 ) -> str:
