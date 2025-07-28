@@ -7,7 +7,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text
+import sqlalchemy as sa
+from sqlalchemy import Boolean, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
@@ -57,7 +58,8 @@ class VKGroup(BaseModel):
         Integer, default=60, comment="Интервал мониторинга в минутах"
     )
     next_monitoring_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, comment="Когда следующий раз запускать мониторинг"
+        sa.DateTime(timezone=True),
+        comment="Когда следующий раз запускать мониторинг",
     )
     monitoring_priority: Mapped[int] = mapped_column(
         Integer,
@@ -67,7 +69,8 @@ class VKGroup(BaseModel):
 
     # Статистика
     last_parsed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, comment="Когда последний раз парсили группу"
+        sa.DateTime(timezone=True),
+        comment="Когда последний раз парсили группу",
     )
     total_posts_parsed: Mapped[int] = mapped_column(
         Integer, default=0, comment="Общее количество обработанных постов"
@@ -81,7 +84,8 @@ class VKGroup(BaseModel):
         Integer, default=0, comment="Количество запусков мониторинга"
     )
     last_monitoring_success: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, comment="Последний успешный запуск мониторинга"
+        sa.DateTime(timezone=True),
+        comment="Последний успешный запуск мониторинга",
     )
     last_monitoring_error: Mapped[Optional[str]] = mapped_column(
         Text, comment="Последняя ошибка мониторинга"

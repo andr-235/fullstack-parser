@@ -456,11 +456,11 @@ class ParserService:
         # Обновляем дату
         date_value = post_data.get("date")
         if isinstance(date_value, datetime):
-            post.updated_at = date_value.replace(tzinfo=None)
+            post.updated_at = date_value.replace(tzinfo=timezone.utc)
         elif isinstance(date_value, (int, float)):
             post.updated_at = datetime.fromtimestamp(
                 date_value, tz=timezone.utc
-            ).replace(tzinfo=None)
+            )
         else:
             self.logger.warning(
                 "Неожиданный тип даты",
@@ -477,12 +477,10 @@ class ParserService:
         # Обрабатываем дату публикации
         date_value = post_data.get("date")
         if isinstance(date_value, datetime):
-            published_at = date_value.replace(tzinfo=None)
-            updated_at = date_value.replace(tzinfo=None)
+            published_at = date_value.replace(tzinfo=timezone.utc)
+            updated_at = date_value.replace(tzinfo=timezone.utc)
         elif isinstance(date_value, (int, float)):
-            published_at = datetime.fromtimestamp(
-                date_value, tz=timezone.utc
-            ).replace(tzinfo=None)
+            published_at = datetime.fromtimestamp(date_value, tz=timezone.utc)
             updated_at = published_at
         else:
             self.logger.warning(
@@ -490,7 +488,7 @@ class ParserService:
                 date_type=type(date_value),
                 date_value=date_value,
             )
-            published_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            published_at = datetime.now(timezone.utc)
             updated_at = published_at
 
         # Создаем новый пост
@@ -772,14 +770,14 @@ class ParserService:
             text=comment_data.get("text", ""),
             published_at=datetime.fromtimestamp(
                 comment_data.get("date", 0), tz=timezone.utc
-            ).replace(tzinfo=None),
+            ),
             author_id=author_id,
             author_name=author_name,
             author_screen_name=author_screen_name,
             author_photo_url=author_photo_url,
             is_processed=True,
             matched_keywords_count=len(matches),
-            processed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            processed_at=datetime.now(timezone.utc),
         )
 
         self.db.add(new_comment)
@@ -803,7 +801,7 @@ class ParserService:
         self, group: VKGroup, stats: ParseStats
     ) -> None:
         """Обновляет статистику группы после парсинга"""
-        group.last_parsed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        group.last_parsed_at = datetime.now(timezone.utc)
         group.total_posts_parsed += stats.posts_processed
         group.total_comments_found += stats.comments_found
         await self.db.commit()

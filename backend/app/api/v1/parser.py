@@ -141,7 +141,7 @@ async def update_comment_status(
     if status_update.is_viewed is not None:
         comment.is_viewed = status_update.is_viewed
         if status_update.is_viewed:
-            comment.viewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            comment.viewed_at = datetime.now(timezone.utc)
         else:
             comment.viewed_at = None
 

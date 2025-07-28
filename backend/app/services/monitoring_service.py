@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List
 
 import structlog
-from sqlalchemy import and_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from arq import create_pool
 from arq.connections import RedisSettings
@@ -42,19 +42,21 @@ class MonitoringService:
 
     async def get_groups_for_monitoring(self) -> List[VKGroup]:
         """Получить группы, готовые для мониторинга"""
-        # Используем время Владивостока для сравнения
-        from app.core.time_utils import now_vladivostok
+        # Используем UTC время для сравнения
+        from datetime import timezone
 
-        now = now_vladivostok().replace(tzinfo=None)
+        now = datetime.now(timezone.utc)
 
         # Получаем активные группы с включенным мониторингом,
         # которые нужно проверить сейчас или уже просрочены
+        # Обрабатываем как время с часовым поясом, так и без него
         query = (
             select(VKGroup)
             .where(
                 and_(
                     VKGroup.is_active,
                     VKGroup.auto_monitoring_enabled,
+                    # Сравниваем время мониторинга
                     VKGroup.next_monitoring_at <= now,
                 )
             )
@@ -73,15 +75,16 @@ class MonitoringService:
         if not group.auto_monitoring_enabled:
             return
 
-        # Используем время Владивостока для планирования
-        from app.core.time_utils import now_vladivostok
+        # Используем UTC время для планирования
+        from datetime import timezone
 
-        # Рассчитываем время следующего мониторинга
-        next_time = now_vladivostok() + timedelta(
+        # Рассчитываем время следующего мониторинга в UTC
+        next_time = datetime.now(timezone.utc) + timedelta(
             minutes=group.monitoring_interval_minutes
         )
 
-        group.next_monitoring_at = next_time.replace(tzinfo=None)
+        # Сохраняем в UTC без удаления часового пояса
+        group.next_monitoring_at = next_time
         await self.db.commit()
 
         self.logger.info(
@@ -124,9 +127,7 @@ class MonitoringService:
 
                 # Обновляем статистику
                 group.monitoring_runs_count += 1
-                group.last_monitoring_success = datetime.now(
-                    timezone.utc
-                ).replace(tzinfo=None)
+                group.last_monitoring_success = datetime.now(timezone.utc)
                 group.last_monitoring_error = None
 
                 # Планируем следующий мониторинг
@@ -249,9 +250,7 @@ class MonitoringService:
                 1, min(1440, interval_minutes)
             )  # 1-1440 минут
             group.monitoring_priority = max(1, min(10, priority))  # 1-10
-            group.next_monitoring_at = datetime.now(timezone.utc).replace(
-                tzinfo=None
-            )
+            group.next_monitoring_at = datetime.now(timezone.utc)
 
             await self.db.commit()
 
@@ -334,14 +333,15 @@ class MonitoringService:
             monitored_groups = len(monitored_groups.scalars().all())
 
             # Группы, готовые для мониторинга
-            from app.core.time_utils import now_vladivostok
+            from datetime import timezone
 
-            now = now_vladivostok().replace(tzinfo=None)
+            now = datetime.now(timezone.utc)
             ready_groups = await self.db.execute(
                 select(VKGroup).where(
                     and_(
                         VKGroup.is_active,
                         VKGroup.auto_monitoring_enabled,
+                        # Сравниваем время мониторинга
                         VKGroup.next_monitoring_at <= now,
                     )
                 )

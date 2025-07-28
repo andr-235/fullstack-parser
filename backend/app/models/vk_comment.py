@@ -2,16 +2,12 @@
 Модель VK комментария
 """
 
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-)
-from sqlalchemy.orm import relationship
+from datetime import datetime
+from typing import Optional
+
+import sqlalchemy as sa
+from sqlalchemy import ForeignKey, String, Text, Integer, Boolean
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
 
@@ -22,69 +18,91 @@ class VKComment(BaseModel):
     __tablename__ = "vk_comments"
 
     # Основная информация
-    vk_id = Column(
+    vk_id: Mapped[int] = mapped_column(
         Integer, nullable=False, index=True, comment="ID комментария в ВК"
     )
-    text = Column(Text, nullable=False, comment="Текст комментария")
+    text: Mapped[str] = mapped_column(
+        Text, nullable=False, comment="Текст комментария"
+    )
 
     # Связи
-    post_id = Column(Integer, ForeignKey("vk_posts.id"), nullable=False)
-    post = relationship("VKPost", back_populates="comments")
-    post_vk_id = Column(
+    post_id: Mapped[int] = mapped_column(
+        ForeignKey("vk_posts.id"), nullable=False
+    )
+    post: Mapped["VKPost"] = relationship("VKPost", back_populates="comments")
+    post_vk_id: Mapped[Optional[int]] = mapped_column(
         Integer, comment="ID поста в VK (для формирования ссылок)"
     )
 
     # Автор комментария
-    author_id = Column(
+    author_id: Mapped[int] = mapped_column(
         Integer, nullable=False, comment="ID автора комментария"
     )
-    author_name = Column(String(200), comment="Имя автора")
-    author_screen_name = Column(String(100), comment="Короткое имя автора")
-    author_photo_url = Column(String(500), comment="URL фото автора")
+    author_name: Mapped[Optional[str]] = mapped_column(
+        String(200), comment="Имя автора"
+    )
+    author_screen_name: Mapped[Optional[str]] = mapped_column(
+        String(100), comment="Короткое имя автора"
+    )
+    author_photo_url: Mapped[Optional[str]] = mapped_column(
+        String(500), comment="URL фото автора"
+    )
 
     # Метаданные
-    published_at = Column(
-        DateTime, nullable=False, comment="Дата публикации комментария"
+    published_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
+        nullable=False,
+        comment="Дата публикации комментария",
     )
-    likes_count = Column(Integer, default=0, comment="Количество лайков")
+    likes_count: Mapped[int] = mapped_column(
+        Integer, default=0, comment="Количество лайков"
+    )
 
     # Иерархия комментариев
-    parent_comment_id = Column(
-        Integer,
-        ForeignKey("vk_comments.id"),
-        comment="ID родительского комментария",
+    parent_comment_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("vk_comments.id"), comment="ID родительского комментария"
     )
-    parent_comment = relationship("VKComment", remote_side="VKComment.id")
+    parent_comment: Mapped[Optional["VKComment"]] = relationship(
+        "VKComment", remote_side="VKComment.id"
+    )
 
     # Вложения (упрощённо)
-    has_attachments = Column(
+    has_attachments: Mapped[bool] = mapped_column(
         Boolean, default=False, comment="Есть ли вложения"
     )
-    attachments_info = Column(Text, comment="JSON с информацией о вложениях")
+    attachments_info: Mapped[Optional[str]] = mapped_column(
+        Text, comment="JSON с информацией о вложениях"
+    )
 
     # Состояние обработки
-    is_processed = Column(
+    is_processed: Mapped[bool] = mapped_column(
         Boolean, default=False, comment="Обработан ли комментарий"
     )
-    processed_at = Column(DateTime, comment="Когда был обработан")
+    processed_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), comment="Когда был обработан"
+    )
 
     # Найденные ключевые слова
-    matched_keywords_count = Column(
+    matched_keywords_count: Mapped[int] = mapped_column(
         Integer, default=0, comment="Количество найденных ключевых слов"
     )
 
     # Статус просмотра и архивирования
-    is_viewed = Column(
+    is_viewed: Mapped[bool] = mapped_column(
         Boolean, default=False, comment="Просмотрен ли комментарий"
     )
-    viewed_at = Column(DateTime, comment="Когда был просмотрен")
-    is_archived = Column(
+    viewed_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), comment="Когда был просмотрен"
+    )
+    is_archived: Mapped[bool] = mapped_column(
         Boolean, default=False, comment="Архивирован ли комментарий"
     )
-    archived_at = Column(DateTime, comment="Когда был архивирован")
+    archived_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), comment="Когда был архивирован"
+    )
 
     # Связи с ключевыми словами
-    keyword_matches = relationship(
+    keyword_matches: Mapped[list["CommentKeywordMatch"]] = relationship(
         "CommentKeywordMatch",
         back_populates="comment",
         cascade="all, delete-orphan",

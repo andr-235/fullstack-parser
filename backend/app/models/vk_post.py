@@ -2,16 +2,12 @@
 Модель VK поста
 """
 
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    Text,
-    UniqueConstraint,
-)
-from sqlalchemy.orm import relationship
+from datetime import datetime
+from typing import Optional
+
+import sqlalchemy as sa
+from sqlalchemy import ForeignKey, Integer, Text, Boolean, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
 
@@ -25,39 +21,57 @@ class VKPost(BaseModel):
     )
 
     # Основная информация
-    vk_id = Column(
+    vk_id: Mapped[int] = mapped_column(
         Integer, nullable=False, index=True, comment="ID поста в ВК"
     )
-    vk_owner_id = Column(Integer, nullable=False, comment="ID владельца поста")
-    text = Column(Text, comment="Текст поста")
+    vk_owner_id: Mapped[int] = mapped_column(
+        Integer, nullable=False, comment="ID владельца поста"
+    )
+    text: Mapped[Optional[str]] = mapped_column(Text, comment="Текст поста")
 
     # Связь с группой
-    group_id = Column(Integer, ForeignKey("vk_groups.id"), nullable=False)
-    group = relationship("VKGroup", back_populates="posts")
+    group_id: Mapped[int] = mapped_column(
+        ForeignKey("vk_groups.id"), nullable=False
+    )
+    group: Mapped["VKGroup"] = relationship("VKGroup", back_populates="posts")
 
     # Метаданные
-    published_at = Column(
-        DateTime, nullable=False, comment="Дата публикации поста"
+    published_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
+        nullable=False,
+        comment="Дата публикации поста",
     )
-    likes_count = Column(Integer, default=0, comment="Количество лайков")
-    reposts_count = Column(Integer, default=0, comment="Количество репостов")
-    comments_count = Column(
+    likes_count: Mapped[int] = mapped_column(
+        Integer, default=0, comment="Количество лайков"
+    )
+    reposts_count: Mapped[int] = mapped_column(
+        Integer, default=0, comment="Количество репостов"
+    )
+    comments_count: Mapped[int] = mapped_column(
         Integer, default=0, comment="Количество комментариев"
     )
-    views_count = Column(Integer, default=0, comment="Количество просмотров")
+    views_count: Mapped[int] = mapped_column(
+        Integer, default=0, comment="Количество просмотров"
+    )
 
     # Состояние обработки
-    is_parsed = Column(Boolean, default=False, comment="Обработан ли пост")
-    parsed_at = Column(DateTime, comment="Когда был обработан")
+    is_parsed: Mapped[bool] = mapped_column(
+        Boolean, default=False, comment="Обработан ли пост"
+    )
+    parsed_at: Mapped[Optional[datetime]] = mapped_column(
+        sa.DateTime(timezone=True), comment="Когда был обработан"
+    )
 
     # Вложения (упрощённо)
-    has_attachments = Column(
+    has_attachments: Mapped[bool] = mapped_column(
         Boolean, default=False, comment="Есть ли вложения"
     )
-    attachments_info = Column(Text, comment="JSON с информацией о вложениях")
+    attachments_info: Mapped[Optional[str]] = mapped_column(
+        Text, comment="JSON с информацией о вложениях"
+    )
 
     # Связи
-    comments = relationship(
+    comments: Mapped[list["VKComment"]] = relationship(
         "VKComment", back_populates="post", cascade="all, delete-orphan"
     )
 
