@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
 import asyncio
+
+from sqlalchemy import select
+
 from app.core.database import async_engine
-from app.models import VKComment, VKPost, VKGroup, Keyword, CommentKeywordMatch
-from sqlalchemy import select, text
+from app.models import CommentKeywordMatch, Keyword, VKComment, VKGroup, VKPost
 
 
 async def test_api():

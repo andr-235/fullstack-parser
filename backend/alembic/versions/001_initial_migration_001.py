@@ -6,8 +6,6 @@ Create Date: 2024-01-01 00:00:00.000000
 
 """
 
-
-
 # revision identifiers, used by Alembic.
 revision = "001_initial_migration_001"
 down_revision = None

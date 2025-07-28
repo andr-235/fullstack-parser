@@ -2,25 +2,22 @@
 API endpoints для управления VK группами
 """
 
+import asyncio
 import re
-from typing import Optional, Dict, List, Any, TypedDict
+import uuid
+from typing import Dict, List, Optional, TypedDict
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     Form,
     HTTPException,
     UploadFile,
     status,
-    BackgroundTasks,
 )
-from fastapi.responses import StreamingResponse
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-import json
-import asyncio
-import uuid
-from datetime import datetime, timezone
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -38,7 +35,6 @@ from app.schemas.vk_group import (
 # from app.services.vk_api_service import VKAPIService  # Удалено как неиспользуемое
 from app.services.group_service import group_service
 from app.services.vk_api_service import VKAPIService
-
 
 router = APIRouter(tags=["Groups"])
 

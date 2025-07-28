@@ -11,9 +11,10 @@ from pathlib import Path
 # Добавляем путь к проекту
 sys.path.append(str(Path(__file__).parent.parent))
 
+from sqlalchemy import select
+
 from app.core.database import AsyncSessionLocal
 from app.models.vk_group import VKGroup
-from sqlalchemy import select
 
 
 async def fix_monitoring_times():

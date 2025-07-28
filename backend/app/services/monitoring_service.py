@@ -9,19 +9,17 @@ from datetime import datetime, timedelta, timezone
 from typing import List
 
 import structlog
-from sqlalchemy import and_, or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
 from arq import create_pool
 from arq.connections import RedisSettings
+from sqlalchemy import and_, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.vk_group import VKGroup
-from app.services.arq_enqueue import enqueue_run_parsing_task
-from app.services.vk_api_service import VKAPIService
 from app.core.config import settings
 from app.core.time_utils import (
-    format_datetime_for_display,
     format_monitoring_time_for_display,
 )
+from app.models.vk_group import VKGroup
+from app.services.vk_api_service import VKAPIService
 
 logger = structlog.get_logger(__name__)
 
@@ -492,7 +490,6 @@ class MonitoringService:
 
             # Конвертируем в локальное время для отображения
             self.logger.info("Начинаем конвертацию времени")
-            from app.core.time_utils import format_datetime_for_display
 
             next_monitoring_local = None
             if next_monitoring_time:

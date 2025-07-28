@@ -6,19 +6,19 @@
 import asyncio
 import signal
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 import structlog
 from arq import create_pool
 from arq.connections import RedisSettings
-from sqlalchemy import select, and_, update
+from sqlalchemy import and_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.services.monitoring_service import MonitoringService
-from app.services.vk_api_service import VKAPIService
 from app.core.database import AsyncSessionLocal
 from app.models.vk_group import VKGroup
+from app.services.monitoring_service import MonitoringService
+from app.services.vk_api_service import VKAPIService
 
 logger = structlog.get_logger(__name__)
 

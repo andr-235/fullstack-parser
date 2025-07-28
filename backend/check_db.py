@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import asyncio
+
 from app.core.database import engine
 
 
@@ -32,7 +33,7 @@ async def check_data():
         """
         )
         rows = result.fetchall()
-        print(f"\nSample comments with groups:")
+        print("\nSample comments with groups:")
         for row in rows:
             print(
                 f"Comment {row[0]}: author={row[1]}, post={row[2]}, group={row[3]}"
