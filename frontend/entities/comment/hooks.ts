@@ -87,7 +87,7 @@ export function useUpdateCommentStatus() {
     }: {
       commentId: number
       data: { is_viewed?: boolean; is_archived?: boolean }
-    }) => api.patch<VKCommentResponse>(`/comments/${commentId}/`, data),
+    }) => api.patch<VKCommentResponse>(`/comments/${commentId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments'] })
       queryClient.invalidateQueries({ queryKey: ['infinite-comments'] })
@@ -101,7 +101,7 @@ export function useMarkCommentAsViewed() {
 
   return useMutation({
     mutationFn: (commentId: number) =>
-      api.patch<VKCommentResponse>(`/comments/${commentId}/`, {
+      api.patch<VKCommentResponse>(`/comments/${commentId}`, {
         is_viewed: true,
       }),
     onSuccess: () => {
@@ -117,7 +117,7 @@ export function useArchiveComment() {
 
   return useMutation({
     mutationFn: (commentId: number) =>
-      api.patch<VKCommentResponse>(`/comments/${commentId}/`, {
+      api.patch<VKCommentResponse>(`/comments/${commentId}`, {
         is_archived: true,
       }),
     onSuccess: () => {
@@ -133,7 +133,7 @@ export function useUnarchiveComment() {
 
   return useMutation({
     mutationFn: (commentId: number) =>
-      api.patch<VKCommentResponse>(`/comments/${commentId}/`, {
+      api.patch<VKCommentResponse>(`/comments/${commentId}`, {
         is_archived: false,
       }),
     onSuccess: () => {

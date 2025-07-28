@@ -2,6 +2,7 @@
 API endpoints для управления комментариями
 """
 
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -12,6 +13,7 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.core.logging import get_logger
 from app.models import CommentKeywordMatch, Keyword, VKComment, VKGroup, VKPost
+from app.schemas.vk_comment import CommentUpdateRequest
 
 router = APIRouter(tags=["Comments"])
 logger = get_logger(__name__)
@@ -244,6 +246,82 @@ async def mark_comment_as_viewed(
         raise
     except Exception as e:
         logger.error(f"Error marking comment {comment_id} as viewed: {e}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при обновлении комментария",
+        )
+
+
+@router.patch("/{comment_id}")
+async def update_comment(
+    comment_id: int,
+    update_data: CommentUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Обновить статус комментария (просмотрен/архивирован).
+    """
+    try:
+        result = await db.execute(
+            select(VKComment).where(VKComment.id == comment_id)
+        )
+        comment = result.scalar_one_or_none()
+
+        if not comment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Комментарий не найден",
+            )
+
+        # Обновляем статус просмотренности
+        if update_data.is_viewed is not None:
+            comment.is_viewed = update_data.is_viewed
+            if update_data.is_viewed:
+                comment.viewed_at = datetime.now(timezone.utc)
+            else:
+                comment.viewed_at = None
+
+        # Обновляем статус архивирования
+        if update_data.is_archived is not None:
+            comment.is_archived = update_data.is_archived
+            if update_data.is_archived:
+                comment.archived_at = datetime.now(timezone.utc).replace(
+                    tzinfo=None
+                )
+            else:
+                comment.archived_at = None
+
+        await db.commit()
+        await db.refresh(comment)
+
+        return {
+            "id": comment.id,
+            "vk_id": comment.vk_id,
+            "text": comment.text,
+            "author_name": comment.author_name,
+            "author_screen_name": comment.author_screen_name,
+            "published_at": (
+                comment.published_at.isoformat()
+                if comment.published_at
+                else None
+            ),
+            "likes_count": comment.likes_count,
+            "is_viewed": comment.is_viewed,
+            "is_archived": comment.is_archived,
+            "matched_keywords_count": comment.matched_keywords_count,
+            "created_at": (
+                comment.created_at.isoformat() if comment.created_at else None
+            ),
+            "updated_at": (
+                comment.updated_at.isoformat() if comment.updated_at else None
+            ),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating comment {comment_id}: {e}")
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
