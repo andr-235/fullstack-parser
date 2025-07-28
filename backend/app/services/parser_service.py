@@ -640,23 +640,22 @@ class ParserService:
                 self.logger.info(
                     "Запрос данных пользователя", author_id=author_id
                 )
-                users = await self.vk_service.api.users.get(
-                    user_ids=[author_id], fields=["screen_name", "photo_100"]
+                user_info = await self.vk_service.get_user_info(author_id)
+                self.logger.info(
+                    "Ответ VK API для пользователя", user_info=user_info
                 )
-                self.logger.info("Ответ VK API для пользователя", users=users)
 
-                if users and len(users) > 0:
-                    user = users[0]
+                if user_info:
                     # Формируем полное имя из first_name и last_name
-                    first_name = getattr(user, "first_name", "")
-                    last_name = getattr(user, "last_name", "")
+                    first_name = user_info.get("first_name", "")
+                    last_name = user_info.get("last_name", "")
                     name = f"{first_name} {last_name}".strip()
 
                     # Получаем screen_name (может быть пустым)
-                    screen_name = getattr(user, "screen_name", "")
+                    screen_name = user_info.get("screen_name", "")
 
                     # Получаем URL фото
-                    photo_url = getattr(user, "photo_100", "")
+                    photo_url = user_info.get("photo_100", "")
 
                     self.logger.info(
                         "Информация о пользователе получена",
@@ -670,7 +669,7 @@ class ParserService:
                     return name, screen_name, photo_url
                 else:
                     self.logger.warning(
-                        "VK API вернул пустой список пользователей",
+                        "VK API вернул пустые данные пользователя",
                         author_id=author_id,
                     )
             except Exception as e:
@@ -692,16 +691,15 @@ class ParserService:
             group_id = abs(author_id)
             try:
                 self.logger.info("Запрос данных группы", group_id=group_id)
-                groups = await self.vk_service.api.groups.get_by_id(
-                    group_ids=[group_id], fields=["screen_name", "photo_100"]
+                group_info = await self.vk_service.get_group_info(group_id)
+                self.logger.info(
+                    "Ответ VK API для группы", group_info=group_info
                 )
-                self.logger.info("Ответ VK API для группы", groups=groups)
 
-                if groups and len(groups) > 0:
-                    group = groups[0]
-                    name = getattr(group, "name", "")
-                    screen_name = getattr(group, "screen_name", "")
-                    photo_url = getattr(group, "photo_100", "")
+                if group_info:
+                    name = group_info.get("name", "")
+                    screen_name = group_info.get("screen_name", "")
+                    photo_url = group_info.get("photo_100", "")
 
                     self.logger.info(
                         "Информация о группе получена",
@@ -715,7 +713,7 @@ class ParserService:
                     return name, screen_name, photo_url
                 else:
                     self.logger.warning(
-                        "VK API вернул пустой список групп", group_id=group_id
+                        "VK API вернул пустые данные группы", group_id=group_id
                     )
             except Exception as e:
                 self.logger.error(

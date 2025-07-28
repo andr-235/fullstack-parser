@@ -7,7 +7,9 @@
         restart restart-prod restart-dev status status-prod status-dev \
         health health-prod health-dev backup backup-prod \
         optimize-images scan-vulnerabilities monitor-resources \
-        adminer adminer-start adminer-stop
+        pgadmin pgadmin-start pgadmin-stop pgadmin-logs pgadmin-restart \
+        db-exec db-backup db-restore db-status db-tables db-connect \
+        update-authors check-authors backend-exec backend-shell
 
 # Переменные
 COMPOSE_PROD = docker-compose.prod.ip.yml
@@ -217,7 +219,7 @@ dev: build-dev up ## Быстрый запуск разработки (сбор�
 	@echo "$(GREEN)Разработка запущена!$(NC)"
 	@echo "Frontend: http://localhost:3000"
 	@echo "Backend: http://localhost:8000"
-	@echo "Adminer: http://localhost:8080"
+	@echo "pgAdmin: http://localhost:5050"
 	@echo "MailHog: http://localhost:8025"
 	@echo "Redis Commander: http://localhost:8081"
 
@@ -231,21 +233,103 @@ stop-prod: down-prod ## Быстрая остановка продакшена
 	@echo "$(YELLOW)Продакшен остановлен$(NC)"
 
 # =============================================================================
-# Adminer команды
+# pgAdmin команды
 # =============================================================================
 
-adminer: adminer-start ## Быстрый запуск Adminer
+pgadmin: pgadmin-start ## Быстрый запуск pgAdmin
 
-adminer-start: ## Запустить Adminer для управления БД
-	@echo "$(GREEN)Запуск Adminer...$(NC)"
-	docker-compose -f $(COMPOSE_PROD_IP) --profile admin up adminer -d
-	@echo "$(GREEN)Adminer запущен!$(NC)"
-	@echo "Доступ: http://localhost:8080"
+pgadmin-start: ## Запустить pgAdmin для управления БД
+	@echo "$(GREEN)Запуск pgAdmin...$(NC)"
+	docker-compose -f $(COMPOSE_PROD_IP) --profile admin up pgadmin -d
+	@echo "$(GREEN)pgAdmin запущен!$(NC)"
+	@echo "Доступ: http://localhost:5050"
+	@echo "Email: admin@admin.com"
+	@echo "Пароль: admin"
 	@echo "Сервер: postgres"
 	@echo "Пользователь: ${DB_USER}"
 	@echo "База данных: ${DB_NAME}"
 
-adminer-stop: ## Остановить Adminer
-	@echo "$(YELLOW)Остановка Adminer...$(NC)"
-	docker-compose -f $(COMPOSE_PROD_IP) stop adminer
-	@echo "$(YELLOW)Adminer остановлен$(NC)" 
+pgadmin-stop: ## Остановить pgAdmin
+	@echo "$(YELLOW)Остановка pgAdmin...$(NC)"
+	docker-compose -f $(COMPOSE_PROD_IP) stop pgadmin
+	@echo "$(YELLOW)pgAdmin остановлен$(NC)"
+
+pgadmin-logs: ## Показать логи pgAdmin
+	@echo "$(GREEN)Логи pgAdmin:$(NC)"
+	docker-compose -f $(COMPOSE_PROD_IP) logs -f pgadmin
+
+pgadmin-restart: ## Перезапустить pgAdmin
+	@echo "$(GREEN)Перезапуск pgAdmin...$(NC)"
+	docker-compose -f $(COMPOSE_PROD_IP) restart pgadmin
+	@echo "$(GREEN)pgAdmin перезапущен$(NC)"
+
+# =============================================================================
+# Команды для работы с БД
+# =============================================================================
+
+db-exec: ## Выполнить SQL запрос в БД
+	@read -p "Введите SQL запрос: " query; \
+	docker-compose -f $(COMPOSE_PROD_IP) exec -T postgres psql -U ${DB_USER} -d ${DB_NAME} -c "$$query"
+
+db-backup: ## Создать резервную копию БД
+	@echo "$(GREEN)Создание резервной копии БД...$(NC)"
+	@mkdir -p backup/$(shell date +%Y%m%d_%H%M%S)
+	docker-compose -f $(COMPOSE_PROD_IP) exec -T postgres pg_dump -U ${DB_USER} ${DB_NAME} > backup/$(shell date +%Y%m%d_%H%M%S)/db_backup.sql
+	@echo "Резервная копия создана в backup/$(shell date +%Y%m%d_%H%M%S)/"
+
+db-restore: ## Восстановить БД из резервной копии
+	@echo "$(YELLOW)ВНИМАНИЕ: Восстановление БД из резервной копии!$(NC)"
+	@read -p "Введите путь к файлу резервной копии: " file; \
+	if [ -f "$$file" ]; then \
+		docker-compose -f $(COMPOSE_PROD_IP) exec -T postgres psql -U ${DB_USER} -d ${DB_NAME} < $$file; \
+		echo "$(GREEN)БД восстановлена из $$file$(NC)"; \
+	else \
+		echo "$(RED)Файл $$file не найден$(NC)"; \
+	fi
+
+db-status: ## Показать статус БД
+	@echo "$(GREEN)Статус БД:$(NC)"
+	docker-compose -f $(COMPOSE_PROD_IP) exec -T postgres psql -U ${DB_USER} -d ${DB_NAME} -c "SELECT version();"
+	@echo ""
+	@echo "$(GREEN)Размер БД:$(NC)"
+	docker-compose -f $(COMPOSE_PROD_IP) exec -T postgres psql -U ${DB_USER} -d ${DB_NAME} -c "SELECT pg_size_pretty(pg_database_size('${DB_NAME}'));"
+
+db-tables: ## Показать список таблиц
+	@echo "$(GREEN)Список таблиц в БД:$(NC)"
+	docker-compose -f $(COMPOSE_PROD_IP) exec -T postgres psql -U ${DB_USER} -d ${DB_NAME} -c "\dt"
+
+db-connect: ## Подключиться к БД через psql
+	@echo "$(GREEN)Подключение к БД...$(NC)"
+	docker-compose -f $(COMPOSE_PROD_IP) exec postgres psql -U ${DB_USER} -d ${DB_NAME}
+
+# =============================================================================
+# Команды для работы со скриптами
+# =============================================================================
+
+update-authors: ## Обновить данные авторов в БД
+	@echo "$(GREEN)Обновление данных авторов в БД...$(NC)"
+	@if [ -f "backend/update_all_authors.py" ]; then \
+		docker cp backend/update_all_authors.py fullstack_prod_backend:/app/update_all_authors.py; \
+		docker-compose -f $(COMPOSE_PROD_IP) exec backend python update_all_authors.py; \
+		docker-compose -f $(COMPOSE_PROD_IP) exec backend rm -f update_all_authors.py; \
+	else \
+		echo "$(RED)Файл backend/update_all_authors.py не найден$(NC)"; \
+	fi
+
+check-authors: ## Проверить данные авторов в БД
+	@echo "$(GREEN)Проверка данных авторов в БД...$(NC)"
+	@if [ -f "backend/check_authors.py" ]; then \
+		docker cp backend/check_authors.py fullstack_prod_backend:/app/check_authors.py; \
+		docker-compose -f $(COMPOSE_PROD_IP) exec backend python check_authors.py; \
+		docker-compose -f $(COMPOSE_PROD_IP) exec backend rm -f check_authors.py; \
+	else \
+		echo "$(RED)Файл backend/check_authors.py не найден$(NC)"; \
+	fi
+
+backend-exec: ## Выполнить команду в backend контейнере
+	@read -p "Введите команду для выполнения в backend: " cmd; \
+	docker-compose -f $(COMPOSE_PROD_IP) exec backend $$cmd
+
+backend-shell: ## Открыть shell в backend контейнере
+	@echo "$(GREEN)Открытие shell в backend контейнере...$(NC)"
+	docker-compose -f $(COMPOSE_PROD_IP) exec backend bash 
