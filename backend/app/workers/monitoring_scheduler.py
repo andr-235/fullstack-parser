@@ -6,18 +6,70 @@
 import asyncio
 import signal
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import structlog
 from arq import create_pool
 from arq.connections import RedisSettings
+from sqlalchemy import select, and_, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.services.monitoring_service import MonitoringService
 from app.services.vk_api_service import VKAPIService
 from app.core.database import AsyncSessionLocal
+from app.models.vk_group import VKGroup
 
 logger = structlog.get_logger(__name__)
+
+
+async def check_and_fix_outdated_monitoring_times(db: AsyncSession):
+    """Проверить и исправить устаревшее время мониторинга"""
+    try:
+        now = datetime.now(timezone.utc)
+
+        # Находим группы с устаревшим временем мониторинга
+        result = await db.execute(
+            select(VKGroup).where(
+                and_(
+                    VKGroup.is_active == True,
+                    VKGroup.auto_monitoring_enabled == True,
+                    VKGroup.next_monitoring_at <= now,
+                )
+            )
+        )
+        outdated_groups = result.scalars().all()
+
+        if outdated_groups:
+            logger.warning(
+                f"Найдено {len(outdated_groups)} групп с устаревшим временем мониторинга"
+            )
+
+            # Обновляем время для всех устаревших групп
+            next_time = now + timedelta(hours=1)  # Устанавливаем на час вперед
+
+            await db.execute(
+                update(VKGroup)
+                .where(
+                    and_(
+                        VKGroup.is_active == True,
+                        VKGroup.auto_monitoring_enabled == True,
+                        VKGroup.next_monitoring_at <= now,
+                    )
+                )
+                .values(next_monitoring_at=next_time)
+            )
+            await db.commit()
+
+            logger.info(
+                f"Обновлено время мониторинга для {len(outdated_groups)} групп на {next_time.isoformat()}"
+            )
+        else:
+            logger.info("Все группы имеют актуальное время мониторинга")
+
+    except Exception as e:
+        logger.error(f"Ошибка при проверке устаревшего времени: {e}")
+        await db.rollback()
 
 
 async def main():
@@ -57,6 +109,9 @@ async def main():
 
                 # Создаем сессию БД
                 async with AsyncSessionLocal() as db:
+                    # Проверяем и исправляем устаревшее время мониторинга
+                    await check_and_fix_outdated_monitoring_times(db)
+
                     # Инициализируем сервисы
                     vk_service = VKAPIService(
                         token=settings.vk.access_token,

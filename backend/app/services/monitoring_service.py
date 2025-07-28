@@ -76,11 +76,87 @@ class MonitoringService:
         result = await self.db.execute(query)
         groups = list(result.scalars().all())
 
+        # Отладочная информация
         self.logger.info(
             "Найдено групп для мониторинга",
             count=len(groups),
             current_time=now.isoformat(),
         )
+
+        # Дополнительная отладка - проверим несколько групп
+        if groups:
+            for i, group in enumerate(groups[:3]):
+                self.logger.info(
+                    f"Группа {i+1} для мониторинга",
+                    group_id=group.id,
+                    group_name=group.name,
+                    next_monitoring_at=(
+                        group.next_monitoring_at.isoformat()
+                        if group.next_monitoring_at
+                        else None
+                    ),
+                    is_active=group.is_active,
+                    auto_monitoring_enabled=group.auto_monitoring_enabled,
+                )
+        else:
+            # Проверим, почему нет групп
+            total_result = await self.db.execute(select(VKGroup))
+            total_groups = len(total_result.scalars().all())
+
+            active_result = await self.db.execute(
+                select(VKGroup).where(VKGroup.is_active == True)
+            )
+            active_groups = len(active_result.scalars().all())
+
+            monitored_result = await self.db.execute(
+                select(VKGroup).where(
+                    and_(
+                        VKGroup.is_active == True,
+                        VKGroup.auto_monitoring_enabled == True,
+                    )
+                )
+            )
+            monitored_groups = len(monitored_result.scalars().all())
+
+            # Проверим время у нескольких групп
+            sample_result = await self.db.execute(
+                select(VKGroup)
+                .where(
+                    and_(
+                        VKGroup.is_active == True,
+                        VKGroup.auto_monitoring_enabled == True,
+                    )
+                )
+                .limit(3)
+            )
+            sample_groups = sample_result.scalars().all()
+
+            self.logger.info(
+                "Отладка: почему нет групп для мониторинга",
+                total_groups=total_groups,
+                active_groups=active_groups,
+                monitored_groups=monitored_groups,
+                current_time=now.isoformat(),
+            )
+
+            for i, group in enumerate(sample_groups):
+                self.logger.info(
+                    f"Пример группы {i+1}",
+                    group_id=group.id,
+                    group_name=group.name,
+                    next_monitoring_at=(
+                        group.next_monitoring_at.isoformat()
+                        if group.next_monitoring_at
+                        else None
+                    ),
+                    is_active=group.is_active,
+                    auto_monitoring_enabled=group.auto_monitoring_enabled,
+                    time_comparison=(
+                        group.next_monitoring_at <= now
+                        if group.next_monitoring_at
+                        else "None"
+                    ),
+                )
 
         return groups
 
@@ -389,8 +465,11 @@ class MonitoringService:
                     and_(
                         VKGroup.is_active,
                         VKGroup.auto_monitoring_enabled,
-                        # Сравниваем время мониторинга
-                        VKGroup.next_monitoring_at <= now,
+                        # Используем ту же логику, что и в get_groups_for_monitoring
+                        or_(
+                            VKGroup.next_monitoring_at.is_(None),
+                            VKGroup.next_monitoring_at <= now,
+                        ),
                     )
                 )
             )
@@ -491,43 +570,30 @@ class MonitoringService:
             updated_count = 0
 
             for group in groups:
-                # Проверяем, нужно ли обновить время
-                if (
-                    not group.next_monitoring_at
-                    or group.next_monitoring_at <= now
-                ):
-                    # Устанавливаем время следующего мониторинга на текущее время + интервал
-                    group.next_monitoring_at = now + timedelta(
-                        minutes=group.monitoring_interval_minutes
-                    )
-                    updated_count += 1
+                # Всегда обновляем время для всех групп
+                # Устанавливаем время следующего мониторинга на текущее время
+                # чтобы группы попали в очередь мониторинга сразу
+                group.next_monitoring_at = now
+                updated_count += 1
 
-                    self.logger.info(
-                        "Обновлено время мониторинга группы",
-                        group_id=group.id,
-                        group_name=group.name,
-                        old_time=(
-                            group.next_monitoring_at.isoformat()
-                            if group.next_monitoring_at
-                            else None
-                        ),
-                        new_time=group.next_monitoring_at.isoformat(),
-                        interval_minutes=group.monitoring_interval_minutes,
-                    )
+                self.logger.info(
+                    "Обновлено время мониторинга группы",
+                    group_id=group.id,
+                    group_name=group.name,
+                    old_time=(
+                        group.next_monitoring_at.isoformat()
+                        if group.next_monitoring_at
+                        else None
+                    ),
+                    new_time=group.next_monitoring_at.isoformat(),
+                    interval_minutes=group.monitoring_interval_minutes,
+                )
 
             await self.db.commit()
-
-            self.logger.info(
-                "Сброс времени мониторинга завершен",
-                total_groups=len(groups),
-                updated_groups=updated_count,
-                current_time=now.isoformat(),
-            )
 
             return {
                 "total_groups": len(groups),
                 "updated_groups": updated_count,
-                "current_time": now.isoformat(),
             }
 
         except Exception as e:
@@ -536,8 +602,4 @@ class MonitoringService:
                 error=str(e),
                 exc_info=True,
             )
-            return {
-                "total_groups": 0,
-                "updated_groups": 0,
-                "error": str(e),
-            }
+            return {"error": str(e)}

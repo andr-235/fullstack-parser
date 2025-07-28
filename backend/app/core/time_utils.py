@@ -61,20 +61,21 @@ def now_vladivostok() -> datetime:
 def format_monitoring_time_for_display(dt: datetime) -> str:
     """
     Форматировать время мониторинга для отображения пользователю
-    Без дополнительной конвертации часового пояса, так как время уже содержит правильный интервал
+    Конвертирует UTC время в локальное время Владивостока
 
     Args:
-        dt: Дата и время мониторинга
+        dt: Дата и время мониторинга (UTC)
 
     Returns:
-        Отформатированная строка
+        Отформатированная строка в локальном времени
     """
     if dt.tzinfo is None:
         # Если время без часового пояса, считаем что это UTC
         dt = dt.replace(tzinfo=timezone.utc)
 
-    # Отображаем время как есть, без конвертации в локальный часовой пояс
-    return dt.strftime("%d.%m.%Y %H:%M:%S")
+    # Конвертируем в локальное время Владивостока
+    local_dt = utc_to_vladivostok(dt)
+    return local_dt.strftime("%d.%m.%Y %H:%M:%S")
 
 
 def format_datetime_for_display(
