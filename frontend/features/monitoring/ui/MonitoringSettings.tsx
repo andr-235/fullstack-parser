@@ -68,7 +68,9 @@ export default function MonitoringSettings({
           <div className="space-y-2">
             <Label className="text-sm font-medium">Группа</Label>
             <div className="p-3 bg-slate-800 rounded-md">
-              <div className="font-medium">{group.group_name || group.name}</div>
+              <div className="font-medium">
+                {group.group_name || group.name}
+              </div>
               <div className="text-sm text-slate-400">@{group.screen_name}</div>
             </div>
           </div>
@@ -159,7 +161,7 @@ export default function MonitoringSettings({
                 <span className="ml-2 font-medium">
                   {group.last_monitoring_success
                     ? group.last_monitoring_success_local ||
-                    formatDateTimeShort(group.last_monitoring_success)
+                      formatDateTimeShort(group.last_monitoring_success)
                     : 'Нет'}
                 </span>
               </div>
