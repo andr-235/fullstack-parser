@@ -88,7 +88,7 @@ const KeywordRow = ({
       onUpdate(
         keyword.id,
         { word: editedWord },
-        { onSuccess: () => { }, onError: () => { } }
+        { onSuccess: () => {}, onError: () => {} }
       )
     }
     setIsEditing(false)

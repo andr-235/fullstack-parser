@@ -17,7 +17,13 @@ import { Switch } from '@/shared/ui'
 import { FileUpload } from '@/shared/ui'
 import { Progress } from '@/shared/ui'
 import { useUploadKeywordsWithProgress } from '@/entities/keyword'
-import { Upload, AlertCircle, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import {
+  Upload,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Loader2,
+} from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import type { KeywordUploadResponse } from '@/types/api'
 
@@ -37,7 +43,9 @@ export default function UploadKeywordsModal({
   const [uploadResult, setUploadResult] =
     useState<KeywordUploadResponse | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
+  const [uploadStatus, setUploadStatus] = useState<
+    'idle' | 'uploading' | 'success' | 'error'
+  >('idle')
 
   // Новые состояния для отслеживания прогресса
   const [currentKeyword, setCurrentKeyword] = useState<string>('')
@@ -127,13 +135,15 @@ export default function UploadKeywordsModal({
       if (error?.response?.status) {
         switch (error.response.status) {
           case 404:
-            errorMessage = 'Сервер недоступен. Проверьте подключение к интернету'
+            errorMessage =
+              'Сервер недоступен. Проверьте подключение к интернету'
             break
           case 413:
             errorMessage = 'Файл слишком большой. Максимальный размер: 5MB'
             break
           case 422:
-            errorMessage = 'Некорректный формат файла. Проверьте структуру данных'
+            errorMessage =
+              'Некорректный формат файла. Проверьте структуру данных'
             break
           case 500:
             errorMessage = 'Ошибка сервера. Попробуйте позже'
@@ -147,7 +157,8 @@ export default function UploadKeywordsModal({
         } else if (error.message.includes('timeout')) {
           errorMessage = 'Превышено время ожидания. Попробуйте позже'
         } else if (error.message.includes('FILE_ERROR_NO_SPACE')) {
-          errorMessage = 'Недостаточно места на диске. Обратитесь к администратору'
+          errorMessage =
+            'Недостаточно места на диске. Обратитесь к администратору'
         } else if (error.message.includes('total_processed')) {
           errorMessage = 'Ошибка обработки ответа сервера. Попробуйте еще раз'
         } else {
@@ -242,7 +253,8 @@ export default function UploadKeywordsModal({
             />
             {selectedFile && (
               <p className="text-sm text-gray-600 mt-2">
-                Выбран файл: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                Выбран файл: {selectedFile.name} (
+                {(selectedFile.size / 1024).toFixed(1)} KB)
               </p>
             )}
           </div>
@@ -289,14 +301,21 @@ export default function UploadKeywordsModal({
           </div>
 
           {/* Статус загрузки */}
-          {(uploadStatus === 'uploading' || uploadStatus === 'success' || uploadStatus === 'error') && (
+          {(uploadStatus === 'uploading' ||
+            uploadStatus === 'success' ||
+            uploadStatus === 'error') && (
             <div className="border rounded-lg p-4 bg-gray-50">
               <div className="flex items-center gap-2 mb-3">
                 {getStatusIcon()}
-                <h4 className={`font-medium ${uploadStatus === 'success' ? 'text-green-700' :
-                  uploadStatus === 'error' ? 'text-red-700' :
-                    'text-blue-700'
-                  }`}>
+                <h4
+                  className={`font-medium ${
+                    uploadStatus === 'success'
+                      ? 'text-green-700'
+                      : uploadStatus === 'error'
+                        ? 'text-red-700'
+                        : 'text-blue-700'
+                  }`}
+                >
                   {getStatusText()}
                 </h4>
               </div>
@@ -307,10 +326,12 @@ export default function UploadKeywordsModal({
                   <p className="text-sm text-gray-600">
                     {currentKeyword ? (
                       <>
-                        Обрабатывается: <span className="font-medium">{currentKeyword}</span>
+                        Обрабатывается:{' '}
+                        <span className="font-medium">{currentKeyword}</span>
                         {totalKeywords > 0 && (
                           <span className="text-gray-500">
-                            {' '}({processedKeywords}/{totalKeywords})
+                            {' '}
+                            ({processedKeywords}/{totalKeywords})
                           </span>
                         )}
                       </>
@@ -325,10 +346,16 @@ export default function UploadKeywordsModal({
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="font-medium text-green-600">Создано:</span> {uploadResult.created}
+                      <span className="font-medium text-green-600">
+                        Создано:
+                      </span>{' '}
+                      {uploadResult.created}
                     </div>
                     <div>
-                      <span className="font-medium text-gray-600">Пропущено:</span> {uploadResult.skipped}
+                      <span className="font-medium text-gray-600">
+                        Пропущено:
+                      </span>{' '}
+                      {uploadResult.skipped}
                     </div>
                   </div>
                   {uploadResult.errors.length > 0 && (
@@ -370,7 +397,9 @@ export default function UploadKeywordsModal({
             disabled={!selectedFile || uploadStatus === 'uploading'}
             className="gap-2"
           >
-            {uploadStatus === 'uploading' && <Loader2 className="h-4 w-4 animate-spin" />}
+            {uploadStatus === 'uploading' && (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            )}
             Загрузить
           </Button>
         </DialogFooter>

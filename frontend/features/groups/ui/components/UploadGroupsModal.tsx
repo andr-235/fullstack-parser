@@ -17,7 +17,13 @@ import { Switch } from '@/shared/ui'
 import { FileUpload } from '@/shared/ui'
 import { Progress } from '@/shared/ui'
 import { useUploadGroupsWithProgress } from '@/entities/group'
-import { Upload, AlertCircle, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import {
+  Upload,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Loader2,
+} from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import type { VKGroupUploadResponse } from '@/types/api'
 
@@ -33,7 +39,9 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
   const [uploadResult, setUploadResult] =
     useState<VKGroupUploadResponse | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
+  const [uploadStatus, setUploadStatus] = useState<
+    'idle' | 'uploading' | 'success' | 'error'
+  >('idle')
 
   // Новые состояния для отслеживания прогресса
   const [currentGroup, setCurrentGroup] = useState<string>('')
@@ -121,13 +129,15 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
       if (error?.response?.status) {
         switch (error.response.status) {
           case 404:
-            errorMessage = 'Сервер недоступен. Проверьте подключение к интернету'
+            errorMessage =
+              'Сервер недоступен. Проверьте подключение к интернету'
             break
           case 413:
             errorMessage = 'Файл слишком большой. Максимальный размер: 5MB'
             break
           case 422:
-            errorMessage = 'Некорректный формат файла. Проверьте структуру данных'
+            errorMessage =
+              'Некорректный формат файла. Проверьте структуру данных'
             break
           case 500:
             errorMessage = 'Ошибка сервера. Попробуйте позже'
@@ -223,7 +233,8 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
             />
             {selectedFile && (
               <p className="text-sm text-gray-600">
-                Выбран файл: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                Выбран файл: {selectedFile.name} (
+                {(selectedFile.size / 1024).toFixed(1)} KB)
               </p>
             )}
           </div>
@@ -255,14 +266,21 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
           </div>
 
           {/* Статус загрузки */}
-          {(uploadStatus === 'uploading' || uploadStatus === 'success' || uploadStatus === 'error') && (
+          {(uploadStatus === 'uploading' ||
+            uploadStatus === 'success' ||
+            uploadStatus === 'error') && (
             <div className="border rounded-lg p-4 bg-gray-50">
               <div className="flex items-center gap-2 mb-3">
                 {getStatusIcon()}
-                <h4 className={`font-medium ${uploadStatus === 'success' ? 'text-green-700' :
-                  uploadStatus === 'error' ? 'text-red-700' :
-                    'text-blue-700'
-                  }`}>
+                <h4
+                  className={`font-medium ${
+                    uploadStatus === 'success'
+                      ? 'text-green-700'
+                      : uploadStatus === 'error'
+                        ? 'text-red-700'
+                        : 'text-blue-700'
+                  }`}
+                >
                   {getStatusText()}
                 </h4>
               </div>
@@ -273,10 +291,12 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
                   <p className="text-sm text-gray-600">
                     {currentGroup ? (
                       <>
-                        Обрабатывается: <span className="font-medium">{currentGroup}</span>
+                        Обрабатывается:{' '}
+                        <span className="font-medium">{currentGroup}</span>
                         {totalGroups > 0 && (
                           <span className="text-gray-500">
-                            {' '}({processedGroups}/{totalGroups})
+                            {' '}
+                            ({processedGroups}/{totalGroups})
                           </span>
                         )}
                       </>
@@ -291,10 +311,16 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="font-medium text-green-600">Создано:</span> {uploadResult.created}
+                      <span className="font-medium text-green-600">
+                        Создано:
+                      </span>{' '}
+                      {uploadResult.created}
                     </div>
                     <div>
-                      <span className="font-medium text-gray-600">Пропущено:</span> {uploadResult.skipped}
+                      <span className="font-medium text-gray-600">
+                        Пропущено:
+                      </span>{' '}
+                      {uploadResult.skipped}
                     </div>
                   </div>
                 </div>
@@ -326,7 +352,9 @@ export function UploadGroupsModal({ onSuccess }: UploadGroupsModalProps) {
             disabled={!selectedFile || uploadStatus === 'uploading'}
             className="gap-2"
           >
-            {uploadStatus === 'uploading' && <Loader2 className="h-4 w-4 animate-spin" />}
+            {uploadStatus === 'uploading' && (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            )}
             Загрузить
           </Button>
         </DialogFooter>

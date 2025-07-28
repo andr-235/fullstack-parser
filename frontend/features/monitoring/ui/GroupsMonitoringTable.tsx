@@ -155,7 +155,9 @@ export default function GroupsMonitoringTable({
     )
 
     // Используем локальное время, которое уже приходит с сервера
-    const displayText = group.next_monitoring_at_local || formatNextRunTime(group.next_monitoring_at)
+    const displayText =
+      group.next_monitoring_at_local ||
+      formatNextRunTime(group.next_monitoring_at)
 
     return {
       text: displayText,

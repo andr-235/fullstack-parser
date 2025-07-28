@@ -176,7 +176,9 @@ export default function MonitoringPage() {
     const progress = calculateProgress(stats.next_monitoring_at, 5)
 
     // Используем локальное время, которое уже приходит с сервера
-    const displayText = stats.next_monitoring_at_local || formatNextRunTime(stats.next_monitoring_at)
+    const displayText =
+      stats.next_monitoring_at_local ||
+      formatNextRunTime(stats.next_monitoring_at)
 
     return {
       text: displayText,
@@ -211,13 +213,17 @@ export default function MonitoringPage() {
     allGroups: allGroups?.total || 0, // Общее количество всех групп
     active:
       activeGroups?.items?.filter(
-        (g: VKGroupMonitoring) => g.auto_monitoring_enabled && !g.last_monitoring_error
+        (g: VKGroupMonitoring) =>
+          g.auto_monitoring_enabled && !g.last_monitoring_error
       ).length || 0,
     error:
-      activeGroups?.items?.filter((g: VKGroupMonitoring) => g.last_monitoring_error).length || 0,
+      activeGroups?.items?.filter(
+        (g: VKGroupMonitoring) => g.last_monitoring_error
+      ).length || 0,
     waiting:
       activeGroups?.items?.filter(
-        (g: VKGroupMonitoring) => g.auto_monitoring_enabled && !g.last_monitoring_success
+        (g: VKGroupMonitoring) =>
+          g.auto_monitoring_enabled && !g.last_monitoring_success
       ).length || 0,
   }
 
@@ -324,13 +330,18 @@ export default function MonitoringPage() {
               </Button>
               <Button
                 onClick={handleSchedulerToggle}
-                disabled={startSchedulerMutation.isPending || stopSchedulerMutation.isPending}
-                className={`transition-all duration-200 hover:scale-105 ${schedulerStatus?.is_running
-                  ? 'bg-red-600 hover:bg-red-700 text-white'
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-                  }`}
+                disabled={
+                  startSchedulerMutation.isPending ||
+                  stopSchedulerMutation.isPending
+                }
+                className={`transition-all duration-200 hover:scale-105 ${
+                  schedulerStatus?.is_running
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
               >
-                {(startSchedulerMutation.isPending || stopSchedulerMutation.isPending) ? (
+                {startSchedulerMutation.isPending ||
+                stopSchedulerMutation.isPending ? (
                   <LoadingSpinner className="h-4 w-4 mr-2" />
                 ) : schedulerStatus?.is_running ? (
                   <Pause className="h-4 w-4 mr-2" />
@@ -395,12 +406,13 @@ export default function MonitoringPage() {
                   Следующий запуск
                 </p>
                 <p
-                  className={`text-sm font-medium ${nextMonitoringTime.status === 'overdue'
-                    ? 'text-red-400'
-                    : nextMonitoringTime.status === 'waiting'
-                      ? 'text-slate-400'
-                      : 'text-purple-400'
-                    }`}
+                  className={`text-sm font-medium ${
+                    nextMonitoringTime.status === 'overdue'
+                      ? 'text-red-400'
+                      : nextMonitoringTime.status === 'waiting'
+                        ? 'text-slate-400'
+                        : 'text-purple-400'
+                  }`}
                 >
                   {nextMonitoringTime.text}
                 </p>

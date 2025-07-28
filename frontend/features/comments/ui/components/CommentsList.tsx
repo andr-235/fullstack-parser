@@ -63,7 +63,7 @@ export function CommentsList({
         onUnarchive={onUnarchive}
         isLoading={isLoading}
         selectedComments={selectedComments}
-        onCommentSelect={onCommentSelect || (() => { })}
+        onCommentSelect={onCommentSelect || (() => {})}
       />
 
       {hasNextPage && (

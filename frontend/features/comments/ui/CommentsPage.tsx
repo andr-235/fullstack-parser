@@ -245,7 +245,8 @@ export default function CommentsPage() {
   } = useInfiniteComments(
     filterUndefined({
       text: debouncedText || undefined,
-      group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
+      group_id:
+        groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
       keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
       ...statusParams,
       ...authorParams,
@@ -255,47 +256,68 @@ export default function CommentsPage() {
 
   const { data: groupsData } = useGroups()
   const { data: keywordsData } = useKeywords()
-  const comments = useMemo(
-    () => {
-      const allComments = data?.pages.flatMap((page) => page.items) ?? []
+  const comments = useMemo(() => {
+    const allComments = data?.pages.flatMap((page) => page.items) ?? []
 
-      // Сортировка на фронтенде
-      return allComments.sort((a, b) => {
-        if (sortField === 'published_at') {
-          const dateA = new Date(a.published_at).getTime()
-          const dateB = new Date(b.published_at).getTime()
-          return sortOrder === 'desc' ? dateB - dateA : dateA - dateB
+    // Сортировка на фронтенде
+    return allComments.sort((a, b) => {
+      if (sortField === 'published_at') {
+        const dateA = new Date(a.published_at).getTime()
+        const dateB = new Date(b.published_at).getTime()
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB
+      }
+      if (sortField === 'author_name') {
+        const nameA = (
+          a.author_name ||
+          a.author_screen_name ||
+          ''
+        ).toLowerCase()
+        const nameB = (
+          b.author_name ||
+          b.author_screen_name ||
+          ''
+        ).toLowerCase()
+        if (sortOrder === 'desc') {
+          return nameB.localeCompare(nameA)
         }
-        if (sortField === 'author_name') {
-          const nameA = (a.author_name || a.author_screen_name || '').toLowerCase()
-          const nameB = (b.author_name || b.author_screen_name || '').toLowerCase()
-          if (sortOrder === 'desc') {
-            return nameB.localeCompare(nameA)
-          }
-          return nameA.localeCompare(nameB)
-        }
-        return 0
-      })
-    },
-    [data, sortField, sortOrder]
-  )
+        return nameA.localeCompare(nameB)
+      }
+      return 0
+    })
+  }, [data, sortField, sortOrder])
 
   // Детальная отладка API запросов
   useEffect(() => {
     console.log('=== API DEBUG ===')
-    console.log('useInfiniteComments params:', filterUndefined({
-      text: debouncedText || undefined,
-      group_id: groupFilter && groupFilter !== 'all' ? Number(groupFilter) : undefined,
-      keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
-      ...statusParams,
-      ...authorParams,
-      // Сортировка теперь на фронтенде
-    }))
+    console.log(
+      'useInfiniteComments params:',
+      filterUndefined({
+        text: debouncedText || undefined,
+        group_id:
+          groupFilter && groupFilter !== 'all'
+            ? Number(groupFilter)
+            : undefined,
+        keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
+        ...statusParams,
+        ...authorParams,
+        // Сортировка теперь на фронтенде
+      })
+    )
     console.log('isFetching:', isFetching)
     console.log('error:', error)
     console.log('data pages count:', data?.pages?.length)
     console.log('comments count:', comments.length)
-  }, [data, error, isFetching, comments.length, debouncedText, groupFilter, keywordFilter, statusParams, authorParams])
+  }, [
+    data,
+    error,
+    isFetching,
+    comments.length,
+    debouncedText,
+    groupFilter,
+    keywordFilter,
+    statusParams,
+    authorParams,
+  ])
 
   // Отладка групп и ключевых слов
   useEffect(() => {
@@ -715,8 +737,9 @@ export default function CommentsPage() {
                 {comments.map((comment: VKCommentResponse, index: number) => (
                   <TableRow
                     key={comment.id}
-                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${comment.is_viewed ? 'opacity-60' : ''
-                      }`}
+                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${
+                      comment.is_viewed ? 'opacity-60' : ''
+                    }`}
                     style={{ animationDelay: `${index * 30}ms` }}
                   >
                     <TableCell>
@@ -724,23 +747,31 @@ export default function CommentsPage() {
                         <Avatar className="w-6 h-6 border border-slate-600">
                           <AvatarImage src={comment.author_photo_url} />
                           <AvatarFallback className="bg-slate-700 text-slate-300 text-xs">
-                            {comment.author_name?.[0] || comment.author_screen_name?.[0] || (comment.author_id > 0 ? 'U' : 'G')}
+                            {comment.author_name?.[0] ||
+                              comment.author_screen_name?.[0] ||
+                              (comment.author_id > 0 ? 'U' : 'G')}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="font-medium text-slate-200 text-xs">
-                            {comment.author_name || comment.author_screen_name || (comment.author_id > 0 ? `Пользователь ${comment.author_id}` : `Группа ${Math.abs(comment.author_id)}`)}
+                            {comment.author_name ||
+                              comment.author_screen_name ||
+                              (comment.author_id > 0
+                                ? `Пользователь ${comment.author_id}`
+                                : `Группа ${Math.abs(comment.author_id)}`)}
                           </div>
-                          {comment.author_screen_name && comment.author_name && (
-                            <div className="text-xs text-slate-400">
-                              @{comment.author_screen_name}
-                            </div>
-                          )}
-                          {!comment.author_name && comment.author_screen_name && (
-                            <div className="text-xs text-slate-400">
-                              ID: {comment.author_id}
-                            </div>
-                          )}
+                          {comment.author_screen_name &&
+                            comment.author_name && (
+                              <div className="text-xs text-slate-400">
+                                @{comment.author_screen_name}
+                              </div>
+                            )}
+                          {!comment.author_name &&
+                            comment.author_screen_name && (
+                              <div className="text-xs text-slate-400">
+                                ID: {comment.author_id}
+                              </div>
+                            )}
                         </div>
                       </div>
                     </TableCell>
