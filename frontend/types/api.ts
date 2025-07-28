@@ -283,6 +283,7 @@ export interface MonitoringStats {
 export interface VKGroupMonitoring extends VKGroupResponse {
   id: number // Добавляем id для совместимости с frontend
   group_id?: number // Оставляем group_id для совместимости с API
+  group_name?: string // Название группы из API мониторинга
   auto_monitoring_enabled: boolean
   monitoring_interval_minutes: number
   monitoring_priority: number

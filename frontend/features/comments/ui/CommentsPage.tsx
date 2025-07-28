@@ -737,9 +737,8 @@ export default function CommentsPage() {
                 {comments.map((comment: VKCommentResponse, index: number) => (
                   <TableRow
                     key={comment.id}
-                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${
-                      comment.is_viewed ? 'opacity-60' : ''
-                    }`}
+                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${comment.is_viewed ? 'opacity-60' : ''
+                      }`}
                     style={{ animationDelay: `${index * 30}ms` }}
                   >
                     <TableCell>
@@ -755,7 +754,7 @@ export default function CommentsPage() {
                         <div>
                           <div className="font-medium text-slate-200 text-xs">
                             {comment.author_name ||
-                              comment.author_screen_name ||
+                              (comment.author_screen_name && `@${comment.author_screen_name}`) ||
                               (comment.author_id > 0
                                 ? `Пользователь ${comment.author_id}`
                                 : `Группа ${Math.abs(comment.author_id)}`)}

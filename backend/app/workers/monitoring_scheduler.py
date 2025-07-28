@@ -46,7 +46,9 @@ async def check_and_fix_outdated_monitoring_times(db: AsyncSession):
             )
 
             # Обновляем время для всех устаревших групп
-            next_time = now + timedelta(hours=1)  # Устанавливаем на час вперед
+            next_time = (
+                now  # Устанавливаем на текущее время для немедленного запуска
+            )
 
             await db.execute(
                 update(VKGroup)

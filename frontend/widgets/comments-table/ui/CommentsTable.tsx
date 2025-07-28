@@ -91,7 +91,7 @@ export function CommentsTable({
                   <div>
                     <div className="font-medium">
                       {comment.author_name ||
-                        comment.author_screen_name ||
+                        (comment.author_screen_name && `@${comment.author_screen_name}`) ||
                         (comment.author_id > 0
                           ? `Пользователь ${comment.author_id}`
                           : `Группа ${Math.abs(comment.author_id)}`)}

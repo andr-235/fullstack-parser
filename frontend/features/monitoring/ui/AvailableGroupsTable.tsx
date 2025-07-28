@@ -101,7 +101,7 @@ export default function AvailableGroupsTable({
               <TableRow key={group.id || `available-group-${index}`}>
                 <TableCell>
                   <div>
-                    <div className="font-medium">{group.name}</div>
+                    <div className="font-medium">{group.group_name || group.name}</div>
                     <div className="text-sm text-slate-400">
                       @{group.screen_name}
                     </div>
