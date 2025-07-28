@@ -537,3 +537,34 @@ async def get_monitoring_history(
             )
 
     return history
+
+
+@router.post("/reset-times", response_model=StatusResponse)
+async def reset_monitoring_times(
+    db: AsyncSession = Depends(get_db),
+) -> StatusResponse:
+    """Сбросить время мониторинга для всех групп"""
+    try:
+        vk_service = _get_vk_service()
+        monitoring_service = MonitoringService(db=db, vk_service=vk_service)
+
+        result = await monitoring_service.reset_monitoring_times()
+
+        if "error" in result:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Ошибка сброса времени: {result['error']}",
+            )
+
+        return StatusResponse(
+            status="success",
+            message=f"Время мониторинга обновлено для {result['updated_groups']} из {result['total_groups']} групп",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка сброса времени мониторинга: {str(e)}",
+        ) from e

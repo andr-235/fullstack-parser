@@ -92,19 +92,25 @@ class MonitoringService:
         # Используем UTC время для планирования
         from datetime import timezone
 
-        # Рассчитываем время следующего мониторинга в UTC
-        # Используем текущее время группы или текущее время
-        base_time = group.last_monitoring_success or datetime.now(timezone.utc)
-        next_time = base_time + timedelta(
-            minutes=group.monitoring_interval_minutes
-        )
-
-        # Убеждаемся, что следующее время не в прошлом
         now = datetime.now(timezone.utc)
-        if next_time <= now:
+
+        # Если время следующего мониторинга в прошлом, устанавливаем текущее время
+        if group.next_monitoring_at and group.next_monitoring_at <= now:
             next_time = now + timedelta(
                 minutes=group.monitoring_interval_minutes
             )
+        else:
+            # Используем текущее время группы или текущее время
+            base_time = group.last_monitoring_success or now
+            next_time = base_time + timedelta(
+                minutes=group.monitoring_interval_minutes
+            )
+
+            # Убеждаемся, что следующее время не в прошлом
+            if next_time <= now:
+                next_time = now + timedelta(
+                    minutes=group.monitoring_interval_minutes
+                )
 
         # Сохраняем в UTC
         group.next_monitoring_at = next_time
@@ -116,6 +122,7 @@ class MonitoringService:
             group_name=group.name,
             next_monitoring_at=next_time.isoformat(),
             interval_minutes=group.monitoring_interval_minutes,
+            current_time=now.isoformat(),
         )
 
     async def start_group_monitoring(self, group: VKGroup) -> bool:
@@ -461,4 +468,76 @@ class MonitoringService:
                 "ready_for_monitoring": 0,
                 "next_monitoring_at": None,
                 "next_monitoring_at_local": None,
+            }
+
+    async def reset_monitoring_times(self) -> dict:
+        """Сбросить время мониторинга для всех активных групп"""
+        try:
+            from datetime import timezone
+
+            now = datetime.now(timezone.utc)
+
+            # Получаем все активные группы с включенным мониторингом
+            result = await self.db.execute(
+                select(VKGroup).where(
+                    and_(
+                        VKGroup.is_active == True,
+                        VKGroup.auto_monitoring_enabled == True,
+                    )
+                )
+            )
+            groups = result.scalars().all()
+
+            updated_count = 0
+
+            for group in groups:
+                # Проверяем, нужно ли обновить время
+                if (
+                    not group.next_monitoring_at
+                    or group.next_monitoring_at <= now
+                ):
+                    # Устанавливаем время следующего мониторинга на текущее время + интервал
+                    group.next_monitoring_at = now + timedelta(
+                        minutes=group.monitoring_interval_minutes
+                    )
+                    updated_count += 1
+
+                    self.logger.info(
+                        "Обновлено время мониторинга группы",
+                        group_id=group.id,
+                        group_name=group.name,
+                        old_time=(
+                            group.next_monitoring_at.isoformat()
+                            if group.next_monitoring_at
+                            else None
+                        ),
+                        new_time=group.next_monitoring_at.isoformat(),
+                        interval_minutes=group.monitoring_interval_minutes,
+                    )
+
+            await self.db.commit()
+
+            self.logger.info(
+                "Сброс времени мониторинга завершен",
+                total_groups=len(groups),
+                updated_groups=updated_count,
+                current_time=now.isoformat(),
+            )
+
+            return {
+                "total_groups": len(groups),
+                "updated_groups": updated_count,
+                "current_time": now.isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(
+                "Ошибка сброса времени мониторинга",
+                error=str(e),
+                exc_info=True,
+            )
+            return {
+                "total_groups": 0,
+                "updated_groups": 0,
+                "error": str(e),
             }
