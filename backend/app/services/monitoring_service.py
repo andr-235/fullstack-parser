@@ -15,9 +15,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.time_utils import (
-    format_monitoring_time_for_display,
-)
+from app.core.time_utils import format_monitoring_time_for_display
 from app.models.vk_group import VKGroup
 from app.services.vk_api_service import VKAPIService
 

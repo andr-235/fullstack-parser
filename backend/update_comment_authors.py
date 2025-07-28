@@ -4,17 +4,14 @@
 """
 
 import asyncio
-import sys
-from typing import List
 
+import structlog
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.vk_comment import VKComment
 from app.services.vk_api_service import VKAPIService
-import structlog
 
 logger = structlog.get_logger()
 

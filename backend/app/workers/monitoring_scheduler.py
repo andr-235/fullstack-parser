@@ -6,7 +6,7 @@
 import asyncio
 import signal
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import structlog
 from arq import create_pool
