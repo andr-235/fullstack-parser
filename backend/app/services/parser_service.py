@@ -121,6 +121,8 @@ class ParserService:
             "Начало фильтрации комментариев",
             search_params=search_params.model_dump(),
             pagination=pagination.model_dump(),
+            order_by=search_params.order_by,
+            order_dir=search_params.order_dir,
         )
 
         query = self._build_comments_query(search_params)
@@ -153,6 +155,14 @@ class ParserService:
                 comments[0].post.group is not None
                 if comments and comments[0].post
                 else None
+            ),
+            order_by=search_params.order_by,
+            order_dir=search_params.order_dir,
+            first_comment_published_at=(
+                comments[0].published_at if comments else None
+            ),
+            first_comment_author_name=(
+                comments[0].author_name if comments else None
             ),
         )
 
@@ -619,6 +629,7 @@ class ParserService:
             Кортеж (имя, screen_name, photo_url)
         """
         if author_id is None:
+            self.logger.warning("author_id is None")
             return "", "", ""
 
         self.logger.info("Получаю данные об авторе VK", author_id=author_id)
@@ -626,59 +637,109 @@ class ParserService:
         if author_id > 0:
             # Пользователь
             try:
+                self.logger.info(
+                    "Запрос данных пользователя", author_id=author_id
+                )
                 users = await self.vk_service.api.users.get(
                     user_ids=[author_id], fields=["screen_name", "photo_100"]
                 )
-                if users:
+                self.logger.info("Ответ VK API для пользователя", users=users)
+
+                if users and len(users) > 0:
                     user = users[0]
-                    name = f"{user.first_name} {user.last_name}"
+                    # Формируем полное имя из first_name и last_name
+                    first_name = getattr(user, "first_name", "")
+                    last_name = getattr(user, "last_name", "")
+                    name = f"{first_name} {last_name}".strip()
+
+                    # Получаем screen_name (может быть пустым)
                     screen_name = getattr(user, "screen_name", "")
+
+                    # Получаем URL фото
                     photo_url = getattr(user, "photo_100", "")
 
                     self.logger.info(
                         "Информация о пользователе получена",
+                        author_id=author_id,
                         name=name,
                         screen_name=screen_name,
                         photo_url=photo_url,
                     )
+
+                    # Возвращаем реальные данные, даже если screen_name пустой
                     return name, screen_name, photo_url
+                else:
+                    self.logger.warning(
+                        "VK API вернул пустой список пользователей",
+                        author_id=author_id,
+                    )
             except Exception as e:
                 self.logger.error(
                     "Ошибка получения данных пользователя",
                     author_id=author_id,
                     error=str(e),
+                    error_type=type(e).__name__,
                 )
+
+            # Fallback только если VK API недоступен или вернул ошибку
+            self.logger.warning(
+                "Используем fallback для пользователя - VK API недоступен",
+                author_id=author_id,
+            )
+            return f"Пользователь {author_id}", f"id{author_id}", ""
         else:
             # Группа
             group_id = abs(author_id)
             try:
+                self.logger.info("Запрос данных группы", group_id=group_id)
                 groups = await self.vk_service.api.groups.get_by_id(
                     group_ids=[group_id], fields=["screen_name", "photo_100"]
                 )
-                if groups:
+                self.logger.info("Ответ VK API для группы", groups=groups)
+
+                if groups and len(groups) > 0:
                     group = groups[0]
-                    name = group.name
+                    name = getattr(group, "name", "")
                     screen_name = getattr(group, "screen_name", "")
                     photo_url = getattr(group, "photo_100", "")
 
                     self.logger.info(
                         "Информация о группе получена",
+                        group_id=group_id,
                         name=name,
                         screen_name=screen_name,
                         photo_url=photo_url,
                     )
+
+                    # Возвращаем реальные данные группы
                     return name, screen_name, photo_url
+                else:
+                    self.logger.warning(
+                        "VK API вернул пустой список групп", group_id=group_id
+                    )
             except Exception as e:
                 self.logger.error(
                     "Ошибка получения данных группы",
                     group_id=group_id,
                     error=str(e),
+                    error_type=type(e).__name__,
                 )
+
+            # Fallback только если VK API недоступен или вернул ошибку
+            self.logger.warning(
+                "Используем fallback для группы - VK API недоступен",
+                group_id=group_id,
+            )
+            return f"Группа {group_id}", f"id{group_id}", ""
 
         self.logger.warning(
             "Не удалось получить данные об авторе VK", author_id=author_id
         )
-        return "", "", ""
+        # Финальный fallback только в крайнем случае
+        if author_id > 0:
+            return f"Пользователь {author_id}", f"id{author_id}", ""
+        else:
+            return f"Группа {abs(author_id)}", f"id{abs(author_id)}", ""
 
     async def _save_comment(
         self,
@@ -898,7 +959,40 @@ class ParserService:
         query = query.where(
             and_(VKComment.is_processed, VKComment.matched_keywords_count > 0)
         )
-        query = query.order_by(desc(VKComment.published_at))
+
+        # Применяем сортировку
+        if search_params.order_by and search_params.order_dir:
+            if search_params.order_dir.lower() == "desc":
+                if search_params.order_by == "published_at":
+                    query = query.order_by(desc(VKComment.published_at))
+                elif search_params.order_by == "author_name":
+                    query = query.order_by(desc(VKComment.author_name))
+                elif search_params.order_by == "likes_count":
+                    query = query.order_by(desc(VKComment.likes_count))
+                elif search_params.order_by == "matched_keywords_count":
+                    query = query.order_by(
+                        desc(VKComment.matched_keywords_count)
+                    )
+                elif search_params.order_by == "created_at":
+                    query = query.order_by(desc(VKComment.created_at))
+                else:
+                    query = query.order_by(desc(VKComment.published_at))
+            else:
+                if search_params.order_by == "published_at":
+                    query = query.order_by(VKComment.published_at)
+                elif search_params.order_by == "author_name":
+                    query = query.order_by(VKComment.author_name)
+                elif search_params.order_by == "likes_count":
+                    query = query.order_by(VKComment.likes_count)
+                elif search_params.order_by == "matched_keywords_count":
+                    query = query.order_by(VKComment.matched_keywords_count)
+                elif search_params.order_by == "created_at":
+                    query = query.order_by(VKComment.created_at)
+                else:
+                    query = query.order_by(VKComment.published_at)
+        else:
+            # Сортировка по умолчанию
+            query = query.order_by(desc(VKComment.published_at))
 
         return query
 
