@@ -41,6 +41,7 @@ import {
   formatDateTimeShort,
   isOverdue,
   calculateProgress,
+  formatNextRunTime,
 } from '@/shared/lib/time-utils'
 import type { VKGroupMonitoring } from '@/types/api'
 import MonitoringSettings from './MonitoringSettings'
@@ -147,30 +148,14 @@ export default function GroupsMonitoringTable({
       }
     }
 
-    // Если время просрочено
-    if (isOverdue(group.next_monitoring_at)) {
-      const displayTime =
-        group.next_monitoring_at_local ||
-        formatDateTimeShort(group.next_monitoring_at)
-      return {
-        text: `Просрочено ${displayTime}`,
-        progress: 100,
-        status: 'overdue',
-        color: 'text-red-400',
-      }
-    }
-
-    // Вычисляем прогресс для интервала мониторинга (используем UTC время)
+    // Вычисляем прогресс для интервала мониторинга
     const progress = calculateProgress(
       group.next_monitoring_at,
       group.monitoring_interval_minutes || 60
     )
 
-    // Для отображения используем относительное время
-    const displayText = formatDistanceToNow(
-      new Date(group.next_monitoring_at),
-      { addSuffix: true, locale: ru }
-    )
+    // Используем локальное время, которое уже приходит с сервера
+    const displayText = group.next_monitoring_at_local || formatNextRunTime(group.next_monitoring_at)
 
     return {
       text: displayText,

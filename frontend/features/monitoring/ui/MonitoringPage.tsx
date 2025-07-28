@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { VKGroupMonitoring } from '@/types/api'
 import {
   Card,
   CardContent,
@@ -18,9 +19,10 @@ import {
 import {
   useMonitoringStats,
   useActiveMonitoringGroups,
-  useRunMonitoringCycle,
   useEnableGroupMonitoring,
   useSchedulerStatus,
+  useStartScheduler,
+  useStopScheduler,
 } from '../hooks'
 import {
   Activity,
@@ -53,6 +55,7 @@ import {
   formatDateTimeShort,
   isOverdue,
   calculateProgress,
+  formatNextRunTime,
 } from '@/shared/lib/time-utils'
 import GroupsMonitoringTable from './GroupsMonitoringTable'
 import { toast } from 'react-hot-toast'
@@ -81,8 +84,9 @@ export default function MonitoringPage() {
     useSchedulerStatus()
 
   const { data: allGroups } = useGroups({ active_only: true })
-  const runCycleMutation = useRunMonitoringCycle()
   const enableMonitoringMutation = useEnableGroupMonitoring()
+  const startSchedulerMutation = useStartScheduler()
+  const stopSchedulerMutation = useStopScheduler()
 
   if (statsLoading || activeGroupsLoading || schedulerLoading) {
     return (
@@ -168,26 +172,11 @@ export default function MonitoringPage() {
       }
     }
 
-    // Если время просрочено
-    if (isOverdue(stats.next_monitoring_at)) {
-      const displayTime =
-        stats.next_monitoring_at_local ||
-        formatDateTimeShort(stats.next_monitoring_at)
-      return {
-        text: `Просрочено ${displayTime}`,
-        progress: 100,
-        status: 'overdue',
-      }
-    }
-
     // Вычисляем прогресс (предполагаем интервал 5 минут)
     const progress = calculateProgress(stats.next_monitoring_at, 5)
 
-    // Для отображения используем относительное время
-    const displayText = formatDistanceToNow(
-      new Date(stats.next_monitoring_at),
-      { addSuffix: true, locale: ru }
-    )
+    // Используем локальное время, которое уже приходит с сервера
+    const displayText = stats.next_monitoring_at_local || formatNextRunTime(stats.next_monitoring_at)
 
     return {
       text: displayText,
@@ -198,7 +187,7 @@ export default function MonitoringPage() {
 
   // Фильтруем группы по статусу
   const filteredGroups =
-    activeGroups?.items?.filter((group) => {
+    activeGroups?.items?.filter((group: VKGroupMonitoring) => {
       if (filterStatus === 'all') return true
       if (
         filterStatus === 'active' &&
@@ -222,24 +211,24 @@ export default function MonitoringPage() {
     allGroups: allGroups?.total || 0, // Общее количество всех групп
     active:
       activeGroups?.items?.filter(
-        (g) => g.auto_monitoring_enabled && !g.last_monitoring_error
+        (g: VKGroupMonitoring) => g.auto_monitoring_enabled && !g.last_monitoring_error
       ).length || 0,
     error:
-      activeGroups?.items?.filter((g) => g.last_monitoring_error).length || 0,
+      activeGroups?.items?.filter((g: VKGroupMonitoring) => g.last_monitoring_error).length || 0,
     waiting:
       activeGroups?.items?.filter(
-        (g) => g.auto_monitoring_enabled && !g.last_monitoring_success
+        (g: VKGroupMonitoring) => g.auto_monitoring_enabled && !g.last_monitoring_success
       ).length || 0,
   }
 
   const handleAddAllGroupsToMonitoring = () => {
     if (!allGroups?.items || allGroups.items.length === 0) {
-      toast.error('Нет доступных групп для добавления')
+      toast.error('Нет групп для добавления в мониторинг')
       return
     }
 
     const groupsToAdd = allGroups.items.filter(
-      (group) => !activeGroups?.items?.some((active) => active.id === group.id)
+      (group) => !activeGroups?.items.some((active) => active.id === group.id)
     )
 
     if (groupsToAdd.length === 0) {
@@ -283,15 +272,12 @@ export default function MonitoringPage() {
     addGroup(0)
   }
 
-  const handleRunCycle = () => {
-    runCycleMutation.mutate(undefined, {
-      onSuccess: () => {
-        toast.success('Цикл мониторинга запущен! 🚀')
-      },
-      onError: (error) => {
-        toast.error(`Ошибка запуска цикла: ${error.message}`)
-      },
-    })
+  const handleSchedulerToggle = () => {
+    if (schedulerStatus?.is_running) {
+      stopSchedulerMutation.mutate()
+    } else {
+      startSchedulerMutation.mutate(300) // 5 минут по умолчанию
+    }
   }
 
   return (
@@ -337,16 +323,21 @@ export default function MonitoringPage() {
                 Добавить все группы
               </Button>
               <Button
-                onClick={handleRunCycle}
-                disabled={runCycleMutation.isPending}
-                className="bg-green-600 hover:bg-green-700 text-white transition-all duration-200 hover:scale-105"
+                onClick={handleSchedulerToggle}
+                disabled={startSchedulerMutation.isPending || stopSchedulerMutation.isPending}
+                className={`transition-all duration-200 hover:scale-105 ${schedulerStatus?.is_running
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+                  }`}
               >
-                {runCycleMutation.isPending ? (
+                {(startSchedulerMutation.isPending || stopSchedulerMutation.isPending) ? (
                   <LoadingSpinner className="h-4 w-4 mr-2" />
+                ) : schedulerStatus?.is_running ? (
+                  <Pause className="h-4 w-4 mr-2" />
                 ) : (
                   <Play className="h-4 w-4 mr-2" />
                 )}
-                Запустить цикл
+                {schedulerStatus?.is_running ? 'Остановить' : 'Запустить цикл'}
               </Button>
             </div>
           </div>
@@ -404,13 +395,12 @@ export default function MonitoringPage() {
                   Следующий запуск
                 </p>
                 <p
-                  className={`text-sm font-medium ${
-                    nextMonitoringTime.status === 'overdue'
-                      ? 'text-red-400'
-                      : nextMonitoringTime.status === 'waiting'
-                        ? 'text-slate-400'
-                        : 'text-purple-400'
-                  }`}
+                  className={`text-sm font-medium ${nextMonitoringTime.status === 'overdue'
+                    ? 'text-red-400'
+                    : nextMonitoringTime.status === 'waiting'
+                      ? 'text-slate-400'
+                      : 'text-purple-400'
+                    }`}
                 >
                   {nextMonitoringTime.text}
                 </p>

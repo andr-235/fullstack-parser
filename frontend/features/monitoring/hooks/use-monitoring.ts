@@ -230,3 +230,44 @@ export function useRunMonitoringCycle() {
     },
   })
 }
+
+/**
+ * Хук для запуска планировщика мониторинга
+ */
+export function useStartScheduler() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (intervalSeconds: number = 300) =>
+      api.startScheduler(intervalSeconds),
+    onSuccess: () => {
+      toast.success('Планировщик мониторинга запущен')
+      queryClient.invalidateQueries({
+        queryKey: createQueryKey.schedulerStatus(),
+      })
+    },
+    onError: (error) => {
+      toast.error(`Ошибка запуска планировщика: ${error.message}`)
+    },
+  })
+}
+
+/**
+ * Хук для остановки планировщика мониторинга
+ */
+export function useStopScheduler() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => api.stopScheduler(),
+    onSuccess: () => {
+      toast.success('Планировщик мониторинга остановлен')
+      queryClient.invalidateQueries({
+        queryKey: createQueryKey.schedulerStatus(),
+      })
+    },
+    onError: (error) => {
+      toast.error(`Ошибка остановки планировщика: ${error.message}`)
+    },
+  })
+}

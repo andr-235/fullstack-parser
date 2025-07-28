@@ -120,6 +120,40 @@ class SchedulerService:
             )
             return None
 
+    async def process_scheduled_tasks(self, redis_manager=None) -> dict:
+        """Обработать запланированные задачи мониторинга"""
+        try:
+            if not self.redis_pool:
+                await self.initialize()
+
+            # Запускаем цикл мониторинга
+            job = await self.redis_pool.enqueue_job("run_monitoring_cycle")
+
+            if job:
+                self.logger.info(
+                    "Задача мониторинга поставлена в очередь",
+                    job_id=job.job_id,
+                )
+                return {
+                    "status": "success",
+                    "job_id": job.job_id,
+                    "message": "Задача мониторинга поставлена в очередь",
+                }
+            else:
+                self.logger.warning("Не удалось поставить задачу мониторинга")
+                return {
+                    "status": "error",
+                    "message": "Не удалось поставить задачу мониторинга",
+                }
+
+        except Exception as e:
+            self.logger.error(
+                "Ошибка обработки запланированных задач",
+                error=str(e),
+                exc_info=True,
+            )
+            return {"status": "error", "error": str(e)}
+
     async def get_scheduler_status(self) -> dict:
         """Получить статус планировщика"""
         return {

@@ -106,3 +106,5 @@ class CommentSearchParams(BaseModel):
     date_to: Optional[datetime] = None
     is_viewed: Optional[bool] = None
     is_archived: Optional[bool] = None
+    order_by: Optional[str] = None
+    order_dir: Optional[str] = None

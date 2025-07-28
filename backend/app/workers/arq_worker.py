@@ -3,7 +3,11 @@ from pathlib import Path
 
 from arq.connections import RedisSettings
 
-from app.workers.arq_tasks import run_monitoring_cycle, run_parsing_task
+from app.workers.arq_tasks import (
+    run_monitoring_cycle,
+    run_parsing_task,
+    run_scheduler_task,
+)
 
 # Загружаем переменные окружения из .env.dev если находимся в dev режиме
 if os.getenv("ENV") == "development":
@@ -19,24 +23,27 @@ if os.getenv("ENV") == "development":
 
 
 class WorkerSettings:
-    functions = [run_parsing_task, run_monitoring_cycle]
+    functions = [run_parsing_task, run_monitoring_cycle, run_scheduler_task]
     redis_settings = RedisSettings.from_dsn(
         os.environ.get("REDIS_URL", "redis://redis:6379/0")
     )
     # Ограничения для предотвращения высокого потребления CPU
 
     max_jobs = int(
-        os.environ.get("ARQ_MAX_JOBS", 1)
-    )  # Максимум 1 задача одновременно
+        os.environ.get("ARQ_MAX_JOBS", 5)
+    )  # Максимум 5 задач одновременно
     job_timeout = int(
-        os.environ.get("ARQ_JOB_TIMEOUT", 300)
-    )  # Таймаут задачи 5 минут
+        os.environ.get("ARQ_JOB_TIMEOUT", 1800)
+    )  # Таймаут задачи 30 минут
     keep_result = int(
-        os.environ.get("ARQ_KEEP_RESULT", 60)
-    )  # Хранить результат 1 минуту
+        os.environ.get("ARQ_KEEP_RESULT", 3600)
+    )  # Хранить результат 1 час
     poll_delay = float(
         os.environ.get("ARQ_POLL_DELAY", 1.0)
     )  # Задержка между проверками задач
     max_tries = int(
         os.environ.get("ARQ_MAX_TRIES", 3)
     )  # Максимум 3 попытки для задачи
+    retry_delay = int(
+        os.environ.get("ARQ_RETRY_DELAY", 60)
+    )  # Задержка между попытками 1 минута

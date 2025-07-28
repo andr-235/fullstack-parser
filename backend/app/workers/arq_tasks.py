@@ -59,11 +59,10 @@ async def run_parsing_task(
             parser_service = ParserService(db, vk_service)
 
             # Запускаем парсинг
-            stats = await parser_service.parse_group_posts(
+            result = await parser_service.parse_group_posts(
                 group_id=group_id,
                 max_posts_count=max_posts,
                 force_reparse=force_reparse,
-                task_id=task_id,
             )
 
         duration = (datetime.now(timezone.utc) - start_time).total_seconds()
@@ -73,14 +72,13 @@ async def run_parsing_task(
             task_id=task_id,
             group_id=group_id,
             duration=duration,
-            stats=stats.model_dump(),
+            result=result,
         )
 
         return {
             "status": "success",
-            "group_id": group_id,
             "duration": duration,
-            "stats": stats.model_dump(),
+            "result": result,
         }
 
     except Exception as e:
@@ -97,7 +95,6 @@ async def run_parsing_task(
 
         return {
             "status": "error",
-            "group_id": group_id,
             "duration": duration,
             "error": str(e),
         }
@@ -127,10 +124,7 @@ async def run_monitoring_cycle(ctx: Dict[str, Any]) -> Dict[str, Any]:
 
         # Создаем сессию БД
         async with AsyncSessionLocal() as db:
-            monitoring_service = MonitoringService(
-                db, vk_service, redis_manager
-            )
-            scheduler_service = SchedulerService(db)
+            monitoring_service = MonitoringService(db, vk_service)
 
             # Запускаем мониторинг
             result = await monitoring_service.run_monitoring_cycle()
@@ -189,7 +183,7 @@ async def run_scheduler_task(ctx: Dict[str, Any]) -> Dict[str, Any]:
 
         # Создаем сессию БД
         async with AsyncSessionLocal() as db:
-            scheduler_service = SchedulerService(db)
+            scheduler_service = SchedulerService()
 
             # Проверяем и запускаем задачи мониторинга
             result = await scheduler_service.process_scheduled_tasks(
@@ -239,8 +233,8 @@ class WorkerSettings:
     ]
 
     redis_settings = settings.redis_url
-    max_jobs = 10
-    job_timeout = 3600  # 1 час
+    max_jobs = 5
+    job_timeout = 1800  # 30 минут
     keep_result = 3600  # Хранить результат 1 час
     max_tries = 3
     retry_delay = 60  # 1 минута между попытками

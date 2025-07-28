@@ -83,12 +83,12 @@ export function CommentsTable({
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={comment.author_photo_url} />
                     <AvatarFallback>
-                      {comment.author_name?.charAt(0) || 'U'}
+                      {comment.author_name?.charAt(0) || comment.author_screen_name?.charAt(0) || (comment.author_id > 0 ? 'U' : 'G')}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="font-medium">
-                      {comment.author_name || 'Аноним'}
+                      {comment.author_name || comment.author_screen_name || (comment.author_id > 0 ? `Пользователь ${comment.author_id}` : `Группа ${Math.abs(comment.author_id)}`)}
                     </div>
                     <div className="text-sm text-slate-400">
                       ID: {comment.author_id}

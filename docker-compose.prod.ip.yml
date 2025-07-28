@@ -218,6 +218,64 @@ services:
         max_attempts: 3
         window: 120s
 
+  # Планировщик мониторинга
+  monitoring_scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    container_name: fullstack_prod_monitoring_scheduler
+    restart: unless-stopped
+    command: ["python", "-m", "app.workers.monitoring_scheduler"]
+    env_file:
+      - .env.prod
+    environment:
+      - ENV=production
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN}
+      - MONITORING_SCHEDULER_INTERVAL_SECONDS=${MONITORING_SCHEDULER_INTERVAL_SECONDS:-300}
+      - MONITORING_AUTO_START_SCHEDULER=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      arq_worker:
+        condition: service_healthy
+    networks:
+      - prod-app-network
+      - prod-db-network
+    logging: *default-logging
+    healthcheck:
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import redis; redis.Redis.from_url('redis://redis:6379/0').ping()",
+        ]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
   # Frontend приложение
   frontend:
     build:

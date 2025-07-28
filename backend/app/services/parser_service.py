@@ -757,9 +757,12 @@ class ParserService:
             Сохраненный комментарий
         """
         author_id = comment_data.get("from_id")
-        author_name, author_screen_name, author_photo_url = (
-            await self._get_author_info(author_id)
-        )
+        if author_id is None:
+            author_name, author_screen_name, author_photo_url = "", "", ""
+        else:
+            author_name, author_screen_name, author_photo_url = (
+                await self._get_author_info(author_id)
+            )
 
         # Создаем комментарий
         new_comment = VKComment(
@@ -1036,7 +1039,9 @@ class ParserService:
 
         comment_data = VKCommentResponse.model_validate(comment)
         comment_data.group = group
-        comment_data.post_vk_id = post_vk_id
+        comment_data.post_vk_id = (
+            post_vk_id if post_vk_id is not None else None
+        )
         comment_data.matched_keywords = matched_keywords
 
         return comment_data

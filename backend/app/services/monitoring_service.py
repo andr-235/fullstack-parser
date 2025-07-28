@@ -11,10 +11,13 @@ from typing import List
 import structlog
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from arq import create_pool
+from arq.connections import RedisSettings
 
 from app.models.vk_group import VKGroup
 from app.services.arq_enqueue import enqueue_run_parsing_task
 from app.services.vk_api_service import VKAPIService
+from app.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -27,6 +30,15 @@ class MonitoringService:
         self.db = db
         self.vk_service = vk_service
         self.logger = logger
+        self.redis_pool = None
+
+    async def _get_redis_pool(self):
+        """Получить Redis pool для ARQ"""
+        if self.redis_pool is None:
+            self.redis_pool = await create_pool(
+                RedisSettings.from_dsn(settings.redis_url)
+            )
+        return self.redis_pool
 
     async def get_groups_for_monitoring(self) -> List[VKGroup]:
         """Получить группы, готовые для мониторинга"""
@@ -50,6 +62,7 @@ class MonitoringService:
                 VKGroup.monitoring_priority.desc(),  # Сначала высокий приоритет
                 VKGroup.next_monitoring_at.asc(),  # Потом по времени
             )
+            .limit(50)  # Ограничиваем количество групп за раз
         )
 
         result = await self.db.execute(query)
@@ -87,35 +100,52 @@ class MonitoringService:
                 group_name=group.name,
             )
 
+            # Получаем Redis pool
+            redis_pool = await self._get_redis_pool()
+
             # Создаём уникальный ID задачи
             task_id = f"monitor_{group.id}_{int(datetime.now().timestamp())}"
 
-            # Ставим задачу в очередь
-            await enqueue_run_parsing_task(
+            # Ставим задачу в очередь ARQ
+            job = await redis_pool.enqueue_job(
+                "run_parsing_task",
                 group_id=group.id,
                 max_posts=group.max_posts_to_check,
-                force_reparse=False,  # Не перепарсиваем старые посты
-                job_id=task_id,
+                force_reparse=False,
+                _job_id=task_id,
             )
 
-            # Обновляем статистику
-            group.monitoring_runs_count += 1
-            group.last_monitoring_success = datetime.now(timezone.utc).replace(
-                tzinfo=None
-            )
-            group.last_monitoring_error = None
+            if job:
+                self.logger.info(
+                    "Задача парсинга поставлена в очередь ARQ",
+                    group_id=group.id,
+                    job_id=job.job_id,
+                )
 
-            # Планируем следующий мониторинг
-            await self.schedule_group_monitoring(group)
+                # Обновляем статистику
+                group.monitoring_runs_count += 1
+                group.last_monitoring_success = datetime.now(
+                    timezone.utc
+                ).replace(tzinfo=None)
+                group.last_monitoring_error = None
 
-            self.logger.info(
-                "Мониторинг группы успешно запущен",
-                group_id=group.id,
-                group_name=group.name,
-                task_id=task_id,
-            )
+                # Планируем следующий мониторинг
+                await self.schedule_group_monitoring(group)
 
-            return True
+                self.logger.info(
+                    "Мониторинг группы успешно запущен",
+                    group_id=group.id,
+                    group_name=group.name,
+                    task_id=task_id,
+                )
+
+                return True
+            else:
+                self.logger.error(
+                    "Не удалось поставить задачу в очередь ARQ",
+                    group_id=group.id,
+                )
+                return False
 
         except Exception as e:
             self.logger.error(

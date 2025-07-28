@@ -9,9 +9,13 @@ import sys
 from datetime import datetime, timezone
 
 import structlog
+from arq import create_pool
+from arq.connections import RedisSettings
 
 from app.core.config import settings
-from app.services.scheduler_service import start_background_scheduler
+from app.services.monitoring_service import MonitoringService
+from app.services.vk_api_service import VKAPIService
+from app.core.database import AsyncSessionLocal
 
 logger = structlog.get_logger(__name__)
 
@@ -29,7 +33,13 @@ async def main():
     signal.signal(signal.SIGTERM, signal_handler)
 
     try:
-        # Запускаем планировщик с интервалом 5 минут
+        # Инициализируем Redis pool
+        redis_pool = await create_pool(
+            RedisSettings.from_dsn(settings.redis_url)
+        )
+        logger.info("✅ Подключение к Redis установлено")
+
+        # Получаем интервал мониторинга
         monitoring_interval = getattr(
             settings, "monitoring_interval_seconds", 300
         )
@@ -40,7 +50,39 @@ async def main():
             start_time=datetime.now(timezone.utc).isoformat(),
         )
 
-        await start_background_scheduler(monitoring_interval)
+        # Основной цикл планировщика
+        while True:
+            try:
+                logger.info("🔄 Запуск цикла мониторинга")
+
+                # Создаем сессию БД
+                async with AsyncSessionLocal() as db:
+                    # Инициализируем сервисы
+                    vk_service = VKAPIService(
+                        token=settings.vk.access_token,
+                        api_version=settings.vk.api_version,
+                    )
+                    monitoring_service = MonitoringService(db, vk_service)
+
+                    # Запускаем цикл мониторинга
+                    result = await monitoring_service.run_monitoring_cycle()
+
+                    logger.info("✅ Цикл мониторинга завершен", result=result)
+
+                # Ждем до следующего цикла
+                logger.info(
+                    f"⏳ Ожидание {monitoring_interval} секунд до следующего цикла"
+                )
+                await asyncio.sleep(monitoring_interval)
+
+            except Exception as e:
+                logger.error(
+                    "💥 Ошибка в цикле мониторинга",
+                    error=str(e),
+                    exc_info=True,
+                )
+                # Ждем 60 секунд перед повторной попыткой
+                await asyncio.sleep(60)
 
     except KeyboardInterrupt:
         logger.info("🛑 Планировщик остановлен пользователем")
@@ -49,6 +91,10 @@ async def main():
             "💥 Критическая ошибка планировщика", error=str(e), exc_info=True
         )
         sys.exit(1)
+    finally:
+        if "redis_pool" in locals():
+            await redis_pool.close()
+            logger.info("🔌 Соединение с Redis закрыто")
 
 
 if __name__ == "__main__":

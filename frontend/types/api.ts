@@ -181,6 +181,8 @@ export interface CommentSearchParams {
   date_to?: string
   is_viewed?: boolean
   is_archived?: boolean
+  order_by?: string
+  order_dir?: string
 }
 
 // Parser типы

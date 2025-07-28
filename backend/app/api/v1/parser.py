@@ -71,6 +71,12 @@ async def get_comments(
     date_to: Optional[datetime] = None,
     is_viewed: Optional[bool] = None,
     is_archived: Optional[bool] = None,
+    order_by: Optional[str] = Query(
+        "published_at", description="Поле для сортировки"
+    ),
+    order_dir: Optional[str] = Query(
+        "desc", description="Направление сортировки (asc/desc)"
+    ),
     pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[VKCommentResponse]:
@@ -85,6 +91,8 @@ async def get_comments(
         date_to=date_to,
         is_viewed=is_viewed,
         is_archived=is_archived,
+        order_by=order_by,
+        order_dir=order_dir,
     )
 
     vk_service = VKAPIService(

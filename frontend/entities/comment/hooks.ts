@@ -48,7 +48,7 @@ export function useInfiniteComments(filters?: CommentSearchParams) {
     queryFn: ({ pageParam = 1 }) => {
       const searchParams = new URLSearchParams()
       searchParams.append('page', pageParam.toString())
-      searchParams.append('size', '20')
+      searchParams.append('size', '100')
 
       Object.entries(filters || {}).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {

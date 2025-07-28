@@ -54,6 +54,9 @@ import {
   ArchiveRestore,
   CheckCircle,
   Edit,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react'
 import { useDebounce } from '@/shared/hooks'
 import Link from 'next/link'
@@ -154,6 +157,8 @@ export default function CommentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('new')
   const [specialAuthor, setSpecialAuthor] = useState<string | null>(null)
   const [authorFilter, setAuthorFilter] = useState<string>('all')
+  const [sortField, setSortField] = useState<string>('published_at')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
   // Локальное состояние для отслеживания загружающихся комментариев
   const [loadingComments, setLoadingComments] = useState<{
@@ -199,6 +204,8 @@ export default function CommentsPage() {
     console.log('specialAuthor:', specialAuthor)
     console.log('authorParams:', authorParams)
     console.log('statusParams:', statusParams)
+    console.log('sortField:', sortField)
+    console.log('sortOrder:', sortOrder)
     console.log('all filters:', {
       text: debouncedText,
       group_id:
@@ -206,6 +213,7 @@ export default function CommentsPage() {
       keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
       ...statusParams,
       ...authorParams,
+      // Сортировка теперь на фронтенде
     })
   }, [
     groupFilter,
@@ -241,14 +249,35 @@ export default function CommentsPage() {
       keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
       ...statusParams,
       ...authorParams,
+      // Убираем сортировку из API - теперь она на фронтенде
     })
   )
 
   const { data: groupsData } = useGroups()
   const { data: keywordsData } = useKeywords()
   const comments = useMemo(
-    () => data?.pages.flatMap((page) => page.items) ?? [],
-    [data]
+    () => {
+      const allComments = data?.pages.flatMap((page) => page.items) ?? []
+
+      // Сортировка на фронтенде
+      return allComments.sort((a, b) => {
+        if (sortField === 'published_at') {
+          const dateA = new Date(a.published_at).getTime()
+          const dateB = new Date(b.published_at).getTime()
+          return sortOrder === 'desc' ? dateB - dateA : dateA - dateB
+        }
+        if (sortField === 'author_name') {
+          const nameA = (a.author_name || a.author_screen_name || '').toLowerCase()
+          const nameB = (b.author_name || b.author_screen_name || '').toLowerCase()
+          if (sortOrder === 'desc') {
+            return nameB.localeCompare(nameA)
+          }
+          return nameA.localeCompare(nameB)
+        }
+        return 0
+      })
+    },
+    [data, sortField, sortOrder]
   )
 
   // Детальная отладка API запросов
@@ -260,6 +289,7 @@ export default function CommentsPage() {
       keyword_id: keywordFilter ? Number(keywordFilter) : undefined,
       ...statusParams,
       ...authorParams,
+      // Сортировка теперь на фронтенде
     }))
     console.log('isFetching:', isFetching)
     console.log('error:', error)
@@ -290,12 +320,31 @@ export default function CommentsPage() {
     setStatusFilter('new')
     setAuthorFilter('all')
     setSpecialAuthor(null)
+    setSortField('published_at')
+    setSortOrder('desc')
   }
 
   const handleAddSpecialAuthor = (authorScreenName: string) => {
     setSpecialAuthor(authorScreenName)
     // Автоматически переключаем фильтр на особые авторы
     setAuthorFilter('special')
+  }
+
+  const handleSort = (field: string) => {
+    console.log('=== SORT DEBUG ===')
+    console.log('Current sortField:', sortField)
+    console.log('Current sortOrder:', sortOrder)
+    console.log('New field:', field)
+
+    if (sortField === field) {
+      const newOrder = sortOrder === 'asc' ? 'desc' : 'asc'
+      console.log('Changing order to:', newOrder)
+      setSortOrder(newOrder)
+    } else {
+      console.log('Changing field to:', field, 'order to: desc')
+      setSortField(field)
+      setSortOrder('desc')
+    }
   }
 
   const handleMarkAsViewed = async (commentId: number) => {
@@ -347,9 +396,9 @@ export default function CommentsPage() {
     loadingComments[`unarchive-${commentId}`] || false
 
   // Статистика
-  const totalComments = 0 // Global stats are removed, so this will be 0
-  const totalGroups = 0 // Global stats are removed, so this will be 0
-  const totalKeywords = 0 // Global stats are removed, so this will be 0
+  const totalComments = data?.pages?.[0]?.total || 0
+  const totalGroups = groupsData?.items?.length || 0
+  const totalKeywords = keywordsData?.items?.length || 0
 
   return (
     <div className="space-y-4">
@@ -614,8 +663,22 @@ export default function CommentsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-gradient-to-r from-slate-700 to-slate-600 shadow-md hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600">
-                  <TableHead className="text-slate-200 text-xs font-bold w-48">
-                    Автор
+                  <TableHead
+                    className="text-slate-200 text-xs font-bold w-48 cursor-pointer hover:bg-slate-600 transition-colors"
+                    onClick={() => handleSort('author_name')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Автор
+                      {sortField === 'author_name' ? (
+                        sortOrder === 'asc' ? (
+                          <ArrowUp className="h-3 w-3" />
+                        ) : (
+                          <ArrowDown className="h-3 w-3" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      )}
+                    </div>
                   </TableHead>
                   <TableHead className="text-slate-200 text-xs font-bold w-96">
                     Комментарий
@@ -623,8 +686,22 @@ export default function CommentsPage() {
                   <TableHead className="text-slate-200 text-xs font-bold w-32">
                     Группа
                   </TableHead>
-                  <TableHead className="text-slate-200 text-xs font-bold w-24">
-                    Дата
+                  <TableHead
+                    className="text-slate-200 text-xs font-bold w-24 cursor-pointer hover:bg-slate-600 transition-colors"
+                    onClick={() => handleSort('published_at')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Дата
+                      {sortField === 'published_at' ? (
+                        sortOrder === 'asc' ? (
+                          <ArrowUp className="h-3 w-3" />
+                        ) : (
+                          <ArrowDown className="h-3 w-3" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 text-slate-400" />
+                      )}
+                    </div>
                   </TableHead>
                   <TableHead className="text-slate-200 text-xs font-bold w-20 text-center">
                     Статус
@@ -647,16 +724,23 @@ export default function CommentsPage() {
                         <Avatar className="w-6 h-6 border border-slate-600">
                           <AvatarImage src={comment.author_photo_url} />
                           <AvatarFallback className="bg-slate-700 text-slate-300 text-xs">
-                            {comment.author_name?.[0] || '?'}
+                            {comment.author_name?.[0] || comment.author_screen_name?.[0] || (comment.author_id > 0 ? 'U' : 'G')}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="font-medium text-slate-200 text-xs">
-                            {comment.author_name}
+                            {comment.author_name || comment.author_screen_name || (comment.author_id > 0 ? `Пользователь ${comment.author_id}` : `Группа ${Math.abs(comment.author_id)}`)}
                           </div>
-                          <div className="text-xs text-slate-400">
-                            @{comment.author_screen_name}
-                          </div>
+                          {comment.author_screen_name && comment.author_name && (
+                            <div className="text-xs text-slate-400">
+                              @{comment.author_screen_name}
+                            </div>
+                          )}
+                          {!comment.author_name && comment.author_screen_name && (
+                            <div className="text-xs text-slate-400">
+                              ID: {comment.author_id}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </TableCell>

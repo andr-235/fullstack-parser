@@ -191,4 +191,11 @@ export const createQueryKey = {
   topKeywords: (limit: number) => ['dashboard', 'top-keywords', limit] as const,
   recentComments: (limit: number) =>
     ['dashboard', 'recent-comments', limit] as const,
+
+  // Недостающие query keys для мониторинга
+  availableGroupsForMonitoring: (params?: any) =>
+    ['monitoring', 'groups', 'available', params] as const,
+  activeMonitoringGroups: (params?: any) =>
+    ['monitoring', 'groups', 'active', params] as const,
+  schedulerStatus: () => ['monitoring', 'scheduler', 'status'] as const,
 }

@@ -5,15 +5,17 @@ API endpoints для управления комментариями
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func
-from typing import List, Optional
+from sqlalchemy import select, func, and_
+from typing import Optional
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.models import VKComment, VKGroup, Keyword
+from app.models import VKComment, VKGroup, Keyword, VKPost, CommentKeywordMatch
 from app.schemas.base import PaginatedResponse
+from app.core.logging import get_logger
 
 router = APIRouter(tags=["Comments"])
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
 
 
 @router.get("/")
@@ -30,14 +32,23 @@ async def get_comments(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Получение списка комментариев с пагинацией и фильтрами.
+    Получение списка комментариев с пагинацией и фильтрацией.
     """
     try:
         offset = (page - 1) * size
 
-        # Базовый запрос
-        query = select(VKComment)
-        count_query = select(func.count(VKComment.id))
+        # Базовый запрос с присоединением группы и поста
+        query = (
+            select(VKComment)
+            .options(selectinload(VKComment.post).selectinload(VKPost.group))
+            .outerjoin(VKPost, VKComment.post_id == VKPost.id)
+            .outerjoin(VKGroup, VKPost.group_id == VKGroup.id)
+        )
+        count_query = (
+            select(func.count(VKComment.id))
+            .outerjoin(VKPost, VKComment.post_id == VKPost.id)
+            .outerjoin(VKGroup, VKPost.group_id == VKGroup.id)
+        )
 
         # Применяем фильтры
         filters = []
@@ -47,9 +58,7 @@ async def get_comments(
             # Нужно присоединить таблицу совпадений ключевых слов
             filters.append(VKComment.matched_keywords_count > 0)
         if group_id is not None:
-            filters.append(
-                VKComment.post_id == group_id
-            )  # VKComment связан с постом, а пост с группой
+            filters.append(VKGroup.id == group_id)
 
         if filters:
             query = query.where(and_(*filters))
@@ -68,9 +77,40 @@ async def get_comments(
 
         pages = (total + size - 1) // size if total > 0 else 1
 
-        # Преобразуем комментарии в словари
+        # Преобразуем комментарии в словари с данными о группе
         items = []
+
+        # Получаем все ключевые слова для комментариев одним запросом
+        comment_ids = [comment.id for comment in comments]
+        keyword_matches_query = (
+            select(CommentKeywordMatch.comment_id, Keyword.word)
+            .join(Keyword, Keyword.id == CommentKeywordMatch.keyword_id)
+            .where(CommentKeywordMatch.comment_id.in_(comment_ids))
+        )
+
+        keyword_result = await db.execute(keyword_matches_query)
+        keyword_matches = keyword_result.fetchall()
+
+        # Группируем ключевые слова по комментариям
+        keywords_by_comment: dict[int, list[str]] = {}
+        for comment_id, keyword in keyword_matches:
+            if comment_id not in keywords_by_comment:
+                keywords_by_comment[comment_id] = []
+            keywords_by_comment[comment_id].append(keyword)
+
         for comment in comments:
+            matched_keywords = keywords_by_comment.get(comment.id, [])
+
+            # Получаем данные группы через связь
+            group_data = None
+            if comment.post and comment.post.group:
+                group_data = {
+                    "id": comment.post.group.id,
+                    "name": comment.post.group.name,
+                    "vk_id": comment.post.group.vk_id,
+                    "screen_name": comment.post.group.screen_name,
+                }
+
             items.append(
                 {
                     "id": comment.id,
@@ -78,6 +118,7 @@ async def get_comments(
                     "text": comment.text,
                     "author_name": comment.author_name,
                     "author_screen_name": comment.author_screen_name,
+                    "author_photo_url": comment.author_photo_url,
                     "published_at": (
                         comment.published_at.isoformat()
                         if comment.published_at
@@ -87,6 +128,9 @@ async def get_comments(
                     "is_viewed": comment.is_viewed,
                     "is_archived": comment.is_archived,
                     "matched_keywords_count": comment.matched_keywords_count,
+                    "matched_keywords": matched_keywords,
+                    "post_vk_id": comment.post.vk_id if comment.post else None,
+                    "group": group_data,
                     "created_at": (
                         comment.created_at.isoformat()
                         if comment.created_at
