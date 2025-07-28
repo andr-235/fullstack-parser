@@ -53,26 +53,36 @@ class MonitoringService:
 
         # Получаем активные группы с включенным мониторингом,
         # которые нужно проверить сейчас или уже просрочены
-        # Обрабатываем как время с часовым поясом, так и без него
         query = (
             select(VKGroup)
             .where(
                 and_(
-                    VKGroup.is_active,
-                    VKGroup.auto_monitoring_enabled,
-                    # Сравниваем время мониторинга
-                    VKGroup.next_monitoring_at <= now,
+                    VKGroup.is_active == True,
+                    VKGroup.auto_monitoring_enabled == True,
+                    # Сравниваем время мониторинга (проверяем на None)
+                    or_(
+                        VKGroup.next_monitoring_at.is_(None),
+                        VKGroup.next_monitoring_at <= now,
+                    ),
                 )
             )
             .order_by(
                 VKGroup.monitoring_priority.desc(),  # Сначала высокий приоритет
-                VKGroup.next_monitoring_at.asc(),  # Потом по времени
+                VKGroup.next_monitoring_at.asc().nulls_last(),  # Потом по времени
             )
             .limit(50)  # Ограничиваем количество групп за раз
         )
 
         result = await self.db.execute(query)
-        return list(result.scalars().all())
+        groups = list(result.scalars().all())
+
+        self.logger.info(
+            "Найдено групп для мониторинга",
+            count=len(groups),
+            current_time=now.isoformat(),
+        )
+
+        return groups
 
     async def schedule_group_monitoring(self, group: VKGroup) -> None:
         """Запланировать следующий мониторинг группы"""
@@ -83,11 +93,20 @@ class MonitoringService:
         from datetime import timezone
 
         # Рассчитываем время следующего мониторинга в UTC
-        next_time = datetime.now(timezone.utc) + timedelta(
+        # Используем текущее время группы или текущее время
+        base_time = group.last_monitoring_success or datetime.now(timezone.utc)
+        next_time = base_time + timedelta(
             minutes=group.monitoring_interval_minutes
         )
 
-        # Сохраняем в UTC без удаления часового пояса
+        # Убеждаемся, что следующее время не в прошлом
+        now = datetime.now(timezone.utc)
+        if next_time <= now:
+            next_time = now + timedelta(
+                minutes=group.monitoring_interval_minutes
+            )
+
+        # Сохраняем в UTC
         group.next_monitoring_at = next_time
         await self.db.commit()
 
@@ -96,6 +115,7 @@ class MonitoringService:
             group_id=group.id,
             group_name=group.name,
             next_monitoring_at=next_time.isoformat(),
+            interval_minutes=group.monitoring_interval_minutes,
         )
 
     async def start_group_monitoring(self, group: VKGroup) -> bool:
@@ -105,6 +125,13 @@ class MonitoringService:
                 "Запуск мониторинга группы",
                 group_id=group.id,
                 group_name=group.name,
+                next_monitoring_at=(
+                    group.next_monitoring_at.isoformat()
+                    if group.next_monitoring_at
+                    else None
+                ),
+                interval_minutes=group.monitoring_interval_minutes,
+                priority=group.monitoring_priority,
             )
 
             # Получаем Redis pool
@@ -142,6 +169,7 @@ class MonitoringService:
                     group_id=group.id,
                     group_name=group.name,
                     task_id=task_id,
+                    runs_count=group.monitoring_runs_count,
                 )
 
                 return True
@@ -254,7 +282,15 @@ class MonitoringService:
                 1, min(1440, interval_minutes)
             )  # 1-1440 минут
             group.monitoring_priority = max(1, min(10, priority))  # 1-10
+
+            # Устанавливаем время следующего мониторинга на текущее время
+            # чтобы группа попала в очередь мониторинга сразу
             group.next_monitoring_at = datetime.now(timezone.utc)
+
+            # Сбрасываем статистику
+            group.monitoring_runs_count = 0
+            group.last_monitoring_success = None
+            group.last_monitoring_error = None
 
             await self.db.commit()
 
@@ -264,6 +300,7 @@ class MonitoringService:
                 group_name=group.name,
                 interval_minutes=group.monitoring_interval_minutes,
                 priority=group.monitoring_priority,
+                next_monitoring_at=group.next_monitoring_at.isoformat(),
             )
 
             return True
@@ -318,15 +355,15 @@ class MonitoringService:
         self.logger.info("Начало получения статистики мониторинга")
         try:
             # Общая статистика
-            total_groups = await self.db.execute(select(VKGroup))
-            total_groups = len(total_groups.scalars().all())
+            total_result = await self.db.execute(select(VKGroup))
+            total_groups = len(total_result.scalars().all())
 
-            active_groups = await self.db.execute(
+            active_result = await self.db.execute(
                 select(VKGroup).where(VKGroup.is_active)
             )
-            active_groups = len(active_groups.scalars().all())
+            active_groups = len(active_result.scalars().all())
 
-            monitored_groups = await self.db.execute(
+            monitored_result = await self.db.execute(
                 select(VKGroup).where(
                     and_(
                         VKGroup.is_active,
@@ -334,13 +371,13 @@ class MonitoringService:
                     )
                 )
             )
-            monitored_groups = len(monitored_groups.scalars().all())
+            monitored_groups = len(monitored_result.scalars().all())
 
             # Группы, готовые для мониторинга
             from datetime import timezone
 
             now = datetime.now(timezone.utc)
-            ready_groups = await self.db.execute(
+            ready_result = await self.db.execute(
                 select(VKGroup).where(
                     and_(
                         VKGroup.is_active,
@@ -350,10 +387,10 @@ class MonitoringService:
                     )
                 )
             )
-            ready_groups = len(ready_groups.scalars().all())
+            ready_groups = len(ready_result.scalars().all())
 
             # Следующий мониторинг
-            next_monitoring = await self.db.execute(
+            next_monitoring_result = await self.db.execute(
                 select(VKGroup.next_monitoring_at)
                 .where(
                     and_(
@@ -365,7 +402,7 @@ class MonitoringService:
                 .order_by(VKGroup.next_monitoring_at.asc())
                 .limit(1)
             )
-            next_monitoring_time = next_monitoring.scalar()
+            next_monitoring_time = next_monitoring_result.scalar()
 
             # Конвертируем в локальное время для отображения
             self.logger.info("Начинаем конвертацию времени")
