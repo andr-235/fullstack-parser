@@ -5,8 +5,8 @@ Provides structured caching with automatic fallback to database.
 
 import json
 import pickle
-from typing import Any, Optional, Dict, List, Union
-from datetime import timedelta
+from typing import Any, Dict, List, Optional
+
 from redis.asyncio import Redis
 from structlog import get_logger
 
@@ -195,7 +195,7 @@ class CacheService:
             values = await self.redis.mget(keys)
 
             result = {}
-            for identifier, value in zip(identifiers, values):
+            for identifier, value in zip(identifiers, values, strict=False):
                 if value is not None:
                     try:
                         result[identifier] = json.loads(value)

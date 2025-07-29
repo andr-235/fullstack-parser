@@ -2,13 +2,14 @@
 Unit tests for cache service.
 """
 
-import pytest
 import json
 import pickle
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from structlog import get_logger
 
-from app.core.cache import CacheService, CacheManager
+from app.core.cache import CacheManager, CacheService
 from app.core.exceptions import CacheError
 
 logger = get_logger()

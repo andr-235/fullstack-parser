@@ -4,15 +4,15 @@ Provides automatic retry logic for VK API and other external service calls.
 """
 
 import asyncio
-import time
-from typing import Callable, Any, Optional
 from functools import wraps
+from typing import Any, Callable, Optional
+
 from structlog import get_logger
 
 from ..core.exceptions import (
-    VKAPIError,
     RateLimitError,
     ServiceUnavailableError,
+    VKAPIError,
 )
 
 logger = get_logger()

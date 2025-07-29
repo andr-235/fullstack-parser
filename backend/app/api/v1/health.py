@@ -2,15 +2,15 @@
 Health check endpoints for monitoring system status.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from fastapi import APIRouter, Depends
+from redis.asyncio import Redis
 from structlog import get_logger
 
-from app.core.database import get_db
-from app.core.cache import CacheService
-from app.core.exceptions import ServiceUnavailableError
-from redis.asyncio import Redis
 from app.core.config import settings
+from app.core.database import get_db
+from app.core.exceptions import ServiceUnavailableError
 
 logger = get_logger()
 

@@ -3,19 +3,20 @@ Background tasks API endpoints.
 Provides endpoints for submitting, monitoring, and managing background tasks.
 """
 
-from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel
 
 from app.core.background_tasks import (
-    background_task_manager,
-    TaskStatus,
     TaskPriority,
-    submit_background_task,
+    TaskStatus,
+    background_task_manager,
     get_background_task,
-    get_background_task_status,
     get_background_task_result,
+    get_background_task_status,
+    submit_background_task,
 )
 from app.core.exceptions import ServiceUnavailableError
 

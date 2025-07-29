@@ -4,6 +4,7 @@ Provides centralized error handling with structured logging support.
 """
 
 from typing import Any, Dict, Optional
+
 from fastapi import HTTPException, status
 
 

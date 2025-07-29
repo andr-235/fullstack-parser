@@ -2,9 +2,9 @@
 Unit tests for database service.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from sqlalchemy import select, update, delete, func
+
+import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.database_service import DatabaseService

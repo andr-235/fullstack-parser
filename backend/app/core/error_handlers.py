@@ -4,19 +4,19 @@ Provides structured logging and unified error responses.
 """
 
 import traceback
-from typing import Any, Dict, Optional
+
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from structlog import get_logger
 
 from .exceptions import (
     BaseAPIException,
-    VKAPIError,
-    DatabaseError,
     CacheError,
-    ValidationError,
+    DatabaseError,
     RateLimitError,
     ServiceUnavailableError,
+    ValidationError,
+    VKAPIError,
 )
 
 logger = get_logger()

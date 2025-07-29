@@ -13,33 +13,31 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
 from app.api.v1.api import api_router
+from app.core.background_tasks import background_task_manager
 from app.core.config import settings
 from app.core.database import init_db
 from app.core.error_handlers import (
     base_exception_handler,
+    cache_exception_handler,
+    database_exception_handler,
+    generic_exception_handler,
+    rate_limit_exception_handler,
     validation_exception_handler,
     vk_api_exception_handler,
-    database_exception_handler,
-    cache_exception_handler,
-    rate_limit_exception_handler,
-    generic_exception_handler,
 )
 from app.core.exceptions import (
     BaseAPIException,
-    VKAPIError,
-    DatabaseError,
     CacheError,
-    ValidationError,
+    DatabaseError,
     RateLimitError,
-    ServiceUnavailableError,
+    ValidationError,
+    VKAPIError,
 )
 from app.middleware.request_logging import RequestLoggingMiddleware
 from app.middleware.retry import RetryMiddleware, create_retry_config
 from app.services.scheduler_service import get_scheduler_service
-from app.core.background_tasks import background_task_manager
 
 # Настройка структурированного логирования
 structlog.configure(
