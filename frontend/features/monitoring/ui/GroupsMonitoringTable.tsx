@@ -256,7 +256,9 @@ export default function GroupsMonitoringTable({
                 >
                   <TableCell>
                     <div>
-                      <div className="font-medium">{group.group_name || group.name}</div>
+                      <div className="font-medium">
+                        {group.group_name || group.name}
+                      </div>
                       <div className="text-sm text-slate-400">
                         @{group.screen_name}
                       </div>
