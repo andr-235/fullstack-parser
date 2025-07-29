@@ -141,7 +141,8 @@ services:
     logging: *default-logging
     healthcheck:
       <<: *default-healthcheck
-      test: ["CMD", "curl", "-fsSL", "http://localhost:8000/api/v1/health/"]
+      test:
+        ["CMD", "curl", "-fsSL", "http://localhost:8000/api/v1/health/health"]
     deploy:
       resources:
         limits:

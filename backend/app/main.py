@@ -18,8 +18,28 @@ from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.database import init_db
+from app.core.error_handlers import (
+    base_exception_handler,
+    validation_exception_handler,
+    vk_api_exception_handler,
+    database_exception_handler,
+    cache_exception_handler,
+    rate_limit_exception_handler,
+    generic_exception_handler,
+)
+from app.core.exceptions import (
+    BaseAPIException,
+    VKAPIError,
+    DatabaseError,
+    CacheError,
+    ValidationError,
+    RateLimitError,
+    ServiceUnavailableError,
+)
 from app.middleware.request_logging import RequestLoggingMiddleware
+from app.middleware.retry import RetryMiddleware, create_retry_config
 from app.services.scheduler_service import get_scheduler_service
+from app.core.background_tasks import background_task_manager
 
 # Настройка структурированного логирования
 structlog.configure(
@@ -77,6 +97,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"⚠️ Ошибка инициализации планировщика: {e}")
 
+    # Инициализируем background task manager
+    try:
+        await background_task_manager.start()
+        logger.info("✅ Background task manager запущен")
+    except Exception as e:
+        logger.warning(f"⚠️ Ошибка инициализации background task manager: {e}")
+
     yield
 
     # Shutdown
@@ -92,6 +119,13 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning(f"⚠️ Ошибка остановки планировщика: {e}")
 
+    # Останавливаем background task manager
+    try:
+        await background_task_manager.stop()
+        logger.info("⏹️ Background task manager остановлен")
+    except Exception as e:
+        logger.warning(f"⚠️ Ошибка остановки background task manager: {e}")
+
 
 # Создание FastAPI приложения с оптимизациями
 app = FastAPI(
@@ -106,18 +140,46 @@ app = FastAPI(
 )
 
 
-# Централизованный exception handler
+# Enhanced exception handlers
+@app.exception_handler(BaseAPIException)
+async def base_api_exception_handler(request: Request, exc: BaseAPIException):
+    return await base_exception_handler(request, exc)
+
+
+@app.exception_handler(ValidationError)
+async def custom_validation_exception_handler(
+    request: Request, exc: ValidationError
+):
+    return await validation_exception_handler(request, exc)
+
+
+@app.exception_handler(VKAPIError)
+async def vk_api_exception_handler_wrapper(request: Request, exc: VKAPIError):
+    return await vk_api_exception_handler(request, exc)
+
+
+@app.exception_handler(DatabaseError)
+async def database_exception_handler_wrapper(
+    request: Request, exc: DatabaseError
+):
+    return await database_exception_handler(request, exc)
+
+
+@app.exception_handler(CacheError)
+async def cache_exception_handler_wrapper(request: Request, exc: CacheError):
+    return await cache_exception_handler(request, exc)
+
+
+@app.exception_handler(RateLimitError)
+async def rate_limit_exception_handler_wrapper(
+    request: Request, exc: RateLimitError
+):
+    return await rate_limit_exception_handler(request, exc)
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error("Unhandled exception", exc_info=True, path=request.url.path)
-    return JSONResponse(
-        status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "error": "internal_server_error",
-            "message": str(exc),
-            "path": str(request.url.path),
-        },
-    )
+    return await generic_exception_handler(request, exc)
 
 
 @app.exception_handler(FastAPIHTTPException)
@@ -143,7 +205,9 @@ async def validation_exception_handler(
     request: Request, exc: RequestValidationError
 ):
     logger.warning(
-        "Validation error", errors=exc.errors(), path=request.url.path
+        "Validation error",
+        errors=exc.errors(),
+        path=request.url.path,
     )
     return JSONResponse(
         status_code=422,
@@ -211,6 +275,12 @@ app.add_middleware(
 
 # Добавляем middleware для обработки заголовков прокси (должен быть первым)
 app.add_middleware(ProxyHeadersMiddleware)
+
+# Добавляем retry middleware для VK API endpoints
+retry_config = create_retry_config(
+    max_retries=3, base_delay=1.0, max_delay=60.0, exponential_backoff=True
+)
+app.add_middleware(RetryMiddleware, retry_config)
 
 # Добавляем middleware для логирования запросов
 app.add_middleware(RequestLoggingMiddleware)

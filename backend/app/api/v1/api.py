@@ -5,6 +5,7 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    background_tasks,
     comments,
     errors,
     groups,
@@ -21,6 +22,11 @@ api_router = APIRouter()
 
 # Подключение всех роутеров
 api_router.include_router(health.router, prefix="/health", tags=["Health"])
+api_router.include_router(
+    background_tasks.router,
+    prefix="/background-tasks",
+    tags=["Background Tasks"],
+)
 api_router.include_router(
     comments.router, prefix="/comments", tags=["Comments"]
 )
@@ -53,6 +59,7 @@ async def api_info() -> dict[str, str | dict[str, str]]:
         "service": "VK Comments Parser API",
         "version": "1.0.0",
         "endpoints": {
+            "background_tasks": "/background-tasks - Управление фоновыми задачами",
             "comments": "/comments - Найденные комментарии",
             "groups": "/groups - Управление VK группами",
             "keywords": "/keywords - Управление ключевыми словами",
