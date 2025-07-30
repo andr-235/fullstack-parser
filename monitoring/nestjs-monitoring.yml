@@ -1,0 +1,39 @@
+# =============================================================================
+# NestJS Backend Monitoring Configuration
+# =============================================================================
+
+# Prometheus configuration for NestJS metrics
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "nestjs-rules.yml"
+
+scrape_configs:
+  # NestJS Backend metrics
+  - job_name: "nestjs-backend"
+    static_configs:
+      - targets: ["backend:8000"]
+    metrics_path: "/api/metrics"
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # PostgreSQL metrics
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres:5432"]
+    scrape_interval: 30s
+
+  # Redis metrics
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis:6379"]
+    scrape_interval: 30s
+
+  # Node.js metrics
+  - job_name: "nodejs"
+    static_configs:
+      - targets: ["backend:8000"]
+    metrics_path: "/api/node-metrics"
+    scrape_interval: 15s

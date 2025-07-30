@@ -127,13 +127,6 @@ async function verifyDataConsistency() {
 
     // Verify that keyword match count matches actual matches
     const actualMatches = await prisma.commentKeywordMatch.count();
-    const expectedMatches = await prisma.keyword.aggregate({
-      _sum: {
-        _count: {
-          commentMatches: true,
-        },
-      },
-    });
 
     console.log(`   - Actual keyword matches: ${actualMatches}`);
 

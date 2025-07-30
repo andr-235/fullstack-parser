@@ -5,6 +5,11 @@ export class CreateKeywordDto {
   @ApiProperty({ description: "Keyword word" })
   @IsString()
   word: string;
+
+  @ApiProperty({ description: "Keyword active status", required: false })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }
 
 export class UpdateKeywordDto {

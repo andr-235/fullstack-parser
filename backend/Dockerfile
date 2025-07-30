@@ -1,96 +1,72 @@
 # =============================================================================
-# Optimized Multi-stage Dockerfile for FastAPI Backend Application
+# Optimized Multi-stage Dockerfile for NestJS Backend Application
 # =============================================================================
 
 # ----------- Stage 1: Dependencies (with enhanced caching) -----------
 # Пиннинг версии для воспроизводимости
-FROM python:3.13-slim AS deps
+FROM node:18-alpine@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c AS deps
+
+# Установка системных зависимостей
+RUN apk add --no-cache libc6-compat
+
+# Создание пользователя для безопасности
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nestjs -u 1001
+
 WORKDIR /app
 
-# Установка системных зависимостей для компиляции
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
-    libpq-dev \
-    libffi-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+# Копирование файлов зависимостей для кеширования
+COPY package.json package-lock.json* ./
 
-# Копирование только файлов зависимостей для лучшего кеширования
-COPY pyproject.toml poetry.lock* ./
-
-# Установка poetry с оптимизацией
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir poetry==1.8.3 && \
-    poetry config virtualenvs.create false && \
-    poetry config installer.max-workers 10 && \
-    poetry config installer.parallel true && \
-    poetry install --no-root --only=main --no-interaction
+# Установка зависимостей с кешированием
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production && npm cache clean --force
 
 # ----------- Stage 2: Builder (application build) -----------
-FROM python:3.13-slim AS builder
+FROM node:18-alpine AS builder
 WORKDIR /app
-
-# Копирование установленных пакетов
-COPY --from=deps /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
-COPY --from=deps /usr/local/bin /usr/local/bin
 
 # Копирование исходного кода
-COPY app/ ./app/
-COPY alembic/ ./alembic/
-COPY alembic.ini ./
-COPY entrypoint.sh ./
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Сборка приложения
+RUN --mount=type=cache,target=/app/.nest/cache \
+    npm run build
 
 # ----------- Stage 3: Production (minimal runtime) -----------
-FROM python:3.13-slim AS production
+FROM node:18-alpine AS runner
 WORKDIR /app
 
-# Установка только runtime зависимостей
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
-    curl \
-    tzdata \
-    dumb-init \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean \
-    && groupadd -r appuser && useradd --no-log-init -r -g appuser appuser
+# Создание пользователя
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nestjs -u 1001
 
-# Настройка часового пояса для Владивостока
-ENV TZ=Asia/Vladivostok
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+# Копирование только необходимых файлов
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/prisma ./prisma
 
-# Копирование Python пакетов и кода
-COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /app /app
-COPY entrypoint.sh /entrypoint.sh
-
-# Настройка прав доступа
-RUN chmod +x /entrypoint.sh && \
-    chown -R appuser:appuser /app
+# Настройка безопасности
+USER nestjs
 
 # Метаданные образа
 LABEL maintainer="team@company.com" \
       version="1.0" \
-      description="Production FastAPI application"
-
-# Настройка безопасности
-USER appuser
+      description="Production NestJS application"
 
 # Проверка здоровья
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/api/v1/health/ || exit 1
+    CMD curl -f http://localhost:8000/api/health || exit 1
 
 # Экспорт порта
 EXPOSE 8000
 
 # Переменные окружения
-ENV PYTHONPATH=/app \
-    PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+ENV NODE_ENV=production
+ENV PORT=8000
 
-# Точка входа с dumb-init для правильной обработки сигналов
-ENTRYPOINT ["dumb-init", "--"]
-
-# Команда запуска
-CMD ["/entrypoint.sh"]
+# Точка входа
+ENTRYPOINT ["node"]
+CMD ["dist/main.js"]

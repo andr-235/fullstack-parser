@@ -6,6 +6,8 @@ import { GroupsModule } from "./modules/groups/groups.module";
 import { ParserModule } from "./modules/parser/parser.module";
 import { KeywordsModule } from "./modules/keywords/keywords.module";
 import { CommentsModule } from "./modules/comments/comments.module";
+import { HealthModule } from "./modules/health/health.module";
+import { MonitoringModule } from "./modules/monitoring/monitoring.module";
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { CommentsModule } from "./modules/comments/comments.module";
     ParserModule,
     KeywordsModule,
     CommentsModule,
+    HealthModule,
+    MonitoringModule,
   ],
 })
 export class AppModule {}

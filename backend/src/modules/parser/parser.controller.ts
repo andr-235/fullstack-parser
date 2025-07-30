@@ -16,7 +16,7 @@ import {
   ApiQuery,
 } from "@nestjs/swagger";
 import { ParserService } from "./parser.service";
-import { VKGroup, VKPost, VKComment } from "@prisma/client";
+import { VKGroupDto, VKPostDto, VKCommentDto } from "../../common/dto/vk.dto";
 
 @ApiTags("parser")
 @Controller("parser")
@@ -29,7 +29,7 @@ export class ParserController {
   @ApiResponse({
     status: 201,
     description: "Group parsed successfully",
-    type: VKGroup,
+    type: VKGroupDto,
   })
   @ApiResponse({
     status: 400,
@@ -39,7 +39,9 @@ export class ParserController {
     status: 404,
     description: "Group not found",
   })
-  async parseGroup(@Param("screenName") screenName: string): Promise<VKGroup> {
+  async parseGroup(
+    @Param("screenName") screenName: string
+  ): Promise<VKGroupDto> {
     return this.parserService.parseGroup(screenName);
   }
 
@@ -55,7 +57,7 @@ export class ParserController {
   @ApiResponse({
     status: 201,
     description: "Posts parsed successfully",
-    type: [VKPost],
+    type: [VKPostDto],
   })
   @ApiResponse({
     status: 400,
@@ -68,7 +70,7 @@ export class ParserController {
   async parseGroupPosts(
     @Param("groupId") groupId: string,
     @Query("limit") limit: number = 100
-  ): Promise<VKPost[]> {
+  ): Promise<VKPostDto[]> {
     return this.parserService.parseGroupPosts(groupId, limit);
   }
 
@@ -84,7 +86,7 @@ export class ParserController {
   @ApiResponse({
     status: 201,
     description: "Comments parsed successfully",
-    type: [VKComment],
+    type: [VKCommentDto],
   })
   @ApiResponse({
     status: 400,
@@ -97,7 +99,7 @@ export class ParserController {
   async parsePostComments(
     @Param("postId") postId: string,
     @Query("limit") limit: number = 100
-  ): Promise<VKComment[]> {
+  ): Promise<VKCommentDto[]> {
     return this.parserService.parsePostComments(postId, limit);
   }
 
@@ -179,7 +181,7 @@ export class ParserController {
     description: "Group not found",
   })
   async getGroupStats(@Param("groupId") groupId: string): Promise<{
-    group: VKGroup;
+    group: VKGroupDto;
     postsCount: number;
     commentsCount: number;
     matchesCount: number;
@@ -222,7 +224,7 @@ export class ParserController {
     @Query("postsLimit") postsLimit: number = 100,
     @Query("commentsLimit") commentsLimit: number = 100
   ): Promise<{
-    group: VKGroup;
+    group: VKGroupDto;
     postsParsed: number;
     commentsParsed: number;
     keywordsMatched: number;

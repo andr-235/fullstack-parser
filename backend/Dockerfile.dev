@@ -1,58 +1,42 @@
 # =============================================================================
-# Development Dockerfile for FastAPI Backend Application
+# Development Dockerfile for NestJS Backend Application
 # =============================================================================
 
-FROM python:3.13-slim
+FROM node:18-alpine
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
-    libpq-dev \
-    libffi-dev \
-    curl \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
+# Установка системных зависимостей
+RUN apk add --no-cache libc6-compat curl
 
-# Install dumb-init for proper signal handling
-RUN pip install --no-cache-dir dumb-init
+# Создание пользователя для безопасности
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nestjs -u 1001
 
-# Create app directory
 WORKDIR /app
 
-# Create app user for better security
-RUN groupadd -r appuser && useradd --no-log-init -r -g appuser appuser
+# Копирование файлов зависимостей
+COPY package.json package-lock.json* ./
 
-# Copy dependency files
-COPY pyproject.toml poetry.lock ./
+# Установка всех зависимостей (включая dev)
+RUN npm ci
 
-# Install poetry and dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir poetry==1.8.3 && \
-    poetry config virtualenvs.create false && \
-    poetry config installer.max-workers 10 && \
-    poetry install --no-root --only=main --no-interaction
-
-# Copy application code
+# Копирование исходного кода
 COPY . .
 
-# Set proper permissions
-RUN chown -R appuser:appuser /app
+# Генерация Prisma клиента
+RUN npx prisma generate
 
-# Switch to app user
-USER appuser
+# Настройка прав доступа
+RUN chown -R nestjs:nodejs /app
 
-# Expose port
+# Переключение на непривилегированного пользователя
+USER nestjs
+
+# Экспорт порта
 EXPOSE 8000
 
-# Environment variables for development
-ENV PYTHONPATH=/app \
-    PYTHONUNBUFFERED=1 \
-    ENV=development
+# Переменные окружения для разработки
+ENV NODE_ENV=development
+ENV PORT=8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8000/api/v1/health/ || exit 1
-
-# Start development server with auto-reload
-CMD ["dumb-init", "--", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"] 
+# Команда запуска с hot reload
+CMD ["npm", "run", "start:dev"] 
