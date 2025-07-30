@@ -32,7 +32,9 @@ model VKGroup {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  posts       VKPost[]
+
+  // Relations
+  posts VKPost[]
 
   @@map("vk_groups")
 }
@@ -41,11 +43,13 @@ model VKPost {
   id        String   @id @default(cuid())
   vkId      Int      @unique
   groupId   String
-  group     VKGroup  @relation(fields: [groupId], references: [id])
   text      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  comments  VKComment[]
+
+  // Relations
+  group    VKGroup     @relation(fields: [groupId], references: [id])
+  comments VKComment[]
 
   @@map("vk_posts")
 }
@@ -54,10 +58,12 @@ model VKComment {
   id        String   @id @default(cuid())
   vkId      Int      @unique
   postId    String
-  post      VKPost   @relation(fields: [postId], references: [id])
   text      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Relations
+  post VKPost @relation(fields: [postId], references: [id])
   keywordMatches CommentKeywordMatch[]
 
   @@map("vk_comments")
@@ -69,7 +75,9 @@ model Keyword {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  matches   CommentKeywordMatch[]
+
+  // Relations
+  commentMatches CommentKeywordMatch[]
 
   @@map("keywords")
 }
@@ -77,10 +85,13 @@ model Keyword {
 model CommentKeywordMatch {
   id        String   @id @default(cuid())
   commentId String
-  comment   VKComment @relation(fields: [commentId], references: [id])
   keywordId String
-  keyword   Keyword   @relation(fields: [keywordId], references: [id])
   createdAt DateTime @default(now())
 
+  // Relations
+  comment VKComment @relation(fields: [commentId], references: [id])
+  keyword Keyword   @relation(fields: [keywordId], references: [id])
+
+  @@unique([commentId, keywordId])
   @@map("comment_keyword_matches")
 }
