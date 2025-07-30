@@ -1,42 +1,27 @@
-# =============================================================================
-# Development Dockerfile for NestJS Backend Application
-# =============================================================================
+# =========================================
+# Development Environment
+# =========================================
 
+# Используем Alpine для меньшего размера образа
 FROM node:18-alpine
 
-# Установка системных зависимостей
-RUN apk add --no-cache libc6-compat curl
+# Устанавливаем OpenSSL для Prisma
+RUN apk add --no-cache openssl
 
-# Создание пользователя для безопасности
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nestjs -u 1001
-
+# Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Копирование файлов зависимостей
-COPY package.json package-lock.json* ./
+# Копируем файлы зависимостей для кеширования
+COPY package*.json ./
 
-# Установка всех зависимостей (включая dev)
-RUN npm ci
+# Устанавливаем зависимости
+RUN npm ci --only=development
 
-# Копирование исходного кода
+# Копируем исходный код
 COPY . .
 
-# Генерация Prisma клиента
-RUN npx prisma generate
-
-# Настройка прав доступа
-RUN chown -R nestjs:nodejs /app
-
-# Переключение на непривилегированного пользователя
-USER nestjs
-
-# Экспорт порта
+# Expose порт для development сервера
 EXPOSE 8000
 
-# Переменные окружения для разработки
-ENV NODE_ENV=development
-ENV PORT=8000
-
-# Команда запуска с hot reload
+# Команда для development с hot reload
 CMD ["npm", "run", "start:dev"] 

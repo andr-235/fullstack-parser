@@ -2,7 +2,7 @@
 # Development Docker Compose for NestJS Backend
 # =============================================================================
 
-version: "3.8"
+# Убираем устаревший version
 
 services:
   # PostgreSQL Database
@@ -10,12 +10,10 @@ services:
     image: postgres:15-alpine
     container_name: fullstack_dev_postgres
     restart: unless-stopped
-    env_file:
-      - .env.dev
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: fullstack_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
@@ -54,16 +52,14 @@ services:
       dockerfile: Dockerfile.dev
     container_name: fullstack_dev_backend
     restart: unless-stopped
-    env_file:
-      - .env.dev
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/fullstack_dev
       - REDIS_URL=redis://redis:6379/0
-      - JWT_SECRET=${JWT_SECRET_KEY}
+      - JWT_SECRET=your_jwt_secret_key_here
       - JWT_EXPIRES_IN=15m
       - CORS_ORIGINS=http://localhost:3000,http://localhost:3001
-      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN}
+      - VK_ACCESS_TOKEN=your_vk_token_here
       - PORT=8000
     ports:
       - "8000:8000"
@@ -91,10 +87,8 @@ services:
       dockerfile: Dockerfile.dev
     container_name: fullstack_dev_prisma_studio
     restart: unless-stopped
-    env_file:
-      - .env.dev
     environment:
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/fullstack_dev
     ports:
       - "5555:5555"
     depends_on:
