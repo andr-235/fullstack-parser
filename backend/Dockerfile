@@ -1,72 +1,31 @@
-# =============================================================================
-# Optimized Multi-stage Dockerfile for NestJS Backend Application
-# =============================================================================
-
-# ----------- Stage 1: Dependencies (with enhanced caching) -----------
-# Пиннинг версии для воспроизводимости
-FROM node:18-alpine@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c AS deps
-
-# Установка системных зависимостей
-RUN apk add --no-cache libc6-compat
-
-# Создание пользователя для безопасности
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nestjs -u 1001
-
-WORKDIR /app
-
-# Копирование файлов зависимостей для кеширования
-COPY package.json package-lock.json* ./
-
-# Установка зависимостей с кешированием
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production && npm cache clean --force
-
-# ----------- Stage 2: Builder (application build) -----------
-FROM node:18-alpine AS builder
-WORKDIR /app
-
-# Копирование исходного кода
-COPY --from=deps /app/node_modules ./node_modules
+# Development stage
+FROM node:18-slim AS development
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+RUN npm ci
 COPY . .
+USER node
 
-# Сборка приложения
-RUN --mount=type=cache,target=/app/.nest/cache \
-    npm run build
+# Build stage
+FROM node:18-slim AS build
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+COPY --from=development /usr/src/app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+ENV NODE_ENV production
+RUN npm ci --only=production && npm cache clean --force
+USER node
 
-# ----------- Stage 3: Production (minimal runtime) -----------
-FROM node:18-alpine AS runner
-WORKDIR /app
+# Production stage
+FROM node:18-slim AS production
+WORKDIR /usr/src/app
 
-# Создание пользователя
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nestjs -u 1001
+# Устанавливаем OpenSSL и wget для Prisma и health check
+RUN apt-get update && apt-get install -y openssl wget && rm -rf /var/lib/apt/lists/*
 
-# Копирование только необходимых файлов
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/prisma ./prisma
-
-# Настройка безопасности
-USER nestjs
-
-# Метаданные образа
-LABEL maintainer="team@company.com" \
-      version="1.0" \
-      description="Production NestJS application"
-
-# Проверка здоровья
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/api/health || exit 1
-
-# Экспорт порта
-EXPOSE 8000
-
-# Переменные окружения
-ENV NODE_ENV=production
-ENV PORT=8000
-
-# Точка входа
-ENTRYPOINT ["node"]
-CMD ["dist/main.js"]
+COPY --from=build /usr/src/app/node_modules ./node_modules
+COPY --from=build /usr/src/app/dist ./dist
+CMD ["node", "dist/src/main.js"]

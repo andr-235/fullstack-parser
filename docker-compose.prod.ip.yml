@@ -109,7 +109,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: runner
+      target: production
       args:
         BUILDKIT_INLINE_CACHE: 1
     container_name: fullstack_prod_backend
@@ -140,7 +140,15 @@ services:
     logging: *default-logging
     healthcheck:
       <<: *default-healthcheck
-      test: ["CMD", "curl", "-fsSL", "http://localhost:8000/api/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8000/api/health",
+        ]
     deploy:
       resources:
         limits:
