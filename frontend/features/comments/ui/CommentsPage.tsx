@@ -755,21 +755,20 @@ export default function CommentsPage() {
                           <div className="font-medium text-slate-200 text-xs">
                             {comment?.author_name ||
                               (comment?.author_screen_name &&
-                                `@${comment.author_screen_name}`) ||
+                                `@${comment?.author_screen_name}`) ||
                               (comment?.author_id > 0
-                                ? `Пользователь ${comment.author_id}`
-                                : `Группа ${Math.abs(comment.author_id)}`)}
+                                ? `Пользователь ${comment?.author_id}`
+                                : `Группа ${Math.abs(comment?.author_id || 0)}`)}
                           </div>
-                          {comment?.author_screen_name &&
-                            comment?.author_name && (
-                              <div className="text-xs text-slate-400">
-                                @{comment.author_screen_name}
-                              </div>
-                            )}
+                          {comment?.author_screen_name && (
+                            <div className="text-xs text-slate-400">
+                              @{comment?.author_screen_name}
+                            </div>
+                          )}
                           {!comment?.author_name &&
                             comment?.author_screen_name && (
                               <div className="text-xs text-slate-400">
-                                ID: {comment.author_id}
+                                ID: {comment?.author_id}
                               </div>
                             )}
                         </div>
@@ -854,7 +853,7 @@ export default function CommentsPage() {
                             className="hover:bg-blue-900 text-blue-400 hover:text-blue-300 transition-all duration-200 hover:scale-110 h-8 w-8"
                           >
                             <Link
-                              href={`https://vk.com/wall-${comment.group.vk_id}_${comment.post_vk_id}?reply=${comment.vk_id}`}
+                              href={`https://vk.com/wall-${comment?.group?.vk_id}_${comment?.post_vk_id}?reply=${comment?.vk_id}`}
                               target="_blank"
                             >
                               <ExternalLink className="h-4 w-4" />
@@ -867,7 +866,7 @@ export default function CommentsPage() {
                           size="icon"
                           onClick={() =>
                             comment?.author_screen_name &&
-                            handleAddSpecialAuthor(comment.author_screen_name)
+                            handleAddSpecialAuthor(comment?.author_screen_name)
                           }
                           className="hover:bg-purple-900 text-purple-400 hover:text-purple-300 transition-all duration-200 hover:scale-110 h-8 w-8"
                           title="Добавить автора в особый статус"

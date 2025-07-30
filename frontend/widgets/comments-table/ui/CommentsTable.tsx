@@ -94,12 +94,12 @@ export function CommentsTable({
                     <div className="font-medium">
                       {comment?.author_name ||
                         (comment?.author_screen_name &&
-                          `@${comment.author_screen_name}`) ||
+                          `@${comment?.author_screen_name}`) ||
                         (comment?.author_id > 0
-                          ? `Пользователь ${comment.author_id}`
-                          : `Группа ${Math.abs(comment.author_id)}`)}
+                          ? `Пользователь ${comment?.author_id}`
+                          : `Группа ${Math.abs(comment?.author_id || 0)}`)}
                     </div>
-                    <div className="text-sm text-slate-400">
+                    <div className="text-sm text-gray-500">
                       ID: {comment?.author_id}
                     </div>
                   </div>
