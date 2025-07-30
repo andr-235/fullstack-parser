@@ -737,7 +737,7 @@ export default function CommentsPage() {
                 {comments.map((comment: VKCommentResponse, index: number) => (
                   <TableRow
                     key={comment.id}
-                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${comment.is_viewed ? 'opacity-60' : ''
+                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${comment?.is_viewed ? 'opacity-60' : ''
                       }`}
                     style={{ animationDelay: `${index * 30}ms` }}
                   >
@@ -825,7 +825,7 @@ export default function CommentsPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
-                        {comment.is_viewed ? (
+                        {comment?.is_viewed ? (
                           <Badge
                             variant="secondary"
                             className="text-xs bg-gray-900 text-gray-300"
@@ -875,7 +875,7 @@ export default function CommentsPage() {
                           <Edit className="h-4 w-4" />
                         </Button>
 
-                        {!comment.is_viewed && (
+                        {!comment?.is_viewed && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -892,7 +892,7 @@ export default function CommentsPage() {
                           </Button>
                         )}
 
-                        {comment.is_viewed && (
+                        {comment?.is_viewed && (
                           <Button
                             variant="ghost"
                             size="icon"

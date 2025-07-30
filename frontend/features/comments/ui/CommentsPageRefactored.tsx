@@ -128,10 +128,10 @@ export default function CommentsPage() {
 
     return {
       total: allComments.length,
-      new: allComments.filter((c) => !c.is_viewed && !c.is_archived).length,
-      viewed: allComments.filter((c) => c.is_viewed && !c.is_archived).length,
-      archived: allComments.filter((c) => c.is_archived).length,
-      withKeywords: allComments.filter((c) => c.matched_keywords_count > 0)
+      new: allComments.filter((c) => !c?.is_viewed && !c?.is_archived).length,
+      viewed: allComments.filter((c) => c?.is_viewed && !c?.is_archived).length,
+      archived: allComments.filter((c) => c?.is_archived).length,
+      withKeywords: allComments.filter((c) => c?.matched_keywords_count > 0)
         .length,
     }
   }, [commentsData])

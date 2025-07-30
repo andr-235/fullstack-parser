@@ -16,6 +16,10 @@ export class Comment {
   isArchived: boolean
 
   constructor(data: VKCommentResponse) {
+    if (!data) {
+      throw new Error('Comment data is required')
+    }
+
     this.id = data.id
     this.text = data.text
     this.authorId = data.author_id

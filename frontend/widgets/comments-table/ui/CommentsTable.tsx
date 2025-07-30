@@ -64,6 +64,8 @@ export function CommentsTable({
       </TableHeader>
       <TableBody>
         {comments.map((comment) => {
+          if (!comment) return null
+
           const commentModel = new Comment(comment)
 
           return (
