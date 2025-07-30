@@ -148,7 +148,7 @@ describe("Comments (e2e)", () => {
         },
       });
 
-      commentId = comment.id;
+      commentId = comment.id.toString();
     });
 
     it("should return comment by id", () => {
@@ -167,10 +167,6 @@ describe("Comments (e2e)", () => {
         .expect(404);
     });
   });
-
-
-
-
 
   describe("/comments/statistics (GET)", () => {
     beforeEach(async () => {
@@ -219,12 +215,8 @@ describe("Comments (e2e)", () => {
     });
   });
 
-
-
-
-
   afterAll(async () => {
     await prisma.$disconnect();
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for connections to close
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for connections to close
   });
 });

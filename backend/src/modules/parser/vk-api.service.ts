@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { VK } from 'vk-io';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger } from "@nestjs/common";
+import { VK } from "vk-io";
+import { ConfigService } from "@nestjs/config";
 
 export interface VKUser {
   id: number;
@@ -78,19 +78,19 @@ export class VkApiService {
   private vk: VK;
 
   constructor(private configService: ConfigService) {
-    const token = this.configService.get<string>('VK_TOKEN');
-    
+    const token = this.configService.get<string>("VK_ACCESS_TOKEN");
+
     if (!token) {
-      this.logger.error('VK_TOKEN not found in environment variables');
-      throw new Error('VK_TOKEN is required');
+      this.logger.error("VK_TOKEN not found in environment variables");
+      throw new Error("VK_TOKEN is required");
     }
 
     this.vk = new VK({
       token,
-      apiVersion: '5.199',
+      apiVersion: "5.199",
     });
 
-    this.logger.log('VK API service initialized');
+    this.logger.log("VK API service initialized");
   }
 
   /**
@@ -100,7 +100,7 @@ export class VkApiService {
     try {
       const response = await this.vk.api.users.get({
         user_ids: [userId],
-        fields: ['screen_name', 'photo_100'],
+        fields: ["screen_name", "photo_100"],
       });
 
       if (response && response.length > 0) {
@@ -121,10 +121,10 @@ export class VkApiService {
     try {
       const response = await this.vk.api.groups.getById({
         group_id: groupId,
-        fields: ['screen_name', 'photo_100'],
+        fields: ["screen_name", "photo_100"],
       });
 
-      return response as unknown as VKGroup || null;
+      return (response as unknown as VKGroup) || null;
     } catch (error) {
       this.logger.error(`Failed to get group ${groupId}:`, error);
       throw error;
@@ -137,7 +137,7 @@ export class VkApiService {
   async getWallPosts(
     ownerId: number,
     count: number = 100,
-    offset: number = 0,
+    offset: number = 0
   ): Promise<VKWallResponse> {
     try {
       const response = await this.vk.api.wall.get({
@@ -164,7 +164,7 @@ export class VkApiService {
     ownerId: number,
     postId: number,
     count: number = 100,
-    offset: number = 0,
+    offset: number = 0
   ): Promise<VKCommentsResponse> {
     try {
       const response = await this.vk.api.wall.getComments({
@@ -173,7 +173,7 @@ export class VkApiService {
         count,
         offset,
         extended: 1,
-        sort: 'desc',
+        sort: "desc",
       });
 
       return {
@@ -183,7 +183,7 @@ export class VkApiService {
     } catch (error) {
       this.logger.error(
         `Failed to get comments for post ${postId} in ${ownerId}:`,
-        error,
+        error
       );
       throw error;
     }
@@ -196,7 +196,7 @@ export class VkApiService {
     query: string,
     ownerId?: number,
     count: number = 100,
-    offset: number = 0,
+    offset: number = 0
   ): Promise<VKWallResponse> {
     try {
       const params: any = {
@@ -229,7 +229,7 @@ export class VkApiService {
     try {
       const response = await this.vk.api.users.get({
         user_ids: userIds,
-        fields: ['screen_name', 'photo_100'],
+        fields: ["screen_name", "photo_100"],
       });
 
       return (response || []) as VKUser[];
@@ -246,7 +246,7 @@ export class VkApiService {
     try {
       const response = await this.vk.api.groups.getById({
         group_ids: groupIds,
-        fields: ['screen_name', 'photo_100'],
+        fields: ["screen_name", "photo_100"],
       });
 
       return (Array.isArray(response) ? response : [response]) as VKGroup[];
@@ -264,7 +264,7 @@ export class VkApiService {
       await this.vk.api.users.get({ user_ids: [1] });
       return true;
     } catch (error) {
-      this.logger.error('VK token validation failed:', error);
+      this.logger.error("VK token validation failed:", error);
       return false;
     }
   }
@@ -293,7 +293,7 @@ export class VkApiService {
     } catch (error) {
       this.logger.error(
         `Failed to get stats for post ${postId} in ${ownerId}:`,
-        error,
+        error
       );
       throw error;
     }
@@ -317,9 +317,9 @@ export class VkApiService {
     } catch (error) {
       this.logger.error(
         `Failed to get attachments for post ${postId} in ${ownerId}:`,
-        error,
+        error
       );
       throw error;
     }
   }
-} 
+}

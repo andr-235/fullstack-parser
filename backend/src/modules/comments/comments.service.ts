@@ -4,12 +4,26 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
+import { VKCommentResponseDto } from "../../common/dto/vk-comment.dto";
 import { VKComment } from "@prisma/client";
-import { VKCommentResponseDto } from "../../common/dto";
 
 @Injectable()
 export class CommentsService {
   constructor(private prisma: PrismaService) {}
+
+  private mapToResponseDto(comment: any): VKCommentResponseDto {
+    return {
+      id: comment.id.toString(),
+      vkId: comment.vkId,
+      postId: comment.postId.toString(),
+      text: comment.text,
+      createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt,
+      keywords:
+        comment.keywordMatches?.map((match: any) => match.keyword.word) || [],
+      post: comment.post,
+    };
+  }
 
   async findAll(
     page: number = 1,
@@ -38,12 +52,12 @@ export class CommentsService {
     }
 
     if (postId) {
-      where.postId = postId;
+      where.postId = parseInt(postId);
     }
 
     if (groupId) {
       where.post = {
-        groupId: groupId,
+        groupId: parseInt(groupId),
       };
     }
 
@@ -86,16 +100,7 @@ export class CommentsService {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      comments: comments.map((comment) => ({
-        id: comment.id,
-        vkId: comment.vkId,
-        postId: comment.postId,
-        text: comment.text,
-        createdAt: comment.createdAt,
-        updatedAt: comment.updatedAt,
-        keywords: comment.keywordMatches.map((match) => match.keyword.word),
-        post: comment.post,
-      })),
+      comments: comments.map((comment) => this.mapToResponseDto(comment)),
       total,
       page,
       limit,
@@ -105,7 +110,7 @@ export class CommentsService {
 
   async findOne(id: string): Promise<VKCommentResponseDto> {
     const comment = await this.prisma.vKComment.findUnique({
-      where: { id },
+      where: { id: parseInt(id) },
       include: {
         keywordMatches: {
           include: {
@@ -124,21 +129,12 @@ export class CommentsService {
       throw new NotFoundException(`Comment with ID ${id} not found`);
     }
 
-    return {
-      id: comment.id,
-      vkId: comment.vkId,
-      postId: comment.postId,
-      text: comment.text,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
-      keywords: comment.keywordMatches.map((match) => match.keyword.word),
-      post: comment.post,
-    };
+    return this.mapToResponseDto(comment);
   }
 
   async findByPostId(postId: string): Promise<VKCommentResponseDto[]> {
     const comments = await this.prisma.vKComment.findMany({
-      where: { postId },
+      where: { postId: parseInt(postId) },
       include: {
         keywordMatches: {
           include: {
@@ -151,21 +147,19 @@ export class CommentsService {
           },
         },
       },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
 
-    return comments.map((comment) => ({
-      id: comment.id,
-      vkId: comment.vkId,
-      postId: comment.postId,
-      text: comment.text,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
-      keywords: comment.keywordMatches.map((match) => match.keyword.word),
-      post: comment.post,
-    }));
+    return comments.map((comment) => this.mapToResponseDto(comment));
   }
 
   async searchByText(query: string): Promise<VKCommentResponseDto[]> {
+    if (!query || query.trim().length === 0) {
+      throw new BadRequestException("Search query is required");
+    }
+
     const comments = await this.prisma.vKComment.findMany({
       where: {
         text: {
@@ -185,18 +179,12 @@ export class CommentsService {
           },
         },
       },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
 
-    return comments.map((comment) => ({
-      id: comment.id,
-      vkId: comment.vkId,
-      postId: comment.postId,
-      text: comment.text,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
-      keywords: comment.keywordMatches.map((match) => match.keyword.word),
-      post: comment.post,
-    }));
+    return comments.map((comment) => this.mapToResponseDto(comment));
   }
 
   async create(data: {
@@ -205,7 +193,11 @@ export class CommentsService {
     text: string;
   }): Promise<VKCommentResponseDto> {
     const comment = await this.prisma.vKComment.create({
-      data,
+      data: {
+        vkId: data.vkId,
+        postId: parseInt(data.postId),
+        text: data.text,
+      },
       include: {
         keywordMatches: {
           include: {
@@ -220,16 +212,7 @@ export class CommentsService {
       },
     });
 
-    return {
-      id: comment.id,
-      vkId: comment.vkId,
-      postId: comment.postId,
-      text: comment.text,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
-      keywords: comment.keywordMatches.map((match) => match.keyword.word),
-      post: comment.post,
-    };
+    return this.mapToResponseDto(comment);
   }
 
   async update(
@@ -237,7 +220,7 @@ export class CommentsService {
     data: Partial<VKComment>
   ): Promise<VKCommentResponseDto> {
     const comment = await this.prisma.vKComment.update({
-      where: { id },
+      where: { id: parseInt(id) },
       data,
       include: {
         keywordMatches: {
@@ -253,21 +236,12 @@ export class CommentsService {
       },
     });
 
-    return {
-      id: comment.id,
-      vkId: comment.vkId,
-      postId: comment.postId,
-      text: comment.text,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
-      keywords: comment.keywordMatches.map((match) => match.keyword.word),
-      post: comment.post,
-    };
+    return this.mapToResponseDto(comment);
   }
 
   async delete(id: string): Promise<void> {
     await this.prisma.vKComment.delete({
-      where: { id },
+      where: { id: parseInt(id) },
     });
   }
 
@@ -275,7 +249,7 @@ export class CommentsService {
     const comments = await this.prisma.vKComment.findMany({
       where: {
         post: {
-          groupId,
+          groupId: parseInt(groupId),
         },
       },
       include: {
@@ -290,26 +264,21 @@ export class CommentsService {
           },
         },
       },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
 
-    return comments.map((comment) => ({
-      id: comment.id,
-      vkId: comment.vkId,
-      postId: comment.postId,
-      text: comment.text,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
-      keywords: comment.keywordMatches.map((match) => match.keyword.word),
-      post: comment.post,
-    }));
+    return comments.map((comment) => this.mapToResponseDto(comment));
   }
 
   async getStatistics() {
     const [
       totalComments,
       commentsWithKeywords,
-      averageCommentsPerPost,
-      topGroups,
+      totalKeywords,
+      mostActiveGroups,
+      recentComments,
     ] = await Promise.all([
       this.prisma.vKComment.count(),
       this.prisma.vKComment.count({
@@ -319,21 +288,7 @@ export class CommentsService {
           },
         },
       }),
-      this.prisma.vKComment
-        .groupBy({
-          by: ["postId"],
-          _count: {
-            id: true,
-          },
-        })
-        .then((result) => {
-          const totalPosts = result.length;
-          const totalComments = result.reduce(
-            (sum, group) => sum + group._count.id,
-            0
-          );
-          return totalPosts > 0 ? totalComments / totalPosts : 0;
-        }),
+      this.prisma.commentKeywordMatch.count(),
       this.prisma.vKComment.groupBy({
         by: ["postId"],
         _count: {
@@ -346,77 +301,67 @@ export class CommentsService {
         },
         take: 10,
       }),
-    ]);
-
-    // Get group information for top posts
-    const postIds = topGroups.map((group) => group.postId);
-    const posts = await this.prisma.vKPost.findMany({
-      where: {
-        id: {
-          in: postIds,
+      this.prisma.vKComment.findMany({
+        take: 10,
+        orderBy: {
+          createdAt: "desc",
         },
-      },
-      include: {
-        group: true,
-      },
-    });
-
-    const topGroupsWithNames = topGroups.map((group) => {
-      const post = posts.find((p) => p.id === group.postId);
-      return {
-        groupId: post?.groupId || "Unknown",
-        groupName: post?.group?.name || "Unknown",
-        commentCount: group._count.id,
-      };
-    });
+        include: {
+          keywordMatches: {
+            include: {
+              keyword: true,
+            },
+          },
+          post: {
+            include: {
+              group: true,
+            },
+          },
+        },
+      }),
+    ]);
 
     return {
       totalComments,
       commentsWithKeywords,
-      averageCommentsPerPost,
-      topGroups: topGroupsWithNames,
+      totalKeywords,
+      averageKeywordsPerComment: totalKeywords / totalComments || 0,
+      mostActiveGroups: mostActiveGroups.map((group) => ({
+        postId: group.postId,
+        commentCount: group._count.id,
+      })),
+      recentComments: recentComments.map((comment) =>
+        this.mapToResponseDto(comment)
+      ),
     };
   }
 
   async getKeywordAnalysis(limit: number = 20) {
-    const [totalComments, totalCommentsWithKeywords, keywordMatches] =
-      await Promise.all([
-        this.prisma.vKComment.count(),
-        this.prisma.vKComment.count({
-          where: {
-            keywordMatches: {
-              some: {},
-            },
-          },
-        }),
-        this.prisma.commentKeywordMatch.findMany({
-          include: {
-            keyword: true,
-          },
-        }),
-      ]);
-
-    // Count keyword frequency
-    const keywordCounts = new Map<string, number>();
-    keywordMatches.forEach((match) => {
-      const count = keywordCounts.get(match.keyword.word) || 0;
-      keywordCounts.set(match.keyword.word, count + 1);
+    const keywords = await this.prisma.keyword.findMany({
+      where: {
+        isActive: true,
+      },
+      include: {
+        commentMatches: true,
+      },
+      take: limit,
     });
 
-    // Convert to array and sort by frequency
-    const sortedKeywords = Array.from(keywordCounts.entries())
-      .map(([keyword, count]) => ({
-        keyword,
-        count,
-        percentage: (count / totalCommentsWithKeywords) * 100,
+    const totalKeywords = await this.prisma.keyword.count();
+    const totalMatches = await this.prisma.commentKeywordMatch.count();
+
+    const keywordStats = keywords
+      .map((keyword) => ({
+        word: keyword.word,
+        matchCount: keyword.commentMatches.length,
+        percentage: (keyword.commentMatches.length / totalMatches) * 100,
       }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, limit);
+      .sort((a, b) => b.matchCount - a.matchCount);
 
     return {
-      keywordFrequency: sortedKeywords,
-      totalCommentsWithKeywords,
-      totalComments,
+      keywordStats,
+      totalKeywords,
+      totalMatches,
     };
   }
 
@@ -425,7 +370,7 @@ export class CommentsService {
 
     const [comments, total] = await Promise.all([
       this.prisma.vKComment.findMany({
-        where: { postId },
+        where: { postId: parseInt(postId) },
         skip,
         take: limit,
         include: {
@@ -445,23 +390,14 @@ export class CommentsService {
         },
       }),
       this.prisma.vKComment.count({
-        where: { postId },
+        where: { postId: parseInt(postId) },
       }),
     ]);
 
     const totalPages = Math.ceil(total / limit);
 
     return {
-      comments: comments.map((comment) => ({
-        id: comment.id,
-        vkId: comment.vkId,
-        postId: comment.postId,
-        text: comment.text,
-        createdAt: comment.createdAt,
-        updatedAt: comment.updatedAt,
-        keywords: comment.keywordMatches.map((match) => match.keyword.word),
-        post: comment.post,
-      })),
+      comments: comments.map((comment) => this.mapToResponseDto(comment)),
       total,
       page,
       limit,
@@ -476,7 +412,7 @@ export class CommentsService {
       this.prisma.vKComment.findMany({
         where: {
           post: {
-            groupId,
+            groupId: parseInt(groupId),
           },
         },
         skip,
@@ -500,7 +436,7 @@ export class CommentsService {
       this.prisma.vKComment.count({
         where: {
           post: {
-            groupId,
+            groupId: parseInt(groupId),
           },
         },
       }),
@@ -509,16 +445,122 @@ export class CommentsService {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      comments: comments.map((comment) => ({
-        id: comment.id,
-        vkId: comment.vkId,
-        postId: comment.postId,
-        text: comment.text,
-        createdAt: comment.createdAt,
-        updatedAt: comment.updatedAt,
-        keywords: comment.keywordMatches.map((match) => match.keyword.word),
-        post: comment.post,
-      })),
+      comments: comments.map((comment) => this.mapToResponseDto(comment)),
+      total,
+      page,
+      limit,
+      totalPages,
+    };
+  }
+
+  async getCommentsByKeyword(
+    keyword: string,
+    page: number = 1,
+    limit: number = 20
+  ) {
+    const skip = (page - 1) * limit;
+
+    const [comments, total] = await Promise.all([
+      this.prisma.vKComment.findMany({
+        where: {
+          keywordMatches: {
+            some: {
+              keyword: {
+                word: keyword,
+              },
+            },
+          },
+        },
+        skip,
+        take: limit,
+        include: {
+          keywordMatches: {
+            include: {
+              keyword: true,
+            },
+          },
+          post: {
+            include: {
+              group: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+      this.prisma.vKComment.count({
+        where: {
+          keywordMatches: {
+            some: {
+              keyword: {
+                word: keyword,
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      comments: comments.map((comment) => this.mapToResponseDto(comment)),
+      total,
+      page,
+      limit,
+      totalPages,
+    };
+  }
+
+  async getCommentsByDateRange(
+    startDate: Date,
+    endDate: Date,
+    page: number = 1,
+    limit: number = 20
+  ) {
+    const skip = (page - 1) * limit;
+
+    const [comments, total] = await Promise.all([
+      this.prisma.vKComment.findMany({
+        where: {
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+        skip,
+        take: limit,
+        include: {
+          keywordMatches: {
+            include: {
+              keyword: true,
+            },
+          },
+          post: {
+            include: {
+              group: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+      this.prisma.vKComment.count({
+        where: {
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      comments: comments.map((comment) => this.mapToResponseDto(comment)),
       total,
       page,
       limit,

@@ -5,6 +5,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -63,16 +64,23 @@ export class CommentsController {
     },
   })
   async findAll(
-    @Query("page") page?: number,
-    @Query("limit") limit?: number,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
     @Query("search") search?: string,
     @Query("postId") postId?: string,
     @Query("groupId") groupId?: string,
     @Query("hasKeywords") hasKeywords?: boolean
   ) {
+    const pageNumber = page ? parseInt(page, 10) : 1;
+    const limitNumber = limit ? parseInt(limit, 10) : 10;
+
+    if (pageNumber < 1 || limitNumber < 1) {
+      throw new BadRequestException("Page and limit must be positive numbers.");
+    }
+
     return this.commentsService.findAll(
-      page,
-      limit,
+      pageNumber,
+      limitNumber,
       search,
       postId,
       groupId,

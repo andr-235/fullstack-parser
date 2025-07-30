@@ -85,7 +85,7 @@ export class KeywordsService {
 
   async findOne(id: string): Promise<KeywordResponseDto> {
     const keyword = await this.prisma.keyword.findUnique({
-      where: { id },
+      where: { id: parseInt(id) },
     });
 
     if (!keyword) {
@@ -109,7 +109,7 @@ export class KeywordsService {
   ): Promise<KeywordResponseDto> {
     // Check if keyword exists
     const existingKeyword = await this.prisma.keyword.findUnique({
-      where: { id },
+      where: { id: parseInt(id) },
     });
 
     if (!existingKeyword) {
@@ -141,7 +141,7 @@ export class KeywordsService {
     }
 
     const keyword = await this.prisma.keyword.update({
-      where: { id },
+      where: { id: parseInt(id) },
       data: updateData,
     });
 
@@ -150,7 +150,7 @@ export class KeywordsService {
 
   async remove(id: string): Promise<void> {
     const keyword = await this.prisma.keyword.findUnique({
-      where: { id },
+      where: { id: parseInt(id) },
     });
 
     if (!keyword) {
@@ -158,7 +158,7 @@ export class KeywordsService {
     }
 
     await this.prisma.keyword.delete({
-      where: { id },
+      where: { id: parseInt(id) },
     });
   }
 
@@ -211,10 +211,13 @@ export class KeywordsService {
       );
     }
 
-    const updatedKeywords = await this.prisma.keyword.updateMany({
+    const numericIds = ids.map((id) => parseInt(id));
+
+    // Update keywords
+    await this.prisma.keyword.updateMany({
       where: {
         id: {
-          in: ids,
+          in: numericIds,
         },
       },
       data: {
@@ -222,16 +225,16 @@ export class KeywordsService {
       },
     });
 
-    // Return updated keywords
-    const keywords = await this.prisma.keyword.findMany({
+    // Get updated keywords
+    const updatedKeywords = await this.prisma.keyword.findMany({
       where: {
         id: {
-          in: ids,
+          in: numericIds,
         },
       },
     });
 
-    return keywords.map((keyword) => this.mapToResponseDto(keyword));
+    return updatedKeywords.map((keyword) => this.mapToResponseDto(keyword));
   }
 
   async getKeywordStats(): Promise<{
@@ -269,7 +272,7 @@ export class KeywordsService {
     recentMatches: any[];
   }> {
     const keyword = await this.prisma.keyword.findUnique({
-      where: { id: keywordId },
+      where: { id: parseInt(keywordId) },
     });
 
     if (!keyword) {
@@ -278,10 +281,10 @@ export class KeywordsService {
 
     const [matchesCount, recentMatches] = await Promise.all([
       this.prisma.commentKeywordMatch.count({
-        where: { keywordId },
+        where: { keywordId: parseInt(keywordId) },
       }),
       this.prisma.commentKeywordMatch.findMany({
-        where: { keywordId },
+        where: { keywordId: parseInt(keywordId) },
         include: {
           comment: {
             include: {
@@ -293,7 +296,9 @@ export class KeywordsService {
             },
           },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: {
+          createdAt: "desc",
+        },
         take: 10,
       }),
     ]);
@@ -365,7 +370,7 @@ export class KeywordsService {
 
   private mapToResponseDto(keyword: Keyword): KeywordResponseDto {
     return {
-      id: keyword.id,
+      id: keyword.id.toString(),
       word: keyword.word,
       isActive: keyword.isActive,
       createdAt: keyword.createdAt,

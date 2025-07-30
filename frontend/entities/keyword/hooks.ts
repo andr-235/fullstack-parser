@@ -46,10 +46,10 @@ export function useInfiniteKeywords(
     queryFn: ({ pageParam = 1 }) =>
       apiService.getKeywords({ ...params, page: pageParam }),
     getNextPageParam: (lastPage: any) => {
-      if (lastPage.next_page) {
-        return lastPage.next_page
+      if (!lastPage || !lastPage.next_page) {
+        return undefined
       }
-      return undefined
+      return lastPage.next_page
     },
     initialPageParam: 1,
     staleTime: 10 * 60 * 1000, // 10 минут

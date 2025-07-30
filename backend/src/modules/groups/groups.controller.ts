@@ -9,6 +9,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -78,12 +79,24 @@ export class GroupsController {
     },
   })
   async findAll(
-    @Query("page") page?: number,
-    @Query("limit") limit?: number,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
     @Query("search") search?: string,
     @Query("isActive") isActive?: boolean
   ) {
-    return this.groupsService.findAll(page, limit, search, isActive);
+    // Конвертация и валидация параметров
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 20;
+
+    // Проверка валидности
+    if (isNaN(pageNum) || pageNum < 1) {
+      throw new BadRequestException("Page must be a positive number");
+    }
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+      throw new BadRequestException("Limit must be between 1 and 100");
+    }
+
+    return this.groupsService.findAll(pageNum, limitNum, search, isActive);
   }
 
   @Get("statistics")

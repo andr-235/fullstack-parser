@@ -24,14 +24,14 @@ model User {
 }
 
 model VKGroup {
-  id          String   @id @default(cuid())
-  vkId        Int      @unique
-  screenName  String   @unique
+  id          Int      @id @default(autoincrement())
+  vkId        Int      @unique @map("vk_id")
+  screenName  String   @unique @map("screen_name")
   name        String
   description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
   posts VKPost[]
@@ -40,12 +40,12 @@ model VKGroup {
 }
 
 model VKPost {
-  id        String   @id @default(cuid())
-  vkId      Int      @unique
-  groupId   String
+  id        Int      @id @default(autoincrement())
+  vkId      Int      @unique @map("vk_id")
+  groupId   Int      @map("group_id")
   text      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   group    VKGroup     @relation(fields: [groupId], references: [id])
@@ -55,12 +55,12 @@ model VKPost {
 }
 
 model VKComment {
-  id        String   @id @default(cuid())
-  vkId      Int      @unique
-  postId    String
+  id        Int      @id @default(autoincrement())
+  vkId      Int      @unique @map("vk_id")
+  postId    Int      @map("post_id")
   text      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   post           VKPost                @relation(fields: [postId], references: [id])
@@ -70,11 +70,11 @@ model VKComment {
 }
 
 model Keyword {
-  id        String   @id @default(cuid())
+  id        Int      @id @default(autoincrement())
   word      String   @unique
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   commentMatches CommentKeywordMatch[]
@@ -83,10 +83,10 @@ model Keyword {
 }
 
 model CommentKeywordMatch {
-  id        String   @id @default(cuid())
-  commentId String
-  keywordId String
-  createdAt DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  commentId Int      @map("comment_id")
+  keywordId Int      @map("keyword_id")
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
   comment VKComment @relation(fields: [commentId], references: [id])

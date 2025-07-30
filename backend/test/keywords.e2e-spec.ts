@@ -132,7 +132,7 @@ describe("Keywords (e2e)", () => {
       const keyword = await prisma.keyword.create({
         data: { word: "test_keyword" },
       });
-      keywordId = keyword.id;
+      keywordId = keyword.id.toString();
     });
 
     it("should return keyword by id", () => {
@@ -159,7 +159,7 @@ describe("Keywords (e2e)", () => {
       const keyword = await prisma.keyword.create({
         data: { word: "test_keyword" },
       });
-      keywordId = keyword.id;
+      keywordId = keyword.id.toString();
     });
 
     it("should update keyword", () => {
@@ -193,7 +193,7 @@ describe("Keywords (e2e)", () => {
       const keyword = await prisma.keyword.create({
         data: { word: "test_keyword" },
       });
-      keywordId = keyword.id;
+      keywordId = keyword.id.toString();
     });
 
     it("should delete keyword", () => {

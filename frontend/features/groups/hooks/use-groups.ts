@@ -72,6 +72,9 @@ export function useInfiniteGroups(params?: UseInfiniteGroupsParams) {
         search,
       }),
     getNextPageParam: (lastPage) => {
+      if (!lastPage) {
+        return undefined
+      }
       const currentPage = lastPage?.page || 1
       const total = lastPage?.total || 0
       const size = lastPage?.size || 20

@@ -3,7 +3,7 @@ import { MonitoringService } from "./monitoring.service";
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 
 @ApiTags("Monitoring")
-@Controller("api")
+@Controller("monitoring")
 export class MonitoringController {
   constructor(private readonly monitoringService: MonitoringService) {}
 
@@ -26,5 +26,26 @@ export class MonitoringController {
   @ApiResponse({ status: 200, description: "Application status information" })
   async getStatus() {
     return this.monitoringService.getStatus();
+  }
+
+  @Get("scheduler/status")
+  @ApiOperation({ summary: "Scheduler status" })
+  @ApiResponse({ status: 200, description: "Scheduler status information" })
+  async getSchedulerStatus() {
+    return this.monitoringService.getSchedulerStatus();
+  }
+
+  @Get("stats")
+  @ApiOperation({ summary: "Monitoring statistics" })
+  @ApiResponse({ status: 200, description: "Monitoring statistics" })
+  async getStats() {
+    return this.monitoringService.getStats();
+  }
+
+  @Get("groups/active")
+  @ApiOperation({ summary: "Active groups monitoring" })
+  @ApiResponse({ status: 200, description: "Active groups information" })
+  async getActiveGroups() {
+    return this.monitoringService.getActiveGroups();
   }
 }

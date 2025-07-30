@@ -65,7 +65,13 @@ export function useInfiniteComments(filters?: CommentSearchParams) {
       )
     },
     getNextPageParam: (lastPage, allPages) => {
-      const loaded = allPages.reduce((acc, page) => acc + page.items.length, 0)
+      if (!lastPage || !allPages) {
+        return undefined
+      }
+      const loaded = allPages.reduce(
+        (acc, page) => acc + (page?.items?.length || 0),
+        0
+      )
       if (loaded < (lastPage?.total || 0)) {
         return allPages.length + 1
       }

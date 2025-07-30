@@ -175,7 +175,7 @@ describe("Groups (e2e)", () => {
           description: "Test group description",
         },
       });
-      groupId = group.id;
+      groupId = group.id.toString();
     });
 
     it("should return group by id", () => {
@@ -209,7 +209,7 @@ describe("Groups (e2e)", () => {
           description: "Test group description",
         },
       });
-      groupId = group.id;
+      groupId = group.id.toString();
     });
 
     it("should update group", () => {
@@ -250,7 +250,7 @@ describe("Groups (e2e)", () => {
           description: "Test group description",
         },
       });
-      groupId = group.id;
+      groupId = group.id.toString();
     });
 
     it("should delete group", () => {
@@ -485,7 +485,7 @@ describe("Groups (e2e)", () => {
           name: "Test Group",
         },
       });
-      groupId = group.id;
+      groupId = group.id.toString();
 
       // Create posts for this group
       await prisma.vKPost.createMany({

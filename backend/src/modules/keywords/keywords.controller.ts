@@ -9,6 +9,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -100,12 +101,27 @@ export class KeywordsController {
     },
   })
   async findAll(
-    @Query("page") page: number = 1,
-    @Query("limit") limit: number = 20,
+    @Query("page") page: string = "1",
+    @Query("limit") limit: string = "20",
     @Query("search") search?: string,
     @Query("isActive") isActive?: boolean
   ) {
-    return this.keywordsService.findAll(page, limit, search, isActive);
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+
+    if (isNaN(pageNumber) || pageNumber < 1) {
+      throw new BadRequestException("Invalid page number");
+    }
+    if (isNaN(limitNumber) || limitNumber < 1) {
+      throw new BadRequestException("Invalid limit number");
+    }
+
+    return this.keywordsService.findAll(
+      pageNumber,
+      limitNumber,
+      search,
+      isActive
+    );
   }
 
   @Get("search")

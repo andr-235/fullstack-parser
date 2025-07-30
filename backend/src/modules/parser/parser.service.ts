@@ -7,6 +7,7 @@ import {
 import { PrismaService } from "../../prisma/prisma.service";
 import { VkApiService } from "./vk-api.service";
 import { VKGroup, VKPost, VKComment, Keyword } from "@prisma/client";
+import { VKGroupDto, VKPostDto, VKCommentDto } from "../../common/dto/vk.dto";
 
 @Injectable()
 export class ParserService {
@@ -17,7 +18,42 @@ export class ParserService {
     private readonly vkApiService: VkApiService
   ) {}
 
-  async parseGroup(screenName: string): Promise<VKGroup> {
+  private mapGroupToDto(group: VKGroup): VKGroupDto {
+    return {
+      id: group.id.toString(),
+      vkId: group.vkId,
+      screenName: group.screenName,
+      name: group.name,
+      description: group.description,
+      isActive: group.isActive,
+      createdAt: group.createdAt,
+      updatedAt: group.updatedAt,
+    };
+  }
+
+  private mapPostToDto(post: VKPost): VKPostDto {
+    return {
+      id: post.id.toString(),
+      vkId: post.vkId,
+      text: post.text,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      groupId: post.groupId.toString(),
+    };
+  }
+
+  private mapCommentToDto(comment: VKComment): VKCommentDto {
+    return {
+      id: comment.id.toString(),
+      vkId: comment.vkId,
+      text: comment.text,
+      createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt,
+      postId: comment.postId.toString(),
+    };
+  }
+
+  async parseGroup(screenName: string): Promise<VKGroupDto> {
     try {
       this.logger.log(`Starting to parse group: ${screenName}`);
 
@@ -38,9 +74,11 @@ export class ParserService {
         where: { vkId: group.id },
       });
 
+      let dbGroup: VKGroup;
+
       if (existingGroup) {
         this.logger.log(`Updating existing group: ${group.name}`);
-        return this.prisma.vKGroup.update({
+        dbGroup = await this.prisma.vKGroup.update({
           where: { id: existingGroup.id },
           data: {
             name: group.name,
@@ -50,7 +88,7 @@ export class ParserService {
         });
       } else {
         this.logger.log(`Creating new group: ${group.name}`);
-        return this.prisma.vKGroup.create({
+        dbGroup = await this.prisma.vKGroup.create({
           data: {
             vkId: group.id,
             screenName: group.screen_name,
@@ -58,6 +96,8 @@ export class ParserService {
           },
         });
       }
+
+      return this.mapGroupToDto(dbGroup);
     } catch (error) {
       this.logger.error(`Error parsing group ${screenName}:`, error);
       throw error;
@@ -67,7 +107,7 @@ export class ParserService {
   async parseGroupPosts(
     groupId: string,
     limit: number = 100
-  ): Promise<VKPost[]> {
+  ): Promise<VKPostDto[]> {
     try {
       this.logger.log(`Starting to parse posts for group: ${groupId}`);
 
@@ -76,7 +116,7 @@ export class ParserService {
       }
 
       const group = await this.prisma.vKGroup.findUnique({
-        where: { id: groupId },
+        where: { id: parseInt(groupId) },
       });
 
       if (!group) {
@@ -84,47 +124,53 @@ export class ParserService {
       }
 
       // Get posts from VK API
-      const postsData = await this.vkApiService.getWallPosts(
-        group.vkId,
-        limit
-      );
+      const postsData = await this.vkApiService.getWallPosts(group.vkId, limit);
 
       if (!postsData.items || postsData.items.length === 0) {
         this.logger.warn(`No posts found for group: ${groupId}`);
         return [];
       }
 
-      const posts: VKPost[] = [];
+      const posts: VKPostDto[] = [];
       const batchSize = 10; // Process in batches to avoid overwhelming the database
 
       for (let i = 0; i < postsData.items.length; i += batchSize) {
         const batch = postsData.items.slice(i, i + batchSize);
 
-        for (const post of batch) {
+        for (const postData of batch) {
           try {
             // Check if post already exists
             const existingPost = await this.prisma.vKPost.findUnique({
-              where: { vkId: post.id },
+              where: { vkId: postData.id },
             });
 
-            if (!existingPost) {
-              const createdPost = await this.prisma.vKPost.create({
-                data: {
-                  vkId: post.id,
-                  groupId: group.id,
-                  text: post.text || "",
-                },
-              });
-              posts.push(createdPost);
+            if (existingPost) {
+              this.logger.debug(`Post ${postData.id} already exists, skipping`);
+              posts.push(this.mapPostToDto(existingPost));
+              continue;
             }
+
+            // Create new post
+            const post = await this.prisma.vKPost.create({
+              data: {
+                vkId: postData.id,
+                text: postData.text || "",
+                groupId: group.id,
+              },
+            });
+
+            posts.push(this.mapPostToDto(post));
+            this.logger.debug(`Created post: ${postData.id}`);
           } catch (error) {
-            this.logger.error(`Error processing post ${post.id}:`, error);
+            this.logger.error(`Error processing post ${postData.id}:`, error);
             // Continue with other posts
           }
         }
       }
 
-      this.logger.log(`Parsed ${posts.length} new posts for group: ${groupId}`);
+      this.logger.log(
+        `Successfully parsed ${posts.length} posts for group: ${groupId}`
+      );
       return posts;
     } catch (error) {
       this.logger.error(`Error parsing posts for group ${groupId}:`, error);
@@ -135,7 +181,7 @@ export class ParserService {
   async parsePostComments(
     postId: string,
     limit: number = 100
-  ): Promise<VKComment[]> {
+  ): Promise<VKCommentDto[]> {
     try {
       this.logger.log(`Starting to parse comments for post: ${postId}`);
 
@@ -144,8 +190,7 @@ export class ParserService {
       }
 
       const post = await this.prisma.vKPost.findUnique({
-        where: { id: postId },
-        include: { group: true },
+        where: { id: parseInt(postId) },
       });
 
       if (!post) {
@@ -153,9 +198,8 @@ export class ParserService {
       }
 
       // Get comments from VK API
-      const commentsData = await this.vkApiService.getPostComments(
-        -post.group.vkId,
-        post.vkId,
+      const commentsData = await this.vkApiService.getWallPosts(
+        post.groupId,
         limit
       );
 
@@ -164,38 +208,50 @@ export class ParserService {
         return [];
       }
 
-      const comments: VKComment[] = [];
+      const comments: VKCommentDto[] = [];
       const batchSize = 10;
 
       for (let i = 0; i < commentsData.items.length; i += batchSize) {
         const batch = commentsData.items.slice(i, i + batchSize);
 
-        for (const comment of batch) {
+        for (const commentData of batch) {
           try {
             // Check if comment already exists
             const existingComment = await this.prisma.vKComment.findUnique({
-              where: { vkId: comment.id },
+              where: { vkId: commentData.id },
             });
 
-            if (!existingComment) {
-              const createdComment = await this.prisma.vKComment.create({
-                data: {
-                  vkId: comment.id,
-                  postId: post.id,
-                  text: comment.text || "",
-                },
-              });
-              comments.push(createdComment);
+            if (existingComment) {
+              this.logger.debug(
+                `Comment ${commentData.id} already exists, skipping`
+              );
+              comments.push(this.mapCommentToDto(existingComment));
+              continue;
             }
+
+            // Create new comment
+            const comment = await this.prisma.vKComment.create({
+              data: {
+                vkId: commentData.id,
+                text: commentData.text || "",
+                postId: post.id,
+              },
+            });
+
+            comments.push(this.mapCommentToDto(comment));
+            this.logger.debug(`Created comment: ${commentData.id}`);
           } catch (error) {
-            this.logger.error(`Error processing comment ${comment.id}:`, error);
+            this.logger.error(
+              `Error processing comment ${commentData.id}:`,
+              error
+            );
             // Continue with other comments
           }
         }
       }
 
       this.logger.log(
-        `Parsed ${comments.length} new comments for post: ${postId}`
+        `Successfully parsed ${comments.length} comments for post: ${postId}`
       );
       return comments;
     } catch (error) {
@@ -209,7 +265,7 @@ export class ParserService {
       this.logger.log(`Starting keyword matching for comment: ${commentId}`);
 
       const comment = await this.prisma.vKComment.findUnique({
-        where: { id: commentId },
+        where: { id: parseInt(commentId) },
       });
 
       if (!comment) {
@@ -283,7 +339,7 @@ export class ParserService {
 
       for (const comment of comments) {
         try {
-          await this.matchKeywordsForComment(comment.id);
+          await this.matchKeywordsForComment(comment.id.toString());
         } catch (error) {
           this.logger.error(
             `Error matching keywords for comment ${comment.id}:`,
@@ -330,51 +386,46 @@ export class ParserService {
   }
 
   async getGroupStats(groupId: string): Promise<{
-    group: VKGroup;
+    group: VKGroupDto;
     postsCount: number;
     commentsCount: number;
     matchesCount: number;
   }> {
-    try {
-      const group = await this.prisma.vKGroup.findUnique({
-        where: { id: groupId },
-      });
+    const group = await this.prisma.vKGroup.findUnique({
+      where: { id: parseInt(groupId) },
+    });
 
-      if (!group) {
-        throw new NotFoundException(`Group not found: ${groupId}`);
-      }
-
-      const [postsCount, commentsCount, matchesCount] = await Promise.all([
-        this.prisma.vKPost.count({
-          where: { groupId },
-        }),
-        this.prisma.vKComment.count({
-          where: {
-            post: {
-              groupId,
-            },
-          },
-        }),
-        this.prisma.commentKeywordMatch.count({
-          where: {
-            comment: {
-              post: {
-                groupId,
-              },
-            },
-          },
-        }),
-      ]);
-
-      return {
-        group,
-        postsCount,
-        commentsCount,
-        matchesCount,
-      };
-    } catch (error) {
-      this.logger.error(`Error getting group stats for ${groupId}:`, error);
-      throw error;
+    if (!group) {
+      throw new NotFoundException(`Group not found: ${groupId}`);
     }
+
+    const [postsCount, commentsCount, matchesCount] = await Promise.all([
+      this.prisma.vKPost.count({
+        where: { groupId: group.id },
+      }),
+      this.prisma.vKComment.count({
+        where: {
+          post: {
+            groupId: group.id,
+          },
+        },
+      }),
+      this.prisma.commentKeywordMatch.count({
+        where: {
+          comment: {
+            post: {
+              groupId: group.id,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      group: this.mapGroupToDto(group),
+      postsCount,
+      commentsCount,
+      matchesCount,
+    };
   }
 }

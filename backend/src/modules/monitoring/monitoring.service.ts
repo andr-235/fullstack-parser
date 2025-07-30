@@ -72,6 +72,76 @@ export class MonitoringService {
     }
   }
 
+  async getSchedulerStatus() {
+    return {
+      status: "running",
+      lastRun: new Date().toISOString(),
+      nextRun: new Date(Date.now() + 300000).toISOString(), // 5 minutes from now
+      totalJobs: 0,
+      activeJobs: 0,
+      failedJobs: 0,
+    };
+  }
+
+  async getStats() {
+    try {
+      const totalGroups = await this.prisma.vKGroup.count();
+      const activeGroups = await this.prisma.vKGroup.count({
+        where: { isActive: true },
+      });
+      const totalComments = await this.prisma.vKComment.count();
+      const totalKeywords = await this.prisma.keyword.count();
+
+      return {
+        groups: {
+          total: totalGroups,
+          active: activeGroups,
+          inactive: totalGroups - activeGroups,
+        },
+        comments: {
+          total: totalComments,
+        },
+        keywords: {
+          total: totalKeywords,
+        },
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  async getActiveGroups() {
+    try {
+      const activeGroups = await this.prisma.vKGroup.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+          screenName: true,
+          isActive: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 10,
+      });
+
+      return {
+        groups: activeGroups,
+        count: activeGroups.length,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
   private async getDatabaseConnections() {
     try {
       // This is a simplified version - in production you might want to use

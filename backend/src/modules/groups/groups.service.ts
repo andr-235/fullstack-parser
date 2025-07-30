@@ -103,7 +103,7 @@ export class GroupsService {
 
   async findOne(id: string): Promise<VKGroupResponseDto> {
     const group = await this.prisma.vKGroup.findUnique({
-      where: { id },
+      where: { id: parseInt(id) },
       include: {
         _count: {
           select: {
@@ -166,7 +166,7 @@ export class GroupsService {
   ): Promise<VKGroupResponseDto> {
     // Check if group exists
     const existingGroup = await this.prisma.vKGroup.findUnique({
-      where: { id },
+      where: { id: parseInt(id) },
     });
 
     if (!existingGroup) {
@@ -174,7 +174,7 @@ export class GroupsService {
     }
 
     const group = await this.prisma.vKGroup.update({
-      where: { id },
+      where: { id: parseInt(id) },
       data: updateGroupDto,
       include: {
         _count: {
@@ -190,7 +190,7 @@ export class GroupsService {
 
   async remove(id: string): Promise<void> {
     const group = await this.prisma.vKGroup.findUnique({
-      where: { id },
+      where: { id: parseInt(id) },
     });
 
     if (!group) {
@@ -198,7 +198,7 @@ export class GroupsService {
     }
 
     await this.prisma.vKGroup.delete({
-      where: { id },
+      where: { id: parseInt(id) },
     });
   }
 
@@ -265,10 +265,12 @@ export class GroupsService {
   }
 
   async bulkUpdateStatus(ids: string[], isActive: boolean): Promise<number> {
+    const numericIds = ids.map((id) => parseInt(id));
+
     const result = await this.prisma.vKGroup.updateMany({
       where: {
         id: {
-          in: ids,
+          in: numericIds,
         },
       },
       data: {
