@@ -83,24 +83,24 @@ export function CommentsTable({
               <TableCell>
                 <div className="flex items-center space-x-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={comment.author_photo_url} />
+                    <AvatarImage src={comment?.author_photo_url} />
                     <AvatarFallback>
-                      {comment.author_name?.charAt(0) ||
-                        comment.author_screen_name?.charAt(0) ||
-                        (comment.author_id > 0 ? 'U' : 'G')}
+                      {comment?.author_name?.charAt(0) ||
+                        comment?.author_screen_name?.charAt(0) ||
+                        (comment?.author_id > 0 ? 'U' : 'G')}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="font-medium">
-                      {comment.author_name ||
-                        (comment.author_screen_name &&
+                      {comment?.author_name ||
+                        (comment?.author_screen_name &&
                           `@${comment.author_screen_name}`) ||
-                        (comment.author_id > 0
+                        (comment?.author_id > 0
                           ? `Пользователь ${comment.author_id}`
                           : `Группа ${Math.abs(comment.author_id)}`)}
                     </div>
                     <div className="text-sm text-slate-400">
-                      ID: {comment.author_id}
+                      ID: {comment?.author_id}
                     </div>
                   </div>
                 </div>
@@ -108,13 +108,13 @@ export function CommentsTable({
               <TableCell>
                 <div className="max-w-md">
                   <p className="text-sm text-slate-200 line-clamp-3">
-                    {comment.text}
+                    {comment?.text || ''}
                   </p>
                 </div>
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
-                  {comment.matched_keywords?.map((keyword, index) => (
+                  {comment?.matched_keywords?.map((keyword, index) => (
                     <Badge key={index} variant="secondary" className="text-xs">
                       {keyword}
                     </Badge>
@@ -123,7 +123,7 @@ export function CommentsTable({
               </TableCell>
               <TableCell>
                 <div className="text-sm text-slate-400">
-                  {formatDistanceToNow(new Date(comment.published_at), {
+                  {formatDistanceToNow(new Date(comment?.published_at || new Date()), {
                     addSuffix: true,
                     locale: ru,
                   })}
@@ -148,7 +148,7 @@ export function CommentsTable({
                 <div className="flex space-x-2">
                   {onMarkAsViewed && !commentModel.isViewed && (
                     <button
-                      onClick={() => onMarkAsViewed(comment.id)}
+                      onClick={() => onMarkAsViewed(comment?.id || 0)}
                       className="text-blue-400 hover:text-blue-300 text-sm"
                     >
                       Отметить просмотренным
@@ -156,7 +156,7 @@ export function CommentsTable({
                   )}
                   {onArchive && !commentModel.isArchived && (
                     <button
-                      onClick={() => onArchive(comment.id)}
+                      onClick={() => onArchive(comment?.id || 0)}
                       className="text-orange-400 hover:text-orange-300 text-sm"
                     >
                       В архив
@@ -164,7 +164,7 @@ export function CommentsTable({
                   )}
                   {onUnarchive && commentModel.isArchived && (
                     <button
-                      onClick={() => onUnarchive(comment.id)}
+                      onClick={() => onUnarchive(comment?.id || 0)}
                       className="text-green-400 hover:text-green-300 text-sm"
                     >
                       Из архива

@@ -744,30 +744,30 @@ export default function CommentsPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="w-6 h-6 border border-slate-600">
-                          <AvatarImage src={comment.author_photo_url} />
+                          <AvatarImage src={comment?.author_photo_url} />
                           <AvatarFallback className="bg-slate-700 text-slate-300 text-xs">
-                            {comment.author_name?.[0] ||
-                              comment.author_screen_name?.[0] ||
-                              (comment.author_id > 0 ? 'U' : 'G')}
+                            {comment?.author_name?.[0] ||
+                              comment?.author_screen_name?.[0] ||
+                              (comment?.author_id > 0 ? 'U' : 'G')}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="font-medium text-slate-200 text-xs">
-                            {comment.author_name ||
-                              (comment.author_screen_name &&
+                            {comment?.author_name ||
+                              (comment?.author_screen_name &&
                                 `@${comment.author_screen_name}`) ||
-                              (comment.author_id > 0
+                              (comment?.author_id > 0
                                 ? `Пользователь ${comment.author_id}`
                                 : `Группа ${Math.abs(comment.author_id)}`)}
                           </div>
-                          {comment.author_screen_name &&
-                            comment.author_name && (
+                          {comment?.author_screen_name &&
+                            comment?.author_name && (
                               <div className="text-xs text-slate-400">
                                 @{comment.author_screen_name}
                               </div>
                             )}
-                          {!comment.author_name &&
-                            comment.author_screen_name && (
+                          {!comment?.author_name &&
+                            comment?.author_screen_name && (
                               <div className="text-xs text-slate-400">
                                 ID: {comment.author_id}
                               </div>
@@ -778,8 +778,8 @@ export default function CommentsPage() {
                     <TableCell className="align-top">
                       <div className="max-w-lg w-full">
                         <HighlightedText
-                          text={comment.text}
-                          keywords={comment.matched_keywords || []}
+                          text={comment?.text || ''}
+                          keywords={comment?.matched_keywords || []}
                         />
                       </div>
                     </TableCell>
@@ -816,7 +816,7 @@ export default function CommentsPage() {
                         <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
                         <span className="text-sm text-slate-400 text-xs">
                           {format(
-                            new Date(comment.published_at),
+                            new Date(comment?.published_at || new Date()),
                             'dd.MM.yyyy HH:mm',
                             { locale: ru }
                           )}
@@ -846,7 +846,7 @@ export default function CommentsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {comment.group?.vk_id && comment.post_vk_id ? (
+                        {comment?.group?.vk_id && comment?.post_vk_id ? (
                           <Button
                             asChild
                             variant="ghost"
@@ -866,7 +866,7 @@ export default function CommentsPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() =>
-                            comment.author_screen_name &&
+                            comment?.author_screen_name &&
                             handleAddSpecialAuthor(comment.author_screen_name)
                           }
                           className="hover:bg-purple-900 text-purple-400 hover:text-purple-300 transition-all duration-200 hover:scale-110 h-8 w-8"
@@ -879,12 +879,12 @@ export default function CommentsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleMarkAsViewed(comment.id)}
-                            disabled={isMarkingAsViewed(comment.id)}
+                            onClick={() => handleMarkAsViewed(comment?.id || 0)}
+                            disabled={isMarkingAsViewed(comment?.id || 0)}
                             className="hover:bg-green-900 text-green-400 hover:text-green-300 transition-all duration-200 hover:scale-110 h-8 w-8"
                             title="Отметить как просмотренный и архивировать"
                           >
-                            {isMarkingAsViewed(comment.id) ? (
+                            {isMarkingAsViewed(comment?.id || 0) ? (
                               <LoadingSpinner className="h-4 w-4" />
                             ) : (
                               <CheckCircle className="h-4 w-4" />
@@ -896,12 +896,12 @@ export default function CommentsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleUnarchiveComment(comment.id)}
-                            disabled={isUnarchiving(comment.id)}
+                            onClick={() => handleUnarchiveComment(comment?.id || 0)}
+                            disabled={isUnarchiving(comment?.id || 0)}
                             className="hover:bg-blue-900 text-blue-400 hover:text-blue-300 transition-all duration-200 hover:scale-110 h-8 w-8"
                             title="Разархивировать"
                           >
-                            {isUnarchiving(comment.id) ? (
+                            {isUnarchiving(comment?.id || 0) ? (
                               <LoadingSpinner className="h-4 w-4" />
                             ) : (
                               <ArchiveRestore className="h-4 w-4" />
