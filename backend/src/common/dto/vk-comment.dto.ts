@@ -40,4 +40,10 @@ export class VKCommentResponseDto {
 
   @ApiProperty({ description: "Comment last update date" })
   updatedAt: Date;
+
+  @ApiProperty({ description: "Keywords found in comment", type: [String] })
+  keywords: string[];
+
+  @ApiProperty({ description: "Associated post information" })
+  post: any;
 }

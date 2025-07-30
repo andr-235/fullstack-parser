@@ -1,72 +1,220 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
-import { CommentsService } from './comments.service';
-import { VKComment } from '@prisma/client';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
+} from "@nestjs/common";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+} from "@nestjs/swagger";
+import { CommentsService } from "./comments.service";
+import { VKCommentResponseDto } from "../../common/dto";
 
-@ApiTags('comments')
-@Controller('comments')
+@ApiTags("comments")
+@Controller("comments")
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all comments' })
-  @ApiResponse({ status: 200, description: 'List of comments' })
-  async findAll(): Promise<VKComment[]> {
-    return this.commentsService.findAll();
+  @ApiOperation({ summary: "Get all comments with pagination and filtering" })
+  @ApiQuery({ name: "page", required: false, description: "Page number" })
+  @ApiQuery({ name: "limit", required: false, description: "Items per page" })
+  @ApiQuery({
+    name: "search",
+    required: false,
+    description: "Search in comment text",
+  })
+  @ApiQuery({
+    name: "postId",
+    required: false,
+    description: "Filter by post ID",
+  })
+  @ApiQuery({
+    name: "groupId",
+    required: false,
+    description: "Filter by group ID",
+  })
+  @ApiQuery({
+    name: "hasKeywords",
+    required: false,
+    description: "Filter comments with keywords",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Comments retrieved successfully",
+    schema: {
+      type: "object",
+      properties: {
+        comments: {
+          type: "array",
+          items: { $ref: "#/components/schemas/VKCommentResponseDto" },
+        },
+        total: { type: "number" },
+        page: { type: "number" },
+        limit: { type: "number" },
+        totalPages: { type: "number" },
+      },
+    },
+  })
+  async findAll(
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("search") search?: string,
+    @Query("postId") postId?: string,
+    @Query("groupId") groupId?: string,
+    @Query("hasKeywords") hasKeywords?: boolean
+  ) {
+    return this.commentsService.findAll(
+      page,
+      limit,
+      search,
+      postId,
+      groupId,
+      hasKeywords
+    );
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get comment by ID' })
-  @ApiResponse({ status: 200, description: 'Comment found' })
-  @ApiResponse({ status: 404, description: 'Comment not found' })
-  async findById(@Param('id') id: string): Promise<VKComment | null> {
-    return this.commentsService.findById(id);
+  @Get("statistics")
+  @ApiOperation({ summary: "Get comment statistics" })
+  @ApiResponse({
+    status: 200,
+    description: "Statistics retrieved successfully",
+    schema: {
+      type: "object",
+      properties: {
+        totalComments: { type: "number" },
+        commentsWithKeywords: { type: "number" },
+        averageCommentsPerPost: { type: "number" },
+        topGroups: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              groupId: { type: "string" },
+              groupName: { type: "string" },
+              commentCount: { type: "number" },
+            },
+          },
+        },
+      },
+    },
+  })
+  async getStatistics() {
+    return this.commentsService.getStatistics();
   }
 
-  @Get('post/:postId')
-  @ApiOperation({ summary: 'Get comments by post ID' })
-  @ApiResponse({ status: 200, description: 'Comments found' })
-  async findByPostId(@Param('postId') postId: string): Promise<VKComment[]> {
-    return this.commentsService.findByPostId(postId);
+  @Get("keywords/analysis")
+  @ApiOperation({ summary: "Get keyword analysis in comments" })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    description: "Number of top keywords to return",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Keyword analysis retrieved successfully",
+    schema: {
+      type: "object",
+      properties: {
+        keywordFrequency: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              keyword: { type: "string" },
+              count: { type: "number" },
+              percentage: { type: "number" },
+            },
+          },
+        },
+        totalCommentsWithKeywords: { type: "number" },
+        totalComments: { type: "number" },
+      },
+    },
+  })
+  async getKeywordAnalysis(@Query("limit") limit?: number) {
+    return this.commentsService.getKeywordAnalysis(limit);
   }
 
-  @Get('search/text')
-  @ApiOperation({ summary: 'Search comments by text' })
-  @ApiQuery({ name: 'q', description: 'Search query' })
-  @ApiResponse({ status: 200, description: 'Comments found' })
-  async searchByText(@Query('q') query: string): Promise<VKComment[]> {
-    return this.commentsService.searchByText(query);
+  @Get(":id")
+  @ApiOperation({ summary: "Get comment by ID" })
+  @ApiParam({ name: "id", description: "Comment ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Comment retrieved successfully",
+    type: VKCommentResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Comment not found",
+  })
+  async findOne(@Param("id") id: string) {
+    return this.commentsService.findOne(id);
   }
 
-  @Post()
-  @ApiOperation({ summary: 'Create new comment' })
-  @ApiResponse({ status: 201, description: 'Comment created' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  async create(@Body() data: {
-    vkId: number;
-    postId: string;
-    text: string;
-  }): Promise<VKComment> {
-    return this.commentsService.create(data);
+  @Get("post/:postId")
+  @ApiOperation({ summary: "Get all comments for a specific post" })
+  @ApiParam({ name: "postId", description: "Post ID" })
+  @ApiQuery({ name: "page", required: false, description: "Page number" })
+  @ApiQuery({ name: "limit", required: false, description: "Items per page" })
+  @ApiResponse({
+    status: 200,
+    description: "Comments for post retrieved successfully",
+    schema: {
+      type: "object",
+      properties: {
+        comments: {
+          type: "array",
+          items: { $ref: "#/components/schemas/VKCommentResponseDto" },
+        },
+        total: { type: "number" },
+        page: { type: "number" },
+        limit: { type: "number" },
+        totalPages: { type: "number" },
+      },
+    },
+  })
+  async findByPost(
+    @Param("postId") postId: string,
+    @Query("page") page?: number,
+    @Query("limit") limit?: number
+  ) {
+    return this.commentsService.findByPost(postId, page, limit);
   }
 
-  @Put(':id')
-  @ApiOperation({ summary: 'Update comment' })
-  @ApiResponse({ status: 200, description: 'Comment updated' })
-  @ApiResponse({ status: 404, description: 'Comment not found' })
-  async update(
-    @Param('id') id: string,
-    @Body() data: Partial<VKComment>,
-  ): Promise<VKComment> {
-    return this.commentsService.update(id, data);
+  @Get("group/:groupId")
+  @ApiOperation({ summary: "Get all comments for a specific group" })
+  @ApiParam({ name: "groupId", description: "Group ID" })
+  @ApiQuery({ name: "page", required: false, description: "Page number" })
+  @ApiQuery({ name: "limit", required: false, description: "Items per page" })
+  @ApiResponse({
+    status: 200,
+    description: "Comments for group retrieved successfully",
+    schema: {
+      type: "object",
+      properties: {
+        comments: {
+          type: "array",
+          items: { $ref: "#/components/schemas/VKCommentResponseDto" },
+        },
+        total: { type: "number" },
+        page: { type: "number" },
+        limit: { type: "number" },
+        totalPages: { type: "number" },
+      },
+    },
+  })
+  async findByGroup(
+    @Param("groupId") groupId: string,
+    @Query("page") page?: number,
+    @Query("limit") limit?: number
+  ) {
+    return this.commentsService.findByGroup(groupId, page, limit);
   }
-
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete comment' })
-  @ApiResponse({ status: 204, description: 'Comment deleted' })
-  @ApiResponse({ status: 404, description: 'Comment not found' })
-  async delete(@Param('id') id: string): Promise<void> {
-    await this.commentsService.delete(id);
-  }
-} 
+}

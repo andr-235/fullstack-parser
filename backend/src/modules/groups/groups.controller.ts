@@ -6,9 +6,9 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
   HttpCode,
   HttpStatus,
-  Query,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -47,40 +47,114 @@ export class GroupsController {
   }
 
   @Get()
-  @ApiOperation({ summary: "Get all VK groups" })
+  @ApiOperation({ summary: "Get all groups with pagination and filtering" })
+  @ApiQuery({ name: "page", required: false, description: "Page number" })
+  @ApiQuery({ name: "limit", required: false, description: "Items per page" })
+  @ApiQuery({
+    name: "search",
+    required: false,
+    description: "Search in group name, screen name, or description",
+  })
+  @ApiQuery({
+    name: "isActive",
+    required: false,
+    description: "Filter by active status",
+  })
   @ApiResponse({
     status: 200,
-    description: "List of all groups",
-    type: [VKGroupResponseDto],
+    description: "Groups retrieved successfully",
+    schema: {
+      type: "object",
+      properties: {
+        groups: {
+          type: "array",
+          items: { $ref: "#/components/schemas/VKGroupResponseDto" },
+        },
+        total: { type: "number" },
+        page: { type: "number" },
+        limit: { type: "number" },
+        totalPages: { type: "number" },
+      },
+    },
   })
-  async findAll(): Promise<VKGroupResponseDto[]> {
-    return this.groupsService.findAll();
+  async findAll(
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("search") search?: string,
+    @Query("isActive") isActive?: boolean
+  ) {
+    return this.groupsService.findAll(page, limit, search, isActive);
+  }
+
+  @Get("statistics")
+  @ApiOperation({ summary: "Get group statistics" })
+  @ApiResponse({
+    status: 200,
+    description: "Statistics retrieved successfully",
+    schema: {
+      type: "object",
+      properties: {
+        totalGroups: { type: "number" },
+        activeGroups: { type: "number" },
+        inactiveGroups: { type: "number" },
+        groupsWithPosts: { type: "number" },
+        averagePostsPerGroup: { type: "number" },
+        topGroups: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              vkId: { type: "number" },
+              screenName: { type: "string" },
+              name: { type: "string" },
+              postCount: { type: "number" },
+            },
+          },
+        },
+      },
+    },
+  })
+  async getStatistics() {
+    return this.groupsService.getStatistics();
   }
 
   @Get("search")
-  @ApiOperation({ summary: "Search groups by VK ID or screen name" })
-  @ApiQuery({ name: "vkId", description: "VK Group ID", required: false })
+  @ApiOperation({
+    summary: "Search groups by name, screen name, or description",
+  })
+  @ApiQuery({ name: "q", required: true, description: "Search query" })
   @ApiQuery({
-    name: "screenName",
-    description: "VK Group screen name",
+    name: "limit",
     required: false,
+    description: "Number of results to return",
   })
   @ApiResponse({
     status: 200,
-    description: "Group found",
-    type: VKGroupResponseDto,
+    description: "Search results retrieved successfully",
+    type: [VKGroupResponseDto],
   })
-  async search(
-    @Query("vkId") vkId?: string,
-    @Query("screenName") screenName?: string
-  ): Promise<VKGroupResponseDto | null> {
-    if (vkId) {
-      return this.groupsService.findByVkId(parseInt(vkId));
-    }
-    if (screenName) {
-      return this.groupsService.findByScreenName(screenName);
-    }
-    return null;
+  async searchGroups(
+    @Query("q") query: string,
+    @Query("limit") limit?: number
+  ) {
+    return this.groupsService.searchGroups(query, limit);
+  }
+
+  @Get("by-post-count")
+  @ApiOperation({ summary: "Get groups filtered by minimum post count" })
+  @ApiQuery({
+    name: "minPosts",
+    required: false,
+    description: "Minimum number of posts",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Groups filtered by post count retrieved successfully",
+    type: [VKGroupResponseDto],
+  })
+  async getGroupsByPostCount(@Query("minPosts") minPosts?: number) {
+    return this.groupsService.getGroupsByPostCount(minPosts);
   }
 
   @Get(":id")
@@ -88,7 +162,7 @@ export class GroupsController {
   @ApiParam({ name: "id", description: "Group ID" })
   @ApiResponse({
     status: 200,
-    description: "Group found",
+    description: "Group retrieved successfully",
     type: VKGroupResponseDto,
   })
   @ApiResponse({
@@ -99,8 +173,42 @@ export class GroupsController {
     return this.groupsService.findOne(id);
   }
 
+  @Get("vk/:vkId")
+  @ApiOperation({ summary: "Get group by VK ID" })
+  @ApiParam({ name: "vkId", description: "VK Group ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Group retrieved successfully",
+    type: VKGroupResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Group not found",
+  })
+  async findByVkId(@Param("vkId") vkId: number): Promise<VKGroupResponseDto> {
+    return this.groupsService.findByVkId(vkId);
+  }
+
+  @Get("screen/:screenName")
+  @ApiOperation({ summary: "Get group by screen name" })
+  @ApiParam({ name: "screenName", description: "VK Group screen name" })
+  @ApiResponse({
+    status: 200,
+    description: "Group retrieved successfully",
+    type: VKGroupResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Group not found",
+  })
+  async findByScreenName(
+    @Param("screenName") screenName: string
+  ): Promise<VKGroupResponseDto> {
+    return this.groupsService.findByScreenName(screenName);
+  }
+
   @Patch(":id")
-  @ApiOperation({ summary: "Update group by ID" })
+  @ApiOperation({ summary: "Update group" })
   @ApiParam({ name: "id", description: "Group ID" })
   @ApiResponse({
     status: 200,
@@ -118,9 +226,29 @@ export class GroupsController {
     return this.groupsService.update(id, updateGroupDto);
   }
 
+  @Patch("bulk/status")
+  @ApiOperation({ summary: "Bulk update group status" })
+  @ApiResponse({
+    status: 200,
+    description: "Groups updated successfully",
+    schema: {
+      type: "object",
+      properties: {
+        updatedCount: { type: "number" },
+      },
+    },
+  })
+  async bulkUpdateStatus(@Body() data: { ids: string[]; isActive: boolean }) {
+    const updatedCount = await this.groupsService.bulkUpdateStatus(
+      data.ids,
+      data.isActive
+    );
+    return { updatedCount };
+  }
+
   @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: "Delete group by ID" })
+  @ApiOperation({ summary: "Delete group" })
   @ApiParam({ name: "id", description: "Group ID" })
   @ApiResponse({
     status: 204,
@@ -131,6 +259,6 @@ export class GroupsController {
     description: "Group not found",
   })
   async remove(@Param("id") id: string): Promise<void> {
-    return this.groupsService.remove(id);
+    await this.groupsService.remove(id);
   }
 }

@@ -61,4 +61,7 @@ export class VKGroupResponseDto {
 
   @ApiProperty({ description: "Group last update date" })
   updatedAt: Date;
+
+  @ApiProperty({ description: "Number of posts in the group" })
+  postCount: number;
 }

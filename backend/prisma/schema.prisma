@@ -63,7 +63,7 @@ model VKComment {
   updatedAt DateTime @updatedAt
 
   // Relations
-  post VKPost @relation(fields: [postId], references: [id])
+  post           VKPost                @relation(fields: [postId], references: [id])
   keywordMatches CommentKeywordMatch[]
 
   @@map("vk_comments")
