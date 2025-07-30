@@ -96,13 +96,13 @@ const HighlightedText = ({
         )
 
         return isKeyword ? (
-          <Badge
+          <span
             key={i}
-            className="mx-1 bg-gradient-to-r from-red-500 to-orange-500 text-white border-0 text-xs font-bold shadow-lg hover:from-red-600 hover:to-orange-600 transition-all duration-200"
+            className="text-orange-400"
             title={`Найдено ключевое слово: ${part}`}
           >
             {part}
-          </Badge>
+          </span>
         ) : (
           part
         )
@@ -737,9 +737,8 @@ export default function CommentsPage() {
                 {comments.map((comment: VKCommentResponse, index: number) => (
                   <TableRow
                     key={comment.id}
-                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${
-                      comment.is_viewed ? 'opacity-60' : ''
-                    }`}
+                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${comment.is_viewed ? 'opacity-60' : ''
+                      }`}
                     style={{ animationDelay: `${index * 30}ms` }}
                   >
                     <TableCell>

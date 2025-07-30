@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  fullName       String?
+  hashedPassword String
+  isActive       Boolean  @default(true)
+  isSuperuser    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("users")
+}
+
+model VKGroup {
+  id          String   @id @default(cuid())
+  vkId        Int      @unique
+  screenName  String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  posts       VKPost[]
+
+  @@map("vk_groups")
+}
+
+model VKPost {
+  id        String   @id @default(cuid())
+  vkId      Int      @unique
+  groupId   String
+  group     VKGroup  @relation(fields: [groupId], references: [id])
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  comments  VKComment[]
+
+  @@map("vk_posts")
+}
+
+model VKComment {
+  id        String   @id @default(cuid())
+  vkId      Int      @unique
+  postId    String
+  post      VKPost   @relation(fields: [postId], references: [id])
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  keywordMatches CommentKeywordMatch[]
+
+  @@map("vk_comments")
+}
+
+model Keyword {
+  id        String   @id @default(cuid())
+  word      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  matches   CommentKeywordMatch[]
+
+  @@map("keywords")
+}
+
+model CommentKeywordMatch {
+  id        String   @id @default(cuid())
+  commentId String
+  comment   VKComment @relation(fields: [commentId], references: [id])
+  keywordId String
+  keyword   Keyword   @relation(fields: [keywordId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("comment_keyword_matches")
+}
