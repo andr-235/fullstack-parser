@@ -44,6 +44,9 @@ import {
   GroupsStatsComponent,
   GroupsManagement,
 } from './components'
+import { useQueryClient } from '@tanstack/react-query'
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
+import { format } from 'date-fns'
 
 const AVATAR_PLACEHOLDER =
   'https://ui-avatars.com/api/?background=0D8ABC&color=fff&name='
@@ -74,6 +77,7 @@ export default function GroupsPage() {
   const updateGroupMutation = useUpdateGroup()
   const deleteGroupMutation = useDeleteGroup()
   const refreshGroupMutation = useRefreshGroupInfo()
+  const queryClient = useQueryClient()
 
   const groups = useMemo(() => {
     console.log('🔍 Данные от useInfiniteGroups:', data)
@@ -149,7 +153,7 @@ export default function GroupsPage() {
 
   // Статистика
   const totalGroups = data?.pages[0]?.total || 0
-  const activeGroups = groups.filter((group) => group.is_active).length
+  const activeGroups = groups.filter((group) => group?.is_active).length
   const inactiveGroups = totalGroups - activeGroups
 
   return (
@@ -294,199 +298,171 @@ export default function GroupsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groups.map((group, index) => (
+                    {groups.map((group) => (
                       <TableRow
-                        key={group.id}
-                        className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${index % 2 === 0 ? 'bg-slate-800' : 'bg-slate-750'}`}
-                        style={{
-                          animationDelay: `${index * 50}ms`,
-                          animationFillMode: 'both',
-                        }}
+                        key={group?.id}
+                        className="group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01]"
                       >
-                        <TableCell className="font-mono text-blue-400 font-semibold whitespace-nowrap">
-                          {group.vk_id}
+                        <TableCell className="font-mono text-xs text-slate-400">
+                          {group?.vk_id}
                         </TableCell>
-                        <TableCell className="w-80 max-w-80">
-                          <div className="flex items-center gap-1">
-                            <div className="relative flex-shrink-0">
-                              <img
-                                src={
-                                  group.photo_url ||
-                                  `${AVATAR_PLACEHOLDER}${encodeURIComponent(group.name)}`
-                                }
-                                alt={group.name}
-                                className="w-6 h-6 rounded-full border border-slate-600 shadow-sm object-cover bg-slate-700 transition-transform duration-200 hover:scale-110"
-                                loading="lazy"
-                              />
-                              {group.is_active && (
-                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-slate-800 animate-pulse"></div>
-                              )}
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="relative">
+                              <Avatar className="w-10 h-10 border border-slate-600">
+                                <AvatarImage
+                                  src={
+                                    group?.photo_url ||
+                                    `${AVATAR_PLACEHOLDER}${encodeURIComponent(group?.name || '')}`
+                                  }
+                                  alt={group?.name}
+                                  loading="lazy"
+                                />
+                                {group?.is_active && (
+                                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-slate-800 animate-pulse"></div>
+                                )}
+                                <AvatarFallback className="bg-slate-700 text-slate-300">
+                                  {group?.name?.charAt(0)?.toUpperCase() || 'G'}
+                                </AvatarFallback>
+                              </Avatar>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div>
-                                <h3 className="font-semibold text-slate-200 truncate text-sm">
-                                  {group.name}
-                                </h3>
-                                <div className="text-xs text-slate-400 truncate mt-0.5">
-                                  @{group.screen_name}
-                                </div>
+                              <div className="font-medium text-slate-200 truncate">
+                                {group?.name}
+                              </div>
+                              <div className="text-xs text-slate-400">
+                                @{group?.screen_name}
                               </div>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell>
                           <div className="flex items-center gap-2">
                             <Badge
                               variant={
-                                group.is_active ? 'default' : 'secondary'
+                                group?.is_active ? 'default' : 'secondary'
                               }
-                              className={`${
-                                group.is_active
-                                  ? 'bg-green-600 hover:bg-green-700'
-                                  : 'bg-slate-600 hover:bg-slate-700'
-                              } text-white`}
+                              className={`${group?.is_active
+                                ? 'bg-green-600 hover:bg-green-700'
+                                : 'bg-slate-600 hover:bg-slate-700'
+                                } text-white`}
                             >
-                              {group.is_active ? 'Активна' : 'Неактивна'}
+                              {group?.is_active ? 'Активна' : 'Неактивна'}
                             </Badge>
                           </div>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <MessageSquare className="h-4 w-4 text-blue-400" />
-                            <span className="font-semibold text-slate-200">
-                              {group.total_comments_found?.toLocaleString() ||
-                                '0'}
-                            </span>
-                          </div>
+                        <TableCell className="text-center">
+                          <span className="font-mono text-sm text-slate-300">
+                            {group?.total_comments_found?.toLocaleString() ||
+                              '0'}
+                          </span>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-green-400" />
-                            <span className="font-semibold text-slate-200">
-                              {group.members_count?.toLocaleString() || 'N/A'}
-                            </span>
-                          </div>
+                        <TableCell className="text-center">
+                          <span className="font-mono text-sm text-slate-300">
+                            {group?.members_count?.toLocaleString() || 'N/A'}
+                          </span>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <div className="text-sm text-slate-400">
-                            {group.last_parsed_at ? (
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                                <span>
-                                  {formatDistanceToNow(
-                                    new Date(group.last_parsed_at),
-                                    { addSuffix: true, locale: ru }
-                                  )}
-                                </span>
-                              </div>
+                        <TableCell className="text-center">
+                          <span className="text-xs text-slate-400">
+                            {group?.last_parsed_at ? (
+                              format(
+                                new Date(group?.last_parsed_at),
+                                'dd.MM.yyyy HH:mm',
+                                { locale: ru }
+                              )
                             ) : (
-                              <span className="text-slate-500">Никогда</span>
+                              'Никогда'
                             )}
-                          </div>
+                          </span>
                         </TableCell>
-                        <TableCell className="text-center whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-1">
-                            {/* Маленькие действия */}
+                        <TableCell>
+                          <div className="flex items-center gap-1">
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => {
-                                refreshGroupMutation.mutate(group.id, {
+                              onClick={() =>
+                                refreshGroupMutation.mutate(group?.id || 0, {
                                   onSuccess: () => {
-                                    toast.success(
-                                      'Информация о группе обновлена! 🔄'
-                                    )
+                                    toast.success('Группа обновлена')
+                                    queryClient.invalidateQueries({
+                                      queryKey: ['groups'],
+                                    })
                                   },
-                                  onError: (error: any) => {
-                                    console.error(
-                                      'Ошибка обновления группы:',
-                                      error
-                                    )
+                                  onError: (error) => {
                                     toast.error(
-                                      'Ошибка обновления информации о группе'
+                                      `Ошибка обновления: ${error.message}`
                                     )
                                   },
                                 })
-                              }}
+                              }
                               disabled={refreshGroupMutation.isPending}
-                              className="h-7 w-7 hover:bg-slate-600/50 text-blue-400 hover:text-blue-300 transition-all duration-200 rounded-md"
-                              title="Обновить информацию о группе из VK"
+                              className="h-8 w-8 hover:bg-blue-900 text-blue-400 hover:text-blue-300 transition-all duration-200"
+                              title="Обновить группу"
                             >
-                              <RefreshCw
-                                className={`h-3.5 w-3.5 ${refreshGroupMutation.isPending ? 'animate-spin' : ''}`}
-                              />
+                              <RefreshCw className="h-4 w-4" />
                             </Button>
+
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleCopyLink(group.screen_name)}
-                              className="h-7 w-7 hover:bg-slate-600/50 text-green-400 hover:text-green-300 transition-all duration-200 rounded-md"
+                              onClick={() => handleCopyLink(group?.screen_name || '')}
+                              className="h-8 w-8 hover:bg-green-900 text-green-400 hover:text-green-300 transition-all duration-200"
                               title="Копировать ссылку"
                             >
-                              {copiedGroup === group.screen_name ? (
-                                <Check className="h-3.5 w-3.5" />
+                              {copiedGroup === group?.screen_name ? (
+                                <Check className="h-4 w-4" />
                               ) : (
-                                <Copy className="h-3.5 w-3.5" />
+                                <Copy className="h-4 w-4" />
                               )}
                             </Button>
+
                             <Button
+                              asChild
                               variant="ghost"
                               size="icon"
-                              asChild
-                              className="h-7 w-7 hover:bg-slate-600/50 text-purple-400 hover:text-purple-300 transition-all duration-200 rounded-md"
+                              className="h-8 w-8 hover:bg-blue-900 text-blue-400 hover:text-blue-300 transition-all duration-200"
                               title="Открыть в VK"
                             >
                               <a
-                                href={`https://vk.com/${group.screen_name}`}
+                                href={`https://vk.com/${group?.screen_name}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
-                                <ExternalLink className="h-3.5 w-3.5" />
+                                <ExternalLink className="h-4 w-4" />
                               </a>
                             </Button>
 
-                            {/* Разделитель */}
-                            <div className="w-px h-6 bg-slate-600 mx-2"></div>
-
-                            {/* Основные действия */}
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() =>
                                 updateGroupMutation.mutate({
-                                  groupId: group.id,
-                                  data: { is_active: !group.is_active },
+                                  groupId: group?.id || 0,
+                                  data: { is_active: !group?.is_active },
                                 })
                               }
                               disabled={updateGroupMutation.isPending}
                               className="h-8 w-8 hover:bg-slate-600/50 text-blue-400 hover:text-blue-300 transition-all duration-200 rounded-md"
                               title={
-                                group.is_active ? 'Остановить' : 'Запустить'
+                                group?.is_active ? 'Остановить' : 'Запустить'
                               }
                             >
-                              {group.is_active ? (
+                              {group?.is_active ? (
                                 <Pause className="h-4 w-4" />
                               ) : (
                                 <Play className="h-4 w-4" />
                               )}
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-slate-600/50 text-yellow-400 hover:text-yellow-300 transition-all duration-200 rounded-md"
-                              title="Настройки"
-                            >
-                              <Settings className="h-4 w-4" />
-                            </Button>
+
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() =>
-                                deleteGroupMutation.mutate(group.id)
+                                deleteGroupMutation.mutate(group?.id || 0)
                               }
                               disabled={deleteGroupMutation.isPending}
-                              className="h-8 w-8 hover:bg-slate-600/50 text-red-400 hover:text-red-300 transition-all duration-200 rounded-md"
-                              title="Удалить"
+                              className="h-8 w-8 hover:bg-red-900 text-red-400 hover:text-red-300 transition-all duration-200"
+                              title="Удалить группу"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
