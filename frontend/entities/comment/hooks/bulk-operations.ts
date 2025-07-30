@@ -26,7 +26,7 @@ export function useBulkMarkAsViewed() {
           pages: old.pages.map((page: any) => ({
             ...page,
             items: (page?.items || []).map((comment: VKCommentResponse) =>
-              commentIds.includes(comment.id)
+              commentIds.includes(comment?.id || 0)
                 ? {
                     ...comment,
                     is_viewed: true,
@@ -81,7 +81,7 @@ export function useBulkArchive() {
           pages: old.pages.map((page: any) => ({
             ...page,
             items: (page?.items || []).map((comment: VKCommentResponse) =>
-              commentIds.includes(comment.id)
+              commentIds.includes(comment?.id || 0)
                 ? {
                     ...comment,
                     is_viewed: true,
@@ -135,7 +135,7 @@ export function useBulkUnarchive() {
           pages: old.pages.map((page: any) => ({
             ...page,
             items: (page?.items || []).map((comment: VKCommentResponse) =>
-              commentIds.includes(comment.id)
+              commentIds.includes(comment?.id || 0)
                 ? {
                     ...comment,
                     is_archived: false,
@@ -187,7 +187,8 @@ export function useBulkDelete() {
           pages: old.pages.map((page: any) => ({
             ...page,
             items: (page?.items || []).filter(
-              (comment: VKCommentResponse) => !commentIds.includes(comment.id)
+              (comment: VKCommentResponse) =>
+                !commentIds.includes(comment?.id || 0)
             ),
           })),
         }

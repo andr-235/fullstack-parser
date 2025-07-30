@@ -69,13 +69,13 @@ export function CommentsTable({
           const commentModel = new Comment(comment)
 
           return (
-            <TableRow key={comment.id}>
+            <TableRow key={comment?.id}>
               {onCommentSelect && (
                 <TableCell>
                   <Checkbox
-                    checked={selectedComments.includes(comment.id)}
+                    checked={selectedComments.includes(comment?.id || 0)}
                     onCheckedChange={(checked) =>
-                      onCommentSelect(comment.id, checked as boolean)
+                      onCommentSelect(comment?.id || 0, checked as boolean)
                     }
                   />
                 </TableCell>

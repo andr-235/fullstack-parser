@@ -173,7 +173,7 @@ export default function CommentsPageEnhanced() {
   // Обработчики выбора
   const handleSelectAll = () => {
     const allComments = commentsData?.pages?.flatMap((page) => page.items) || []
-    setSelectedComments(allComments.map((comment) => comment.id))
+    setSelectedComments(allComments.map((comment) => comment?.id || 0))
   }
 
   const handleDeselectAll = () => {

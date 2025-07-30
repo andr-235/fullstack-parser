@@ -22,7 +22,7 @@ export class CommentProcessingService {
 
     try {
       const comment = commentData // Упрощенная версия без модели
-      const matchedKeywords = this.findMatchingKeywords(comment.text)
+      const matchedKeywords = this.findMatchingKeywords(comment?.text || '')
 
       return {
         comment,

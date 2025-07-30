@@ -736,7 +736,7 @@ export default function CommentsPage() {
               <TableBody>
                 {comments.map((comment: VKCommentResponse, index: number) => (
                   <TableRow
-                    key={comment.id}
+                    key={comment?.id}
                     className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${comment?.is_viewed ? 'opacity-60' : ''
                       }`}
                     style={{ animationDelay: `${index * 30}ms` }}
@@ -785,7 +785,7 @@ export default function CommentsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {comment.group ? (
+                        {comment?.group ? (
                           <>
                             <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
                               <span className="text-white text-xs font-bold">
