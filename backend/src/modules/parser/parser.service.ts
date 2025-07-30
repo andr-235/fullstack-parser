@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
-import { VKApiService } from "./vk-api.service";
+import { VkApiService } from "./vk-api.service";
 import { VKGroup, VKPost, VKComment, Keyword } from "@prisma/client";
 
 @Injectable()
@@ -14,7 +14,7 @@ export class ParserService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly vkApiService: VKApiService
+    private readonly vkApiService: VkApiService
   ) {}
 
   async parseGroup(screenName: string): Promise<VKGroup> {
@@ -27,13 +27,11 @@ export class ParserService {
       }
 
       // Get group info from VK API
-      const groupInfo = await this.vkApiService.getGroupInfo(screenName);
+      const group = await this.vkApiService.getGroup(screenName);
 
-      if (!groupInfo.response || groupInfo.response.length === 0) {
+      if (!group) {
         throw new NotFoundException(`Group not found: ${screenName}`);
       }
-
-      const group = groupInfo.response[0];
 
       // Create or update group in database
       const existingGroup = await this.prisma.vKGroup.findUnique({
@@ -47,7 +45,6 @@ export class ParserService {
           data: {
             name: group.name,
             screenName: group.screen_name,
-            description: group.description,
             updatedAt: new Date(),
           },
         });
@@ -58,7 +55,6 @@ export class ParserService {
             vkId: group.id,
             screenName: group.screen_name,
             name: group.name,
-            description: group.description,
           },
         });
       }
@@ -88,12 +84,12 @@ export class ParserService {
       }
 
       // Get posts from VK API
-      const postsData = await this.vkApiService.getGroupPosts(
+      const postsData = await this.vkApiService.getWallPosts(
         group.vkId,
         limit
       );
 
-      if (!postsData.response || !postsData.response.items) {
+      if (!postsData.items || postsData.items.length === 0) {
         this.logger.warn(`No posts found for group: ${groupId}`);
         return [];
       }
@@ -101,8 +97,8 @@ export class ParserService {
       const posts: VKPost[] = [];
       const batchSize = 10; // Process in batches to avoid overwhelming the database
 
-      for (let i = 0; i < postsData.response.items.length; i += batchSize) {
-        const batch = postsData.response.items.slice(i, i + batchSize);
+      for (let i = 0; i < postsData.items.length; i += batchSize) {
+        const batch = postsData.items.slice(i, i + batchSize);
 
         for (const post of batch) {
           try {
@@ -163,7 +159,7 @@ export class ParserService {
         limit
       );
 
-      if (!commentsData.response || !commentsData.response.items) {
+      if (!commentsData.items || commentsData.items.length === 0) {
         this.logger.warn(`No comments found for post: ${postId}`);
         return [];
       }
@@ -171,8 +167,8 @@ export class ParserService {
       const comments: VKComment[] = [];
       const batchSize = 10;
 
-      for (let i = 0; i < commentsData.response.items.length; i += batchSize) {
-        const batch = commentsData.response.items.slice(i, i + batchSize);
+      for (let i = 0; i < commentsData.items.length; i += batchSize) {
+        const batch = commentsData.items.slice(i, i + batchSize);
 
         for (const comment of batch) {
           try {

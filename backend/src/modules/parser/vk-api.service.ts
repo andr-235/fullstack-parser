@@ -1,345 +1,325 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  ServiceUnavailableException,
-} from "@nestjs/common";
-import { HttpService } from "@nestjs/axios";
-import { firstValueFrom } from "rxjs";
-import { catchError, timeout, retry } from "rxjs/operators";
-import { of } from "rxjs";
+import { Injectable, Logger } from '@nestjs/common';
+import { VK } from 'vk-io';
+import { ConfigService } from '@nestjs/config';
+
+export interface VKUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  screen_name?: string;
+  photo_100?: string;
+  deactivated?: string;
+}
+
+export interface VKGroup {
+  id: number;
+  name: string;
+  screen_name: string;
+  photo_100?: string;
+  type: string;
+  is_closed: number;
+  is_admin: number;
+  is_member: number;
+  is_advertiser: number;
+}
+
+export interface VKPost {
+  id: number;
+  owner_id: number;
+  from_id: number;
+  date: number;
+  text: string;
+  attachments?: any[];
+  likes?: {
+    count: number;
+    user_likes: number;
+    can_like: number;
+    can_publish: number;
+  };
+  reposts?: {
+    count: number;
+    user_reposted: number;
+  };
+  comments?: {
+    count: number;
+    can_post?: number;
+  };
+  views?: {
+    count: number;
+  };
+}
+
+export interface VKComment {
+  id: number;
+  from_id: number;
+  date: number;
+  text: string;
+  attachments?: any[];
+  likes?: {
+    count: number;
+    user_likes: number;
+    can_like: number;
+  };
+}
+
+export interface VKWallResponse {
+  count: number;
+  items: VKPost[];
+}
+
+export interface VKCommentsResponse {
+  count: number;
+  items: VKComment[];
+}
 
 @Injectable()
-export class VKApiService {
-  private readonly logger = new Logger(VKApiService.name);
-  private readonly baseUrl = "https://api.vk.com/method";
-  private readonly accessToken = process.env.VK_ACCESS_TOKEN;
-  private readonly requestTimeout = 30000; // 30 seconds
-  private readonly maxRetries = 3;
+export class VkApiService {
+  private readonly logger = new Logger(VkApiService.name);
+  private vk: VK;
 
-  constructor(private readonly httpService: HttpService) {
-    if (!this.accessToken) {
-      this.logger.warn("VK_ACCESS_TOKEN is not set");
+  constructor(private configService: ConfigService) {
+    const token = this.configService.get<string>('VK_TOKEN');
+    
+    if (!token) {
+      this.logger.error('VK_TOKEN not found in environment variables');
+      throw new Error('VK_TOKEN is required');
     }
+
+    this.vk = new VK({
+      token,
+      apiVersion: '5.199',
+    });
+
+    this.logger.log('VK API service initialized');
   }
 
-  private async makeRequest(endpoint: string, params: any) {
+  /**
+   * Получить информацию о пользователе
+   */
+  async getUser(userId: number | string): Promise<VKUser | null> {
     try {
-      if (!this.accessToken) {
-        throw new ServiceUnavailableException("VK API token not configured");
-      }
-
-      const response = await firstValueFrom(
-        this.httpService
-          .get(`${this.baseUrl}/${endpoint}`, {
-            params: {
-              ...params,
-              access_token: this.accessToken,
-              v: "5.131",
-            },
-          })
-          .pipe(
-            timeout(this.requestTimeout),
-            retry(this.maxRetries),
-            catchError((error) => {
-              this.logger.error(
-                `VK API request failed for ${endpoint}:`,
-                error
-              );
-              throw new ServiceUnavailableException(
-                `VK API request failed: ${error.message}`
-              );
-            })
-          )
-      );
-
-      // Check for VK API errors
-      if (response.data.error) {
-        const error = response.data.error;
-        this.logger.error(
-          `VK API error: ${error.error_code} - ${error.error_msg}`
-        );
-
-        switch (error.error_code) {
-          case 1:
-            throw new BadRequestException("Invalid request parameters");
-          case 5:
-            throw new ServiceUnavailableException("Invalid VK API token");
-          case 6:
-            throw new ServiceUnavailableException(
-              "Too many requests per second"
-            );
-          case 9:
-            throw new BadRequestException("Flood control: too many requests");
-          case 15:
-            throw new BadRequestException("Access denied");
-          case 18:
-            throw new BadRequestException("User was deleted or banned");
-          case 30:
-            throw new BadRequestException("Profile is private");
-          case 100:
-            throw new BadRequestException(
-              "One of the parameters specified was missing or invalid"
-            );
-          case 113:
-            throw new BadRequestException("Invalid user ID");
-          case 125:
-            throw new BadRequestException("Invalid group ID");
-          case 126:
-            throw new BadRequestException("Invalid app ID");
-          case 127:
-            throw new BadRequestException("Invalid user ID");
-          case 128:
-            throw new BadRequestException("Invalid group ID");
-          case 129:
-            throw new BadRequestException("Invalid app ID");
-          case 130:
-            throw new BadRequestException("Invalid user ID");
-          case 131:
-            throw new BadRequestException("Invalid group ID");
-          case 132:
-            throw new BadRequestException("Invalid app ID");
-          case 133:
-            throw new BadRequestException("Invalid user ID");
-          case 134:
-            throw new BadRequestException("Invalid group ID");
-          case 135:
-            throw new BadRequestException("Invalid app ID");
-          case 136:
-            throw new BadRequestException("Invalid user ID");
-          case 137:
-            throw new BadRequestException("Invalid group ID");
-          case 138:
-            throw new BadRequestException("Invalid app ID");
-          case 139:
-            throw new BadRequestException("Invalid user ID");
-          case 140:
-            throw new BadRequestException("Invalid group ID");
-          case 141:
-            throw new BadRequestException("Invalid app ID");
-          case 142:
-            throw new BadRequestException("Invalid user ID");
-          case 143:
-            throw new BadRequestException("Invalid group ID");
-          case 144:
-            throw new BadRequestException("Invalid app ID");
-          case 145:
-            throw new BadRequestException("Invalid user ID");
-          case 146:
-            throw new BadRequestException("Invalid group ID");
-          case 147:
-            throw new BadRequestException("Invalid app ID");
-          case 148:
-            throw new BadRequestException("Invalid user ID");
-          case 149:
-            throw new BadRequestException("Invalid group ID");
-          case 150:
-            throw new BadRequestException("Invalid app ID");
-          case 151:
-            throw new BadRequestException("Invalid user ID");
-          case 152:
-            throw new BadRequestException("Invalid group ID");
-          case 153:
-            throw new BadRequestException("Invalid app ID");
-          case 154:
-            throw new BadRequestException("Invalid user ID");
-          case 155:
-            throw new BadRequestException("Invalid group ID");
-          case 156:
-            throw new BadRequestException("Invalid app ID");
-          case 157:
-            throw new BadRequestException("Invalid user ID");
-          case 158:
-            throw new BadRequestException("Invalid group ID");
-          case 159:
-            throw new BadRequestException("Invalid app ID");
-          case 160:
-            throw new BadRequestException("Invalid user ID");
-          case 161:
-            throw new BadRequestException("Invalid group ID");
-          case 162:
-            throw new BadRequestException("Invalid app ID");
-          case 163:
-            throw new BadRequestException("Invalid user ID");
-          case 164:
-            throw new BadRequestException("Invalid group ID");
-          case 165:
-            throw new BadRequestException("Invalid app ID");
-          case 166:
-            throw new BadRequestException("Invalid user ID");
-          case 167:
-            throw new BadRequestException("Invalid group ID");
-          case 168:
-            throw new BadRequestException("Invalid app ID");
-          case 169:
-            throw new BadRequestException("Invalid user ID");
-          case 170:
-            throw new BadRequestException("Invalid group ID");
-          case 171:
-            throw new BadRequestException("Invalid app ID");
-          case 172:
-            throw new BadRequestException("Invalid user ID");
-          case 173:
-            throw new BadRequestException("Invalid group ID");
-          case 174:
-            throw new BadRequestException("Invalid app ID");
-          case 175:
-            throw new BadRequestException("Invalid user ID");
-          case 176:
-            throw new BadRequestException("Invalid group ID");
-          case 177:
-            throw new BadRequestException("Invalid app ID");
-          case 178:
-            throw new BadRequestException("Invalid user ID");
-          case 179:
-            throw new BadRequestException("Invalid group ID");
-          case 180:
-            throw new BadRequestException("Invalid app ID");
-          case 181:
-            throw new BadRequestException("Invalid user ID");
-          case 182:
-            throw new BadRequestException("Invalid group ID");
-          case 183:
-            throw new BadRequestException("Invalid app ID");
-          case 184:
-            throw new BadRequestException("Invalid user ID");
-          case 185:
-            throw new BadRequestException("Invalid group ID");
-          case 186:
-            throw new BadRequestException("Invalid app ID");
-          case 187:
-            throw new BadRequestException("Invalid user ID");
-          case 188:
-            throw new BadRequestException("Invalid group ID");
-          case 189:
-            throw new BadRequestException("Invalid app ID");
-          case 190:
-            throw new BadRequestException("Invalid user ID");
-          case 191:
-            throw new BadRequestException("Invalid group ID");
-          case 192:
-            throw new BadRequestException("Invalid app ID");
-          case 193:
-            throw new BadRequestException("Invalid user ID");
-          case 194:
-            throw new BadRequestException("Invalid group ID");
-          case 195:
-            throw new BadRequestException("Invalid app ID");
-          case 196:
-            throw new BadRequestException("Invalid user ID");
-          case 197:
-            throw new BadRequestException("Invalid group ID");
-          case 198:
-            throw new BadRequestException("Invalid app ID");
-          case 199:
-            throw new BadRequestException("Invalid user ID");
-          case 200:
-            throw new BadRequestException("Invalid group ID");
-          default:
-            throw new ServiceUnavailableException(
-              `VK API error: ${error.error_msg}`
-            );
-        }
-      }
-
-      return response.data;
-    } catch (error) {
-      this.logger.error(`Error in VK API request to ${endpoint}:`, error);
-      throw error;
-    }
-  }
-
-  async getGroupInfo(screenName: string) {
-    try {
-      this.logger.log(`Fetching group info for: ${screenName}`);
-
-      if (!screenName || screenName.trim().length === 0) {
-        throw new BadRequestException("Screen name is required");
-      }
-
-      return await this.makeRequest("groups.getById", {
-        group_id: screenName,
+      const response = await this.vk.api.users.get({
+        user_ids: [userId],
+        fields: ['screen_name', 'photo_100'],
       });
+
+      if (response && response.length > 0) {
+        return response[0] as VKUser;
+      }
+
+      return null;
     } catch (error) {
-      this.logger.error(`Error fetching group info for ${screenName}:`, error);
+      this.logger.error(`Failed to get user ${userId}:`, error);
       throw error;
     }
   }
 
-  async getGroupPosts(groupId: number, count: number = 100) {
+  /**
+   * Получить информацию о группе
+   */
+  async getGroup(groupId: number | string): Promise<VKGroup | null> {
     try {
-      this.logger.log(`Fetching posts for group: ${groupId}`);
+      const response = await this.vk.api.groups.getById({
+        group_id: groupId,
+        fields: ['screen_name', 'photo_100'],
+      });
 
-      if (count < 1 || count > 100) {
-        throw new BadRequestException("Count must be between 1 and 100");
-      }
+      return response as unknown as VKGroup || null;
+    } catch (error) {
+      this.logger.error(`Failed to get group ${groupId}:`, error);
+      throw error;
+    }
+  }
 
-      return await this.makeRequest("wall.get", {
-        owner_id: -groupId,
+  /**
+   * Получить посты со стены
+   */
+  async getWallPosts(
+    ownerId: number,
+    count: number = 100,
+    offset: number = 0,
+  ): Promise<VKWallResponse> {
+    try {
+      const response = await this.vk.api.wall.get({
+        owner_id: ownerId,
         count,
+        offset,
+        extended: 1,
       });
+
+      return {
+        count: response.count,
+        items: response.items,
+      };
     } catch (error) {
-      this.logger.error(`Error fetching posts for group ${groupId}:`, error);
+      this.logger.error(`Failed to get wall posts for ${ownerId}:`, error);
       throw error;
     }
   }
 
-  async getPostComments(ownerId: number, postId: number, count: number = 100) {
+  /**
+   * Получить комментарии к посту
+   */
+  async getPostComments(
+    ownerId: number,
+    postId: number,
+    count: number = 100,
+    offset: number = 0,
+  ): Promise<VKCommentsResponse> {
     try {
-      this.logger.log(`Fetching comments for post: ${postId}`);
-
-      if (count < 1 || count > 100) {
-        throw new BadRequestException("Count must be between 1 and 100");
-      }
-
-      return await this.makeRequest("wall.getComments", {
+      const response = await this.vk.api.wall.getComments({
         owner_id: ownerId,
         post_id: postId,
         count,
+        offset,
+        extended: 1,
+        sort: 'desc',
       });
+
+      return {
+        count: response.count,
+        items: response.items,
+      };
     } catch (error) {
-      this.logger.error(`Error fetching comments for post ${postId}:`, error);
+      this.logger.error(
+        `Failed to get comments for post ${postId} in ${ownerId}:`,
+        error,
+      );
       throw error;
     }
   }
 
-  async getGroupMembers(groupId: number, count: number = 1000) {
+  /**
+   * Поиск постов по запросу
+   */
+  async searchPosts(
+    query: string,
+    ownerId?: number,
+    count: number = 100,
+    offset: number = 0,
+  ): Promise<VKWallResponse> {
     try {
-      this.logger.log(`Fetching members for group: ${groupId}`);
+      const params: any = {
+        query,
+        count,
+        offset,
+        extended: 1,
+      };
 
-      if (count < 1 || count > 1000) {
-        throw new BadRequestException("Count must be between 1 and 1000");
+      if (ownerId) {
+        params.owner_id = ownerId;
       }
 
-      return await this.makeRequest("groups.getMembers", {
-        group_id: groupId,
-        count,
-      });
+      const response = await this.vk.api.wall.search(params);
+
+      return {
+        count: response.count,
+        items: response.items,
+      };
     } catch (error) {
-      this.logger.error(`Error fetching members for group ${groupId}:`, error);
+      this.logger.error(`Failed to search posts with query "${query}":`, error);
       throw error;
     }
   }
 
-  async searchGroups(query: string, count: number = 20) {
+  /**
+   * Получить информацию о нескольких пользователях
+   */
+  async getUsers(userIds: (number | string)[]): Promise<VKUser[]> {
     try {
-      this.logger.log(`Searching groups with query: ${query}`);
-
-      if (!query || query.trim().length === 0) {
-        throw new BadRequestException("Search query is required");
-      }
-
-      if (count < 1 || count > 1000) {
-        throw new BadRequestException("Count must be between 1 and 1000");
-      }
-
-      return await this.makeRequest("groups.search", {
-        q: query,
-        count,
+      const response = await this.vk.api.users.get({
+        user_ids: userIds,
+        fields: ['screen_name', 'photo_100'],
       });
+
+      return (response || []) as VKUser[];
     } catch (error) {
-      this.logger.error(`Error searching groups with query ${query}:`, error);
+      this.logger.error(`Failed to get users ${userIds}:`, error);
       throw error;
     }
   }
-}
+
+  /**
+   * Получить информацию о нескольких группах
+   */
+  async getGroups(groupIds: (number | string)[]): Promise<VKGroup[]> {
+    try {
+      const response = await this.vk.api.groups.getById({
+        group_ids: groupIds,
+        fields: ['screen_name', 'photo_100'],
+      });
+
+      return (Array.isArray(response) ? response : [response]) as VKGroup[];
+    } catch (error) {
+      this.logger.error(`Failed to get groups ${groupIds}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Проверить доступность токена
+   */
+  async checkToken(): Promise<boolean> {
+    try {
+      await this.vk.api.users.get({ user_ids: [1] });
+      return true;
+    } catch (error) {
+      this.logger.error('VK token validation failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Получить статистику поста
+   */
+  async getPostStats(ownerId: number, postId: number): Promise<any> {
+    try {
+      const response = await this.vk.api.wall.getById({
+        posts: `${ownerId}_${postId}`,
+        extended: 1,
+      });
+
+      if (response && response.length > 0) {
+        const post = response[0];
+        return {
+          likes: post.likes?.count || 0,
+          reposts: post.reposts?.count || 0,
+          comments: post.comments?.count || 0,
+          views: post.views?.count || 0,
+        };
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error(
+        `Failed to get stats for post ${postId} in ${ownerId}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Получить информацию о вложениях поста
+   */
+  async getPostAttachments(ownerId: number, postId: number): Promise<any[]> {
+    try {
+      const response = await this.vk.api.wall.getById({
+        posts: `${ownerId}_${postId}`,
+        extended: 1,
+      });
+
+      if (response && response.length > 0) {
+        return response[0].attachments || [];
+      }
+
+      return [];
+    } catch (error) {
+      this.logger.error(
+        `Failed to get attachments for post ${postId} in ${ownerId}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+} 

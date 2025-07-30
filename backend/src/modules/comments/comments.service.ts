@@ -63,7 +63,7 @@ export class CommentsService {
       this.prisma.vKComment.findMany({
         where,
         skip,
-        take: limit,
+        take: Number(limit),
         include: {
           keywordMatches: {
             include: {

@@ -16,12 +16,16 @@ import {
   ApiQuery,
 } from "@nestjs/swagger";
 import { ParserService } from "./parser.service";
+import { VkApiService } from "./vk-api.service";
 import { VKGroupDto, VKPostDto, VKCommentDto } from "../../common/dto/vk.dto";
 
 @ApiTags("parser")
 @Controller("parser")
 export class ParserController {
-  constructor(private readonly parserService: ParserService) {}
+  constructor(
+    private readonly parserService: ParserService,
+    private readonly vkApiService: VkApiService
+  ) {}
 
   @Post("groups/:screenName")
   @ApiOperation({ summary: "Parse VK group by screen name" })
@@ -260,5 +264,110 @@ export class ParserController {
       commentsParsed: totalComments,
       keywordsMatched: stats.matchesCount,
     };
+  }
+
+  @Get("vk/user/:userId")
+  @ApiOperation({ summary: "Get VK user information" })
+  @ApiParam({ name: "userId", description: "VK user ID or screen name" })
+  @ApiResponse({
+    status: 200,
+    description: "User information retrieved successfully",
+  })
+  @ApiResponse({
+    status: 404,
+    description: "User not found",
+  })
+  async getVkUser(@Param("userId") userId: string) {
+    return this.vkApiService.getUser(userId);
+  }
+
+  @Get("vk/group/:groupId")
+  @ApiOperation({ summary: "Get VK group information" })
+  @ApiParam({ name: "groupId", description: "VK group ID or screen name" })
+  @ApiResponse({
+    status: 200,
+    description: "Group information retrieved successfully",
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Group not found",
+  })
+  async getVkGroup(@Param("groupId") groupId: string) {
+    return this.vkApiService.getGroup(groupId);
+  }
+
+  @Get("vk/wall/:ownerId")
+  @ApiOperation({ summary: "Get VK wall posts" })
+  @ApiParam({ name: "ownerId", description: "Owner ID (user or group)" })
+  @ApiQuery({
+    name: "count",
+    required: false,
+    description: "Number of posts to get",
+    type: Number,
+  })
+  @ApiQuery({
+    name: "offset",
+    required: false,
+    description: "Offset for pagination",
+    type: Number,
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Wall posts retrieved successfully",
+  })
+  async getVkWallPosts(
+    @Param("ownerId") ownerId: number,
+    @Query("count") count: number = 100,
+    @Query("offset") offset: number = 0
+  ) {
+    return this.vkApiService.getWallPosts(ownerId, count, offset);
+  }
+
+  @Get("vk/search")
+  @ApiOperation({ summary: "Search VK posts" })
+  @ApiQuery({
+    name: "query",
+    required: true,
+    description: "Search query",
+  })
+  @ApiQuery({
+    name: "ownerId",
+    required: false,
+    description: "Owner ID to search in",
+    type: Number,
+  })
+  @ApiQuery({
+    name: "count",
+    required: false,
+    description: "Number of posts to get",
+    type: Number,
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Search results retrieved successfully",
+  })
+  async searchVkPosts(
+    @Query("query") query: string,
+    @Query("ownerId") ownerId?: number,
+    @Query("count") count: number = 100
+  ) {
+    return this.vkApiService.searchPosts(query, ownerId, count);
+  }
+
+  @Get("vk/token/check")
+  @ApiOperation({ summary: "Check VK token validity" })
+  @ApiResponse({
+    status: 200,
+    description: "Token check result",
+    schema: {
+      type: "object",
+      properties: {
+        valid: { type: "boolean" },
+      },
+    },
+  })
+  async checkVkToken() {
+    const valid = await this.vkApiService.checkToken();
+    return { valid };
   }
 }

@@ -21,10 +21,30 @@ export class TestApp {
 
   async cleanup(): Promise<void> {
     if (this.prisma) {
+      // Очищаем базу данных в правильном порядке (от зависимых к независимым)
+      await this.prisma.commentKeywordMatch.deleteMany();
+      await this.prisma.vKComment.deleteMany();
+      await this.prisma.vKPost.deleteMany();
+      await this.prisma.vKGroup.deleteMany();
+      await this.prisma.keyword.deleteMany();
+      await this.prisma.user.deleteMany();
+      
       await this.prisma.$disconnect();
     }
     if (this.app) {
       await this.app.close();
+    }
+  }
+
+  async resetDatabase(): Promise<void> {
+    if (this.prisma) {
+      // Очищаем базу данных в правильном порядке
+      await this.prisma.commentKeywordMatch.deleteMany();
+      await this.prisma.vKComment.deleteMany();
+      await this.prisma.vKPost.deleteMany();
+      await this.prisma.vKGroup.deleteMany();
+      await this.prisma.keyword.deleteMany();
+      await this.prisma.user.deleteMany();
     }
   }
 
