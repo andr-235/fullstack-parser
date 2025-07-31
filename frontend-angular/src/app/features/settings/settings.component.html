@@ -1,0 +1,326 @@
+<div class="settings-container">
+ <div class="settings-header">
+  <h1>Настройки системы</h1>
+  <p>Управление конфигурацией приложения и пользовательскими предпочтениями</p>
+ </div>
+
+ <div class="settings-actions">
+  <button mat-raised-button color="primary" (click)="saveSettings()" [disabled]="isSaving">
+   <mat-icon>save</mat-icon>
+   {{ isSaving ? 'Сохранение...' : 'Сохранить настройки' }}
+  </button>
+  <button mat-stroked-button (click)="resetToDefaults()">
+   <mat-icon>restore</mat-icon>
+   Сбросить к умолчаниям
+  </button>
+  <button mat-stroked-button (click)="exportSettings()">
+   <mat-icon>download</mat-icon>
+   Экспорт
+  </button>
+  <button mat-stroked-button (click)="importFile.click()">
+   <mat-icon>upload</mat-icon>
+   Импорт
+  </button>
+  <input #importFile type="file" accept=".json" style="display: none" (change)="importSettings($event)">
+ </div>
+
+ <div class="settings-content" *ngIf="!isLoading; else loadingTemplate">
+  <mat-expansion-panel class="settings-panel">
+   <mat-expansion-panel-header>
+    <mat-panel-title>
+     <mat-icon>settings</mat-icon>
+     Общие настройки
+    </mat-panel-title>
+   </mat-expansion-panel-header>
+
+   <form [formGroup]="generalForm" class="settings-form">
+    <div class="form-row">
+     <mat-form-field appearance="outline">
+      <mat-label>Название приложения</mat-label>
+      <input matInput formControlName="application_name" placeholder="VK Parser">
+      <mat-error *ngIf="generalForm.get('application_name')?.hasError('required')">
+       Название обязательно
+      </mat-error>
+     </mat-form-field>
+
+     <mat-form-field appearance="outline">
+      <mat-label>Язык по умолчанию</mat-label>
+      <mat-select formControlName="default_language">
+       <mat-option value="ru">Русский</mat-option>
+       <mat-option value="en">English</mat-option>
+      </mat-select>
+     </mat-form-field>
+    </div>
+
+    <div class="form-row">
+     <mat-form-field appearance="outline">
+      <mat-label>Часовой пояс</mat-label>
+      <mat-select formControlName="timezone">
+       <mat-option value="Europe/Moscow">Москва (UTC+3)</mat-option>
+       <mat-option value="Europe/London">Лондон (UTC+0)</mat-option>
+       <mat-option value="America/New_York">Нью-Йорк (UTC-5)</mat-option>
+      </mat-select>
+     </mat-form-field>
+
+     <mat-form-field appearance="outline">
+      <mat-label>Формат даты</mat-label>
+      <mat-select formControlName="date_format">
+       <mat-option value="DD.MM.YYYY">DD.MM.YYYY</mat-option>
+       <mat-option value="MM/DD/YYYY">MM/DD/YYYY</mat-option>
+       <mat-option value="YYYY-MM-DD">YYYY-MM-DD</mat-option>
+      </mat-select>
+     </mat-form-field>
+    </div>
+
+    <div class="form-row">
+     <mat-form-field appearance="outline">
+      <mat-label>Формат времени</mat-label>
+      <mat-select formControlName="time_format">
+       <mat-option value="24">24-часовой</mat-option>
+       <mat-option value="12">12-часовой</mat-option>
+      </mat-select>
+     </mat-form-field>
+
+     <mat-form-field appearance="outline">
+      <mat-label>Интервал автосохранения (мин)</mat-label>
+      <input matInput type="number" formControlName="auto_save_interval" min="1" max="60">
+      <mat-error *ngIf="generalForm.get('auto_save_interval')?.hasError('min')">
+       Минимум 1 минута
+      </mat-error>
+      <mat-error *ngIf="generalForm.get('auto_save_interval')?.hasError('max')">
+       Максимум 60 минут
+      </mat-error>
+     </mat-form-field>
+    </div>
+   </form>
+  </mat-expansion-panel>
+
+  <mat-expansion-panel class="settings-panel">
+   <mat-expansion-panel-header>
+    <mat-panel-title>
+     <mat-icon>code</mat-icon>
+     Настройки парсера
+    </mat-panel-title>
+   </mat-expansion-panel-header>
+
+   <form [formGroup]="parserForm" class="settings-form">
+    <div class="form-row">
+     <mat-form-field appearance="outline">
+      <mat-label>Максимум групп одновременно</mat-label>
+      <input matInput type="number" formControlName="max_concurrent_groups" min="1" max="10">
+     </mat-form-field>
+
+     <mat-form-field appearance="outline">
+      <mat-label>Интервал парсинга (мин)</mat-label>
+      <input matInput type="number" formControlName="parse_interval_minutes" min="5" max="1440">
+     </mat-form-field>
+    </div>
+
+    <div class="form-row">
+     <mat-form-field appearance="outline">
+      <mat-label>Максимум комментариев на группу</mat-label>
+      <input matInput type="number" formControlName="max_comments_per_group" min="100" max="10000">
+     </mat-form-field>
+
+     <mat-form-field appearance="outline">
+      <mat-label>Максимум попыток повтора</mat-label>
+      <input matInput type="number" formControlName="max_retry_attempts" min="1" max="10">
+     </mat-form-field>
+    </div>
+
+    <div class="toggle-options">
+     <mat-slide-toggle formControlName="enable_auto_parsing">
+      Автоматический парсинг
+     </mat-slide-toggle>
+     <mat-slide-toggle formControlName="enable_keyword_filtering">
+      Фильтрация по ключевым словам
+     </mat-slide-toggle>
+     <mat-slide-toggle formControlName="enable_sentiment_analysis">
+      Анализ тональности
+     </mat-slide-toggle>
+     <mat-slide-toggle formControlName="save_raw_data">
+      Сохранять сырые данные
+     </mat-slide-toggle>
+     <mat-slide-toggle formControlName="retry_failed_requests">
+      Повторять неудачные запросы
+     </mat-slide-toggle>
+    </div>
+   </form>
+  </mat-expansion-panel>
+
+  <mat-expansion-panel class="settings-panel">
+   <mat-expansion-panel-header>
+    <mat-panel-title>
+     <mat-icon>notifications</mat-icon>
+     Настройки уведомлений
+    </mat-panel-title>
+   </mat-expansion-panel-header>
+
+   <form [formGroup]="notificationForm" class="settings-form">
+    <div class="toggle-options">
+     <mat-slide-toggle formControlName="enable_email_notifications">
+      Email уведомления
+     </mat-slide-toggle>
+     <mat-slide-toggle formControlName="enable_browser_notifications">
+      Браузерные уведомления
+     </mat-slide-toggle>
+     <mat-slide-toggle formControlName="notify_on_parse_completion">
+      Уведомления о завершении парсинга
+     </mat-slide-toggle>
+     <mat-slide-toggle formControlName="notify_on_errors">
+      Уведомления об ошибках
+     </mat-slide-toggle>
+     <mat-slide-toggle formControlName="notify_on_new_keywords">
+      Уведомления о новых ключевых словах
+     </mat-slide-toggle>
+     <mat-slide-toggle formControlName="notification_sound">
+      Звуковые уведомления
+     </mat-slide-toggle>
+    </div>
+
+    <div class="form-row" *ngIf="notificationForm.get('quiet_hours_enabled')?.value">
+     <mat-form-field appearance="outline">
+      <mat-label>Начало тихих часов</mat-label>
+      <input matInput type="time" formControlName="quiet_hours_start">
+     </mat-form-field>
+
+     <mat-form-field appearance="outline">
+      <mat-label>Конец тихих часов</mat-label>
+      <input matInput type="time" formControlName="quiet_hours_end">
+     </mat-form-field>
+    </div>
+
+    <mat-slide-toggle formControlName="quiet_hours_enabled">
+     Тихие часы
+    </mat-slide-toggle>
+   </form>
+  </mat-expansion-panel>
+
+  <mat-expansion-panel class="settings-panel">
+   <mat-expansion-panel-header>
+    <mat-panel-title>
+     <mat-icon>security</mat-icon>
+     Настройки безопасности
+    </mat-panel-title>
+   </mat-expansion-panel-header>
+
+   <form [formGroup]="securityForm" class="settings-form">
+    <div class="form-row">
+     <mat-form-field appearance="outline">
+      <mat-label>Таймаут сессии (мин)</mat-label>
+      <input matInput type="number" formControlName="session_timeout_minutes" min="5" max="480">
+     </mat-form-field>
+
+     <mat-form-field appearance="outline">
+      <mat-label>Интервал смены пароля (дни)</mat-label>
+      <input matInput type="number" formControlName="password_change_interval_days" min="30" max="365">
+     </mat-form-field>
+    </div>
+
+    <div class="form-row">
+     <mat-form-field appearance="outline">
+      <mat-label>Максимум попыток входа</mat-label>
+      <input matInput type="number" formControlName="max_login_attempts" min="3" max="10">
+     </mat-form-field>
+
+     <mat-form-field appearance="outline">
+      <mat-label>Длительность блокировки (мин)</mat-label>
+      <input matInput type="number" formControlName="lockout_duration_minutes" min="5" max="60">
+     </mat-form-field>
+    </div>
+
+    <div class="form-row">
+     <mat-form-field appearance="outline">
+      <mat-label>Хранение логов (дни)</mat-label>
+      <input matInput type="number" formControlName="log_retention_days" min="30" max="365">
+     </mat-form-field>
+    </div>
+
+    <div class="toggle-options">
+     <mat-slide-toggle formControlName="require_password_change">
+      Требовать смену пароля
+     </mat-slide-toggle>
+     <mat-slide-toggle formControlName="enable_two_factor">
+      Двухфакторная аутентификация
+     </mat-slide-toggle>
+     <mat-slide-toggle formControlName="enable_audit_log">
+      Аудит действий
+     </mat-slide-toggle>
+    </div>
+   </form>
+  </mat-expansion-panel>
+
+  <mat-expansion-panel class="settings-panel">
+   <mat-expansion-panel-header>
+    <mat-panel-title>
+     <mat-icon>palette</mat-icon>
+     Внешний вид
+    </mat-panel-title>
+   </mat-expansion-panel-header>
+
+   <form [formGroup]="appearanceForm" class="settings-form">
+    <div class="form-row">
+     <mat-form-field appearance="outline">
+      <mat-label>Тема</mat-label>
+      <mat-select formControlName="theme">
+       <mat-option value="light">Светлая</mat-option>
+       <mat-option value="dark">Темная</mat-option>
+       <mat-option value="auto">Авто</mat-option>
+      </mat-select>
+     </mat-form-field>
+
+     <mat-form-field appearance="outline">
+      <mat-label>Размер шрифта</mat-label>
+      <mat-select formControlName="font_size">
+       <mat-option value="small">Маленький</mat-option>
+       <mat-option value="medium">Средний</mat-option>
+       <mat-option value="large">Большой</mat-option>
+      </mat-select>
+     </mat-form-field>
+    </div>
+
+    <div class="form-row">
+     <mat-form-field appearance="outline">
+      <mat-label>Основной цвет</mat-label>
+      <input matInput type="color" formControlName="primary_color">
+     </mat-form-field>
+
+     <mat-form-field appearance="outline">
+      <mat-label>Акцентный цвет</mat-label>
+      <input matInput type="color" formControlName="accent_color">
+     </mat-form-field>
+    </div>
+
+    <div class="form-row">
+     <mat-form-field appearance="outline">
+      <mat-label>Макет дашборда</mat-label>
+      <mat-select formControlName="dashboard_layout">
+       <mat-option value="grid">Сетка</mat-option>
+       <mat-option value="list">Список</mat-option>
+       <mat-option value="compact">Компактный</mat-option>
+      </mat-select>
+     </mat-form-field>
+    </div>
+
+    <div class="toggle-options">
+     <mat-slide-toggle formControlName="compact_mode">
+      Компактный режим
+     </mat-slide-toggle>
+     <mat-slide-toggle formControlName="show_animations">
+      Показывать анимации
+     </mat-slide-toggle>
+     <mat-slide-toggle formControlName="sidebar_collapsed">
+      Свернутая боковая панель
+     </mat-slide-toggle>
+    </div>
+   </form>
+  </mat-expansion-panel>
+ </div>
+
+ <ng-template #loadingTemplate>
+  <div class="loading-section">
+   <mat-spinner diameter="50"></mat-spinner>
+   <p>Загрузка настроек...</p>
+  </div>
+ </ng-template>
+</div>

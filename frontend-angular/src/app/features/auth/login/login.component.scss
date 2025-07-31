@@ -1,0 +1,157 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+
+  mat-card {
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+
+    mat-card-header {
+      text-align: center;
+      padding: 24px 24px 0;
+
+      mat-card-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+      }
+
+      mat-card-subtitle {
+        color: #666;
+        font-size: 14px;
+      }
+    }
+
+    mat-card-content {
+      padding: 24px;
+    }
+  }
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .full-width {
+    width: 100%;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0;
+
+    mat-checkbox {
+      font-size: 14px;
+    }
+  }
+
+  .login-button {
+    height: 48px;
+    font-size: 16px;
+    font-weight: 500;
+    border-radius: 8px;
+    margin-top: 16px;
+
+    mat-icon {
+      margin-right: 8px;
+    }
+
+    mat-spinner {
+      margin-right: 8px;
+    }
+  }
+}
+
+.divider {
+  margin: 24px 0;
+}
+
+.additional-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+
+  a {
+    text-decoration: none;
+    font-size: 14px;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 480px) {
+  .login-container {
+    padding: 16px;
+  }
+
+  .login-card {
+    max-width: 100%;
+  }
+
+  .additional-actions {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+}
+
+// Dark theme support
+@media (prefers-color-scheme: dark) {
+  .login-card mat-card {
+    background: rgba(30, 30, 30, 0.95);
+
+    mat-card-title {
+      color: #fff;
+    }
+
+    mat-card-subtitle {
+      color: #ccc;
+    }
+  }
+}
+
+// Focus styles for accessibility
+.login-form input:focus {
+  outline: none;
+}
+
+.login-button:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+// Loading state
+.login-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+// Error state styling
+mat-form-field.mat-form-field-invalid {
+  .mat-form-field-outline {
+    color: #f44336;
+  }
+
+  .mat-form-field-label {
+    color: #f44336;
+  }
+}

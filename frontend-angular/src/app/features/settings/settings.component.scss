@@ -1,0 +1,251 @@
+.settings-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  .settings-header {
+    margin-bottom: 30px;
+    text-align: center;
+
+    h1 {
+      margin: 0 0 10px 0;
+      color: #1976d2;
+      font-size: 2.5rem;
+      font-weight: 300;
+    }
+
+    p {
+      margin: 0;
+      color: #666;
+      font-size: 1.1rem;
+    }
+  }
+
+  .settings-actions {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+
+    button {
+      min-width: 140px;
+    }
+  }
+
+  .settings-content {
+    .settings-panel {
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+      mat-expansion-panel-header {
+        background: #f8f9fa;
+        border-radius: 8px 8px 0 0;
+
+        mat-panel-title {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-weight: 500;
+          color: #333;
+
+          mat-icon {
+            color: #1976d2;
+          }
+        }
+      }
+
+      .settings-form {
+        padding: 20px;
+
+        .form-row {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 20px;
+          margin-bottom: 20px;
+
+          mat-form-field {
+            width: 100%;
+          }
+        }
+
+        .toggle-options {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+          margin-top: 20px;
+
+          mat-slide-toggle {
+            margin: 0;
+          }
+        }
+      }
+    }
+  }
+
+  .loading-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    gap: 20px;
+
+    p {
+      color: #666;
+      font-size: 1.1rem;
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .settings-container {
+    padding: 15px;
+
+    .settings-header {
+      h1 {
+        font-size: 2rem;
+      }
+
+      p {
+        font-size: 1rem;
+      }
+    }
+
+    .settings-actions {
+      flex-direction: column;
+      align-items: center;
+
+      button {
+        width: 100%;
+        max-width: 300px;
+      }
+    }
+
+    .settings-content {
+      .settings-panel {
+        .settings-form {
+          padding: 15px;
+
+          .form-row {
+            grid-template-columns: 1fr;
+            gap: 15px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Dark Theme Support
+@media (prefers-color-scheme: dark) {
+  .settings-container {
+    .settings-header {
+      h1 {
+        color: #64b5f6;
+      }
+
+      p {
+        color: #ccc;
+      }
+    }
+
+    .settings-content {
+      .settings-panel {
+        mat-expansion-panel-header {
+          background: #424242;
+
+          mat-panel-title {
+            color: #fff;
+
+            mat-icon {
+              color: #64b5f6;
+            }
+          }
+        }
+      }
+    }
+
+    .loading-section {
+      p {
+        color: #ccc;
+      }
+    }
+  }
+}
+
+// Material Design Enhancements
+mat-form-field {
+  .mat-form-field-wrapper {
+    padding-bottom: 0;
+  }
+
+  .mat-form-field-outline {
+    color: #e0e0e0;
+  }
+
+  .mat-form-field-outline-thick {
+    color: #1976d2;
+  }
+}
+
+mat-slide-toggle {
+  .mat-slide-toggle-bar {
+    background-color: #e0e0e0;
+  }
+
+  .mat-slide-toggle-thumb {
+    background-color: #fff;
+  }
+
+  &.mat-checked {
+    .mat-slide-toggle-bar {
+      background-color: #1976d2;
+    }
+
+    .mat-slide-toggle-thumb {
+      background-color: #fff;
+    }
+  }
+}
+
+// Animation Enhancements
+.settings-panel {
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+// Form Validation Styles
+mat-form-field {
+  &.ng-invalid.ng-touched {
+    .mat-form-field-outline {
+      color: #f44336;
+    }
+  }
+
+  &.ng-valid.ng-touched {
+    .mat-form-field-outline {
+      color: #4caf50;
+    }
+  }
+}
+
+// Button States
+button {
+  transition: all 0.3s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+}

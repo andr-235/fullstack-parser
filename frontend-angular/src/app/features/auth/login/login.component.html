@@ -1,0 +1,62 @@
+<div class="login-container">
+ <div class="login-card">
+  <mat-card>
+   <mat-card-header>
+    <mat-card-title>Вход в систему</mat-card-title>
+    <mat-card-subtitle>Введите ваши учетные данные</mat-card-subtitle>
+   </mat-card-header>
+
+   <mat-card-content>
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+     <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Имя пользователя</mat-label>
+      <input matInput formControlName="username" placeholder="Введите имя пользователя" [errorStateMatcher]="matcher"
+       autocomplete="username">
+      <mat-icon matSuffix>person</mat-icon>
+      <mat-error *ngIf="isFieldInvalid('username')">
+       {{ getErrorMessage('username') }}
+      </mat-error>
+     </mat-form-field>
+
+     <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Пароль</mat-label>
+      <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password"
+       placeholder="Введите пароль" [errorStateMatcher]="matcher" autocomplete="current-password">
+      <button mat-icon-button matSuffix (click)="hidePassword = !hidePassword" [attr.aria-label]="'Hide password'"
+       [attr.aria-pressed]="hidePassword">
+       <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+      </button>
+      <mat-error *ngIf="isFieldInvalid('password')">
+       {{ getErrorMessage('password') }}
+      </mat-error>
+     </mat-form-field>
+
+     <div class="form-actions">
+      <mat-checkbox formControlName="rememberMe" color="primary">
+       Запомнить меня
+      </mat-checkbox>
+     </div>
+
+     <button mat-raised-button color="primary" type="submit" class="login-button"
+      [disabled]="loginForm.invalid || (isLoading$ | async)">
+      <mat-icon *ngIf="!(isLoading$ | async)">login</mat-icon>
+      <mat-spinner diameter="20" *ngIf="isLoading$ | async"></mat-spinner>
+      {{ (isLoading$ | async) ? 'Вход...' : 'Войти' }}
+     </button>
+    </form>
+
+    <mat-divider class="divider"></mat-divider>
+
+    <div class="additional-actions">
+     <a mat-button color="primary" routerLink="/forgot-password">
+      Забыли пароль?
+     </a>
+     <span class="separator">|</span>
+     <a mat-button color="primary" routerLink="/register">
+      Создать аккаунт
+     </a>
+    </div>
+   </mat-card-content>
+  </mat-card>
+ </div>
+</div>

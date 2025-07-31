@@ -1,0 +1,251 @@
+<div class="monitoring-container">
+ <div class="monitoring-header">
+  <h1>Мониторинг системы</h1>
+  <p>Отслеживание производительности и состояния системы в реальном времени</p>
+ </div>
+
+ <div class="monitoring-actions">
+  <button mat-raised-button color="primary" (click)="refreshData()" [disabled]="isLoading">
+   <mat-icon>refresh</mat-icon>
+   {{ isLoading ? 'Обновление...' : 'Обновить данные' }}
+  </button>
+  <button mat-stroked-button (click)="toggleAutoRefresh()">
+   <mat-icon>{{ autoRefresh ? 'pause' : 'play_arrow' }}</mat-icon>
+   {{ autoRefresh ? 'Остановить автообновление' : 'Автообновление' }}
+  </button>
+  <button mat-stroked-button (click)="exportReport()">
+   <mat-icon>download</mat-icon>
+   Экспорт отчета
+  </button>
+ </div>
+
+ <div class="monitoring-content" *ngIf="!isLoading; else loadingTemplate">
+  <!-- System Overview -->
+  <mat-card class="overview-card">
+   <mat-card-header>
+    <mat-card-title>
+     <mat-icon>dashboard</mat-icon>
+     Обзор системы
+    </mat-card-title>
+    <mat-card-subtitle>Основные метрики производительности</mat-card-subtitle>
+   </mat-card-header>
+   <mat-card-content>
+    <div class="metrics-grid" *ngIf="systemMetrics">
+     <div class="metric-card">
+      <div class="metric-header">
+       <mat-icon>memory</mat-icon>
+       <span>CPU</span>
+      </div>
+      <div class="metric-value">{{ systemMetrics.cpu_usage }}%</div>
+      <mat-progress-bar [value]="systemMetrics.cpu_usage" [color]="systemMetrics.cpu_usage > 80 ? 'warn' : 'primary'">
+      </mat-progress-bar>
+     </div>
+
+     <div class="metric-card">
+      <div class="metric-header">
+       <mat-icon>storage</mat-icon>
+       <span>Память</span>
+      </div>
+      <div class="metric-value">{{ systemMetrics.memory_usage }}%</div>
+      <mat-progress-bar [value]="systemMetrics.memory_usage"
+       [color]="systemMetrics.memory_usage > 80 ? 'warn' : 'primary'">
+      </mat-progress-bar>
+     </div>
+
+     <div class="metric-card">
+      <div class="metric-header">
+       <mat-icon>hard_drive</mat-icon>
+       <span>Диск</span>
+      </div>
+      <div class="metric-value">{{ systemMetrics.disk_usage }}%</div>
+      <mat-progress-bar [value]="systemMetrics.disk_usage" [color]="systemMetrics.disk_usage > 90 ? 'warn' : 'primary'">
+      </mat-progress-bar>
+     </div>
+
+     <div class="metric-card">
+      <div class="metric-header">
+       <mat-icon>network_check</mat-icon>
+       <span>Сеть</span>
+      </div>
+      <div class="metric-value">{{ systemMetrics.network_activity }} MB/s</div>
+      <div class="metric-trend">↑ +5%</div>
+     </div>
+
+     <div class="metric-card">
+      <div class="metric-header">
+       <mat-icon>link</mat-icon>
+       <span>Соединения</span>
+      </div>
+      <div class="metric-value">{{ systemMetrics.active_connections }}</div>
+      <div class="metric-trend">Активные</div>
+     </div>
+
+     <div class="metric-card">
+      <div class="metric-header">
+       <mat-icon>schedule</mat-icon>
+       <span>Время работы</span>
+      </div>
+      <div class="metric-value">{{ formatUptime(systemMetrics.uptime) }}</div>
+      <div class="metric-trend">Аптайм</div>
+     </div>
+    </div>
+   </mat-card-content>
+  </mat-card>
+
+  <!-- Parser Status -->
+  <mat-card class="parser-card">
+   <mat-card-header>
+    <mat-card-title>
+     <mat-icon>code</mat-icon>
+     Статус парсера
+    </mat-card-title>
+    <mat-card-subtitle>Информация о работе парсера VK</mat-card-subtitle>
+   </mat-card-header>
+   <mat-card-content>
+    <div class="parser-status" *ngIf="parserMetrics">
+     <div class="status-indicator">
+      <div class="status-dot" [class.active]="parserMetrics.is_running"></div>
+      <span>{{ parserMetrics.is_running ? 'Работает' : 'Остановлен' }}</span>
+     </div>
+
+     <div class="parser-metrics">
+      <div class="metric-item">
+       <span class="metric-label">Всего групп:</span>
+       <span class="metric-value">{{ parserMetrics.total_groups }}</span>
+      </div>
+      <div class="metric-item">
+       <span class="metric-label">Активных групп:</span>
+       <span class="metric-value">{{ parserMetrics.active_groups }}</span>
+      </div>
+      <div class="metric-item">
+       <span class="metric-label">Обработано комментариев:</span>
+       <span class="metric-value">{{ parserMetrics.total_comments_parsed | number }}</span>
+      </div>
+      <div class="metric-item">
+       <span class="metric-label">С ключевыми словами:</span>
+       <span class="metric-value">{{ parserMetrics.comments_with_keywords | number }}</span>
+      </div>
+      <div class="metric-item">
+       <span class="metric-label">Ошибок:</span>
+       <span class="metric-value error">{{ parserMetrics.errors_count }}</span>
+      </div>
+     </div>
+
+     <div class="current-progress" *ngIf="parserMetrics.current_progress">
+      <h4>Текущий прогресс</h4>
+      <div class="progress-info">
+       <span>{{ parserMetrics.current_progress.group_name }}</span>
+       <span>{{ parserMetrics.current_progress.progress_percentage }}%</span>
+      </div>
+      <mat-progress-bar [value]="parserMetrics.current_progress.progress_percentage">
+      </mat-progress-bar>
+      <div class="progress-details">
+       Обработано: {{ parserMetrics.current_progress.comments_processed | number }} комментариев
+      </div>
+     </div>
+
+     <div class="last-parse" *ngIf="parserMetrics.last_parse_time">
+      <span>Последний парсинг: {{ formatDateTime(parserMetrics.last_parse_time) }}</span>
+     </div>
+    </div>
+   </mat-card-content>
+  </mat-card>
+
+  <!-- Database Status -->
+  <mat-card class="database-card">
+   <mat-card-header>
+    <mat-card-title>
+     <mat-icon>storage</mat-icon>
+     База данных
+    </mat-card-title>
+    <mat-card-subtitle>Состояние и производительность БД</mat-card-subtitle>
+   </mat-card-header>
+   <mat-card-content>
+    <div class="database-status" *ngIf="databaseMetrics">
+     <div class="db-metrics">
+      <div class="metric-item">
+       <span class="metric-label">Размер БД:</span>
+       <span class="metric-value">{{ formatBytes(databaseMetrics.database_size) }}</span>
+      </div>
+      <div class="metric-item">
+       <span class="metric-label">Таблиц:</span>
+       <span class="metric-value">{{ databaseMetrics.tables_count }}</span>
+      </div>
+      <div class="metric-item">
+       <span class="metric-label">Записей:</span>
+       <span class="metric-value">{{ databaseMetrics.total_records | number }}</span>
+      </div>
+      <div class="metric-item">
+       <span class="metric-label">Активных соединений:</span>
+       <span class="metric-value">{{ databaseMetrics.active_connections }}</span>
+      </div>
+      <div class="metric-item">
+       <span class="metric-label">Время отклика:</span>
+       <span class="metric-value">{{ databaseMetrics.response_time }}ms</span>
+      </div>
+     </div>
+
+     <div class="table-stats">
+      <h4>Статистика таблиц</h4>
+      <div class="table-list">
+       <div class="table-item" *ngFor="let table of databaseMetrics.table_stats">
+        <span class="table-name">{{ table.name }}</span>
+        <span class="table-records">{{ table.records | number }}</span>
+        <span class="table-size">{{ formatBytes(table.size) }}</span>
+       </div>
+      </div>
+     </div>
+    </div>
+   </mat-card-content>
+  </mat-card>
+
+  <!-- Activity Logs -->
+  <mat-card class="logs-card">
+   <mat-card-header>
+    <mat-card-title>
+     <mat-icon>list_alt</mat-icon>
+     Журнал активности
+    </mat-card-title>
+    <mat-card-subtitle>Последние события системы</mat-card-subtitle>
+   </mat-card-header>
+   <mat-card-content>
+    <div class="logs-controls">
+     <mat-form-field appearance="outline">
+      <mat-label>Фильтр по уровню</mat-label>
+      <mat-select [(ngModel)]="selectedLogLevel" (selectionChange)="filterLogs()">
+       <mat-option value="all">Все уровни</mat-option>
+       <mat-option value="info">Информация</mat-option>
+       <mat-option value="warning">Предупреждения</mat-option>
+       <mat-option value="error">Ошибки</mat-option>
+      </mat-select>
+     </mat-form-field>
+
+     <button mat-stroked-button (click)="clearLogs()">
+      <mat-icon>clear</mat-icon>
+      Очистить
+     </button>
+    </div>
+
+    <div class="logs-container">
+     <div class="log-entry" *ngFor="let log of filteredLogs" [class]="'log-' + log.level">
+      <div class="log-timestamp">{{ formatDateTime(log.timestamp) }}</div>
+      <div class="log-level" [class]="'level-' + log.level">
+       {{ log.level.toUpperCase() }}
+      </div>
+      <div class="log-message">{{ log.message }}</div>
+      <div class="log-details" *ngIf="log.details">
+       <pre>{{ log.details }}</pre>
+      </div>
+     </div>
+    </div>
+   </mat-card-content>
+  </mat-card>
+ </div>
+
+ <ng-template #loadingTemplate>
+  <div class="loading-section">
+   <mat-spinner diameter="50"></mat-spinner>
+   <p>Загрузка данных мониторинга...</p>
+  </div>
+ </ng-template>
+</div>

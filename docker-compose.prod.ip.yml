@@ -163,10 +163,10 @@ services:
         max_attempts: 3
         window: 120s
 
-  # Frontend приложение
+  # Frontend приложение (Angular)
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend-angular
       dockerfile: Dockerfile
       target: runner
       args:
@@ -178,7 +178,7 @@ services:
     environment:
       - NODE_ENV=production
       - SERVER_IP=${SERVER_IP}
-      - NEXT_PUBLIC_API_URL=${DOMAIN}
+      - API_URL=${DOMAIN}
       - TMPDIR=/tmp/uploads
     expose:
       - "3000"
@@ -192,7 +192,7 @@ services:
     logging: *default-logging
     healthcheck:
       <<: *default-healthcheck
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
     deploy:
       resources:
         limits:
