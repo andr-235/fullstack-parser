@@ -1,5 +1,5 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000/api',
+  apiUrl: 'http://backend:8000/api',
   appName: 'VK Parser Frontend',
 };

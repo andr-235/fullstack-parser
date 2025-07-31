@@ -35,6 +35,7 @@
           },
           "configurations": {
             "production": {
+              "outputPath": "dist/frontend-angular",
               "budgets": [
                 {
                   "type": "initial",
@@ -53,6 +54,7 @@
               "extractLicenses": true
             },
             "development": {
+              "outputPath": "dist/frontend-angular",
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true

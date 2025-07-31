@@ -1,5 +1,5 @@
-# Multi-stage build for Angular application
-FROM node:18-alpine AS builder
+# Multi-stage build
+FROM node:20-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -13,30 +13,21 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build application for production
-RUN npm run build -- --configuration=production
+# Build the application
+RUN npm run build
 
-# Production stage - serve with Node.js
-FROM node:18-alpine AS runner
+# Production stage
+FROM node:20-alpine AS runner
 
 # Set working directory
 WORKDIR /app
 
-# Install serve package
-RUN npm install -g serve
+# Install serve package and curl for health checks
+RUN npm install -g serve && \
+    apk add --no-cache curl
 
-# Copy built application
-COPY --from=builder /app/dist/frontend-angular ./dist
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
-
-# Change ownership of the app directory
-RUN chown -R nextjs:nodejs /app
-
-# Switch to non-root user
-USER nextjs
+# Copy built application from builder stage
+COPY --from=builder /app/dist/frontend-angular/browser ./dist
 
 # Expose port
 EXPOSE 3000

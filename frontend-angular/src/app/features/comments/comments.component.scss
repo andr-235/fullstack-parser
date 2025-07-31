@@ -1,0 +1,144 @@
+.comments-container {
+        padding: 20px;
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+
+      .filters-panel {
+        margin-bottom: 20px;
+      }
+
+      .filters-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+      }
+
+      .search-field {
+        grid-column: 1 / -1;
+      }
+
+      .date-range {
+        display: flex;
+        gap: 10px;
+        grid-column: 1 / -1;
+      }
+
+      .status-filters {
+        display: flex;
+        gap: 20px;
+        grid-column: 1 / -1;
+      }
+
+      .sort-options {
+        display: flex;
+        gap: 10px;
+        grid-column: 1 / -1;
+      }
+
+      .sort-field {
+        min-width: 150px;
+      }
+
+      .loading-section {
+        display: flex;
+        justify-content: center;
+        padding: 40px;
+      }
+
+      .table-section {
+        margin-top: 20px;
+      }
+
+      .table-actions {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .comment-content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .comment-text {
+        font-weight: 500;
+        line-height: 1.4;
+      }
+
+      .comment-meta {
+        display: flex;
+        gap: 10px;
+        font-size: 0.875rem;
+        color: #666;
+      }
+
+      .group-info {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .group-name {
+        font-weight: 500;
+      }
+
+      .group-screen {
+        font-size: 0.875rem;
+        color: #666;
+      }
+
+      .keywords-chips {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+
+      .status-chips {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+
+      .empty-state mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 16px;
+      }
+
+      .delete-action {
+        color: #f44336;
+      }
+
+      table {
+        width: 100%;
+      }
+
+      .mat-column-select {
+        width: 50px;
+      }
+
+      .mat-column-actions {
+        width: 80px;
+      }
+
+      .mat-column-status {
+        width: 120px;
+      }
+
+      .mat-column-keywords {
+        width: 150px;
+      }
+
+      .mat-column-group {
+        width: 150px;
+      }

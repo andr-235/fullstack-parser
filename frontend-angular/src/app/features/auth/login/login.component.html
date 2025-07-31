@@ -13,9 +13,11 @@
       <input matInput formControlName="username" placeholder="Введите имя пользователя" [errorStateMatcher]="matcher"
        autocomplete="username">
       <mat-icon matSuffix>person</mat-icon>
-      <mat-error *ngIf="isFieldInvalid('username')">
+      @if (isFieldInvalid('username')) {
+      <mat-error>
        {{ getErrorMessage('username') }}
       </mat-error>
+      }
      </mat-form-field>
 
      <mat-form-field appearance="outline" class="full-width">
@@ -26,9 +28,11 @@
        [attr.aria-pressed]="hidePassword">
        <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
       </button>
-      <mat-error *ngIf="isFieldInvalid('password')">
+      @if (isFieldInvalid('password')) {
+      <mat-error>
        {{ getErrorMessage('password') }}
       </mat-error>
+      }
      </mat-form-field>
 
      <div class="form-actions">
@@ -39,9 +43,13 @@
 
      <button mat-raised-button color="primary" type="submit" class="login-button"
       [disabled]="loginForm.invalid || (isLoading$ | async)">
-      <mat-icon *ngIf="!(isLoading$ | async)">login</mat-icon>
-      <mat-spinner diameter="20" *ngIf="isLoading$ | async"></mat-spinner>
-      {{ (isLoading$ | async) ? 'Вход...' : 'Войти' }}
+      @if (isLoading$ | async) {
+      <mat-spinner diameter="20"></mat-spinner>
+      Вход...
+      } @else {
+      <mat-icon>login</mat-icon>
+      Войти
+      }
      </button>
     </form>
 

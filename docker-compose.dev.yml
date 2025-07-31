@@ -58,7 +58,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - JWT_SECRET=your_jwt_secret_key_here
       - JWT_EXPIRES_IN=15m
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://frontend:3000
       - VK_ACCESS_TOKEN=your_vk_token_here
       - PORT=8000
     ports:
@@ -75,6 +75,27 @@ services:
       - dev-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Angular Frontend (Development)
+  frontend:
+    build:
+      context: ./frontend-angular
+      dockerfile: Dockerfile
+    container_name: fullstack_dev_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - dev-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3

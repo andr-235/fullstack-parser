@@ -13,9 +13,11 @@
       <input matInput formControlName="username" placeholder="Введите имя пользователя" [errorStateMatcher]="matcher"
        autocomplete="username">
       <mat-icon matSuffix>person</mat-icon>
-      <mat-error *ngIf="isFieldInvalid('username')">
+      @if (isFieldInvalid('username')) {
+      <mat-error>
        {{ getErrorMessage('username') }}
       </mat-error>
+      }
      </mat-form-field>
 
      <mat-form-field appearance="outline" class="full-width">
@@ -26,9 +28,11 @@
        [attr.aria-pressed]="hidePassword">
        <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
       </button>
-      <mat-error *ngIf="isFieldInvalid('password')">
+      @if (isFieldInvalid('password')) {
+      <mat-error>
        {{ getErrorMessage('password') }}
       </mat-error>
+      }
      </mat-form-field>
 
      <mat-form-field appearance="outline" class="full-width">
@@ -39,9 +43,11 @@
        [attr.aria-label]="'Hide password'" [attr.aria-pressed]="hideConfirmPassword">
        <mat-icon>{{hideConfirmPassword ? 'visibility_off' : 'visibility'}}</mat-icon>
       </button>
-      <mat-error *ngIf="isFieldInvalid('confirmPassword') || isPasswordMismatch()">
+      @if (isFieldInvalid('confirmPassword') || isPasswordMismatch()) {
+      <mat-error>
        {{ getErrorMessage('confirmPassword') }}
       </mat-error>
+      }
      </mat-form-field>
 
      <div class="form-actions">
@@ -52,9 +58,13 @@
 
      <button mat-raised-button color="primary" type="submit" class="register-button"
       [disabled]="registerForm.invalid || isLoading">
-      <mat-icon *ngIf="!isLoading">person_add</mat-icon>
-      <mat-spinner diameter="20" *ngIf="isLoading"></mat-spinner>
-      {{ isLoading ? 'Регистрация...' : 'Зарегистрироваться' }}
+      @if (isLoading) {
+      <mat-spinner diameter="20"></mat-spinner>
+      Регистрация...
+      } @else {
+      <mat-icon>person_add</mat-icon>
+      Зарегистрироваться
+      }
      </button>
     </form>
 

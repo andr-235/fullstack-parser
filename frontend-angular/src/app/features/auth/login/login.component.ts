@@ -1,4 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ChangeDetectionStrategy,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -49,6 +55,7 @@ import * as AuthSelectors from '../../../core/store/auth/auth.selectors';
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent implements OnInit, OnDestroy {
   loginForm: FormGroup;
@@ -59,15 +66,16 @@ export class LoginComponent implements OnInit, OnDestroy {
   matcher = new ErrorStateMatcher();
   private destroy$ = new Subject<void>();
 
-  constructor(
-    private formBuilder: FormBuilder,
-    private authService: AuthService,
-    private router: Router,
-    private route: ActivatedRoute,
-    private errorHandler: ErrorHandlerService,
-    private loadingService: LoadingService,
-    private store: Store<AppState>
-  ) {
+  // Используем inject() вместо constructor injection
+  private formBuilder = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private errorHandler = inject(ErrorHandlerService);
+  private loadingService = inject(LoadingService);
+  private store = inject(Store<AppState>);
+
+  constructor() {
     this.loginForm = this.formBuilder.group({
       username: ['', [Validators.required, Validators.minLength(3)]],
       password: ['', [Validators.required, Validators.minLength(6)]],

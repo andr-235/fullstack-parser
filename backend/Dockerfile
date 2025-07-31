@@ -1,5 +1,5 @@
 # Development stage
-FROM node:18-slim AS development
+FROM node:20-slim AS development
 WORKDIR /usr/src/app
 COPY package*.json ./
 
@@ -16,7 +16,7 @@ COPY . .
 USER node
 
 # Build stage
-FROM node:18-slim AS build
+FROM node:20-slim AS build
 WORKDIR /usr/src/app
 COPY package*.json ./
 
@@ -36,7 +36,7 @@ RUN npm ci --only=production && npm cache clean --force
 USER node
 
 # Production stage
-FROM node:18-slim AS production
+FROM node:20-slim AS production
 WORKDIR /usr/src/app
 
 # Устанавливаем OpenSSL и wget для Prisma и health check с оптимизацией

@@ -13,6 +13,10 @@
         "portalocker",
         "mcp-sequential-thinking"
       ]
+    },
+    "angular-cli": {
+      "command": "npx",
+      "args": ["@angular/cli", "mcp"]
     }
   }
 }

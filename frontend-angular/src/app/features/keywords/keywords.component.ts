@@ -1,4 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ChangeDetectionStrategy,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -70,14 +76,17 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
           </div>
 
           <!-- Loading State -->
-          <div *ngIf="loading" class="loading-section">
+          @if (loading) {
+          <div class="loading-section">
             <app-loading-spinner
               message="Loading keywords..."
             ></app-loading-spinner>
           </div>
+          }
 
           <!-- Keywords Table -->
-          <div *ngIf="!loading && keywords.length > 0" class="table-section">
+          @if (!loading && keywords.length > 0) {
+          <div class="table-section">
             <table mat-table [dataSource]="keywords" matSort>
               <!-- Word Column -->
               <ng-container matColumnDef="word">
@@ -87,12 +96,11 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
                 <td mat-cell *matCellDef="let keyword">
                   <div class="keyword-info">
                     <div class="keyword-word">{{ keyword.word }}</div>
-                    <div
-                      class="keyword-description"
-                      *ngIf="keyword.description"
-                    >
+                    @if (keyword.description) {
+                    <div class="keyword-description">
                       {{ keyword.description }}
                     </div>
+                    }
                   </div>
                 </td>
               </ng-container>
@@ -103,14 +111,16 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
                   Category
                 </th>
                 <td mat-cell *matCellDef="let keyword">
+                  @if (keyword.category) {
                   <mat-chip
-                    *ngIf="keyword.category"
                     [color]="getCategoryColor(keyword.category)"
                     selected
                   >
                     {{ keyword.category }}
                   </mat-chip>
-                  <span *ngIf="!keyword.category">-</span>
+                  } @else {
+                  <span>-</span>
+                  }
                 </td>
               </ng-container>
 
@@ -129,20 +139,15 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
                 <th mat-header-cell *matHeaderCellDef>Settings</th>
                 <td mat-cell *matCellDef="let keyword">
                   <div class="settings-chips">
-                    <mat-chip
-                      *ngIf="keyword.is_case_sensitive"
-                      size="small"
-                      color="primary"
-                    >
+                    @if (keyword.is_case_sensitive) {
+                    <mat-chip size="small" color="primary">
                       Case Sensitive
                     </mat-chip>
-                    <mat-chip
-                      *ngIf="keyword.is_whole_word"
-                      size="small"
-                      color="accent"
-                    >
+                    } @if (keyword.is_whole_word) {
+                    <mat-chip size="small" color="accent">
                       Whole Word
                     </mat-chip>
+                    }
                   </div>
                 </td>
               </ng-container>
@@ -211,13 +216,16 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
             >
             </mat-paginator>
           </div>
+          }
 
           <!-- Empty State -->
-          <div *ngIf="!loading && keywords.length === 0" class="empty-state">
+          @if (!loading && keywords.length === 0) {
+          <div class="empty-state">
             <mat-icon>key</mat-icon>
             <h3>No keywords found</h3>
             <p>Try adjusting your search criteria or add a new keyword.</p>
           </div>
+          }
         </mat-card-content>
       </mat-card>
     </div>
@@ -320,6 +328,7 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
     `,
   ],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     ReactiveFormsModule,
@@ -361,10 +370,11 @@ export class KeywordsComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  constructor(
-    private keywordsService: KeywordsService,
-    private snackBar: MatSnackBar
-  ) {}
+  // Используем inject() вместо constructor injection
+  private keywordsService = inject(KeywordsService);
+  private snackBar = inject(MatSnackBar);
+
+  constructor() {}
 
   ngOnInit(): void {
     this.setupSearchSubscription();

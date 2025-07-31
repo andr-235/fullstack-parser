@@ -3,6 +3,7 @@ import {
   OnInit,
   OnDestroy,
   ChangeDetectionStrategy,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
@@ -61,14 +62,17 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
           </div>
 
           <!-- Loading State -->
-          <div *ngIf="loading" class="loading-section">
+          @if (loading) {
+          <div class="loading-section">
             <app-loading-spinner
               message="Loading groups..."
             ></app-loading-spinner>
           </div>
+          }
 
           <!-- Groups Table -->
-          <div *ngIf="!loading && groups.length > 0" class="table-section">
+          @if (!loading && groups.length > 0) {
+          <div class="table-section">
             <table mat-table [dataSource]="groups" matSort>
               <!-- Name Column -->
               <ng-container matColumnDef="name">
@@ -179,13 +183,16 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
             >
             </mat-paginator>
           </div>
+          }
 
           <!-- Empty State -->
-          <div *ngIf="!loading && groups.length === 0" class="empty-state">
+          @if (!loading && groups.length === 0) {
+          <div class="empty-state">
             <mat-icon>group</mat-icon>
             <h3>No groups found</h3>
             <p>Try adjusting your search criteria or add a new group.</p>
           </div>
+          }
         </mat-card-content>
       </mat-card>
     </div>
@@ -315,10 +322,11 @@ export class GroupsComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  constructor(
-    private groupsService: GroupsService,
-    private snackBar: MatSnackBar
-  ) {}
+  // Используем inject() вместо constructor injection
+  private groupsService = inject(GroupsService);
+  private snackBar = inject(MatSnackBar);
+
+  constructor() {}
 
   ngOnInit(): void {
     this.setupSearchSubscription();
