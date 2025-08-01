@@ -2,8 +2,10 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Param,
   Query,
+  Body,
   HttpCode,
   HttpStatus,
   BadRequestException,
@@ -18,6 +20,11 @@ import {
 import { ParserService } from "./parser.service";
 import { VkApiService } from "./vk-api.service";
 import { VKGroupDto, VKPostDto, VKCommentDto } from "../../common/dto/vk.dto";
+import {
+  ParseTaskCreate,
+  ParseTaskResponse,
+  ParseTaskStatus,
+} from "../../common/dto/parser.dto";
 
 @ApiTags("parser")
 @Controller("parser")
@@ -233,8 +240,8 @@ export class ParserController {
     commentsParsed: number;
     keywordsMatched: number;
   }> {
-    // Parse group if not exists
-    const group = await this.parserService.parseGroup(groupId);
+    // Get existing group by ID
+    const group = await this.parserService.getGroupById(groupId);
 
     // Parse posts
     const posts = await this.parserService.parseGroupPosts(
@@ -369,5 +376,56 @@ export class ParserController {
   async checkVkToken() {
     const valid = await this.vkApiService.checkToken();
     return { valid };
+  }
+
+  @Post("tasks")
+  @ApiOperation({ summary: "Create parsing task for multiple groups" })
+  @ApiResponse({
+    status: 201,
+    description: "Task created successfully",
+    type: ParseTaskResponse,
+  })
+  async createParseTask(
+    @Body() taskData: ParseTaskCreate
+  ): Promise<ParseTaskResponse> {
+    return this.parserService.createParseTask(taskData);
+  }
+
+  @Get("tasks/:taskId")
+  @ApiOperation({ summary: "Get parsing task status" })
+  @ApiParam({ name: "taskId", description: "Task ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Task status retrieved successfully",
+    type: ParseTaskStatus,
+  })
+  async getParseTaskStatus(
+    @Param("taskId") taskId: string
+  ): Promise<ParseTaskStatus> {
+    return this.parserService.getParseTaskStatus(taskId);
+  }
+
+  @Get("tasks")
+  @ApiOperation({ summary: "Get all parsing tasks" })
+  @ApiResponse({
+    status: 200,
+    description: "Tasks list retrieved successfully",
+    type: [ParseTaskResponse],
+  })
+  async getAllParseTasks(): Promise<ParseTaskResponse[]> {
+    return this.parserService.getAllParseTasks();
+  }
+
+  @Delete("tasks/:taskId")
+  @ApiOperation({ summary: "Cancel parsing task" })
+  @ApiParam({ name: "taskId", description: "Task ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Task cancelled successfully",
+  })
+  async cancelParseTask(
+    @Param("taskId") taskId: string
+  ): Promise<{ message: string }> {
+    return this.parserService.cancelParseTask(taskId);
   }
 }

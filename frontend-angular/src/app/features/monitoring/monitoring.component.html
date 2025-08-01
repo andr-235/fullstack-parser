@@ -7,11 +7,11 @@
  <div class="monitoring-actions">
   <button mat-raised-button color="primary" (click)="refreshData()" [disabled]="isLoading">
    <mat-icon>refresh</mat-icon>
-   {{ isLoading ? 'Обновление...' : 'Обновить данные' }}
+   {{ isLoadingData ? 'Обновление...' : 'Обновить данные' }}
   </button>
   <button mat-stroked-button (click)="toggleAutoRefresh()">
-   <mat-icon>{{ autoRefresh ? 'pause' : 'play_arrow' }}</mat-icon>
-   {{ autoRefresh ? 'Остановить автообновление' : 'Автообновление' }}
+   <mat-icon>{{ autoRefreshData ? 'pause' : 'play_arrow' }}</mat-icon>
+   {{ autoRefreshData ? 'Остановить автообновление' : 'Автообновление' }}
   </button>
   <button mat-stroked-button (click)="exportReport()">
    <mat-icon>download</mat-icon>
@@ -30,14 +30,15 @@
     <mat-card-subtitle>Основные метрики производительности</mat-card-subtitle>
    </mat-card-header>
    <mat-card-content>
-    <div class="metrics-grid" *ngIf="systemMetrics">
+    <div class="metrics-grid" *ngIf="systemMetricsData">
      <div class="metric-card">
       <div class="metric-header">
        <mat-icon>memory</mat-icon>
        <span>CPU</span>
       </div>
-      <div class="metric-value">{{ systemMetrics.cpu_usage }}%</div>
-      <mat-progress-bar [value]="systemMetrics.cpu_usage" [color]="systemMetrics.cpu_usage > 80 ? 'warn' : 'primary'">
+      <div class="metric-value">{{ systemMetricsData.cpu_usage }}%</div>
+      <mat-progress-bar [value]="systemMetricsData.cpu_usage"
+       [color]="systemMetricsData.cpu_usage > 80 ? 'warn' : 'primary'">
       </mat-progress-bar>
      </div>
 
@@ -46,9 +47,9 @@
        <mat-icon>storage</mat-icon>
        <span>Память</span>
       </div>
-      <div class="metric-value">{{ systemMetrics.memory_usage }}%</div>
-      <mat-progress-bar [value]="systemMetrics.memory_usage"
-       [color]="systemMetrics.memory_usage > 80 ? 'warn' : 'primary'">
+      <div class="metric-value">{{ systemMetricsData.memory_usage }}%</div>
+      <mat-progress-bar [value]="systemMetricsData.memory_usage"
+       [color]="systemMetricsData.memory_usage > 80 ? 'warn' : 'primary'">
       </mat-progress-bar>
      </div>
 
@@ -57,8 +58,9 @@
        <mat-icon>hard_drive</mat-icon>
        <span>Диск</span>
       </div>
-      <div class="metric-value">{{ systemMetrics.disk_usage }}%</div>
-      <mat-progress-bar [value]="systemMetrics.disk_usage" [color]="systemMetrics.disk_usage > 90 ? 'warn' : 'primary'">
+      <div class="metric-value">{{ systemMetricsData.disk_usage }}%</div>
+      <mat-progress-bar [value]="systemMetricsData.disk_usage"
+       [color]="systemMetricsData.disk_usage > 90 ? 'warn' : 'primary'">
       </mat-progress-bar>
      </div>
 
@@ -67,7 +69,7 @@
        <mat-icon>network_check</mat-icon>
        <span>Сеть</span>
       </div>
-      <div class="metric-value">{{ systemMetrics.network_activity }} MB/s</div>
+      <div class="metric-value">{{ systemMetricsData.network_activity }} MB/s</div>
       <div class="metric-trend">↑ +5%</div>
      </div>
 
@@ -76,7 +78,7 @@
        <mat-icon>link</mat-icon>
        <span>Соединения</span>
       </div>
-      <div class="metric-value">{{ systemMetrics.active_connections }}</div>
+      <div class="metric-value">{{ systemMetricsData.active_connections }}</div>
       <div class="metric-trend">Активные</div>
      </div>
 
@@ -85,7 +87,7 @@
        <mat-icon>schedule</mat-icon>
        <span>Время работы</span>
       </div>
-      <div class="metric-value">{{ formatUptime(systemMetrics.uptime) }}</div>
+      <div class="metric-value">{{ formatUptime(systemMetricsData.uptime) }}</div>
       <div class="metric-trend">Аптайм</div>
      </div>
     </div>
@@ -102,50 +104,50 @@
     <mat-card-subtitle>Информация о работе парсера VK</mat-card-subtitle>
    </mat-card-header>
    <mat-card-content>
-    <div class="parser-status" *ngIf="parserMetrics">
+    <div class="parser-status" *ngIf="parserMetricsData">
      <div class="status-indicator">
-      <div class="status-dot" [class.active]="parserMetrics.is_running"></div>
-      <span>{{ parserMetrics.is_running ? 'Работает' : 'Остановлен' }}</span>
+      <div class="status-dot" [class.active]="parserMetricsData.is_running"></div>
+      <span>{{ parserMetricsData.is_running ? 'Работает' : 'Остановлен' }}</span>
      </div>
 
      <div class="parser-metrics">
       <div class="metric-item">
        <span class="metric-label">Всего групп:</span>
-       <span class="metric-value">{{ parserMetrics.total_groups }}</span>
+       <span class="metric-value">{{ parserMetricsData.total_groups }}</span>
       </div>
       <div class="metric-item">
        <span class="metric-label">Активных групп:</span>
-       <span class="metric-value">{{ parserMetrics.active_groups }}</span>
+       <span class="metric-value">{{ parserMetricsData.active_groups }}</span>
       </div>
       <div class="metric-item">
        <span class="metric-label">Обработано комментариев:</span>
-       <span class="metric-value">{{ parserMetrics.total_comments_parsed | number }}</span>
+       <span class="metric-value">{{ parserMetricsData.total_comments_parsed | number }}</span>
       </div>
       <div class="metric-item">
        <span class="metric-label">С ключевыми словами:</span>
-       <span class="metric-value">{{ parserMetrics.comments_with_keywords | number }}</span>
+       <span class="metric-value">{{ parserMetricsData.comments_with_keywords | number }}</span>
       </div>
       <div class="metric-item">
        <span class="metric-label">Ошибок:</span>
-       <span class="metric-value error">{{ parserMetrics.errors_count }}</span>
+       <span class="metric-value error">{{ parserMetricsData.errors_count }}</span>
       </div>
      </div>
 
-     <div class="current-progress" *ngIf="parserMetrics.current_progress">
+     <div class="current-progress" *ngIf="parserMetricsData.current_progress">
       <h4>Текущий прогресс</h4>
       <div class="progress-info">
-       <span>{{ parserMetrics.current_progress.group_name }}</span>
-       <span>{{ parserMetrics.current_progress.progress_percentage }}%</span>
+       <span>{{ parserMetricsData.current_progress.group_name }}</span>
+       <span>{{ parserMetricsData.current_progress.progress_percentage }}%</span>
       </div>
-      <mat-progress-bar [value]="parserMetrics.current_progress.progress_percentage">
+      <mat-progress-bar [value]="parserMetricsData.current_progress.progress_percentage">
       </mat-progress-bar>
       <div class="progress-details">
-       Обработано: {{ parserMetrics.current_progress.comments_processed | number }} комментариев
+       Обработано: {{ parserMetricsData.current_progress.comments_processed | number }} комментариев
       </div>
      </div>
 
-     <div class="last-parse" *ngIf="parserMetrics.last_parse_time">
-      <span>Последний парсинг: {{ formatDateTime(parserMetrics.last_parse_time) }}</span>
+     <div class="last-parse" *ngIf="parserMetricsData.last_parse_time">
+      <span>Последний парсинг: {{ formatDateTime(parserMetricsData.last_parse_time) }}</span>
      </div>
     </div>
    </mat-card-content>
@@ -161,34 +163,34 @@
     <mat-card-subtitle>Состояние и производительность БД</mat-card-subtitle>
    </mat-card-header>
    <mat-card-content>
-    <div class="database-status" *ngIf="databaseMetrics">
+    <div class="database-status" *ngIf="databaseMetricsData">
      <div class="db-metrics">
       <div class="metric-item">
        <span class="metric-label">Размер БД:</span>
-       <span class="metric-value">{{ formatBytes(databaseMetrics.database_size) }}</span>
+       <span class="metric-value">{{ formatBytes(databaseMetricsData.database_size) }}</span>
       </div>
       <div class="metric-item">
        <span class="metric-label">Таблиц:</span>
-       <span class="metric-value">{{ databaseMetrics.tables_count }}</span>
+       <span class="metric-value">{{ databaseMetricsData.tables_count }}</span>
       </div>
       <div class="metric-item">
        <span class="metric-label">Записей:</span>
-       <span class="metric-value">{{ databaseMetrics.total_records | number }}</span>
+       <span class="metric-value">{{ databaseMetricsData.total_records | number }}</span>
       </div>
       <div class="metric-item">
        <span class="metric-label">Активных соединений:</span>
-       <span class="metric-value">{{ databaseMetrics.active_connections }}</span>
+       <span class="metric-value">{{ databaseMetricsData.active_connections }}</span>
       </div>
       <div class="metric-item">
        <span class="metric-label">Время отклика:</span>
-       <span class="metric-value">{{ databaseMetrics.response_time }}ms</span>
+       <span class="metric-value">{{ databaseMetricsData.response_time }}ms</span>
       </div>
      </div>
 
      <div class="table-stats">
       <h4>Статистика таблиц</h4>
       <div class="table-list">
-       <div class="table-item" *ngFor="let table of databaseMetrics.table_stats">
+       <div class="table-item" *ngFor="let table of databaseMetricsData.table_stats">
         <span class="table-name">{{ table.name }}</span>
         <span class="table-records">{{ table.records | number }}</span>
         <span class="table-size">{{ formatBytes(table.size) }}</span>
@@ -227,7 +229,7 @@
     </div>
 
     <div class="logs-container">
-     <div class="log-entry" *ngFor="let log of filteredLogs" [class]="'log-' + log.level">
+     <div class="log-entry" *ngFor="let log of filteredLogsData" [class]="'log-' + log.level">
       <div class="log-timestamp">{{ formatDateTime(log.timestamp) }}</div>
       <div class="log-level" [class]="'level-' + log.level">
        {{ log.level.toUpperCase() }}

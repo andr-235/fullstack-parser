@@ -13,15 +13,24 @@ export class CommentsService {
 
   private mapToResponseDto(comment: any): VKCommentResponseDto {
     return {
-      id: comment.id.toString(),
-      vkId: comment.vkId,
-      postId: comment.postId.toString(),
+      id: comment.id,
+      vk_id: comment.vkId,
+      group_id: comment.post?.group?.id || 0,
+      group_name: comment.post?.group?.name || "",
+      post_id: comment.postId,
+      author_id: 0, // Default value since field doesn't exist in DB
+      author_name: "Unknown Author", // Default value since field doesn't exist in DB
+      author_photo: "", // Default value since field doesn't exist in DB
       text: comment.text,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
+      date: comment.createdAt?.toISOString() || new Date().toISOString(),
+      likes_count: 0, // Default value since field doesn't exist in DB
+      is_viewed: false, // Default value since field doesn't exist in DB
+      is_archived: false, // Default value since field doesn't exist in DB
       keywords:
         comment.keywordMatches?.map((match: any) => match.keyword.word) || [],
-      post: comment.post,
+      sentiment: "neutral", // Default value since field doesn't exist in DB
+      created_at: comment.createdAt?.toISOString() || new Date().toISOString(),
+      updated_at: comment.updatedAt?.toISOString() || new Date().toISOString(),
     };
   }
 

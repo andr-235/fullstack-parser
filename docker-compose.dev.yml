@@ -63,9 +63,9 @@ services:
       - PORT=8000
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
+    # volumes:
+    #   - ./backend:/app
+    #   - /app/node_modules
     depends_on:
       postgres:
         condition: service_healthy

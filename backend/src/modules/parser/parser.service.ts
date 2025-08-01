@@ -6,8 +6,14 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { VkApiService } from "./vk-api.service";
+import { RedisService } from "../../common/redis";
 import { VKGroup, VKPost, VKComment, Keyword } from "@prisma/client";
 import { VKGroupDto, VKPostDto, VKCommentDto } from "../../common/dto/vk.dto";
+import {
+  ParseTaskCreate,
+  ParseTaskResponse,
+  ParseTaskStatus,
+} from "../../common/dto/parser.dto";
 
 @Injectable()
 export class ParserService {
@@ -15,7 +21,8 @@ export class ParserService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly vkApiService: VkApiService
+    private readonly vkApiService: VkApiService,
+    private readonly redisService: RedisService
   ) {}
 
   private mapGroupToDto(group: VKGroup): VKGroupDto {
@@ -104,6 +111,25 @@ export class ParserService {
     }
   }
 
+  async getGroupById(groupId: string): Promise<VKGroupDto> {
+    try {
+      this.logger.log(`Getting group by ID: ${groupId}`);
+
+      const group = await this.prisma.vKGroup.findUnique({
+        where: { id: parseInt(groupId) },
+      });
+
+      if (!group) {
+        throw new NotFoundException(`Group not found with ID: ${groupId}`);
+      }
+
+      return this.mapGroupToDto(group);
+    } catch (error) {
+      this.logger.error(`Error getting group by ID ${groupId}:`, error);
+      throw error;
+    }
+  }
+
   async parseGroupPosts(
     groupId: string,
     limit: number = 100
@@ -174,6 +200,17 @@ export class ParserService {
       return posts;
     } catch (error) {
       this.logger.error(`Error parsing posts for group ${groupId}:`, error);
+      // Return empty array instead of throwing error for VK API issues
+      if (
+        error.message &&
+        (error.message.includes("User was deleted or banned") ||
+          error.message.includes("This profile is private"))
+      ) {
+        this.logger.warn(
+          `Group ${groupId} is deleted, banned, or private, returning empty posts array`
+        );
+        return [];
+      }
       throw error;
     }
   }
@@ -256,6 +293,17 @@ export class ParserService {
       return comments;
     } catch (error) {
       this.logger.error(`Error parsing comments for post ${postId}:`, error);
+      // Return empty array instead of throwing error for VK API issues
+      if (
+        error.message &&
+        (error.message.includes("User was deleted or banned") ||
+          error.message.includes("This profile is private"))
+      ) {
+        this.logger.warn(
+          `Post ${postId} is from deleted/banned/private group, returning empty comments array`
+        );
+        return [];
+      }
       throw error;
     }
   }
@@ -427,5 +475,298 @@ export class ParserService {
       commentsCount,
       matchesCount,
     };
+  }
+
+  async fullParseGroup(
+    groupId: string,
+    postsLimit: number = 100,
+    commentsLimit: number = 100
+  ): Promise<{
+    group: VKGroupDto;
+    postsParsed: number;
+    commentsParsed: number;
+    keywordsMatched: number;
+  }> {
+    try {
+      // Get existing group by ID
+      const group = await this.getGroupById(groupId);
+
+      // Parse posts
+      const posts = await this.parseGroupPosts(group.id, postsLimit);
+
+      // Parse comments for each post
+      let totalComments = 0;
+      for (const post of posts) {
+        const comments = await this.parsePostComments(post.id, commentsLimit);
+        totalComments += comments.length;
+      }
+
+      // Match keywords for all comments
+      await this.matchKeywordsForAllComments();
+
+      // Get final stats
+      const stats = await this.getGroupStats(group.id);
+
+      return {
+        group,
+        postsParsed: posts.length,
+        commentsParsed: totalComments,
+        keywordsMatched: stats.matchesCount,
+      };
+    } catch (error) {
+      this.logger.error(`Error in fullParseGroup for group ${groupId}:`, error);
+      throw error;
+    }
+  }
+
+  // Task Queue Management
+  async createParseTask(taskData: ParseTaskCreate): Promise<ParseTaskResponse> {
+    try {
+      const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      const task: ParseTaskResponse = {
+        id: taskId,
+        status: "pending",
+        totalGroups: taskData.groupIds.length,
+        processedGroups: 0,
+        progress: 0,
+        createdAt: new Date(),
+      };
+
+      // Store task in Redis
+      await this.redisService.setTaskStatus(taskId, task);
+      await this.redisService.setTaskProgress(taskId, 0);
+
+      // Start processing in background
+      this.processParseTask(taskId, taskData);
+
+      return task;
+    } catch (error) {
+      this.logger.error("Error creating parse task:", error);
+      throw error;
+    }
+  }
+
+  async getParseTaskStatus(taskId: string): Promise<ParseTaskStatus> {
+    try {
+      const status = await this.redisService.getTaskStatus(taskId);
+      const progress = await this.redisService.getTaskProgress(taskId);
+      const currentGroup = await this.redisService.hGet(
+        `task:${taskId}`,
+        "currentGroup"
+      );
+      const processedGroups = await this.redisService.hGet(
+        `task:${taskId}`,
+        "processedGroups"
+      );
+      const error = await this.redisService.hGet(`task:${taskId}`, "error");
+      const results = await this.redisService.hGet(`task:${taskId}`, "results");
+      const completedAt = await this.redisService.hGet(
+        `task:${taskId}`,
+        "completedAt"
+      );
+
+      if (!status) {
+        throw new Error("Task not found");
+      }
+
+      return {
+        id: taskId,
+        status: status.status,
+        totalGroups: status.totalGroups,
+        processedGroups: processedGroups ? parseInt(processedGroups) : 0,
+        currentGroup: currentGroup || undefined,
+        progress: progress || 0,
+        createdAt: status.createdAt || new Date(),
+        completedAt: completedAt ? new Date(completedAt) : undefined,
+        error: error || undefined,
+        results: results ? JSON.parse(results) : undefined,
+      };
+    } catch (error) {
+      throw new Error(`Failed to get task status: ${error.message}`);
+    }
+  }
+
+  async getAllParseTasks(): Promise<ParseTaskResponse[]> {
+    try {
+      // Get all task keys from Redis
+      const taskKeys = await this.redisService.keys("task:*");
+      const taskList: ParseTaskResponse[] = [];
+
+      for (const key of taskKeys) {
+        const taskId = key.replace("task:", "");
+        try {
+          const task = await this.getParseTaskStatus(taskId);
+          // Convert ParseTaskStatus to ParseTaskResponse
+          const taskResponse: ParseTaskResponse = {
+            id: task.id,
+            status: task.status,
+            totalGroups: task.totalGroups,
+            processedGroups: task.processedGroups,
+            currentGroup: task.currentGroup,
+            progress: task.progress,
+            createdAt: task.createdAt || new Date(),
+            completedAt: task.completedAt,
+            error: task.error,
+          };
+          taskList.push(taskResponse);
+        } catch (error) {
+          this.logger.warn(`Error getting task ${taskId}:`, error);
+          // Continue with other tasks
+        }
+      }
+
+      return taskList.sort(
+        (a, b) =>
+          new Date(b.createdAt || new Date()).getTime() -
+          new Date(a.createdAt || new Date()).getTime()
+      );
+    } catch (error) {
+      this.logger.error("Error getting all tasks:", error);
+      throw error;
+    }
+  }
+
+  async cancelParseTask(taskId: string): Promise<{ message: string }> {
+    try {
+      // Update task status to cancelled
+      const task = await this.getParseTaskStatus(taskId);
+      task.status = "failed";
+      task.error = "Task cancelled by user";
+
+      await this.redisService.setTaskStatus(taskId, task);
+      await this.redisService.setTaskError(taskId, "Task cancelled by user");
+      await this.redisService.setTaskCompletedAt(taskId, new Date());
+
+      return { message: "Task cancelled successfully" };
+    } catch (error) {
+      this.logger.error(`Error cancelling task ${taskId}:`, error);
+      throw error;
+    }
+  }
+
+  private async processParseTask(
+    taskId: string,
+    taskData: ParseTaskCreate
+  ): Promise<void> {
+    try {
+      const maxConcurrent = 3;
+      const queue = [...taskData.groupIds];
+      let completed = 0;
+      let running = 0;
+      const totalGroups = queue.length;
+
+      const updateTaskStatus = async (
+        status: string,
+        currentGroup?: string,
+        progress?: number
+      ) => {
+        const task = await this.getParseTaskStatus(taskId);
+        const updatedTask: ParseTaskResponse = {
+          id: task.id,
+          status: status as any,
+          totalGroups: task.totalGroups,
+          processedGroups: completed,
+          currentGroup,
+          progress: progress || Math.round((completed / totalGroups) * 100),
+          createdAt: task.createdAt || new Date(),
+          completedAt: task.completedAt,
+          error: task.error,
+        };
+
+        if (status === "completed" || status === "failed") {
+          updatedTask.completedAt = new Date();
+        }
+
+        await this.redisService.setTaskStatus(taskId, updatedTask);
+        await this.redisService.setTaskProgress(taskId, updatedTask.progress);
+
+        if (currentGroup) {
+          await this.redisService.setCurrentGroup(taskId, currentGroup);
+        }
+      };
+
+      const processNext = async () => {
+        if (queue.length === 0 || running >= maxConcurrent) {
+          return;
+        }
+
+        const groupId = queue.shift()!;
+        running++;
+
+        try {
+          // Get group name
+          const group = await this.getGroupById(groupId);
+          await updateTaskStatus(
+            "running",
+            group.name,
+            Math.round((completed / totalGroups) * 100)
+          );
+
+          // Parse group
+          const result = await this.fullParseGroup(
+            groupId,
+            taskData.postsLimit,
+            taskData.commentsLimit
+          );
+
+          completed++;
+          running--;
+
+          // Update processed groups count
+          await this.redisService.incrementProcessedGroups(taskId);
+          await this.redisService.incrementProcessedGroups(taskId);
+
+          await updateTaskStatus(
+            "running",
+            group.name,
+            Math.round((completed / totalGroups) * 100)
+          );
+
+          if (completed === totalGroups) {
+            await updateTaskStatus("completed", undefined, 100);
+            await this.redisService.setTaskCompletedAt(taskId, new Date());
+
+            // Set results
+            const results = {
+              totalPosts: result.postsParsed,
+              totalComments: result.commentsParsed,
+              totalMatches: result.keywordsMatched,
+            };
+            await this.redisService.setTaskResults(taskId, results);
+          } else {
+            // Continue with next group after delay
+            setTimeout(() => processNext(), 1000);
+          }
+        } catch (error) {
+          this.logger.error(`Error processing group ${groupId}:`, error);
+          completed++;
+          running--;
+
+          await this.redisService.setTaskError(taskId, error.message);
+
+          if (completed === totalGroups) {
+            await updateTaskStatus("failed", undefined, 100);
+            await this.redisService.setTaskCompletedAt(taskId, new Date());
+          } else {
+            setTimeout(() => processNext(), 1000);
+          }
+        }
+
+        // Start next group if possible
+        if (running < maxConcurrent && queue.length > 0) {
+          setTimeout(() => processNext(), 500);
+        }
+      };
+
+      // Start processing
+      await updateTaskStatus("running");
+      for (let i = 0; i < Math.min(maxConcurrent, queue.length); i++) {
+        setTimeout(() => processNext(), i * 500);
+      }
+    } catch (error) {
+      this.logger.error(`Error processing task ${taskId}:`, error);
+      // Handle error - task will be marked as failed in the main process
+    }
   }
 }

@@ -58,6 +58,7 @@ model VKComment {
   id        Int      @id @default(autoincrement())
   vkId      Int      @unique @map("vk_id")
   postId    Int      @map("post_id")
+  authorId  Int      @map("author_id")
   text      String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -1,292 +1,177 @@
-import { Injectable } from '@angular/core';
-import { Observable, catchError, tap } from 'rxjs';
-import { ApiService, ApiError } from './api.service';
-import { ErrorHandlerService } from './error-handler.service';
-import { LoadingService } from './loading.service';
-import { CacheService } from './cache.service';
-import {
-  VKGroupResponse,
-  VKGroupCreate,
-  VKGroupUpdate,
-  VKGroupStats,
-  PaginatedResponse,
-} from '../models';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
-export interface GroupsSearchParams {
-  active_only?: boolean;
-  search?: string;
+export interface VKGroupResponse {
+  id: string;
+  vkId: number;
+  screenName: string;
+  name: string;
+  description: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  postCount: number;
+}
+
+export interface CreateVKGroupRequest {
+  vkId: number;
+  screenName: string;
+  name: string;
+  description?: string;
+}
+
+export interface UpdateVKGroupRequest {
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+export interface GroupsResponse {
+  groups: VKGroupResponse[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface GroupsQueryParams {
   page?: number;
-  size?: number;
+  limit?: number;
+  search?: string;
+  isActive?: boolean;
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class GroupsService {
-  constructor(
-    private apiService: ApiService,
-    private errorHandler: ErrorHandlerService,
-    private loadingService: LoadingService,
-    private cacheService: CacheService
-  ) {}
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = `${environment.apiUrl}/groups`;
 
-  getGroups(
-    params: GroupsSearchParams = {}
-  ): Observable<PaginatedResponse<VKGroupResponse>> {
-    const queryParams = new URLSearchParams();
+  /**
+   * Get all groups with pagination and filtering
+   */
+  getGroups(params: GroupsQueryParams = {}): Observable<GroupsResponse> {
+    let httpParams = new HttpParams();
 
-    if (params.active_only !== undefined) {
-      queryParams.append('active_only', params.active_only.toString());
+    if (params.page !== undefined) {
+      httpParams = httpParams.set('page', params.page.toString());
+    }
+    if (params.limit !== undefined) {
+      httpParams = httpParams.set('limit', params.limit.toString());
     }
     if (params.search) {
-      queryParams.append('search', params.search);
+      httpParams = httpParams.set('search', params.search);
     }
-    if (params.page) {
-      queryParams.append('page', params.page.toString());
-    }
-    if (params.size) {
-      queryParams.append('size', params.size.toString());
+    if (params.isActive !== undefined) {
+      httpParams = httpParams.set('isActive', params.isActive.toString());
     }
 
-    const queryString = queryParams.toString();
-    const endpoint = queryString ? `/groups?${queryString}` : '/groups';
-    const cacheKey = `groups_${endpoint}`;
-
-    this.loadingService.show('Loading groups...');
-
-    return this.cacheService
-      .getOrSet(
-        cacheKey,
-        () => this.apiService.get<PaginatedResponse<VKGroupResponse>>(endpoint),
-        2 * 60 * 1000 // 2 minutes cache
-      )
-      .pipe(
-        tap(() => {
-          this.loadingService.hide();
-        }),
-        catchError((error: ApiError) => {
-          this.loadingService.hide();
-          this.errorHandler.handleError(error);
-          throw error;
-        })
-      );
+    return this.http.get<GroupsResponse>(this.apiUrl, { params: httpParams });
   }
 
-  getGroup(id: number): Observable<VKGroupResponse> {
-    this.loadingService.show('Loading group details...');
+  /**
+   * Get group by ID
+   */
+  getGroup(id: string): Observable<VKGroupResponse> {
+    return this.http.get<VKGroupResponse>(`${this.apiUrl}/${id}`);
+  }
 
-    return this.apiService.get<VKGroupResponse>(`/groups/${id}`).pipe(
-      tap(() => {
-        this.loadingService.hide();
-      }),
-      catchError((error: ApiError) => {
-        this.loadingService.hide();
-        this.errorHandler.handleError(error);
-        throw error;
-      })
+  /**
+   * Get group by VK ID
+   */
+  getGroupByVkId(vkId: number): Observable<VKGroupResponse> {
+    return this.http.get<VKGroupResponse>(`${this.apiUrl}/vk/${vkId}`);
+  }
+
+  /**
+   * Get group by screen name
+   */
+  getGroupByScreenName(screenName: string): Observable<VKGroupResponse> {
+    return this.http.get<VKGroupResponse>(
+      `${this.apiUrl}/screen/${screenName}`
     );
   }
 
-  createGroup(group: VKGroupCreate): Observable<VKGroupResponse> {
-    this.loadingService.show('Creating group...');
-
-    return this.apiService.post<VKGroupResponse>('/groups', group).pipe(
-      tap(() => {
-        this.loadingService.hide();
-        this.errorHandler.showSuccessNotification('Group created successfully');
-      }),
-      catchError((error: ApiError) => {
-        this.loadingService.hide();
-        this.errorHandler.handleError(error);
-        throw error;
-      })
-    );
+  /**
+   * Create new group
+   */
+  createGroup(group: CreateVKGroupRequest): Observable<VKGroupResponse> {
+    return this.http.post<VKGroupResponse>(this.apiUrl, group);
   }
 
-  updateGroup(id: number, group: VKGroupUpdate): Observable<VKGroupResponse> {
-    this.loadingService.show('Updating group...');
-
-    return this.apiService.put<VKGroupResponse>(`/groups/${id}`, group).pipe(
-      tap(() => {
-        this.loadingService.hide();
-        this.errorHandler.showSuccessNotification('Group updated successfully');
-      }),
-      catchError((error: ApiError) => {
-        this.loadingService.hide();
-        this.errorHandler.handleError(error);
-        throw error;
-      })
-    );
+  /**
+   * Update group
+   */
+  updateGroup(
+    id: string,
+    updates: UpdateVKGroupRequest
+  ): Observable<VKGroupResponse> {
+    return this.http.patch<VKGroupResponse>(`${this.apiUrl}/${id}`, updates);
   }
 
-  deleteGroup(id: number): Observable<void> {
-    this.loadingService.show('Deleting group...');
-
-    return this.apiService.delete<void>(`/groups/${id}`).pipe(
-      tap(() => {
-        this.loadingService.hide();
-        this.errorHandler.showSuccessNotification('Group deleted successfully');
-      }),
-      catchError((error: ApiError) => {
-        this.loadingService.hide();
-        this.errorHandler.handleError(error);
-        throw error;
-      })
-    );
+  /**
+   * Delete group
+   */
+  deleteGroup(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-  getGroupStats(id: number): Observable<VKGroupStats> {
-    this.loadingService.show('Loading group statistics...');
-
-    return this.apiService.get<VKGroupStats>(`/groups/${id}/stats`).pipe(
-      tap(() => {
-        this.loadingService.hide();
-      }),
-      catchError((error: ApiError) => {
-        this.loadingService.hide();
-        this.errorHandler.handleError(error);
-        throw error;
-      })
-    );
-  }
-
-  refreshGroupInfo(id: number): Observable<VKGroupResponse> {
-    this.loadingService.show('Refreshing group information...');
-
-    return this.apiService
-      .post<VKGroupResponse>(`/groups/${id}/refresh`, {})
-      .pipe(
-        tap(() => {
-          this.loadingService.hide();
-          this.errorHandler.showSuccessNotification(
-            'Group information refreshed successfully'
-          );
-        }),
-        catchError((error: ApiError) => {
-          this.loadingService.hide();
-          this.errorHandler.handleError(error);
-          throw error;
-        })
-      );
-  }
-
+  /**
+   * Toggle group active status
+   */
   toggleGroupActive(
-    id: number,
+    id: string,
     isActive: boolean
   ): Observable<VKGroupResponse> {
-    const action = isActive ? 'activating' : 'deactivating';
-    this.loadingService.show(`${action} group...`);
-
-    return this.apiService
-      .patch<VKGroupResponse>(`/groups/${id}`, {
-        is_active: isActive,
-      })
-      .pipe(
-        tap(() => {
-          this.loadingService.hide();
-          const message = isActive
-            ? 'Group activated successfully'
-            : 'Group deactivated successfully';
-          this.errorHandler.showSuccessNotification(message);
-        }),
-        catchError((error: ApiError) => {
-          this.loadingService.hide();
-          this.errorHandler.handleError(error);
-          throw error;
-        })
-      );
+    return this.updateGroup(id, { isActive });
   }
 
-  // Bulk operations
-  bulkDeleteGroups(groupIds: number[]): Observable<void> {
-    this.loadingService.show('Deleting selected groups...');
-
-    return this.apiService
-      .post<void>('/groups/bulk-delete', { group_ids: groupIds })
-      .pipe(
-        tap(() => {
-          this.loadingService.hide();
-          this.errorHandler.showSuccessNotification(
-            `${groupIds.length} groups deleted successfully`
-          );
-        }),
-        catchError((error: ApiError) => {
-          this.loadingService.hide();
-          this.errorHandler.handleError(error);
-          throw error;
-        })
-      );
+  /**
+   * Bulk update group status
+   */
+  bulkUpdateStatus(
+    ids: string[],
+    isActive: boolean
+  ): Observable<VKGroupResponse[]> {
+    return this.http.patch<VKGroupResponse[]>(`${this.apiUrl}/bulk-status`, {
+      ids,
+      isActive,
+    });
   }
 
-  bulkActivateGroups(groupIds: number[]): Observable<void> {
-    this.loadingService.show('Activating selected groups...');
-
-    return this.apiService
-      .post<void>('/groups/bulk-activate', { group_ids: groupIds })
-      .pipe(
-        tap(() => {
-          this.loadingService.hide();
-          this.errorHandler.showSuccessNotification(
-            `${groupIds.length} groups activated successfully`
-          );
-        }),
-        catchError((error: ApiError) => {
-          this.loadingService.hide();
-          this.errorHandler.handleError(error);
-          throw error;
-        })
-      );
-  }
-
-  bulkDeactivateGroups(groupIds: number[]): Observable<void> {
-    this.loadingService.show('Deactivating selected groups...');
-
-    return this.apiService
-      .post<void>('/groups/bulk-deactivate', { group_ids: groupIds })
-      .pipe(
-        tap(() => {
-          this.loadingService.hide();
-          this.errorHandler.showSuccessNotification(
-            `${groupIds.length} groups deactivated successfully`
-          );
-        }),
-        catchError((error: ApiError) => {
-          this.loadingService.hide();
-          this.errorHandler.handleError(error);
-          throw error;
-        })
-      );
-  }
-
-  // Export functionality
-  exportGroups(params: GroupsSearchParams = {}): Observable<Blob> {
-    this.loadingService.show('Exporting groups...');
-
-    const queryParams = new URLSearchParams();
-    if (params.active_only !== undefined) {
-      queryParams.append('active_only', params.active_only.toString());
+  /**
+   * Search groups
+   */
+  searchGroups(query: string, limit?: number): Observable<VKGroupResponse[]> {
+    let params = new HttpParams().set('q', query);
+    if (limit) {
+      params = params.set('limit', limit.toString());
     }
-    if (params.search) {
-      queryParams.append('search', params.search);
+    return this.http.get<VKGroupResponse[]>(`${this.apiUrl}/search`, {
+      params,
+    });
+  }
+
+  /**
+   * Get groups by post count
+   */
+  getGroupsByPostCount(minPosts?: number): Observable<VKGroupResponse[]> {
+    let params = new HttpParams();
+    if (minPosts) {
+      params = params.set('minPosts', minPosts.toString());
     }
+    return this.http.get<VKGroupResponse[]>(`${this.apiUrl}/by-posts`, {
+      params,
+    });
+  }
 
-    const queryString = queryParams.toString();
-    const endpoint = queryString
-      ? `/groups/export?${queryString}`
-      : '/groups/export';
-
-    return this.apiService.download(endpoint).pipe(
-      tap(() => {
-        this.loadingService.hide();
-        this.errorHandler.showSuccessNotification(
-          'Groups exported successfully'
-        );
-      }),
-      catchError((error: ApiError) => {
-        this.loadingService.hide();
-        this.errorHandler.handleError(error);
-        throw error;
-      })
-    );
+  /**
+   * Get groups statistics
+   */
+  getGroupsStatistics(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/statistics`);
   }
 }

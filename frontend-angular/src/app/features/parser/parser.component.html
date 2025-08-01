@@ -1,0 +1,240 @@
+<div class="parser-container">
+  <!-- Header -->
+  <mat-card class="header-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>settings</mat-icon>
+        Parser Management
+      </mat-card-title>
+      <mat-card-subtitle>
+        Create and manage parsing tasks for VK groups
+      </mat-card-subtitle>
+    </mat-card-header>
+  </mat-card>
+
+  <!-- Statistics -->
+  <mat-card class="stats-card" *ngIf="parsingStats()">
+    <mat-card-header>
+      <mat-card-title>Parsing Statistics</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value">{{ parsingStats()?.totalGroups || 0 }}</div>
+          <div class="stat-label">Groups</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">{{ parsingStats()?.totalPosts || 0 }}</div>
+          <div class="stat-label">Posts</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">{{ parsingStats()?.totalComments || 0 }}</div>
+          <div class="stat-label">Comments</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">{{ parsingStats()?.totalMatches || 0 }}</div>
+          <div class="stat-label">Matches</div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Task Creation -->
+  <mat-card class="task-creation-card">
+    <mat-card-header>
+      <mat-card-title>Create Parsing Task</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="configForm" class="task-form">
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Posts Limit</mat-label>
+            <input matInput formControlName="postsLimit" type="number" min="1" max="1000">
+            <mat-error *ngIf="configForm.get('postsLimit')?.hasError('required')">
+              Posts limit is required
+            </mat-error>
+            <mat-error *ngIf="configForm.get('postsLimit')?.hasError('min')">
+              Minimum value is 1
+            </mat-error>
+            <mat-error *ngIf="configForm.get('postsLimit')?.hasError('max')">
+              Maximum value is 1000
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Comments Limit</mat-label>
+            <input matInput formControlName="commentsLimit" type="number" min="1" max="1000">
+            <mat-error *ngIf="configForm.get('commentsLimit')?.hasError('required')">
+              Comments limit is required
+            </mat-error>
+            <mat-error *ngIf="configForm.get('commentsLimit')?.hasError('min')">
+              Minimum value is 1
+            </mat-error>
+            <mat-error *ngIf="configForm.get('commentsLimit')?.hasError('max')">
+              Maximum value is 1000
+            </mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-actions">
+          <button mat-raised-button color="primary" (click)="createParseTask()"
+            [disabled]="!hasSelectedGroups() || configForm.invalid || isLoading()" class="create-task-btn">
+            <mat-icon>play_arrow</mat-icon>
+            Create Task
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Groups Selection -->
+  <mat-card class="groups-card">
+    <mat-card-header>
+      <mat-card-title>Select Groups</mat-card-title>
+      <mat-card-subtitle>
+        {{ selectedGroups().length }} of {{ groups().length }} groups selected
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="groups-grid" *ngIf="hasGroups(); else noGroupsTemplate">
+        <mat-card class="group-item" *ngFor="let group of groups()" [class.selected]="isGroupSelected(group.id)"
+          (click)="toggleGroupSelection(group.id)">
+          <mat-card-content>
+            <div class="group-info">
+              <div class="group-name">{{ group.name }}</div>
+              <div class="group-screen-name">@{{ group.screenName }}</div>
+              <div class="group-status" [class.active]="group.isActive">
+                {{ group.isActive ? 'Active' : 'Inactive' }}
+              </div>
+            </div>
+            <mat-icon class="selection-icon">
+              {{ isGroupSelected(group.id) ? 'check_circle' : 'radio_button_unchecked' }}
+            </mat-icon>
+          </mat-card-content>
+        </mat-card>
+      </div>
+      <ng-template #noGroupsTemplate>
+        <div class="no-groups">
+          <mat-icon>group_off</mat-icon>
+          <p>No groups available</p>
+        </div>
+      </ng-template>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Active Task Progress -->
+  <mat-card class="active-task-card" *ngIf="hasActiveTask()">
+    <mat-card-header>
+      <mat-card-title>Active Task</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="active-task-info" *ngIf="activeTask()">
+        <div class="task-header">
+          <mat-icon [class]="getTaskStatusIcon(activeTask()?.status || '')">
+            {{ getTaskStatusIcon(activeTask()?.status || '') }}
+          </mat-icon>
+          <span class="task-status">{{ activeTask()?.status?.toUpperCase() }}</span>
+        </div>
+
+        <div class="task-progress">
+          <div class="progress-info">
+            <span>Progress: {{ activeTask()?.progress || 0 }}%</span>
+            <span>{{ activeTask()?.processedGroups || 0 }} / {{ activeTask()?.totalGroups || 0 }} groups</span>
+          </div>
+          <mat-progress-bar [value]="activeTask()?.progress || 0"
+            [color]="getTaskStatusColor(activeTask()?.status || '')">
+          </mat-progress-bar>
+        </div>
+
+        <div class="current-group" *ngIf="activeTask()?.currentGroup">
+          <span>Current: {{ activeTask()?.currentGroup }}</span>
+        </div>
+
+        <div class="task-actions">
+          <button mat-raised-button color="warn" (click)="cancelTask(activeTask()?.id || '')"
+            [disabled]="activeTask()?.status === 'completed' || activeTask()?.status === 'failed'">
+            <mat-icon>stop</mat-icon>
+            Cancel Task
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Tasks List -->
+  <mat-card class="tasks-card">
+    <mat-card-header>
+      <mat-card-title>Parsing Tasks</mat-card-title>
+      <mat-card-subtitle>
+        {{ tasks().length }} tasks total
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="tasks-list" *ngIf="tasks().length > 0; else noTasks">
+        <mat-card class="task-item" *ngFor="let task of tasks()" [class.active]="task.id === activeTaskId()">
+          <mat-card-content>
+            <div class="task-header">
+              <div class="task-status">
+                <mat-icon [class]="getTaskStatusIcon(task.status)">
+                  {{ getTaskStatusIcon(task.status) }}
+                </mat-icon>
+                <span class="status-text">{{ task.status.toUpperCase() }}</span>
+              </div>
+              <div class="task-date">
+                {{ formatDate(task.createdAt) }}
+              </div>
+            </div>
+
+            <div class="task-progress">
+              <div class="progress-info">
+                <span>{{ task.processedGroups || 0 }} / {{ task.totalGroups || 0 }} groups</span>
+                <span>{{ task.progress || 0 }}%</span>
+              </div>
+              <mat-progress-bar [value]="task.progress || 0" [color]="getTaskStatusColor(task.status)">
+              </mat-progress-bar>
+            </div>
+
+            <div class="task-details">
+              <div class="detail-item" *ngIf="task.currentGroup">
+                <span class="label">Current:</span>
+                <span class="value">{{ task.currentGroup }}</span>
+              </div>
+              <div class="detail-item" *ngIf="task.completedAt">
+                <span class="label">Completed:</span>
+                <span class="value">{{ formatDate(task.completedAt) }}</span>
+              </div>
+              <div class="detail-item" *ngIf="task.error">
+                <span class="label">Error:</span>
+                <span class="value error">{{ task.error }}</span>
+              </div>
+            </div>
+
+            <div class="task-actions">
+              <button mat-raised-button color="warn" (click)="cancelTask(task.id)"
+                *ngIf="task.status === 'pending' || task.status === 'running'">
+                <mat-icon>stop</mat-icon>
+                Cancel
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+      <ng-template #noTasks>
+        <div class="no-tasks">
+          <mat-icon>assignment</mat-icon>
+          <p>No parsing tasks yet</p>
+          <p>Create your first task to get started</p>
+        </div>
+      </ng-template>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Loading Spinner -->
+  <app-loading-spinner *ngIf="isLoading()"></app-loading-spinner>
+
+  <!-- Error Display -->
+  <div class="error-message" *ngIf="hasError()">
+    <mat-icon>error</mat-icon>
+    <span>{{ hasError() }}</span>
+  </div>
+</div>

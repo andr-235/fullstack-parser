@@ -1,6 +1,6 @@
-.comments-container {
+.groups-container {
   padding: 20px;
-  max-width: 1600px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -38,34 +38,9 @@
   min-width: 300px;
 }
 
-.group-field,
-.keyword-field {
-  min-width: 200px;
-}
-
-.status-filter {
+.active-filter {
   margin-left: 20px;
   color: #ffffff;
-}
-
-.date-filters-section {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  padding: 16px;
-  background-color: #2a2a2a;
-  border-radius: 8px;
-  border: 1px solid #404040;
-}
-
-.date-field {
-  min-width: 180px;
-}
-
-.sort-field {
-  min-width: 150px;
 }
 
 .loading-section {
@@ -114,45 +89,6 @@
   overflow: hidden;
 }
 
-.comment-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.comment-text {
-  font-size: 14px;
-  line-height: 1.4;
-  margin-bottom: 8px;
-  word-wrap: break-word;
-
-  ::ng-deep .highlighted-keyword {
-    color: #ff4444 !important;
-  }
-}
-
-.comment-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 0.875rem;
-  color: #b0b0b0;
-  flex-wrap: wrap;
-}
-
-.author {
-  color: #2196f3;
-  font-weight: 500;
-}
-
-.date {
-  color: #b0b0b0;
-}
-
-.likes {
-  color: #f44336;
-  font-weight: 500;
-}
-
 .group-info {
   display: flex;
   flex-direction: column;
@@ -167,50 +103,6 @@
 .group-screen-name {
   font-size: 0.875rem;
   color: #b0b0b0;
-}
-
-// Keyword chips styles
-.keywords-chips {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.keyword-chip {
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  background-color: #f44336;
-  color: white;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-// Status chips styles
-.status-chips {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.status-chip {
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.status-chip.viewed {
-  background-color: #4caf50;
-  color: white;
-}
-
-.status-chip.archived {
-  background-color: #ff9800;
-  color: white;
 }
 
 .empty-state {
@@ -242,6 +134,59 @@
   color: #f44336 !important;
 }
 
+// Status button styles
+.status-active {
+  background-color: #4caf50;
+  color: white;
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  min-width: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  &:hover:not(:disabled) {
+    background-color: #45a049;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.status-inactive {
+  background-color: #ff9800;
+  color: white;
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  min-width: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  &:hover:not(:disabled) {
+    background-color: #f57c00;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
 // Inline spinner styles
 .inline-spinner {
   ::ng-deep .mdc-circular-progress__determinate-circle,
@@ -255,10 +200,6 @@ table {
   width: 100%;
 }
 
-.mat-column-select {
-  width: 50px;
-}
-
 .mat-column-actions {
   width: 80px;
 }
@@ -267,11 +208,11 @@ table {
   width: 120px;
 }
 
-.mat-column-keywords {
-  width: 150px;
+.mat-column-postCount {
+  width: 100px;
 }
 
-.mat-column-group {
+.mat-column-screenName {
   width: 150px;
 }
 
@@ -287,8 +228,7 @@ table {
 
 // Responsive design
 @media (max-width: 768px) {
-  .filters-section,
-  .date-filters-section {
+  .filters-section {
     flex-direction: column;
     align-items: stretch;
   }
@@ -297,14 +237,7 @@ table {
     min-width: auto;
   }
 
-  .group-field,
-  .keyword-field,
-  .date-field,
-  .sort-field {
-    min-width: auto;
-  }
-
-  .status-filter {
+  .active-filter {
     margin-left: 0;
   }
 
@@ -312,9 +245,8 @@ table {
     overflow-x: auto;
   }
 
-  .mat-column-select,
-  .mat-column-keywords,
-  .mat-column-group {
+  .mat-column-screenName,
+  .mat-column-postCount {
     display: none;
   }
 }
@@ -325,8 +257,7 @@ table {
     background-color: #2a2a2a;
   }
 
-  .filters-section,
-  .date-filters-section {
+  .filters-section {
     background-color: #2a2a2a;
     border-color: #404040;
   }
@@ -386,77 +317,4 @@ table {
 
 .mat-mdc-checkbox .mdc-checkbox {
   color: #ffffff;
-}
-
-// Select styles
-.mat-mdc-select {
-  color: #ffffff;
-}
-
-.mat-mdc-select-value {
-  color: #ffffff !important;
-}
-
-.mat-mdc-select-arrow {
-  color: #b0b0b0;
-}
-
-// Date picker styles
-.mat-mdc-datepicker-toggle {
-  color: #b0b0b0;
-}
-
-.mat-mdc-datepicker-toggle:hover {
-  color: #ffffff;
-}
-
-// Tooltip styles
-.mat-mdc-tooltip {
-  background-color: #424242;
-  color: #ffffff;
-  font-size: 0.875rem;
-}
-
-// Button styles
-.mat-mdc-icon-button {
-  color: #b0b0b0;
-  transition: color 0.2s ease;
-
-  &:hover:not(:disabled) {
-    color: #ffffff;
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-}
-
-// Loading states
-.mat-mdc-icon-button[disabled] {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-// Table header sort styles
-.mat-sort-header-container {
-  color: #ffffff;
-}
-
-.mat-sort-header-arrow {
-  color: #b0b0b0;
-}
-
-.mat-sort-header-sorted .mat-sort-header-arrow {
-  color: #ffffff;
-}
-
-// Selection checkbox styles
-.mat-mdc-checkbox.mat-mdc-checkbox-checked .mdc-checkbox__background {
-  background-color: #2196f3;
-  border-color: #2196f3;
-}
-
-.mat-mdc-checkbox .mdc-checkbox__ripple {
-  background-color: rgba(33, 150, 243, 0.1);
 }

@@ -121,6 +121,7 @@ export class ApiService {
   }
 
   get<T>(endpoint: string, params?: any): Observable<T> {
+    this.startLoading();
     const startTime = performance.now();
     const url = this.buildUrl(endpoint, params);
 
@@ -129,7 +130,8 @@ export class ApiService {
         const duration = performance.now() - startTime;
         this.performanceService.recordResponseTime(duration);
       }),
-      catchError(this.handleError.bind(this))
+      catchError(this.handleError.bind(this)),
+      finalize(() => this.stopLoading())
     );
   }
 
@@ -137,13 +139,16 @@ export class ApiService {
     let url = `${this.baseUrl}${endpoint}`;
 
     if (params) {
-      const httpParams = new HttpParams();
+      let httpParams = new HttpParams();
       Object.keys(params).forEach((key) => {
         if (params[key] !== undefined && params[key] !== null) {
-          httpParams.set(key, params[key].toString());
+          httpParams = httpParams.set(key, params[key].toString());
         }
       });
-      url += `?${httpParams.toString()}`;
+      const queryString = httpParams.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
     }
 
     return url;

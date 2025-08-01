@@ -99,6 +99,18 @@ export class GroupsController {
     return this.groupsService.findAll(pageNum, limitNum, search, isActive);
   }
 
+  @Get("all")
+  @ApiOperation({ summary: "Get all groups without pagination" })
+  @ApiResponse({
+    status: 200,
+    description: "All groups retrieved successfully",
+    type: [VKGroupResponseDto],
+  })
+  async findAllWithoutPagination(): Promise<VKGroupResponseDto[]> {
+    const result = await this.groupsService.findAll(1, 10000); // Большой лимит для получения всех
+    return result.groups;
+  }
+
   @Get("statistics")
   @ApiOperation({ summary: "Get group statistics" })
   @ApiResponse({

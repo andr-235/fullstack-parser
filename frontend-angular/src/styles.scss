@@ -1,39 +1,208 @@
-
 // Include theming for Angular Material with `mat.theme()`.
 // This Sass mixin will define CSS variables that are used for styling Angular Material
 // components according to the Material 3 design spec.
 // Learn more about theming and how to use it for your application's
 // custom components at https://material.angular.dev/guide/theming
-@use '@angular/material' as mat;
+@use "@angular/material" as mat;
 
-html {
-  @include mat.theme((
-    color: (
-      primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
-    ),
-    typography: Roboto,
-    density: 0,
-  ));
+// Import local fonts
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap");
+@import url("https://fonts.googleapis.com/icon?family=Material+Icons");
+
+// CSS переменные для темной темы
+:root {
+  // Светлая тема (по умолчанию)
+  --app-background: #ffffff;
+  --app-surface: #fafafa;
+  --app-primary: #1976d2;
+  --app-primary-text: #ffffff;
+  --app-text-primary: #212121;
+  --app-text-secondary: #757575;
+  --app-border: #e0e0e0;
+  --app-hover: #f5f5f5;
+  --app-selected: #e3f2fd;
+  --app-error: #d32f2f;
+  --app-success: #388e3c;
+  --app-warning: #f57c00;
+  --app-info: #1976d2;
+  --app-shadow: rgba(0, 0, 0, 0.12);
+  --app-card-background: #ffffff;
+  --app-toolbar-background: #1976d2;
+  --app-sidenav-background: #fafafa;
+  --app-overlay: rgba(0, 0, 0, 0.5);
 }
 
+// Темная тема
+.dark-theme {
+  --app-background: #121212;
+  --app-surface: #1e1e1e;
+  --app-primary: #90caf9;
+  --app-primary-text: #000000;
+  --app-text-primary: #ffffff;
+  --app-text-secondary: #b0b0b0;
+  --app-border: #333333;
+  --app-hover: #2a2a2a;
+  --app-selected: #1e3a5f;
+  --app-error: #f44336;
+  --app-success: #4caf50;
+  --app-warning: #ff9800;
+  --app-info: #2196f3;
+  --app-shadow: rgba(0, 0, 0, 0.3);
+  --app-card-background: #1e1e1e;
+  --app-toolbar-background: #1e1e1e;
+  --app-sidenav-background: #1e1e1e;
+  --app-overlay: rgba(0, 0, 0, 0.7);
+}
+
+// Светлая тема (для совместимости)
+.light-theme {
+  --app-background: #ffffff;
+  --app-surface: #fafafa;
+  --app-primary: #1976d2;
+  --app-primary-text: #ffffff;
+  --app-text-primary: #212121;
+  --app-text-secondary: #757575;
+  --app-border: #e0e0e0;
+  --app-hover: #f5f5f5;
+  --app-selected: #e3f2fd;
+  --app-error: #d32f2f;
+  --app-success: #388e3c;
+  --app-warning: #f57c00;
+  --app-info: #1976d2;
+  --app-shadow: rgba(0, 0, 0, 0.12);
+  --app-card-background: #ffffff;
+  --app-toolbar-background: #1976d2;
+  --app-sidenav-background: #fafafa;
+  --app-overlay: rgba(0, 0, 0, 0.5);
+}
+
+// Глобальные стили
+* {
+  box-sizing: border-box;
+}
+
+html,
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
-  color-scheme: light;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
+  height: 100%;
   margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background-color: var(--app-background);
+  color: var(--app-text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
-/* You can add global styles to this file, and also import other style files */
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+// Стили для Material компонентов
+.mat-mdc-card {
+  background-color: var(--app-card-background) !important;
+  color: var(--app-text-primary) !important;
+  border: 1px solid var(--app-border);
+}
+
+.mat-mdc-toolbar {
+  background-color: var(--app-toolbar-background) !important;
+  color: var(--app-primary-text) !important;
+}
+
+.mat-mdc-sidenav {
+  background-color: var(--app-sidenav-background) !important;
+  color: var(--app-text-primary) !important;
+}
+
+// Анимации для плавного перехода между темами
+* {
+  transition: background-color 0.3s ease, color 0.3s ease,
+    border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+// Улучшенные стили для скроллбара
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--app-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--app-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--app-text-secondary);
+}
+
+// Стили для фокуса
+*:focus {
+  outline: 2px solid var(--app-primary);
+  outline-offset: 2px;
+}
+
+// Стили для выделения текста
+::selection {
+  background-color: var(--app-primary);
+  color: var(--app-primary-text);
+}
+
+// Стили для placeholder
+::placeholder {
+  color: var(--app-text-secondary);
+  opacity: 0.7;
+}
+
+// Стили для disabled элементов
+*:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+// Утилитарные классы
+.text-primary {
+  color: var(--app-primary) !important;
+}
+
+.text-secondary {
+  color: var(--app-text-secondary) !important;
+}
+
+.text-error {
+  color: var(--app-error) !important;
+}
+
+.text-success {
+  color: var(--app-success) !important;
+}
+
+.text-warning {
+  color: var(--app-warning) !important;
+}
+
+.text-info {
+  color: var(--app-info) !important;
+}
+
+.bg-primary {
+  background-color: var(--app-primary) !important;
+  color: var(--app-primary-text) !important;
+}
+
+.bg-surface {
+  background-color: var(--app-surface) !important;
+}
+
+.bg-card {
+  background-color: var(--app-card-background) !important;
+}
+
+.border {
+  border: 1px solid var(--app-border) !important;
+}
+
+.shadow {
+  box-shadow: 0 2px 4px var(--app-shadow) !important;
+}
+
+.shadow-lg {
+  box-shadow: 0 4px 8px var(--app-shadow) !important;
+}

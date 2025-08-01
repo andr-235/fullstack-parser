@@ -1,4 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ChangeDetectionStrategy,
+  inject,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -24,6 +30,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 @Component({
   selector: 'app-settings',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     ReactiveFormsModule,
@@ -50,13 +57,24 @@ export class SettingsComponent implements OnInit {
   securityForm!: FormGroup;
   appearanceForm!: FormGroup;
 
-  isLoading = false;
-  isSaving = false;
+  // Используем signals для лучшей производительности
+  isLoading = signal(false);
+  isSaving = signal(false);
 
-  constructor(
-    private settingsService: SettingsService,
-    private snackBar: MatSnackBar
-  ) {
+  // Геттеры для template
+  get isLoadingData(): boolean {
+    return this.isLoading();
+  }
+
+  get isSavingData(): boolean {
+    return this.isSaving();
+  }
+
+  // Используем inject() вместо constructor injection
+  private settingsService = inject(SettingsService);
+  private snackBar = inject(MatSnackBar);
+
+  constructor() {
     this.initializeForms();
   }
 
@@ -92,25 +110,29 @@ export class SettingsComponent implements OnInit {
         Validators.min(100),
         Validators.max(10000),
       ]),
+      max_retry_attempts: new FormControl(3, [
+        Validators.min(1),
+        Validators.max(10),
+      ]),
       enable_auto_parsing: new FormControl(true),
       enable_keyword_filtering: new FormControl(true),
       enable_sentiment_analysis: new FormControl(false),
       save_raw_data: new FormControl(true),
       retry_failed_requests: new FormControl(true),
-      max_retry_attempts: new FormControl(3, [
-        Validators.min(1),
-        Validators.max(10),
-      ]),
     });
 
     // Notification Settings
     this.notificationForm = new FormGroup({
-      enable_email_notifications: new FormControl(true),
-      enable_browser_notifications: new FormControl(true),
+      email_notifications: new FormControl(false),
+      browser_notifications: new FormControl(false),
       notify_on_parse_completion: new FormControl(true),
       notify_on_errors: new FormControl(true),
       notify_on_new_keywords: new FormControl(false),
       notification_sound: new FormControl(true),
+      email_address: new FormControl('', [Validators.email]),
+      notification_frequency: new FormControl('immediate', [
+        Validators.required,
+      ]),
       quiet_hours_enabled: new FormControl(false),
       quiet_hours_start: new FormControl('22:00'),
       quiet_hours_end: new FormControl('08:00'),
@@ -138,7 +160,7 @@ export class SettingsComponent implements OnInit {
       ]),
       enable_audit_log: new FormControl(true),
       log_retention_days: new FormControl(90, [
-        Validators.min(30),
+        Validators.min(7),
         Validators.max(365),
       ]),
     });
@@ -146,33 +168,44 @@ export class SettingsComponent implements OnInit {
     // Appearance Settings
     this.appearanceForm = new FormGroup({
       theme: new FormControl('light', [Validators.required]),
-      primary_color: new FormControl('#1976d2'),
-      accent_color: new FormControl('#ff4081'),
-      font_size: new FormControl('medium'),
+      primary_color: new FormControl('#1976d2', [Validators.required]),
+      accent_color: new FormControl('#ff4081', [Validators.required]),
+      font_size: new FormControl('medium', [Validators.required]),
       compact_mode: new FormControl(false),
       show_animations: new FormControl(true),
       sidebar_collapsed: new FormControl(false),
-      dashboard_layout: new FormControl('grid'),
+      dashboard_layout: new FormControl('grid', [Validators.required]),
     });
   }
 
   private loadSettings(): void {
-    this.isLoading = true;
+    this.isLoading.set(true);
     this.settingsService.getSettings().subscribe({
       next: (settings) => {
-        this.generalForm.patchValue(settings.general || {});
-        this.parserForm.patchValue(settings.parser || {});
-        this.notificationForm.patchValue(settings.notifications || {});
-        this.securityForm.patchValue(settings.security || {});
-        this.appearanceForm.patchValue(settings.appearance || {});
-        this.isLoading = false;
+        // Patch forms with loaded settings
+        if (settings.general) {
+          this.generalForm.patchValue(settings.general);
+        }
+        if (settings.parser) {
+          this.parserForm.patchValue(settings.parser);
+        }
+        if (settings.notifications) {
+          this.notificationForm.patchValue(settings.notifications);
+        }
+        if (settings.security) {
+          this.securityForm.patchValue(settings.security);
+        }
+        if (settings.appearance) {
+          this.appearanceForm.patchValue(settings.appearance);
+        }
+        this.isLoading.set(false);
       },
       error: (error) => {
         console.error('Error loading settings:', error);
-        this.snackBar.open('Ошибка загрузки настроек', 'Закрыть', {
+        this.snackBar.open('Error loading settings', 'Close', {
           duration: 3000,
         });
-        this.isLoading = false;
+        this.isLoading.set(false);
       },
     });
   }
@@ -185,13 +218,14 @@ export class SettingsComponent implements OnInit {
       this.securityForm.invalid ||
       this.appearanceForm.invalid
     ) {
-      this.snackBar.open('Пожалуйста, исправьте ошибки в формах', 'Закрыть', {
+      this.snackBar.open('Please fix validation errors', 'Close', {
         duration: 3000,
       });
       return;
     }
 
-    this.isSaving = true;
+    this.isSaving.set(true);
+
     const settings = {
       general: this.generalForm.value,
       parser: this.parserForm.value,
@@ -202,62 +236,53 @@ export class SettingsComponent implements OnInit {
 
     this.settingsService.updateSettings(settings).subscribe({
       next: () => {
-        this.snackBar.open('Настройки успешно сохранены', 'Закрыть', {
-          duration: 3000,
+        this.snackBar.open('Settings saved successfully', 'Close', {
+          duration: 2000,
         });
-        this.isSaving = false;
+        this.isSaving.set(false);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error saving settings:', error);
-        this.snackBar.open('Ошибка сохранения настроек', 'Закрыть', {
+        this.snackBar.open('Error saving settings', 'Close', {
           duration: 3000,
         });
-        this.isSaving = false;
+        this.isSaving.set(false);
       },
     });
   }
 
   resetToDefaults(): void {
-    this.settingsService.resetToDefaults().subscribe({
-      next: () => {
-        this.loadSettings();
-        this.snackBar.open(
-          'Настройки сброшены к значениям по умолчанию',
-          'Закрыть',
-          { duration: 3000 }
-        );
-      },
-      error: (error) => {
-        console.error('Error resetting settings:', error);
-        this.snackBar.open('Ошибка сброса настроек', 'Закрыть', {
-          duration: 3000,
-        });
-      },
-    });
+    if (confirm('Are you sure you want to reset all settings to defaults?')) {
+      this.initializeForms();
+      this.snackBar.open('Settings reset to defaults', 'Close', {
+        duration: 2000,
+      });
+    }
   }
 
   exportSettings(): void {
-    this.settingsService.exportSettings().subscribe({
-      next: (data) => {
-        const blob = new Blob([JSON.stringify(data, null, 2)], {
-          type: 'application/json',
-        });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'settings.json';
-        a.click();
-        window.URL.revokeObjectURL(url);
-        this.snackBar.open('Настройки экспортированы', 'Закрыть', {
-          duration: 3000,
-        });
-      },
-      error: (error) => {
-        console.error('Error exporting settings:', error);
-        this.snackBar.open('Ошибка экспорта настроек', 'Закрыть', {
-          duration: 3000,
-        });
-      },
+    const settings = {
+      general: this.generalForm.value,
+      parser: this.parserForm.value,
+      notifications: this.notificationForm.value,
+      security: this.securityForm.value,
+      appearance: this.appearanceForm.value,
+    };
+
+    const blob = new Blob([JSON.stringify(settings, null, 2)], {
+      type: 'application/json',
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `settings_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    this.snackBar.open('Settings exported successfully', 'Close', {
+      duration: 2000,
     });
   }
 
@@ -269,22 +294,29 @@ export class SettingsComponent implements OnInit {
     reader.onload = (e: any) => {
       try {
         const settings = JSON.parse(e.target.result);
-        this.settingsService.importSettings(settings).subscribe({
-          next: () => {
-            this.loadSettings();
-            this.snackBar.open('Настройки успешно импортированы', 'Закрыть', {
-              duration: 3000,
-            });
-          },
-          error: (error) => {
-            console.error('Error importing settings:', error);
-            this.snackBar.open('Ошибка импорта настроек', 'Закрыть', {
-              duration: 3000,
-            });
-          },
+
+        if (settings.general) {
+          this.generalForm.patchValue(settings.general);
+        }
+        if (settings.parser) {
+          this.parserForm.patchValue(settings.parser);
+        }
+        if (settings.notifications) {
+          this.notificationForm.patchValue(settings.notifications);
+        }
+        if (settings.security) {
+          this.securityForm.patchValue(settings.security);
+        }
+        if (settings.appearance) {
+          this.appearanceForm.patchValue(settings.appearance);
+        }
+
+        this.snackBar.open('Settings imported successfully', 'Close', {
+          duration: 2000,
         });
       } catch (error) {
-        this.snackBar.open('Неверный формат файла настроек', 'Закрыть', {
+        console.error('Error parsing settings file:', error);
+        this.snackBar.open('Error importing settings', 'Close', {
           duration: 3000,
         });
       }

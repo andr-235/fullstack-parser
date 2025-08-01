@@ -1,0 +1,154 @@
+<div class="keywords-container">
+  <div class="header-section">
+    <h2>Управление ключевыми словами</h2>
+    <p>Управляйте и отслеживайте ключевые слова для анализа комментариев</p>
+  </div>
+
+  <!-- Search and Filters -->
+  <div class="filters-section">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Поиск ключевых слов</mat-label>
+      <input matInput [formControl]="searchControl" placeholder="Введите ключевое слово или описание" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="category-field">
+      <mat-label>Категория</mat-label>
+      <mat-select [formControl]="categoryControl">
+        <mat-option value="all">Все категории</mat-option>
+        <mat-option value="spam">Спам</mat-option>
+        <mat-option value="offensive">Оскорбления</mat-option>
+        <mat-option value="commercial">Коммерческие</mat-option>
+        <mat-option value="other">Другие</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-checkbox [formControl]="activeOnlyControl" class="active-filter">
+      Только активные ключевые слова
+    </mat-checkbox>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+  <div class="loading-section">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Загрузка ключевых слов...</p>
+  </div>
+  }
+
+  <!-- Error State -->
+  @if (error()) {
+  <div class="error-section">
+    <mat-icon color="warn">error</mat-icon>
+    <p>{{ error() }}</p>
+  </div>
+  }
+
+  <!-- Keywords Table -->
+  @if (!loading() && filteredKeywords() && filteredKeywords().length > 0) {
+  <div class="table-section">
+    <table mat-table [dataSource]="filteredKeywords()" matSort (matSortChange)="onSortChange($event)"
+      class="keywords-table">
+      <!-- Word Column -->
+      <ng-container matColumnDef="word">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Ключевое слово</th>
+        <td mat-cell *matCellDef="let keyword">
+          <div class="keyword-info">
+            <div class="keyword-word">{{ keyword.word }}</div>
+            @if (keyword.description) {
+            <div class="keyword-description">{{ keyword.description }}</div>
+            }
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Category Column -->
+      <ng-container matColumnDef="category">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Категория</th>
+        <td mat-cell *matCellDef="let keyword">
+          <span class="category-badge" [class]="'category-' + keyword.category">
+            {{ getCategoryLabel(keyword.category) }}
+          </span>
+        </td>
+      </ng-container>
+
+      <!-- Status Column -->
+      <ng-container matColumnDef="isActive">
+        <th mat-header-cell *matHeaderCellDef>Статус</th>
+        <td mat-cell *matCellDef="let keyword">
+          <button mat-button [class]="keyword.isActive ? 'status-active' : 'status-inactive'"
+            (click)="toggleKeywordActive(keyword.id, !keyword.isActive)"
+            [matTooltip]="keyword.isActive ? 'Нажмите для деактивации' : 'Нажмите для активации'"
+            [disabled]="isActionLoading(keyword.id)">
+            @if (isActionLoading(keyword.id)) {
+            <mat-spinner diameter="16" class="inline-spinner"></mat-spinner>
+            } @else {
+            {{ keyword.isActive ? 'Активно' : 'Неактивно' }}
+            }
+          </button>
+        </td>
+      </ng-container>
+
+      <!-- Created Date Column -->
+      <ng-container matColumnDef="createdAt">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Дата создания</th>
+        <td mat-cell *matCellDef="let keyword">
+          {{ keyword.createdAt | date:'dd.MM.yy, HH:mm' }}
+        </td>
+      </ng-container>
+
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Действия</th>
+        <td mat-cell *matCellDef="let keyword">
+          <button mat-icon-button [matMenuTriggerFor]="menu" [matTooltip]="'Дополнительные действия'"
+            [disabled]="isActionLoading(keyword.id)">
+            @if (isActionLoading(keyword.id)) {
+            <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+            <mat-icon>more_vert</mat-icon>
+            }
+          </button>
+          <mat-menu #menu="matMenu">
+            <button mat-menu-item (click)="toggleKeywordActive(keyword.id, !keyword.isActive)"
+              [disabled]="isActionLoading(keyword.id)">
+              @if (isActionLoading(keyword.id)) {
+              <mat-spinner diameter="16" class="inline-spinner"></mat-spinner>
+              } @else {
+              <mat-icon>{{ keyword.isActive ? 'visibility_off' : 'visibility' }}</mat-icon>
+              }
+              <span>{{ keyword.isActive ? 'Деактивировать' : 'Активировать' }}</span>
+            </button>
+            <button mat-menu-item (click)="deleteKeyword(keyword.id)" class="delete-action"
+              [disabled]="isActionLoading(keyword.id)">
+              @if (isActionLoading(keyword.id)) {
+              <mat-spinner diameter="16" class="inline-spinner"></mat-spinner>
+              } @else {
+              <mat-icon>delete</mat-icon>
+              }
+              <span>Удалить</span>
+            </button>
+          </mat-menu>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
+    </table>
+
+    <!-- Pagination -->
+    <mat-paginator [length]="totalItems()" [pageSize]="pageSize()" [pageIndex]="currentPage()"
+      [pageSizeOptions]="[5, 10, 25, 50]" (page)="onPageChange($event.pageIndex)">
+    </mat-paginator>
+  </div>
+  }
+
+  <!-- Empty State -->
+  @if (!loading() && (!filteredKeywords() || filteredKeywords().length === 0)) {
+  <div class="empty-state">
+    <mat-icon>search</mat-icon>
+    <h3>Ключевые слова не найдены</h3>
+    <p>Попробуйте изменить критерии поиска или добавьте новое ключевое слово.</p>
+  </div>
+  }
+</div>

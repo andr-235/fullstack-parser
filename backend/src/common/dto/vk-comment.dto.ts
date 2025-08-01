@@ -24,26 +24,53 @@ export class UpdateVKCommentDto {
 
 export class VKCommentResponseDto {
   @ApiProperty({ description: "Comment ID" })
-  id: string;
+  id: number;
 
   @ApiProperty({ description: "VK Comment ID" })
-  vkId: number;
+  vk_id: number;
+
+  @ApiProperty({ description: "Group ID" })
+  group_id: number;
+
+  @ApiProperty({ description: "Group name" })
+  group_name: string;
 
   @ApiProperty({ description: "Post ID" })
-  postId: string;
+  post_id: number;
+
+  @ApiProperty({ description: "Author ID" })
+  author_id: number;
+
+  @ApiProperty({ description: "Author name" })
+  author_name: string;
+
+  @ApiProperty({ description: "Author photo" })
+  author_photo: string;
 
   @ApiProperty({ description: "Comment text content" })
   text: string;
 
-  @ApiProperty({ description: "Comment creation date" })
-  createdAt: Date;
+  @ApiProperty({ description: "Comment date" })
+  date: string;
 
-  @ApiProperty({ description: "Comment last update date" })
-  updatedAt: Date;
+  @ApiProperty({ description: "Likes count" })
+  likes_count: number;
+
+  @ApiProperty({ description: "Is viewed" })
+  is_viewed: boolean;
+
+  @ApiProperty({ description: "Is archived" })
+  is_archived: boolean;
 
   @ApiProperty({ description: "Keywords found in comment", type: [String] })
   keywords: string[];
 
-  @ApiProperty({ description: "Associated post information" })
-  post: any;
+  @ApiProperty({ description: "Sentiment" })
+  sentiment: "positive" | "negative" | "neutral";
+
+  @ApiProperty({ description: "Comment creation date" })
+  created_at: string;
+
+  @ApiProperty({ description: "Comment last update date" })
+  updated_at: string;
 }

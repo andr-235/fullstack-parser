@@ -1,48 +1,122 @@
 import { Injectable } from '@angular/core';
-import { Observable, catchError, tap } from 'rxjs';
+import { Observable, catchError, tap, map } from 'rxjs';
 import { ApiService, ApiError } from './api.service';
 import { ErrorHandlerService } from './error-handler.service';
 import { LoadingService } from './loading.service';
+import { PaginatedResponse, VKGroupResponse } from '../models/vk-group.model';
 
-export interface ParserStatus {
-  is_running: boolean;
-  last_run?: string;
-  next_run?: string;
-  total_groups: number;
-  active_groups: number;
-  total_comments_parsed: number;
-  comments_with_keywords: number;
-  errors_count: number;
-  current_progress?: {
-    group_id: number;
-    group_name: string;
-    progress_percentage: number;
-    comments_parsed: number;
-  };
+export interface VKGroup {
+  id: string;
+  vkId: number;
+  screenName: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface ParserConfig {
-  auto_parse_enabled: boolean;
-  parse_interval_minutes: number;
-  max_posts_per_group: number;
-  max_comments_per_post: number;
-  parse_delay_seconds: number;
+export interface VKPost {
+  id: string;
+  vkId: number;
+  text: string;
+  createdAt: Date;
+  updatedAt: Date;
+  groupId: string;
 }
 
-export interface ParseRequest {
-  group_ids?: number[];
-  force_parse?: boolean;
-  max_posts?: number;
+export interface VKComment {
+  id: string;
+  vkId: number;
+  text: string;
+  createdAt: Date;
+  updatedAt: Date;
+  postId: string;
 }
 
-export interface ParserLog {
+export interface ParsingStats {
+  totalGroups: number;
+  totalPosts: number;
+  totalComments: number;
+  totalKeywords: number;
+  totalMatches: number;
+}
+
+export interface GroupStats {
+  group: VKGroup;
+  postsCount: number;
+  commentsCount: number;
+  matchesCount: number;
+}
+
+export interface FullParseResult {
+  group: VKGroup;
+  postsParsed: number;
+  commentsParsed: number;
+  keywordsMatched: number;
+}
+
+export interface VKUser {
   id: number;
-  timestamp: string;
-  level: 'INFO' | 'WARNING' | 'ERROR';
-  message: string;
-  group_id?: number;
-  group_name?: string;
-  details?: any;
+  first_name: string;
+  last_name: string;
+  screen_name?: string;
+  photo_100?: string;
+  deactivated?: string;
+}
+
+export interface VKGroupInfo {
+  id: number;
+  name: string;
+  screen_name: string;
+  photo_100?: string;
+  type: string;
+  is_closed: number;
+  is_admin: number;
+  is_member: number;
+  is_advertiser: number;
+}
+
+export interface VKWallResponse {
+  count: number;
+  items: any[];
+}
+
+export interface TokenCheckResult {
+  valid: boolean;
+}
+
+// Task management interfaces
+export interface ParseTaskCreate {
+  groupIds: string[];
+  postsLimit?: number;
+  commentsLimit?: number;
+}
+
+export interface ParseTaskResponse {
+  id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  totalGroups: number;
+  processedGroups: number;
+  currentGroup?: string;
+  progress: number;
+  createdAt: Date;
+  completedAt?: Date;
+  error?: string;
+  results?: any;
+}
+
+export interface ParseTaskStatus {
+  id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  totalGroups: number;
+  processedGroups: number;
+  currentGroup?: string;
+  progress: number;
+  createdAt: Date;
+  completedAt?: Date;
+  error?: string;
+  results?: any;
 }
 
 @Injectable({
@@ -55,246 +129,145 @@ export class ParserService {
     private loadingService: LoadingService
   ) {}
 
-  getParserStatus(): Observable<ParserStatus> {
-    this.loadingService.show('Loading parser status...');
-
-    return this.apiService.get<ParserStatus>('/parser/status').pipe(
-      tap(() => {
-        this.loadingService.hide();
-      }),
-      catchError((error: ApiError) => {
-        this.loadingService.hide();
-        this.errorHandler.handleError(error);
-        throw error;
-      })
-    );
-  }
-
-  getParserConfig(): Observable<ParserConfig> {
-    this.loadingService.show('Loading parser configuration...');
-
-    return this.apiService.get<ParserConfig>('/parser/config').pipe(
-      tap(() => {
-        this.loadingService.hide();
-      }),
-      catchError((error: ApiError) => {
-        this.loadingService.hide();
-        this.errorHandler.handleError(error);
-        throw error;
-      })
-    );
-  }
-
-  updateParserConfig(config: Partial<ParserConfig>): Observable<ParserConfig> {
-    this.loadingService.show('Updating parser configuration...');
-
-    return this.apiService.put<ParserConfig>('/parser/config', config).pipe(
-      tap(() => {
-        this.loadingService.hide();
-        this.errorHandler.showSuccessNotification(
-          'Parser configuration updated successfully'
-        );
-      }),
-      catchError((error: ApiError) => {
-        this.loadingService.hide();
-        this.errorHandler.handleError(error);
-        throw error;
-      })
-    );
-  }
-
-  startParsing(request: ParseRequest = {}): Observable<{ message: string }> {
-    this.loadingService.show('Starting parser...');
-
+  // Task management methods
+  createParseTask(taskData: ParseTaskCreate): Observable<ParseTaskResponse> {
     return this.apiService
-      .post<{ message: string }>('/parser/start', request)
+      .post<ParseTaskResponse>('/parser/tasks', taskData)
       .pipe(
-        tap(() => {
-          this.loadingService.hide();
-          this.errorHandler.showSuccessNotification(
-            'Parser started successfully'
-          );
-        }),
+        tap(() => this.loadingService.hide()),
         catchError((error: ApiError) => {
-          this.loadingService.hide();
           this.errorHandler.handleError(error);
           throw error;
         })
       );
   }
 
-  stopParsing(): Observable<{ message: string }> {
-    this.loadingService.show('Stopping parser...');
-
-    return this.apiService.post<{ message: string }>('/parser/stop', {}).pipe(
-      tap(() => {
-        this.loadingService.hide();
-        this.errorHandler.showSuccessNotification(
-          'Parser stopped successfully'
-        );
-      }),
+  getParseTaskStatus(taskId: string): Observable<ParseTaskStatus> {
+    return this.apiService.get<ParseTaskStatus>(`/parser/tasks/${taskId}`).pipe(
       catchError((error: ApiError) => {
-        this.loadingService.hide();
         this.errorHandler.handleError(error);
         throw error;
       })
     );
   }
 
-  parseGroup(
-    groupId: number,
-    request: ParseRequest = {}
-  ): Observable<{ message: string }> {
-    this.loadingService.show('Starting group parsing...');
+  getAllParseTasks(): Observable<ParseTaskResponse[]> {
+    return this.apiService.get<ParseTaskResponse[]>('/parser/tasks').pipe(
+      catchError((error: ApiError) => {
+        this.errorHandler.handleError(error);
+        throw error;
+      })
+    );
+  }
 
+  cancelParseTask(taskId: string): Observable<{ message: string }> {
     return this.apiService
-      .post<{ message: string }>(`/parser/groups/${groupId}/parse`, request)
+      .delete<{ message: string }>(`/parser/tasks/${taskId}`)
       .pipe(
-        tap(() => {
-          this.loadingService.hide();
-          this.errorHandler.showSuccessNotification(
-            'Group parsing started successfully'
-          );
-        }),
         catchError((error: ApiError) => {
-          this.loadingService.hide();
           this.errorHandler.handleError(error);
           throw error;
         })
       );
   }
 
-  parseAllGroups(request: ParseRequest = {}): Observable<{ message: string }> {
-    this.loadingService.show('Starting parsing for all groups...');
+  // Data retrieval methods (no parsing logic)
+  getParsingStats(): Observable<ParsingStats> {
+    return this.apiService.get<ParsingStats>('/parser/stats').pipe(
+      catchError((error: ApiError) => {
+        this.errorHandler.handleError(error);
+        throw error;
+      })
+    );
+  }
 
+  getGroupStats(groupId: string): Observable<GroupStats> {
     return this.apiService
-      .post<{ message: string }>('/parser/groups/parse-all', request)
+      .get<GroupStats>(`/parser/groups/${groupId}/stats`)
       .pipe(
-        tap(() => {
-          this.loadingService.hide();
-          this.errorHandler.showSuccessNotification(
-            'Parsing started for all groups'
-          );
-        }),
         catchError((error: ApiError) => {
-          this.loadingService.hide();
           this.errorHandler.handleError(error);
           throw error;
         })
       );
   }
 
-  getParserLogs(limit: number = 100): Observable<ParserLog[]> {
-    this.loadingService.show('Loading parser logs...');
-
-    return this.apiService.get<ParserLog[]>(`/parser/logs?limit=${limit}`).pipe(
-      tap(() => {
-        this.loadingService.hide();
-      }),
+  getVkUser(userId: string): Observable<VKUser> {
+    return this.apiService.get<VKUser>(`/parser/vk/user/${userId}`).pipe(
       catchError((error: ApiError) => {
-        this.loadingService.hide();
         this.errorHandler.handleError(error);
         throw error;
       })
     );
   }
 
-  clearParserLogs(): Observable<{ message: string }> {
-    this.loadingService.show('Clearing parser logs...');
-
-    return this.apiService.delete<{ message: string }>('/parser/logs').pipe(
-      tap(() => {
-        this.loadingService.hide();
-        this.errorHandler.showSuccessNotification(
-          'Parser logs cleared successfully'
-        );
-      }),
+  getVkGroup(groupId: string): Observable<VKGroupInfo> {
+    return this.apiService.get<VKGroupInfo>(`/parser/vk/group/${groupId}`).pipe(
       catchError((error: ApiError) => {
-        this.loadingService.hide();
         this.errorHandler.handleError(error);
         throw error;
       })
     );
   }
 
-  // Additional parser methods
-  pauseParsing(): Observable<{ message: string }> {
-    this.loadingService.show('Pausing parser...');
-
-    return this.apiService.post<{ message: string }>('/parser/pause', {}).pipe(
-      tap(() => {
-        this.loadingService.hide();
-        this.errorHandler.showSuccessNotification('Parser paused successfully');
-      }),
-      catchError((error: ApiError) => {
-        this.loadingService.hide();
-        this.errorHandler.handleError(error);
-        throw error;
-      })
-    );
-  }
-
-  resumeParsing(): Observable<{ message: string }> {
-    this.loadingService.show('Resuming parser...');
-
-    return this.apiService.post<{ message: string }>('/parser/resume', {}).pipe(
-      tap(() => {
-        this.loadingService.hide();
-        this.errorHandler.showSuccessNotification(
-          'Parser resumed successfully'
-        );
-      }),
-      catchError((error: ApiError) => {
-        this.loadingService.hide();
-        this.errorHandler.handleError(error);
-        throw error;
-      })
-    );
-  }
-
-  getParserStatistics(): Observable<{
-    total_runs: number;
-    successful_runs: number;
-    failed_runs: number;
-    total_comments_parsed: number;
-    average_comments_per_run: number;
-    last_successful_run?: string;
-  }> {
-    this.loadingService.show('Loading parser statistics...');
-
+  getVkWallPosts(
+    ownerId: number,
+    count: number = 100,
+    offset: number = 0
+  ): Observable<VKWallResponse> {
     return this.apiService
-      .get<{
-        total_runs: number;
-        successful_runs: number;
-        failed_runs: number;
-        total_comments_parsed: number;
-        average_comments_per_run: number;
-        last_successful_run?: string;
-      }>('/parser/statistics')
+      .get<VKWallResponse>(
+        `/parser/vk/wall/${ownerId}?count=${count}&offset=${offset}`
+      )
       .pipe(
-        tap(() => {
-          this.loadingService.hide();
-        }),
         catchError((error: ApiError) => {
-          this.loadingService.hide();
           this.errorHandler.handleError(error);
           throw error;
         })
       );
   }
 
-  exportParserLogs(): Observable<Blob> {
-    this.loadingService.show('Exporting parser logs...');
-
-    return this.apiService.download('/parser/logs/export').pipe(
-      tap(() => {
-        this.loadingService.hide();
-        this.errorHandler.showSuccessNotification(
-          'Parser logs exported successfully'
-        );
-      }),
+  searchVkPosts(
+    query: string,
+    ownerId?: number,
+    count: number = 100
+  ): Observable<VKWallResponse> {
+    let url = `/parser/vk/search?query=${encodeURIComponent(
+      query
+    )}&count=${count}`;
+    if (ownerId) {
+      url += `&ownerId=${ownerId}`;
+    }
+    return this.apiService.get<VKWallResponse>(url).pipe(
       catchError((error: ApiError) => {
-        this.loadingService.hide();
+        this.errorHandler.handleError(error);
+        throw error;
+      })
+    );
+  }
+
+  checkVkToken(): Observable<TokenCheckResult> {
+    return this.apiService.get<TokenCheckResult>('/parser/vk/token/check').pipe(
+      catchError((error: ApiError) => {
+        this.errorHandler.handleError(error);
+        throw error;
+      })
+    );
+  }
+
+  // Group management methods
+  getGroups(): Observable<VKGroup[]> {
+    return this.apiService.get<VKGroup[]>('/groups').pipe(
+      catchError((error: ApiError) => {
+        this.errorHandler.handleError(error);
+        throw error;
+      })
+    );
+  }
+
+  getAllGroups(): Observable<VKGroup[]> {
+    return this.apiService.get<VKGroup[]>('/groups/all').pipe(
+      catchError((error: ApiError) => {
         this.errorHandler.handleError(error);
         throw error;
       })

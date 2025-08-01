@@ -1,258 +1,226 @@
 <div class="comments-container">
- <mat-card>
-  <mat-card-header>
-   <mat-card-title>Comments Management</mat-card-title>
-   <mat-card-subtitle>Search and manage VK comments with keyword
-    matches</mat-card-subtitle>
-  </mat-card-header>
+  <div class="header-section">
+    <h2>Управление комментариями</h2>
+    <p>Поиск и управление комментариями VK с совпадениями ключевых слов</p>
+  </div>
 
-  <mat-card-content>
-   <!-- Advanced Search and Filters -->
-   <mat-expansion-panel class="filters-panel">
-    <mat-expansion-panel-header>
-     <mat-panel-title>
-      <mat-icon>filter_list</mat-icon>
-      Search & Filters
-     </mat-panel-title>
-    </mat-expansion-panel-header>
-
-    <div class="filters-section">
-     <!-- Text Search -->
-     <mat-form-field appearance="outline" class="search-field">
-      <mat-label>Search comments</mat-label>
-      <input matInput [formControl]="textControl" placeholder="Enter comment text to search" />
+  <!-- Search and Filters -->
+  <div class="filters-section">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Поиск комментариев</mat-label>
+      <input matInput [formControl]="textControl" placeholder="Введите текст комментария для поиска" />
       <mat-icon matSuffix>search</mat-icon>
-     </mat-form-field>
+    </mat-form-field>
 
-     <!-- Group Filter -->
-     <mat-form-field appearance="outline" class="group-field">
-      <mat-label>Group</mat-label>
+    <mat-form-field appearance="outline" class="group-field">
+      <mat-label>Группа</mat-label>
       <mat-select [formControl]="groupIdControl">
-       <mat-option value="">All groups</mat-option>
-       <mat-option *ngFor="let group of groups" [value]="group.id">
-        {{ group.name }}
-       </mat-option>
+        <mat-option value="">Все группы</mat-option>
+        <mat-option *ngFor="let group of groupsData()" [value]="group.id">
+          {{ group.name }}
+        </mat-option>
       </mat-select>
-     </mat-form-field>
+    </mat-form-field>
 
-     <!-- Keyword Filter -->
-     <mat-form-field appearance="outline" class="keyword-field">
-      <mat-label>Keyword</mat-label>
+    <mat-form-field appearance="outline" class="keyword-field">
+      <mat-label>Ключевое слово</mat-label>
       <mat-select [formControl]="keywordIdControl">
-       <mat-option value="">All keywords</mat-option>
-       <mat-option *ngFor="let keyword of keywords" [value]="keyword.id">
-        {{ keyword.word }}
-       </mat-option>
+        <mat-option value="">Все ключевые слова</mat-option>
+        <mat-option *ngFor="let keyword of keywordsData()" [value]="keyword.id">
+          {{ keyword.word }}
+        </mat-option>
       </mat-select>
-     </mat-form-field>
+    </mat-form-field>
 
-     <!-- Date Range -->
-     <div class="date-range">
-      <mat-form-field appearance="outline">
-       <mat-label>From Date</mat-label>
-       <input matInput [matDatepicker]="fromPicker" [formControl]="dateFromControl" />
-       <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
-       <mat-datepicker #fromPicker></mat-datepicker>
-      </mat-form-field>
+    <mat-checkbox [formControl]="isViewedControl" class="status-filter">
+      Только просмотренные
+    </mat-checkbox>
 
-      <mat-form-field appearance="outline">
-       <mat-label>To Date</mat-label>
-       <input matInput [matDatepicker]="toPicker" [formControl]="dateToControl" />
-       <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
-       <mat-datepicker #toPicker></mat-datepicker>
-      </mat-form-field>
-     </div>
+    <mat-checkbox [formControl]="isArchivedControl" class="status-filter">
+      Только архивированные
+    </mat-checkbox>
+  </div>
 
-     <!-- Status Filters -->
-     <div class="status-filters">
-      <mat-checkbox [formControl]="isViewedControl" class="status-filter">
-       Viewed only
-      </mat-checkbox>
-      <mat-checkbox [formControl]="isArchivedControl" class="status-filter">
-       Archived only
-      </mat-checkbox>
-     </div>
+  <!-- Date Range Section -->
+  <div class="date-filters-section">
+    <mat-form-field appearance="outline" class="date-field">
+      <mat-label>Дата с</mat-label>
+      <input matInput [matDatepicker]="fromPicker" [formControl]="dateFromControl" />
+      <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+      <mat-datepicker #fromPicker></mat-datepicker>
+    </mat-form-field>
 
-     <!-- Sort Options -->
-     <div class="sort-options">
-      <mat-form-field appearance="outline" class="sort-field">
-       <mat-label>Sort by</mat-label>
-       <mat-select [formControl]="orderByControl">
-        <mat-option value="published_at">Date</mat-option>
-        <mat-option value="likes_count">Likes</mat-option>
-        <mat-option value="matched_keywords_count">Keyword Matches</mat-option>
-        <mat-option value="author_screen_name">Author</mat-option>
-       </mat-select>
-      </mat-form-field>
+    <mat-form-field appearance="outline" class="date-field">
+      <mat-label>Дата по</mat-label>
+      <input matInput [matDatepicker]="toPicker" [formControl]="dateToControl" />
+      <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+      <mat-datepicker #toPicker></mat-datepicker>
+    </mat-form-field>
 
-      <mat-form-field appearance="outline" class="sort-field">
-       <mat-label>Order</mat-label>
-       <mat-select [formControl]="orderDirControl">
-        <mat-option value="desc">Descending</mat-option>
-        <mat-option value="asc">Ascending</mat-option>
-       </mat-select>
-      </mat-form-field>
-     </div>
-    </div>
-   </mat-expansion-panel>
+    <mat-form-field appearance="outline" class="sort-field">
+      <mat-label>Сортировка по</mat-label>
+      <mat-select [formControl]="orderByControl">
+        <mat-option value="published_at">Дате</mat-option>
+        <mat-option value="likes_count">Лайкам</mat-option>
+        <mat-option value="matched_keywords_count">Совпадениям ключевых слов</mat-option>
+        <mat-option value="author_screen_name">Автору</mat-option>
+      </mat-select>
+    </mat-form-field>
 
-   <!-- Loading State -->
-   <div *ngIf="loading" class="loading-section">
-    <app-loading-spinner message="Loading comments..."></app-loading-spinner>
-   </div>
+    <mat-form-field appearance="outline" class="sort-field">
+      <mat-label>Порядок</mat-label>
+      <mat-select [formControl]="orderDirControl">
+        <mat-option value="desc">По убыванию</mat-option>
+        <mat-option value="asc">По возрастанию</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
 
-   <!-- Comments Table -->
-   <div *ngIf="!loading && comments.length > 0" class="table-section">
-    <div class="table-actions">
-     <button mat-raised-button color="primary" (click)="exportComments()">
-      <mat-icon>download</mat-icon>
-      Export
-     </button>
-     <button mat-raised-button color="accent" (click)="bulkMarkViewed()">
-      <mat-icon>visibility</mat-icon>
-      Mark Viewed
-     </button>
-     <button mat-raised-button color="warn" (click)="bulkArchive()">
-      <mat-icon>archive</mat-icon>
-      Archive
-     </button>
-    </div>
+  <!-- Loading State -->
+  @if (isLoading()) {
+  <div class="loading-section">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Загрузка комментариев...</p>
+  </div>
+  }
 
-    <table mat-table [dataSource]="comments" matSort>
-     <!-- Selection Column -->
-     <ng-container matColumnDef="select">
-      <th mat-header-cell *matHeaderCellDef>
-       <mat-checkbox (change)="$event ? masterToggle() : null" [checked]="selection.hasValue() && isAllSelected()"
-        [indeterminate]="selection.hasValue() && !isAllSelected()">
-       </mat-checkbox>
-      </th>
-      <td mat-cell *matCellDef="let row">
-       <mat-checkbox (click)="$event.stopPropagation()" (change)="$event ? selection.toggle(row) : null"
-        [checked]="selection.isSelected(row)">
-       </mat-checkbox>
-      </td>
-     </ng-container>
+  <!-- Error State -->
+  @if (error()) {
+  <div class="error-section">
+    <mat-icon color="warn">error</mat-icon>
+    <p>{{ error() }}</p>
+  </div>
+  }
 
-     <!-- Text Column -->
-     <ng-container matColumnDef="text">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>
-       Comment
-      </th>
-      <td mat-cell *matCellDef="let comment">
-       <div class="comment-content">
-        <div class="comment-text">{{ comment.text }}</div>
-        <div class="comment-meta">
-         <span class="author">@{{
-          comment.author_screen_name || comment.author_id
-          }}</span>
-         <span class="date">{{
-          comment.published_at | date : 'short'
-          }}</span>
-         <span class="likes">❤️ {{ comment.likes_count }}</span>
-        </div>
-       </div>
-      </td>
-     </ng-container>
+  <!-- Comments Table -->
+  @if (!isLoading() && commentsData() && commentsData().length > 0) {
+  <div class="table-section">
+    <table mat-table [dataSource]="commentsData()" matSort (matSortChange)="onSortChange($event)"
+      class="comments-table">
+      <!-- Checkbox Column -->
+      <ng-container matColumnDef="select">
+        <th mat-header-cell *matHeaderCellDef>
+          <mat-checkbox (change)="$event ? masterToggle() : null" [checked]="selection.hasValue() && isAllSelected()"
+            [indeterminate]="selection.hasValue() && !isAllSelected()">
+          </mat-checkbox>
+        </th>
+        <td mat-cell *matCellDef="let row">
+          <mat-checkbox (click)="$event.stopPropagation()" (change)="$event ? selection.toggle(row) : null"
+            [checked]="selection.isSelected(row)">
+          </mat-checkbox>
+        </td>
+      </ng-container>
 
-     <!-- Group Column -->
-     <ng-container matColumnDef="group">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>Group</th>
-      <td mat-cell *matCellDef="let comment">
-       <div class="group-info" *ngIf="comment.group">
-        <div class="group-name">{{ comment.group.name }}</div>
-        <div class="group-screen">
-         @{{ comment.group.screen_name }}
-        </div>
-       </div>
-      </td>
-     </ng-container>
+      <!-- Text Column -->
+      <ng-container matColumnDef="text">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Комментарий</th>
+        <td mat-cell *matCellDef="let comment">
+          <div class="comment-info">
+            <div class="comment-text" [innerHTML]="highlightKeywords(comment.text, comment.keywords)"></div>
+            <div class="comment-meta">
+              <span class="author">&#64;{{ comment.author_screen_name }}</span>
+              <span class="date">{{ comment.published_at | date : 'dd.MM.yy, HH:mm' }}</span>
+              <span class="likes">❤️ {{ comment.likes_count }}</span>
+            </div>
+          </div>
+        </td>
+      </ng-container>
 
-     <!-- Keywords Column -->
-     <ng-container matColumnDef="keywords">
-      <th mat-header-cell *matHeaderCellDef mat-sort-header>
-       Keywords
-      </th>
-      <td mat-cell *matCellDef="let comment">
-       <div class="keywords-chips" *ngIf="
-                      comment.matched_keywords &&
-                      comment.matched_keywords.length > 0
-                    ">
-        <mat-chip *ngFor="let keyword of comment.matched_keywords" size="small" color="accent">
-         {{ keyword }}
-        </mat-chip>
-       </div>
-       <span *ngIf="
-                      !comment.matched_keywords ||
-                      comment.matched_keywords.length === 0
-                    ">-</span>
-      </td>
-     </ng-container>
+      <!-- Group Column -->
+      <ng-container matColumnDef="group">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Группа</th>
+        <td mat-cell *matCellDef="let comment">
+          <div class="group-info">
+            <div class="group-name">{{ comment.group_name }}</div>
+            <div class="group-screen-name">&#64;{{ comment.group_screen_name }}</div>
+          </div>
+        </td>
+      </ng-container>
 
-     <!-- Status Column -->
-     <ng-container matColumnDef="status">
-      <th mat-header-cell *matHeaderCellDef>Status</th>
-      <td mat-cell *matCellDef="let comment">
-       <div class="status-chips">
-        <mat-chip *ngIf="comment.is_viewed" size="small" color="primary">
-         Viewed
-        </mat-chip>
-        <mat-chip *ngIf="comment.is_archived" size="small" color="warn">
-         Archived
-        </mat-chip>
-        <mat-chip *ngIf="!comment.is_viewed && !comment.is_archived" size="small" color="accent">
-         New
-        </mat-chip>
-       </div>
-      </td>
-     </ng-container>
+      <!-- Status Column -->
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Статус</th>
+        <td mat-cell *matCellDef="let comment">
+          <div class="status-chips">
+            @if (comment.is_viewed) {
+            <span class="status-chip viewed">Просмотрен</span>
+            } @if (comment.is_archived) {
+            <span class="status-chip archived">Архивирован</span>
+            }
+          </div>
+        </td>
+      </ng-container>
 
-     <!-- Actions Column -->
-     <ng-container matColumnDef="actions">
-      <th mat-header-cell *matHeaderCellDef>Actions</th>
-      <td mat-cell *matCellDef="let comment">
-       <button mat-icon-button [matMenuTriggerFor]="menu">
-        <mat-icon>more_vert</mat-icon>
-       </button>
-       <mat-menu #menu="matMenu">
-        <button mat-menu-item (click)="viewComment(comment)">
-         <mat-icon>visibility</mat-icon>
-         <span>View Details</span>
-        </button>
-        <button mat-menu-item (click)="markAsViewed(comment.id)" *ngIf="!comment.is_viewed">
-         <mat-icon>visibility</mat-icon>
-         <span>Mark Viewed</span>
-        </button>
-        <button mat-menu-item (click)="markAsArchived(comment.id)" *ngIf="!comment.is_archived">
-         <mat-icon>archive</mat-icon>
-         <span>Archive</span>
-        </button>
-        <button mat-menu-item (click)="deleteComment(comment.id)" class="delete-action">
-         <mat-icon>delete</mat-icon>
-         <span>Delete</span>
-        </button>
-       </mat-menu>
-      </td>
-     </ng-container>
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Действия</th>
+        <td mat-cell *matCellDef="let comment">
+          <button mat-icon-button [matMenuTriggerFor]="menu" [matTooltip]="'Дополнительные действия'"
+            [disabled]="isActionLoading(comment.id)">
+            @if (isActionLoading(comment.id)) {
+            <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+            <mat-icon>more_vert</mat-icon>
+            }
+          </button>
+          <mat-menu #menu="matMenu">
+            <button mat-menu-item (click)="viewComment(comment)" [disabled]="isActionLoading(comment.id)">
+              @if (isActionLoading(comment.id)) {
+              <mat-spinner diameter="16" class="inline-spinner"></mat-spinner>
+              } @else {
+              <mat-icon>visibility</mat-icon>
+              }
+              <span>Просмотреть</span>
+            </button>
+            @if (!comment.isViewed) {
+            <button mat-menu-item (click)="markAsViewed(comment.id)" [disabled]="isActionLoading(comment.id)">
+              @if (isActionLoading(comment.id)) {
+              <mat-spinner diameter="16" class="inline-spinner"></mat-spinner>
+              } @else {
+              <mat-icon>check</mat-icon>
+              }
+              <span>Отметить как просмотренный</span>
+            </button>
+            } @if (!comment.isArchived) {
+            <button mat-menu-item (click)="markAsArchived(comment.id)" [disabled]="isActionLoading(comment.id)">
+              @if (isActionLoading(comment.id)) {
+              <mat-spinner diameter="16" class="inline-spinner"></mat-spinner>
+              } @else {
+              <mat-icon>archive</mat-icon>
+              }
+              <span>Архивировать</span>
+            </button>
+            }
+            <button mat-menu-item (click)="deleteComment(comment.id)" class="delete-action"
+              [disabled]="isActionLoading(comment.id)">
+              @if (isActionLoading(comment.id)) {
+              <mat-spinner diameter="16" class="inline-spinner"></mat-spinner>
+              } @else {
+              <mat-icon>delete</mat-icon>
+              }
+              <span>Удалить</span>
+            </button>
+          </mat-menu>
+        </td>
+      </ng-container>
 
-     <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-     <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
     </table>
 
     <!-- Pagination -->
-    <mat-paginator [length]="totalItems" [pageSize]="pageSize" [pageIndex]="currentPage"
-     [pageSizeOptions]="[10, 25, 50, 100]" (page)="onPageChange($event)">
+    <mat-paginator [length]="totalItemsCount()" [pageSize]="pageSizeValue()" [pageIndex]="currentPageIndex()"
+      [pageSizeOptions]="[10, 25, 50, 100]" (page)="onPageChange($event)">
     </mat-paginator>
-   </div>
+  </div>
+  }
 
-   <!-- Empty State -->
-   <div *ngIf="!loading && comments.length === 0" class="empty-state">
+  <!-- Empty State -->
+  @if (!isLoading() && (!commentsData() || commentsData().length === 0)) {
+  <div class="empty-state">
     <mat-icon>comment</mat-icon>
-    <h3>No comments found</h3>
-    <p>
-     Try adjusting your search criteria or check if there are any
-     comments in the system.
-    </p>
-   </div>
-  </mat-card-content>
- </mat-card>
+    <h3>Комментарии не найдены</h3>
+    <p>Попробуйте изменить критерии поиска.</p>
+  </div>
+  }
 </div>

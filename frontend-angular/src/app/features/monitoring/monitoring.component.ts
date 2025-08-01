@@ -1,4 +1,12 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ChangeDetectionStrategy,
+  inject,
+  signal,
+  computed,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -102,6 +110,7 @@ class MockMonitoringService {
   templateUrl: './monitoring.component.html',
   styleUrls: ['./monitoring.component.scss'],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     FormsModule,
@@ -127,27 +136,79 @@ class MockMonitoringService {
   ],
 })
 export class MonitoringComponent implements OnInit, OnDestroy {
-  systemMetrics?: SystemMetrics;
-  parserMetrics?: ParserMetrics;
-  databaseMetrics?: DatabaseMetrics;
-  activityLogs: ActivityLog[] = [];
-  filteredLogs: ActivityLog[] = [];
+  // Используем signals для лучшей производительности
+  systemMetrics = signal<SystemMetrics | undefined>(undefined);
+  parserMetrics = signal<ParserMetrics | undefined>(undefined);
+  databaseMetrics = signal<DatabaseMetrics | undefined>(undefined);
+  activityLogs = signal<ActivityLog[]>([]);
+  filteredLogs = signal<ActivityLog[]>([]);
+  isLoading = signal(false);
+  autoRefresh = signal(false);
+  selectedLogLevel = signal('all');
+  totalLogs = signal(0);
+  currentPage = signal(0);
+  pageSize = signal(25);
 
-  isLoading = false;
-  autoRefresh = false;
-  selectedLogLevel = 'all';
+  // Computed values
+  hasLogs = computed(() => this.activityLogs().length > 0);
+  hasFilteredLogs = computed(() => this.filteredLogs().length > 0);
+  isParserRunning = computed(() => this.parserMetrics()?.is_running || false);
 
-  totalLogs = 0;
-  currentPage = 0;
-  pageSize = 25;
+  // Геттеры для template
+  get systemMetricsData(): SystemMetrics | undefined {
+    return this.systemMetrics();
+  }
+
+  get parserMetricsData(): ParserMetrics | undefined {
+    return this.parserMetrics();
+  }
+
+  get databaseMetricsData(): DatabaseMetrics | undefined {
+    return this.databaseMetrics();
+  }
+
+  get activityLogsData(): ActivityLog[] {
+    return this.activityLogs();
+  }
+
+  get filteredLogsData(): ActivityLog[] {
+    return this.filteredLogs();
+  }
+
+  get isLoadingData(): boolean {
+    return this.isLoading();
+  }
+
+  get autoRefreshData(): boolean {
+    return this.autoRefresh();
+  }
+
+  get selectedLogLevelData(): string {
+    return this.selectedLogLevel();
+  }
+
+  get totalLogsCount(): number {
+    return this.totalLogs();
+  }
+
+  get currentPageIndex(): number {
+    return this.currentPage();
+  }
+
+  get pageSizeValue(): number {
+    return this.pageSize();
+  }
+
+  displayedColumns = ['timestamp', 'level', 'component', 'message', 'actions'];
 
   private destroy$ = new Subject<void>();
   private refreshInterval?: any;
 
-  constructor(
-    private monitoringService: MockMonitoringService,
-    private snackBar: MatSnackBar
-  ) {}
+  // Используем inject() вместо constructor injection
+  private monitoringService = inject(MockMonitoringService);
+  private snackBar = inject(MatSnackBar);
+
+  constructor() {}
 
   ngOnInit(): void {
     this.loadAllMetrics();
@@ -163,17 +224,17 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   }
 
   refreshData(): void {
-    this.isLoading = true;
     this.loadAllMetrics();
     this.loadActivityLogs();
   }
 
   toggleAutoRefresh(): void {
-    this.autoRefresh = !this.autoRefresh;
+    const current = this.autoRefresh();
+    this.autoRefresh.set(!current);
 
-    if (this.autoRefresh) {
+    if (!current) {
       this.refreshInterval = setInterval(() => {
-        this.loadAllMetrics();
+        this.refreshData();
       }, 30000); // Refresh every 30 seconds
     } else {
       if (this.refreshInterval) {
@@ -184,52 +245,57 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   }
 
   exportReport(): void {
+    this.isLoading.set(true);
     this.monitoringService.exportReport().subscribe({
-      next: (data: any) => {
-        const blob = new Blob([JSON.stringify(data, null, 2)], {
-          type: 'application/json',
-        });
+      next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `monitoring-report-${
+        a.download = `monitoring_report_${
           new Date().toISOString().split('T')[0]
-        }.json`;
+        }.pdf`;
+        document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
-        this.snackBar.open('Отчет экспортирован', 'Закрыть', {
-          duration: 3000,
+        document.body.removeChild(a);
+        this.snackBar.open('Report exported successfully', 'Close', {
+          duration: 2000,
         });
+        this.isLoading.set(false);
       },
-      error: (error: any) => {
+      error: (error) => {
         console.error('Error exporting report:', error);
-        this.snackBar.open('Ошибка экспорта отчета', 'Закрыть', {
+        this.snackBar.open('Error exporting report', 'Close', {
           duration: 3000,
         });
+        this.isLoading.set(false);
       },
     });
   }
 
   filterLogs(): void {
-    if (this.selectedLogLevel === 'all') {
-      this.filteredLogs = [...this.activityLogs];
+    const level = this.selectedLogLevel();
+    const logs = this.activityLogs();
+
+    if (level === 'all') {
+      this.filteredLogs.set(logs);
     } else {
-      this.filteredLogs = this.activityLogs.filter(
-        (log) => log.level.toLowerCase() === this.selectedLogLevel
-      );
+      const filtered = logs.filter((log) => log.level === level);
+      this.filteredLogs.set(filtered);
     }
   }
 
   clearLogs(): void {
     this.monitoringService.clearLogs().subscribe({
       next: () => {
-        this.activityLogs = [];
-        this.filteredLogs = [];
-        this.snackBar.open('Журнал очищен', 'Закрыть', { duration: 3000 });
+        this.snackBar.open('Logs cleared successfully', 'Close', {
+          duration: 2000,
+        });
+        this.loadActivityLogs();
       },
-      error: (error: any) => {
+      error: (error) => {
         console.error('Error clearing logs:', error);
-        this.snackBar.open('Ошибка очистки журнала', 'Закрыть', {
+        this.snackBar.open('Error clearing logs', 'Close', {
           duration: 3000,
         });
       },
@@ -237,57 +303,50 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   }
 
   private loadAllMetrics(): void {
+    this.isLoading.set(true);
+
+    // Load system metrics
     this.monitoringService.getSystemMetrics().subscribe({
-      next: (metrics: SystemMetrics) => {
-        this.systemMetrics = metrics;
-        this.isLoading = false;
+      next: (metrics) => {
+        this.systemMetrics.set(metrics);
       },
-      error: (error: any) => {
+      error: (error) => {
         console.error('Error loading system metrics:', error);
-        this.snackBar.open('Ошибка загрузки метрик системы', 'Закрыть', {
-          duration: 3000,
-        });
-        this.isLoading = false;
       },
     });
 
+    // Load parser metrics
     this.monitoringService.getParserMetrics().subscribe({
-      next: (metrics: ParserMetrics) => {
-        this.parserMetrics = metrics;
+      next: (metrics) => {
+        this.parserMetrics.set(metrics);
       },
-      error: (error: any) => {
+      error: (error) => {
         console.error('Error loading parser metrics:', error);
-        this.snackBar.open('Ошибка загрузки метрик парсера', 'Закрыть', {
-          duration: 3000,
-        });
       },
     });
 
+    // Load database metrics
     this.monitoringService.getDatabaseMetrics().subscribe({
-      next: (metrics: DatabaseMetrics) => {
-        this.databaseMetrics = metrics;
+      next: (metrics) => {
+        this.databaseMetrics.set(metrics);
+        this.isLoading.set(false);
       },
-      error: (error: any) => {
+      error: (error) => {
         console.error('Error loading database metrics:', error);
-        this.snackBar.open('Ошибка загрузки метрик БД', 'Закрыть', {
-          duration: 3000,
-        });
+        this.isLoading.set(false);
       },
     });
   }
 
   private loadActivityLogs(): void {
     this.monitoringService.getActivityLogs().subscribe({
-      next: (response: { data: ActivityLog[]; total: number }) => {
-        this.activityLogs = response.data;
-        this.totalLogs = response.total;
+      next: (response) => {
+        this.activityLogs.set(response.data);
+        this.totalLogs.set(response.total);
         this.filterLogs();
       },
-      error: (error: any) => {
+      error: (error) => {
         console.error('Error loading activity logs:', error);
-        this.snackBar.open('Ошибка загрузки журнала активности', 'Закрыть', {
-          duration: 3000,
-        });
       },
     });
   }
@@ -298,23 +357,22 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     const minutes = Math.floor((seconds % 3600) / 60);
 
     if (days > 0) {
-      return `${days}д ${hours}ч ${minutes}м`;
+      return `${days}d ${hours}h ${minutes}m`;
     } else if (hours > 0) {
-      return `${hours}ч ${minutes}м`;
+      return `${hours}h ${minutes}m`;
     } else {
-      return `${minutes}м`;
+      return `${minutes}m`;
     }
   }
 
   formatDateTime(dateString: string): string {
-    return new Date(dateString).toLocaleString('ru-RU');
+    return new Date(dateString).toLocaleString();
   }
 
   formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 Б';
-    const k = 1024;
-    const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    if (bytes === 0) return '0 Bytes';
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
   }
 }

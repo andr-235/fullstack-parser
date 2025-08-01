@@ -5,8 +5,13 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:prod": "ng build --configuration=production",
+    "serve:prod": "ng serve --configuration=production",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "lint": "ng lint",
+    "dev": "ng serve --configuration=development",
+    "prod": "ng serve --configuration=production"
   },
   "prettier": {
     "overrides": [

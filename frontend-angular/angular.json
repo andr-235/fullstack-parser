@@ -31,33 +31,73 @@
             ],
             "styles": [
               "src/styles.scss"
+            ],
+            "optimization": {
+              "scripts": true,
+              "styles": {
+                "minify": true,
+                "inlineCritical": false
+              },
+              "fonts": true
+            },
+            "sourceMap": false,
+            "namedChunks": false,
+            "aot": true,
+            "extractLicenses": true,
+            "budgets": [
+              {
+                "type": "initial",
+                "maximumWarning": "1MB",
+                "maximumError": "2MB"
+              },
+              {
+                "type": "anyComponentStyle",
+                "maximumWarning": "6kB",
+                "maximumError": "10kB"
+              }
             ]
           },
           "configurations": {
             "production": {
               "outputPath": "dist/frontend-angular",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "2MB",
-                  "maximumError": "3MB"
+                  "maximumWarning": "1MB",
+                  "maximumError": "2MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "8kB",
-                  "maximumError": "16kB"
+                  "maximumWarning": "6kB",
+                  "maximumError": "10kB"
                 }
               ],
               "outputHashing": "all",
-              "optimization": true,
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": true
+              },
               "sourceMap": false,
-              "extractLicenses": true
+              "extractLicenses": true,
+              "namedChunks": false,
+              "aot": true
             },
             "development": {
               "outputPath": "dist/frontend-angular",
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "namedChunks": true
             }
           },
           "defaultConfiguration": "production"

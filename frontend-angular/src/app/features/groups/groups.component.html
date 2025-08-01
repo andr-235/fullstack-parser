@@ -1,0 +1,156 @@
+<div class="groups-container">
+  <div class="header-section">
+    <h2>Управление группами VK</h2>
+    <p>Управляйте и отслеживайте группы VK</p>
+  </div>
+
+  <!-- Search and Filters -->
+  <div class="filters-section">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Поиск групп</mat-label>
+      <input matInput [formControl]="searchControl" placeholder="Введите название группы или screen name" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <mat-checkbox [formControl]="activeOnlyControl" class="active-filter">
+      Только активные группы
+    </mat-checkbox>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+  <div class="loading-section">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Загрузка групп...</p>
+  </div>
+  }
+
+  <!-- Error State -->
+  @if (hasError()) {
+  <div class="error-section">
+    <mat-icon color="warn">error</mat-icon>
+    <p>{{ error() }}</p>
+  </div>
+  }
+
+  <!-- Groups Table -->
+  @if (!loading() && groupsData() && groupsData().length > 0) {
+  <div class="table-section">
+    <table mat-table [dataSource]="groupsData()" matSort (matSortChange)="onSortChange($event)" class="groups-table">
+      <!-- Name Column -->
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Название</th>
+        <td mat-cell *matCellDef="let group">
+          <div class="group-info">
+            <div class="group-name">{{ group.name }}</div>
+            <div class="group-screen-name">
+              &#64;{{ group.screenName }}
+            </div>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Post Count Column -->
+      <ng-container matColumnDef="postCount">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>
+          Посты
+        </th>
+        <td mat-cell *matCellDef="let group">
+          {{ group.postCount }}
+        </td>
+      </ng-container>
+
+      <!-- Status Column -->
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Статус</th>
+        <td mat-cell *matCellDef="let group">
+          <button mat-button [class]="group.isActive ? 'status-active' : 'status-inactive'"
+            (click)="toggleGroupActive(group)"
+            [matTooltip]="group.isActive ? 'Нажмите для деактивации' : 'Нажмите для активации'"
+            [disabled]="isActionLoading(group.id)">
+            @if (isActionLoading(group.id)) {
+            <mat-spinner diameter="16" class="inline-spinner"></mat-spinner>
+            } @else {
+            {{ group.isActive ? 'Активна' : 'Неактивна' }}
+            }
+          </button>
+        </td>
+      </ng-container>
+
+      <!-- Last Updated Column -->
+      <ng-container matColumnDef="last_parsed">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>
+          Последнее обновление
+        </th>
+        <td mat-cell *matCellDef="let group">
+          {{ group.updatedAt | date : 'dd.MM.yy, HH:mm' }}
+        </td>
+      </ng-container>
+
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Действия</th>
+        <td mat-cell *matCellDef="let group">
+          <button mat-icon-button [matMenuTriggerFor]="menu" [matTooltip]="'Дополнительные действия'"
+            [disabled]="isActionLoading(group.id)">
+            @if (isActionLoading(group.id)) {
+            <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+            <mat-icon>more_vert</mat-icon>
+            }
+          </button>
+          <mat-menu #menu="matMenu">
+            <button mat-menu-item (click)="refreshGroupInfo(group.id)" [disabled]="isActionLoading(group.id)">
+              @if (isActionLoading(group.id)) {
+              <mat-spinner diameter="16" class="inline-spinner"></mat-spinner>
+              } @else {
+              <mat-icon>refresh</mat-icon>
+              }
+              <span>Обновить информацию</span>
+            </button>
+            <button mat-menu-item (click)="toggleGroupActive(group)" [disabled]="isActionLoading(group.id)">
+              @if (isActionLoading(group.id)) {
+              <mat-spinner diameter="16" class="inline-spinner"></mat-spinner>
+              } @else {
+              <mat-icon>{{
+                group.isActive ? 'pause' : 'play_arrow'
+                }}</mat-icon>
+              }
+              <span>{{
+                group.isActive ? 'Деактивировать' : 'Активировать'
+                }}</span>
+            </button>
+            <button mat-menu-item (click)="deleteGroup(group)" class="delete-action"
+              [disabled]="isActionLoading(group.id)">
+              @if (isActionLoading(group.id)) {
+              <mat-spinner diameter="16" class="inline-spinner"></mat-spinner>
+              } @else {
+              <mat-icon>delete</mat-icon>
+              }
+              <span>Удалить</span>
+            </button>
+          </mat-menu>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns()">
+      </tr>
+    </table>
+
+    <!-- Pagination -->
+    <mat-paginator [length]="totalGroups()" [pageSize]="pageSize()" [pageIndex]="currentPage()"
+      [pageSizeOptions]="pageSizeOptions" (page)="onPageChange($event)">
+    </mat-paginator>
+  </div>
+  }
+
+  <!-- Empty State -->
+  @if (isEmpty()) {
+  <div class="empty-state">
+    <mat-icon>group</mat-icon>
+    <h3>Группы не найдены</h3>
+    <p>Попробуйте изменить критерии поиска или добавьте новую группу.</p>
+  </div>
+  }
+</div>

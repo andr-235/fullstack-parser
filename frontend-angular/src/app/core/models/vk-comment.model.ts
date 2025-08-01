@@ -12,7 +12,7 @@ export interface VKCommentResponse {
   likes_count: number;
   is_viewed: boolean;
   is_archived: boolean;
-  keywords_found: string[];
+  keywords: string[];
   sentiment: 'positive' | 'negative' | 'neutral';
   created_at: string;
   updated_at: string;

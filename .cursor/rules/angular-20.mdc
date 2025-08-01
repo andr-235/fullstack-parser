@@ -1,6 +1,6 @@
 ---
 description: This rule provides comprehensive best practices and coding standards for Angular development, focusing on modern TypeScript, standalone components, signals, and performance optimizations.
-globs: ["**/*.{ts,html,scss,css}"]
+globs: frontend-angular/**/*.ts,frontend-angular/**/*.html,frontend-angular/**/*.scss
 ---
 
 # Angular Best Practices

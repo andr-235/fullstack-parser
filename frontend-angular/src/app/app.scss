@@ -1,25 +1,85 @@
-.spacer {
-  flex: 1 1 auto;
-}
-
 .sidenav-container {
-  height: calc(100vh - 64px);
+  height: 100vh;
+  background-color: var(--app-background);
 }
 
 .sidenav {
   width: 250px;
+  background-color: var(--app-surface);
+  border-right: 1px solid var(--app-border);
+}
+
+.sidenav .mat-toolbar {
+  background-color: var(--app-primary);
+  color: var(--app-primary-text);
 }
 
 .content {
   padding: 20px;
+  background-color: var(--app-background);
+  min-height: calc(100vh - 64px);
 }
 
-.active {
-  background-color: rgba(0, 0, 0, 0.1);
+.spacer {
+  flex: 1 1 auto;
 }
 
-mat-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+// Стили для активных ссылок в навигации
+.mat-nav-list .mat-list-item.active {
+  background-color: var(--app-selected);
+  color: var(--app-primary);
+}
+
+.mat-nav-list .mat-list-item:hover {
+  background-color: var(--app-hover);
+}
+
+// Стили для иконок в навигации
+.mat-nav-list .mat-list-item mat-icon {
+  color: var(--app-text-secondary);
+  margin-right: 16px;
+}
+
+.mat-nav-list .mat-list-item.active mat-icon {
+  color: var(--app-primary);
+}
+
+// Стили для тулбара
+.mat-toolbar {
+  background-color: var(--app-primary);
+  color: var(--app-primary-text);
+  box-shadow: 0 2px 4px var(--app-shadow);
+}
+
+// Адаптивные стили для мобильных устройств
+@media (max-width: 768px) {
+  .sidenav {
+    width: 200px;
+  }
+
+  .content {
+    padding: 16px;
+  }
+}
+
+// Стили для темной темы
+[data-theme="dark"] {
+  .sidenav-container {
+    background-color: var(--app-background);
+  }
+
+  .sidenav {
+    background-color: var(--app-surface);
+    border-right-color: var(--app-border);
+  }
+
+  .content {
+    background-color: var(--app-background);
+  }
+
+  .mat-toolbar {
+    background-color: var(--app-primary);
+    color: var(--app-primary-text);
+    box-shadow: 0 2px 4px var(--app-shadow);
+  }
 }

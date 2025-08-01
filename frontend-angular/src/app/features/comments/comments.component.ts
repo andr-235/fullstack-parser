@@ -1,139 +1,165 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  computed,
+  signal,
+  input,
+  output,
+  inject,
+  OnInit,
+  OnDestroy,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormControl, FormGroup } from '@angular/forms';
-import { MatTableModule } from '@angular/material/table';
-import { MatButtonModule } from '@angular/material/button';
+import { ReactiveFormsModule, FormControl } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatIconModule } from '@angular/material/icon';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatSortModule } from '@angular/material/sort';
-import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatDialogModule } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatTableModule } from '@angular/material/table';
+import { MatSortModule, Sort } from '@angular/material/sort';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
-
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { SelectionModel } from '@angular/cdk/collections';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
+import { ChangeDetectionStrategy } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommentsService } from '../../core/services/comments.service';
-import { GroupsService } from '../../core/services/groups.service';
-import { KeywordsService } from '../../core/services/keywords.service';
 import {
-  VKCommentResponse,
-  CommentSearchParams,
+  GroupsService,
   VKGroupResponse,
-  KeywordResponse,
-} from '../../core/models';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+} from '../../core/services/groups.service';
+import { KeywordsService } from '../../core/services/keywords.service';
+import { VKCommentResponse } from '../../core/models/vk-comment.model';
+
+// Interfaces
+interface Comment {
+  id: string;
+  text: string;
+  author_screen_name: string;
+  published_at: string;
+  likes_count: number;
+  group_name: string;
+  group_screen_name: string;
+  keywords: string[];
+  is_viewed: boolean;
+  is_archived: boolean;
+}
+
+interface Group {
+  id: string;
+  name: string;
+  screen_name: string;
+}
+
+interface Keyword {
+  id: string;
+  word: string;
+}
+
+interface CommentsResponse {
+  comments: Comment[];
+  total: number;
+}
 
 @Component({
   selector: 'app-comments',
-  templateUrl: './comments.component.html',
-  styleUrls: ['./comments.component.scss'],
   standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatTableModule,
-    MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
-    MatCheckboxModule,
-    MatIconModule,
-    MatPaginatorModule,
-    MatSortModule,
-    MatCardModule,
-    MatChipsModule,
-    MatTooltipModule,
-    MatMenuModule,
-    MatDialogModule,
     MatSelectModule,
+    MatCheckboxModule,
+    MatTableModule,
+    MatSortModule,
+    MatPaginatorModule,
+    MatProgressSpinnerModule,
+    MatMenuModule,
+    MatTooltipModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    MatExpansionModule,
-    LoadingSpinnerComponent,
+    MatIconModule,
+    MatButtonModule,
   ],
+  templateUrl: './comments.component.html',
+  styleUrls: ['./comments.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CommentsComponent implements OnInit, OnDestroy {
-  comments: VKCommentResponse[] = [];
-  groups: VKGroupResponse[] = [];
-  keywords: KeywordResponse[] = [];
-  loading = false;
-  totalItems = 0;
-  currentPage = 0;
-  pageSize = 25;
-  displayedColumns = [
+  // Inputs
+  initialFilters = input<Partial<any>>({});
+
+  // Outputs
+  commentDeleted = output<string>();
+  commentViewed = output<string>();
+  commentArchived = output<string>();
+
+  // Dependencies
+  private readonly commentsService = inject(CommentsService);
+  private readonly groupsService = inject(GroupsService);
+  private readonly keywordsService = inject(KeywordsService);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly sanitizer = inject(DomSanitizer);
+  private readonly destroy$ = new Subject<void>();
+
+  // API endpoints
+  private readonly apiUrl = environment.apiUrl;
+
+  // Signals
+  commentsData = signal<Comment[]>([]);
+  groupsData = signal<Group[]>([]);
+  keywordsData = signal<Keyword[]>([]);
+  isLoading = signal(false);
+  error = signal('');
+  currentPageIndex = signal(0);
+  pageSizeValue = signal(25);
+  totalItemsCount = signal(0);
+  actionLoadingIds = signal<Set<string>>(new Set());
+
+  // Selection model for checkboxes
+  selection = new SelectionModel<Comment>(true, []);
+
+  // Form controls
+  textControl = new FormControl('');
+  groupIdControl = new FormControl('');
+  keywordIdControl = new FormControl('');
+  dateFromControl = new FormControl<Date | null>(null);
+  dateToControl = new FormControl<Date | null>(null);
+  isViewedControl = new FormControl(false);
+  isArchivedControl = new FormControl(false);
+  orderByControl = new FormControl('published_at');
+  orderDirControl = new FormControl('desc');
+
+  // Computed values
+  displayedColumns = computed(() => [
     'select',
     'text',
     'group',
-    'keywords',
     'status',
     'actions',
-  ];
-
-  searchForm = new FormGroup({
-    text: new FormControl(''),
-    group_id: new FormControl(''),
-    keyword_id: new FormControl(''),
-    date_from: new FormControl(''),
-    date_to: new FormControl(''),
-    is_viewed: new FormControl(false),
-    is_archived: new FormControl(false),
-    order_by: new FormControl('published_at'),
-    order_dir: new FormControl('desc'),
-  });
-
-  // Getters for form controls
-  get textControl() {
-    return this.searchForm.get('text') as FormControl;
-  }
-  get groupIdControl() {
-    return this.searchForm.get('group_id') as FormControl;
-  }
-  get keywordIdControl() {
-    return this.searchForm.get('keyword_id') as FormControl;
-  }
-  get dateFromControl() {
-    return this.searchForm.get('date_from') as FormControl;
-  }
-  get dateToControl() {
-    return this.searchForm.get('date_to') as FormControl;
-  }
-  get isViewedControl() {
-    return this.searchForm.get('is_viewed') as FormControl;
-  }
-  get isArchivedControl() {
-    return this.searchForm.get('is_archived') as FormControl;
-  }
-  get orderByControl() {
-    return this.searchForm.get('order_by') as FormControl;
-  }
-  get orderDirControl() {
-    return this.searchForm.get('order_dir') as FormControl;
-  }
-
-  selection = new SelectionModel<VKCommentResponse>(true, []);
-
-  private destroy$ = new Subject<void>();
-
-  constructor(
-    private commentsService: CommentsService,
-    private groupsService: GroupsService,
-    private keywordsService: KeywordsService,
-    private snackBar: MatSnackBar
-  ) {}
+  ]);
 
   ngOnInit(): void {
-    this.setupSearchSubscription();
-    this.loadGroups();
-    this.loadKeywords();
-    this.loadComments();
+    this.setupFormListeners();
+
+    // Add a small delay to prevent race conditions during component initialization
+    setTimeout(() => {
+      this.loadGroups();
+      this.loadKeywords();
+      this.loadComments();
+    }, 100);
   }
 
   ngOnDestroy(): void {
@@ -141,284 +167,313 @@ export class CommentsComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private setupSearchSubscription(): void {
-    this.searchForm.valueChanges
-      .pipe(takeUntil(this.destroy$), debounceTime(500), distinctUntilChanged())
+  highlightKeywords(text: string, keywords: string[]): SafeHtml {
+    if (!keywords || keywords.length === 0) {
+      return this.sanitizer.bypassSecurityTrustHtml(text);
+    }
+
+    let highlightedText = text;
+
+    // Сортируем ключевые слова по длине (от длинных к коротким), чтобы избежать проблем с вложенными совпадениями
+    const sortedKeywords = [...keywords].sort((a, b) => b.length - a.length);
+
+    for (const keyword of sortedKeywords) {
+      const regex = new RegExp(
+        `(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`,
+        'gi'
+      );
+      highlightedText = highlightedText.replace(
+        regex,
+        '<span class="highlighted-keyword">$1</span>'
+      );
+    }
+
+    return this.sanitizer.bypassSecurityTrustHtml(highlightedText);
+  }
+
+  private setupFormListeners(): void {
+    // Debounced text search
+    this.textControl.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
       .subscribe(() => {
-        this.currentPage = 0;
+        this.currentPageIndex.set(0);
+        this.loadComments();
+      });
+
+    // Other filter changes
+    this.groupIdControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.currentPageIndex.set(0);
+        this.loadComments();
+      });
+
+    this.keywordIdControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.currentPageIndex.set(0);
+        this.loadComments();
+      });
+
+    this.dateFromControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.currentPageIndex.set(0);
+        this.loadComments();
+      });
+
+    this.dateToControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.currentPageIndex.set(0);
+        this.loadComments();
+      });
+
+    this.isViewedControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.currentPageIndex.set(0);
+        this.loadComments();
+      });
+
+    this.isArchivedControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.currentPageIndex.set(0);
+        this.loadComments();
+      });
+
+    this.orderByControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.currentPageIndex.set(0);
+        this.loadComments();
+      });
+
+    this.orderDirControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.currentPageIndex.set(0);
         this.loadComments();
       });
   }
 
   private loadGroups(): void {
-    this.groupsService.getGroups({ size: 100 }).subscribe({
+    this.groupsService.getGroups().subscribe({
       next: (response) => {
-        this.groups = response.items;
+        // Преобразуем VKGroupResponse в Group
+        const groups: Group[] = (response.groups || []).map((group) => ({
+          id: group.id,
+          name: group.name,
+          screen_name: group.screenName,
+        }));
+        this.groupsData.set(groups);
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error loading groups:', error);
+        this.groupsData.set([]);
+        this.cdr.markForCheck();
       },
     });
   }
 
   private loadKeywords(): void {
-    this.keywordsService.getKeywords({ size: 100 }).subscribe({
+    this.keywordsService.getKeywords().subscribe({
       next: (response) => {
-        this.keywords = response.items;
+        // Преобразуем KeywordResponse в Keyword
+        const keywords: Keyword[] = (response.items || []).map((keyword) => ({
+          id: keyword.id.toString(),
+          word: keyword.word,
+        }));
+        this.keywordsData.set(keywords);
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error loading keywords:', error);
+        this.keywordsData.set([]);
+        this.cdr.markForCheck();
       },
     });
   }
 
   private loadComments(): void {
-    this.loading = true;
+    this.isLoading.set(true);
+    this.error.set('');
 
-    const formValue = this.searchForm.value;
-    const params: CommentSearchParams = {
-      text: formValue.text || undefined,
-      group_id: formValue.group_id ? Number(formValue.group_id) : undefined,
-      keyword_id: formValue.keyword_id
-        ? Number(formValue.keyword_id)
+    const params = {
+      page: this.currentPageIndex() + 1,
+      page_size: this.pageSizeValue(),
+      search: this.textControl.value || undefined,
+      group_id: this.groupIdControl.value
+        ? parseInt(this.groupIdControl.value)
         : undefined,
-      date_from: formValue.date_from || undefined,
-      date_to: formValue.date_to || undefined,
-      is_viewed: formValue.is_viewed || undefined,
-      is_archived: formValue.is_archived || undefined,
-      order_by: formValue.order_by || undefined,
-      order_dir: formValue.order_dir || undefined,
+      keyword_id: this.keywordIdControl.value
+        ? parseInt(this.keywordIdControl.value)
+        : undefined,
+      date_from: this.dateFromControl.value?.toISOString(),
+      date_to: this.dateToControl.value?.toISOString(),
+      is_viewed: this.isViewedControl.value || undefined,
+      is_archived: this.isArchivedControl.value || undefined,
+      sort_by: this.orderByControl.value,
+      sort_order: this.orderDirControl.value,
     };
 
     this.commentsService.getComments(params).subscribe({
       next: (response) => {
-        this.comments = response.items;
-        this.totalItems = response.total;
-        this.loading = false;
+        // Преобразуем VKCommentResponse в Comment
+        const comments: Comment[] = (response.items || []).map(
+          (comment: any) => ({
+            id: comment.id.toString(),
+            text: comment.text,
+            author_screen_name: comment.author_name || '',
+            published_at: comment.date,
+            likes_count: comment.likes_count,
+            group_name: comment.group_name,
+            group_screen_name: comment.group_name, // Используем group_name как screen_name
+            keywords: comment.keywords || [],
+            is_viewed: comment.is_viewed,
+            is_archived: comment.is_archived,
+          })
+        );
+        this.commentsData.set(comments);
+        this.totalItemsCount.set(response.total || 0);
+        this.isLoading.set(false);
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error loading comments:', error);
-        this.snackBar.open('Error loading comments', 'Close', {
-          duration: 3000,
-        });
-        this.loading = false;
+        this.error.set('Ошибка загрузки комментариев');
+        this.commentsData.set([]);
+        this.totalItemsCount.set(0);
+        this.isLoading.set(false);
+        this.cdr.markForCheck();
       },
     });
   }
 
-  onPageChange(event: PageEvent): void {
-    this.currentPage = event.pageIndex;
-    this.pageSize = event.pageSize;
-    this.loadComments();
+  onSortChange(sort: Sort): void {
+    this.orderByControl.setValue(sort.active);
+    this.orderDirControl.setValue(sort.direction);
   }
 
-  // Selection methods
+  isActionLoading(id: string): boolean {
+    return this.actionLoadingIds().has(id);
+  }
+
+  private setActionLoading(id: string, loading: boolean): void {
+    const currentIds = new Set(this.actionLoadingIds());
+    if (loading) {
+      currentIds.add(id);
+    } else {
+      currentIds.delete(id);
+    }
+    this.actionLoadingIds.set(currentIds);
+  }
+
   isAllSelected(): boolean {
     const numSelected = this.selection.selected.length;
-    const numRows = this.comments.length;
+    const numRows = this.commentsData().length;
     return numSelected === numRows;
   }
 
   masterToggle(): void {
-    this.isAllSelected()
-      ? this.selection.clear()
-      : this.comments.forEach((row) => this.selection.select(row));
+    if (this.isAllSelected()) {
+      this.selection.clear();
+    } else {
+      this.commentsData().forEach((row) => this.selection.select(row));
+    }
   }
 
-  // Action methods
-  viewComment(comment: VKCommentResponse): void {
-    // TODO: Implement comment detail dialog
+  viewComment(comment: Comment): void {
+    // Implement view comment logic
     console.log('View comment:', comment);
   }
 
-  markAsViewed(commentId: number): void {
-    this.commentsService.markAsViewed(commentId).subscribe({
+  markAsViewed(commentId: string): void {
+    this.setActionLoading(commentId, true);
+    this.commentsService.markAsViewed(parseInt(commentId)).subscribe({
       next: () => {
-        this.snackBar.open('Comment marked as viewed', 'Close', {
-          duration: 2000,
+        this.commentViewed.emit(commentId);
+        this.snackBar.open('Комментарий отмечен как просмотренный', 'Закрыть', {
+          duration: 3000,
         });
         this.loadComments();
+        this.setActionLoading(commentId, false);
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error marking comment as viewed:', error);
-        this.snackBar.open('Error marking comment as viewed', 'Close', {
+        this.snackBar.open('Ошибка при отметке комментария', 'Закрыть', {
           duration: 3000,
         });
+        this.setActionLoading(commentId, false);
+        this.cdr.markForCheck();
       },
     });
   }
 
-  markAsArchived(commentId: number): void {
-    this.commentsService.markAsArchived(commentId).subscribe({
+  markAsArchived(commentId: string): void {
+    this.setActionLoading(commentId, true);
+    this.commentsService.markAsArchived(parseInt(commentId)).subscribe({
       next: () => {
-        this.snackBar.open('Comment archived', 'Close', { duration: 2000 });
+        this.commentArchived.emit(commentId);
+        this.snackBar.open('Комментарий архивирован', 'Закрыть', {
+          duration: 3000,
+        });
         this.loadComments();
+        this.setActionLoading(commentId, false);
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error archiving comment:', error);
-        this.snackBar.open('Error archiving comment', 'Close', {
+        this.snackBar.open('Ошибка при архивировании комментария', 'Закрыть', {
           duration: 3000,
         });
+        this.setActionLoading(commentId, false);
+        this.cdr.markForCheck();
       },
     });
   }
 
-  deleteComment(commentId: number): void {
-    if (confirm('Are you sure you want to delete this comment?')) {
-      this.commentsService.deleteComment(commentId).subscribe({
-        next: () => {
-          this.snackBar.open('Comment deleted', 'Close', { duration: 2000 });
-          this.loadComments();
-        },
-        error: (error) => {
-          console.error('Error deleting comment:', error);
-          this.snackBar.open('Error deleting comment', 'Close', {
-            duration: 3000,
-          });
-        },
-      });
-    }
-  }
-
-  bulkMarkViewed(): void {
-    const selectedIds = this.selection.selected.map((comment) => comment.id);
-    if (selectedIds.length === 0) {
-      this.snackBar.open('Please select comments to mark as viewed', 'Close', {
-        duration: 3000,
-      });
-      return;
-    }
-
-    this.commentsService
-      .bulkUpdate(selectedIds, { is_viewed: true })
-      .subscribe({
-        next: () => {
-          this.snackBar.open(
-            `${selectedIds.length} comments marked as viewed`,
-            'Close',
-            { duration: 2000 }
-          );
-          this.selection.clear();
-          this.loadComments();
-        },
-        error: (error) => {
-          console.error('Error bulk marking comments as viewed:', error);
-          this.snackBar.open('Error marking comments as viewed', 'Close', {
-            duration: 3000,
-          });
-        },
-      });
-  }
-
-  bulkArchive(): void {
-    const selectedIds = this.selection.selected.map((comment) => comment.id);
-    if (selectedIds.length === 0) {
-      this.snackBar.open('Please select comments to archive', 'Close', {
-        duration: 3000,
-      });
-      return;
-    }
-
-    this.commentsService
-      .bulkUpdate(selectedIds, { is_archived: true })
-      .subscribe({
-        next: () => {
-          this.snackBar.open(
-            `${selectedIds.length} comments archived`,
-            'Close',
-            { duration: 2000 }
-          );
-          this.selection.clear();
-          this.loadComments();
-        },
-        error: (error) => {
-          console.error('Error bulk archiving comments:', error);
-          this.snackBar.open('Error archiving comments', 'Close', {
-            duration: 3000,
-          });
-        },
-      });
-  }
-
-  exportComments(): void {
-    const formValue = this.searchForm.value;
-    const params: CommentSearchParams = {
-      text: formValue.text || undefined,
-      group_id: formValue.group_id ? Number(formValue.group_id) : undefined,
-      keyword_id: formValue.keyword_id
-        ? Number(formValue.keyword_id)
-        : undefined,
-      date_from: formValue.date_from || undefined,
-      date_to: formValue.date_to || undefined,
-      is_viewed: formValue.is_viewed || undefined,
-      is_archived: formValue.is_archived || undefined,
-      order_by: formValue.order_by || undefined,
-      order_dir: formValue.order_dir || undefined,
-    };
-
-    this.commentsService.exportComments(params).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `comments_export_${
-          new Date().toISOString().split('T')[0]
-        }.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        this.snackBar.open('Comments exported successfully', 'Close', {
-          duration: 2000,
+  deleteComment(commentId: string): void {
+    this.setActionLoading(commentId, true);
+    this.commentsService.deleteComment(parseInt(commentId)).subscribe({
+      next: () => {
+        this.commentDeleted.emit(commentId);
+        this.snackBar.open('Комментарий удален', 'Закрыть', {
+          duration: 3000,
         });
+        this.loadComments();
+        this.setActionLoading(commentId, false);
+        this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error exporting comments:', error);
-        this.snackBar.open('Error exporting comments', 'Close', {
+        console.error('Error deleting comment:', error);
+        this.snackBar.open('Ошибка при удалении комментария', 'Закрыть', {
           duration: 3000,
         });
+        this.setActionLoading(commentId, false);
+        this.cdr.markForCheck();
       },
     });
   }
-}
 
-// SelectionModel class for table selection
-class SelectionModel<T> {
-  private _selection = new Set<T>();
-
-  constructor(private _multiple = false, initiallySelectedValues?: T[]) {
-    if (initiallySelectedValues) {
-      initiallySelectedValues.forEach((value) => this._selection.add(value));
-    }
+  onPageChange(event: any): void {
+    this.currentPageIndex.set(event.pageIndex);
+    this.pageSizeValue.set(event.pageSize);
+    this.loadComments();
   }
 
-  get selected(): T[] {
-    return Array.from(this._selection);
-  }
-
-  select(...values: T[]): void {
-    values.forEach((value) => this._selection.add(value));
-  }
-
-  deselect(...values: T[]): void {
-    values.forEach((value) => this._selection.delete(value));
-  }
-
-  toggle(value: T): void {
-    if (this.isSelected(value)) {
-      this.deselect(value);
-    } else {
-      this.select(value);
-    }
-  }
-
-  clear(): void {
-    this._selection.clear();
-  }
-
-  isSelected(value: T): boolean {
-    return this._selection.has(value);
-  }
-
-  hasValue(): boolean {
-    return this._selection.size > 0;
+  clearFilters(): void {
+    this.textControl.setValue('');
+    this.groupIdControl.setValue('');
+    this.keywordIdControl.setValue('');
+    this.dateFromControl.setValue(null);
+    this.dateToControl.setValue(null);
+    this.isViewedControl.setValue(false);
+    this.isArchivedControl.setValue(false);
+    this.orderByControl.setValue('published_at');
+    this.orderDirControl.setValue('desc');
   }
 }

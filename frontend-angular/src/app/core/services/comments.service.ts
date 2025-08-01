@@ -24,53 +24,52 @@ export class CommentsService {
   getComments(
     params: CommentSearchParams = {}
   ): Observable<PaginatedResponse<VKCommentResponse>> {
-    const queryParams = new URLSearchParams();
+    const queryParams: any = {};
 
     if (params.text) {
-      queryParams.append('text', params.text);
+      queryParams.search = params.text;
     }
     if (params.group_id) {
-      queryParams.append('group_id', params.group_id.toString());
+      queryParams.groupId = params.group_id.toString();
     }
     if (params.keyword_id) {
-      queryParams.append('keyword_id', params.keyword_id.toString());
+      queryParams.keywordId = params.keyword_id.toString();
     }
     if (params.author_id) {
-      queryParams.append('author_id', params.author_id.toString());
+      queryParams.authorId = params.author_id.toString();
     }
     if (params.author_screen_name && params.author_screen_name.length > 0) {
-      params.author_screen_name.forEach((name) => {
-        queryParams.append('author_screen_name', name);
-      });
+      queryParams.authorScreenName = params.author_screen_name.join(',');
     }
     if (params.date_from) {
-      queryParams.append('date_from', params.date_from);
+      queryParams.dateFrom = params.date_from;
     }
     if (params.date_to) {
-      queryParams.append('date_to', params.date_to);
+      queryParams.dateTo = params.date_to;
     }
     if (params.is_viewed !== undefined) {
-      queryParams.append('is_viewed', params.is_viewed.toString());
+      queryParams.isViewed = params.is_viewed;
     }
     if (params.is_archived !== undefined) {
-      queryParams.append('is_archived', params.is_archived.toString());
+      queryParams.isArchived = params.is_archived;
     }
     if (params.order_by) {
-      queryParams.append('order_by', params.order_by);
+      queryParams.orderBy = params.order_by;
     }
     if (params.order_dir) {
-      queryParams.append('order_dir', params.order_dir);
+      queryParams.orderDir = params.order_dir;
     }
-
-    const queryString = queryParams.toString();
-    const endpoint = queryString ? `/comments?${queryString}` : '/comments';
 
     this.loadingService.show('Loading comments...');
 
     return this.apiService
-      .get<PaginatedResponse<VKCommentResponse>>(endpoint)
+      .get<PaginatedResponse<VKCommentResponse>>('/comments', queryParams)
       .pipe(
-        tap(() => {
+        tap((response) => {
+          // Преобразуем ответ backend в формат frontend
+          if (response.comments) {
+            response.items = response.comments;
+          }
           this.loadingService.hide();
         }),
         catchError((error: ApiError) => {

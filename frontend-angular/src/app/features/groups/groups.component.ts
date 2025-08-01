@@ -1,335 +1,146 @@
 import {
   Component,
+  inject,
+  signal,
+  computed,
   OnInit,
   OnDestroy,
   ChangeDetectionStrategy,
-  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSortModule, Sort } from '@angular/material/sort';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatMenuModule } from '@angular/material/menu';
 import { MatDialogModule } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
+import {
+  debounceTime,
+  distinctUntilChanged,
+  Subject,
+  takeUntil,
+  catchError,
+  finalize,
+} from 'rxjs';
 
 import {
   GroupsService,
-  GroupsSearchParams,
+  VKGroupResponse,
+  GroupsQueryParams,
 } from '../../core/services/groups.service';
-import { VKGroupResponse } from '../../core/models';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+
+interface GroupsState {
+  items: VKGroupResponse[];
+  total: number;
+  page: number;
+  size: number;
+  loading: boolean;
+  error: string | null;
+  sortField: string | null;
+  sortDirection: 'asc' | 'desc' | null;
+}
 
 @Component({
   selector: 'app-groups',
-  template: `
-    <div class="groups-container">
-      <mat-card>
-        <mat-card-header>
-          <mat-card-title>VK Groups Management</mat-card-title>
-          <mat-card-subtitle>Manage and monitor VK groups</mat-card-subtitle>
-        </mat-card-header>
-
-        <mat-card-content>
-          <!-- Search and Filters -->
-          <div class="filters-section">
-            <mat-form-field appearance="outline" class="search-field">
-              <mat-label>Search groups</mat-label>
-              <input
-                matInput
-                [formControl]="searchControl"
-                placeholder="Enter group name or screen name"
-              />
-              <mat-icon matSuffix>search</mat-icon>
-            </mat-form-field>
-
-            <mat-checkbox
-              [formControl]="activeOnlyControl"
-              class="active-filter"
-            >
-              Active groups only
-            </mat-checkbox>
-          </div>
-
-          <!-- Loading State -->
-          @if (loading) {
-          <div class="loading-section">
-            <app-loading-spinner
-              message="Loading groups..."
-            ></app-loading-spinner>
-          </div>
-          }
-
-          <!-- Groups Table -->
-          @if (!loading && groups.length > 0) {
-          <div class="table-section">
-            <table mat-table [dataSource]="groups" matSort>
-              <!-- Name Column -->
-              <ng-container matColumnDef="name">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
-                <td mat-cell *matCellDef="let group">
-                  <div class="group-info">
-                    <div class="group-name">{{ group.name }}</div>
-                    <div class="group-screen-name">
-                      @{{ group.screen_name }}
-                    </div>
-                  </div>
-                </td>
-              </ng-container>
-
-              <!-- Members Column -->
-              <ng-container matColumnDef="members">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>
-                  Members
-                </th>
-                <td mat-cell *matCellDef="let group">
-                  {{ group.members_count || 'N/A' }}
-                </td>
-              </ng-container>
-
-              <!-- Comments Column -->
-              <ng-container matColumnDef="comments">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>
-                  Comments
-                </th>
-                <td mat-cell *matCellDef="let group">
-                  {{ group.total_comments_found }}
-                </td>
-              </ng-container>
-
-              <!-- Status Column -->
-              <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>Status</th>
-                <td mat-cell *matCellDef="let group">
-                  <mat-chip
-                    [color]="group.is_active ? 'accent' : 'warn'"
-                    selected
-                  >
-                    {{ group.is_active ? 'Active' : 'Inactive' }}
-                  </mat-chip>
-                </td>
-              </ng-container>
-
-              <!-- Last Parsed Column -->
-              <ng-container matColumnDef="lastParsed">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>
-                  Last Parsed
-                </th>
-                <td mat-cell *matCellDef="let group">
-                  {{
-                    group.last_parsed_at
-                      ? (group.last_parsed_at | date : 'short')
-                      : 'Never'
-                  }}
-                </td>
-              </ng-container>
-
-              <!-- Actions Column -->
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef>Actions</th>
-                <td mat-cell *matCellDef="let group">
-                  <button mat-icon-button [matMenuTriggerFor]="menu">
-                    <mat-icon>more_vert</mat-icon>
-                  </button>
-                  <mat-menu #menu="matMenu">
-                    <button mat-menu-item (click)="refreshGroup(group.id)">
-                      <mat-icon>refresh</mat-icon>
-                      <span>Refresh Info</span>
-                    </button>
-                    <button
-                      mat-menu-item
-                      (click)="toggleGroupActive(group.id, !group.is_active)"
-                    >
-                      <mat-icon>{{
-                        group.is_active ? 'pause' : 'play_arrow'
-                      }}</mat-icon>
-                      <span>{{
-                        group.is_active ? 'Deactivate' : 'Activate'
-                      }}</span>
-                    </button>
-                    <button
-                      mat-menu-item
-                      (click)="deleteGroup(group.id)"
-                      class="delete-action"
-                    >
-                      <mat-icon>delete</mat-icon>
-                      <span>Delete</span>
-                    </button>
-                  </mat-menu>
-                </td>
-              </ng-container>
-
-              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-            </table>
-
-            <!-- Pagination -->
-            <mat-paginator
-              [length]="totalItems"
-              [pageSize]="pageSize"
-              [pageIndex]="currentPage"
-              [pageSizeOptions]="[10, 25, 50, 100]"
-              (page)="onPageChange($event)"
-            >
-            </mat-paginator>
-          </div>
-          }
-
-          <!-- Empty State -->
-          @if (!loading && groups.length === 0) {
-          <div class="empty-state">
-            <mat-icon>group</mat-icon>
-            <h3>No groups found</h3>
-            <p>Try adjusting your search criteria or add a new group.</p>
-          </div>
-          }
-        </mat-card-content>
-      </mat-card>
-    </div>
-  `,
-  styles: [
-    `
-      .groups-container {
-        padding: 20px;
-        max-width: 1400px;
-        margin: 0 auto;
-      }
-
-      .filters-section {
-        display: flex;
-        gap: 20px;
-        align-items: center;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-      }
-
-      .search-field {
-        flex: 1;
-        min-width: 300px;
-      }
-
-      .active-filter {
-        margin-left: 20px;
-      }
-
-      .loading-section {
-        display: flex;
-        justify-content: center;
-        padding: 40px;
-      }
-
-      .table-section {
-        margin-top: 20px;
-      }
-
-      .group-info {
-        display: flex;
-        flex-direction: column;
-      }
-
-      .group-name {
-        font-weight: 500;
-      }
-
-      .group-screen-name {
-        font-size: 0.875rem;
-        color: #666;
-      }
-
-      .empty-state {
-        text-align: center;
-        padding: 40px;
-        color: #666;
-      }
-
-      .empty-state mat-icon {
-        font-size: 48px;
-        width: 48px;
-        height: 48px;
-        margin-bottom: 16px;
-      }
-
-      .delete-action {
-        color: #f44336;
-      }
-
-      table {
-        width: 100%;
-      }
-
-      .mat-column-actions {
-        width: 80px;
-      }
-
-      .mat-column-status {
-        width: 120px;
-      }
-
-      .mat-column-members,
-      .mat-column-comments {
-        width: 100px;
-      }
-    `,
-  ],
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     ReactiveFormsModule,
     MatTableModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatCheckboxModule,
-    MatIconModule,
     MatPaginatorModule,
     MatSortModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatMenuModule,
+    MatCheckboxModule,
+    MatSnackBarModule,
+    MatProgressSpinnerModule,
     MatCardModule,
     MatChipsModule,
     MatTooltipModule,
-    MatMenuModule,
     MatDialogModule,
-    LoadingSpinnerComponent,
   ],
+  templateUrl: './groups.component.html',
+  styleUrls: ['./groups.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GroupsComponent implements OnInit, OnDestroy {
-  groups: VKGroupResponse[] = [];
-  loading = false;
-  totalItems = 0;
-  currentPage = 0;
-  pageSize = 25;
-  displayedColumns = [
+  private readonly groupsService = inject(GroupsService);
+  private readonly snackBar = inject(MatSnackBar);
+
+  // Signals for state management
+  private readonly _state = signal<GroupsState>({
+    items: [],
+    total: 0,
+    page: 0,
+    size: 25,
+    loading: false,
+    error: null,
+    sortField: null,
+    sortDirection: null,
+  });
+
+  // Readonly signals for template
+  readonly groupsData = computed(() => this._state().items);
+  readonly totalGroups = computed(() => this._state().total);
+  readonly currentPage = computed(() => this._state().page);
+  readonly pageSize = computed(() => this._state().size);
+  readonly loading = computed(() => this._state().loading);
+  readonly hasError = computed(() => !!this._state().error);
+  readonly error = computed(() => this._state().error);
+  readonly isEmpty = computed(
+    () => !this.loading() && this.groupsData().length === 0
+  );
+
+  // Form controls
+  readonly searchControl = new FormControl('');
+  readonly activeOnlyControl = new FormControl(false);
+
+  // Pagination options
+  readonly pageSizeOptions = [10, 25, 50, 100];
+
+  // Table columns
+  readonly displayedColumns = signal([
     'name',
-    'members',
-    'comments',
+    'postCount',
     'status',
-    'lastParsed',
+    'last_parsed',
     'actions',
-  ];
+  ]);
 
-  searchControl = new FormControl('');
-  activeOnlyControl = new FormControl(false);
+  // Private properties
+  private readonly destroy$ = new Subject<void>();
+  private readonly loadingActions = signal<Set<string>>(new Set());
 
-  private destroy$ = new Subject<void>();
+  constructor() {
+    // Setup search debouncing
+    this.searchControl.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.loadGroups();
+      });
 
-  // Используем inject() вместо constructor injection
-  private groupsService = inject(GroupsService);
-  private snackBar = inject(MatSnackBar);
-
-  constructor() {}
+    // Setup active filter
+    this.activeOnlyControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.loadGroups();
+      });
+  }
 
   ngOnInit(): void {
-    this.setupSearchSubscription();
     this.loadGroups();
   }
 
@@ -338,116 +149,156 @@ export class GroupsComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private setupSearchSubscription(): void {
-    this.searchControl.valueChanges
-      .pipe(takeUntil(this.destroy$), debounceTime(500), distinctUntilChanged())
-      .subscribe(() => {
-        this.currentPage = 0;
-        this.loadGroups();
-      });
+  onPageChange(event: PageEvent): void {
+    this._state.update((state: GroupsState) => ({
+      ...state,
+      page: event.pageIndex,
+      size: event.pageSize,
+    }));
+    this.loadGroups();
+  }
 
-    this.activeOnlyControl.valueChanges
-      .pipe(takeUntil(this.destroy$))
+  onSortChange(sort: Sort): void {
+    this._state.update((state: GroupsState) => ({
+      ...state,
+      sortField: sort.active || null,
+      sortDirection: sort.direction || null,
+    }));
+    this.loadGroups();
+  }
+
+  refreshGroupInfo(groupId: string): void {
+    this.setActionLoading(groupId, true);
+
+    this.groupsService
+      .getGroup(groupId)
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError((error: any) => {
+          this.showError('Не удалось обновить информацию о группе');
+          throw error;
+        }),
+        finalize(() => this.setActionLoading(groupId, false))
+      )
       .subscribe(() => {
-        this.currentPage = 0;
-        this.loadGroups();
+        this.showSuccess('Информация о группе успешно обновлена');
+        this.loadGroups(); // Reload the list
       });
   }
 
-  private loadGroups(): void {
-    this.loading = true;
+  toggleGroupActive(group: VKGroupResponse): void {
+    const newStatus = !group.isActive;
+    this.setActionLoading(group.id, true);
 
-    const params: GroupsSearchParams = {
-      page: this.currentPage + 1,
-      size: this.pageSize,
+    this.groupsService
+      .toggleGroupActive(group.id, newStatus)
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError((error: any) => {
+          this.showError(
+            `Не удалось ${newStatus ? 'активировать' : 'деактивировать'} группу`
+          );
+          throw error;
+        }),
+        finalize(() => this.setActionLoading(group.id, false))
+      )
+      .subscribe(() => {
+        this.showSuccess(
+          `Группа успешно ${newStatus ? 'активирована' : 'деактивирована'}`
+        );
+        this.loadGroups(); // Reload the list
+      });
+  }
+
+  deleteGroup(group: VKGroupResponse): void {
+    if (confirm(`Вы уверены, что хотите удалить группу "${group.name}"?`)) {
+      this.setActionLoading(group.id, true);
+
+      this.groupsService
+        .deleteGroup(group.id)
+        .pipe(
+          takeUntil(this.destroy$),
+          catchError((error: any) => {
+            this.showError('Не удалось удалить группу');
+            throw error;
+          }),
+          finalize(() => this.setActionLoading(group.id, false))
+        )
+        .subscribe(() => {
+          this.showSuccess('Группа успешно удалена');
+          this.loadGroups(); // Reload the list
+        });
+    }
+  }
+
+  isActionLoading(groupId: string): boolean {
+    return this.loadingActions().has(groupId);
+  }
+
+  private setActionLoading(groupId: string, loading: boolean): void {
+    this.loadingActions.update((actions: Set<string>) => {
+      const newActions = new Set(actions);
+      if (loading) {
+        newActions.add(groupId);
+      } else {
+        newActions.delete(groupId);
+      }
+      return newActions;
+    });
+  }
+
+  private loadGroups(): void {
+    this._state.update((state) => ({ ...state, loading: true, error: null }));
+
+    const params: GroupsQueryParams = {
+      page: this.currentPage() + 1, // Backend uses 1-based pagination
+      limit: this.pageSize(),
       search: this.searchControl.value || undefined,
-      active_only: this.activeOnlyControl.value || undefined,
+      isActive: this.activeOnlyControl.value || undefined,
     };
 
     this.groupsService
       .getGroups(params)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.groups = response.items;
-          this.totalItems = response.total;
-          this.loading = false;
-        },
-        error: (error) => {
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError((error) => {
           console.error('Error loading groups:', error);
-          this.snackBar.open('Error loading groups', 'Close', {
-            duration: 3000,
-          });
-          this.loading = false;
-        },
+          this._state.update((state) => ({
+            ...state,
+            loading: false,
+            error: error.message || 'Не удалось загрузить группы',
+          }));
+          this.showError('Не удалось загрузить группы');
+          throw error;
+        }),
+        finalize(() => {
+          this._state.update((state) => ({ ...state, loading: false }));
+        })
+      )
+      .subscribe((response) => {
+        this._state.update((state: GroupsState) => ({
+          ...state,
+          items: response.groups,
+          total: response.total,
+          loading: false,
+        }));
       });
   }
 
-  onPageChange(event: PageEvent): void {
-    this.currentPage = event.pageIndex;
-    this.pageSize = event.pageSize;
-    this.loadGroups();
+  private showSuccess(message: string): void {
+    this.snackBar.open(message, 'Закрыть', {
+      duration: 3000,
+      horizontalPosition: 'end',
+      verticalPosition: 'top',
+    });
   }
 
-  refreshGroup(groupId: number): void {
-    this.groupsService
-      .refreshGroupInfo(groupId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.snackBar.open('Group info refreshed', 'Close', {
-            duration: 2000,
-          });
-          this.loadGroups();
-        },
-        error: (error) => {
-          console.error('Error refreshing group:', error);
-          this.snackBar.open('Error refreshing group', 'Close', {
-            duration: 3000,
-          });
-        },
-      });
-  }
-
-  toggleGroupActive(groupId: number, isActive: boolean): void {
-    this.groupsService
-      .toggleGroupActive(groupId, isActive)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.snackBar.open(
-            `Group ${isActive ? 'activated' : 'deactivated'}`,
-            'Close',
-            { duration: 2000 }
-          );
-          this.loadGroups();
-        },
-        error: (error) => {
-          console.error('Error toggling group status:', error);
-          this.snackBar.open('Error updating group status', 'Close', {
-            duration: 3000,
-          });
-        },
-      });
-  }
-
-  deleteGroup(groupId: number): void {
-    if (confirm('Are you sure you want to delete this group?')) {
-      this.groupsService
-        .deleteGroup(groupId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.snackBar.open('Group deleted', 'Close', { duration: 2000 });
-            this.loadGroups();
-          },
-          error: (error) => {
-            console.error('Error deleting group:', error);
-            this.snackBar.open('Error deleting group', 'Close', {
-              duration: 3000,
-            });
-          },
-        });
-    }
+  private showError(message: string): void {
+    this.snackBar.open(message, 'Закрыть', {
+      duration: 5000,
+      horizontalPosition: 'end',
+      verticalPosition: 'top',
+      panelClass: ['error-snackbar'],
+    });
   }
 }

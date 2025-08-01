@@ -5,9 +5,9 @@
  </div>
 
  <div class="settings-actions">
-  <button mat-raised-button color="primary" (click)="saveSettings()" [disabled]="isSaving">
+  <button mat-raised-button color="primary" (click)="saveSettings()" [disabled]="isSavingData">
    <mat-icon>save</mat-icon>
-   {{ isSaving ? 'Сохранение...' : 'Сохранить настройки' }}
+   {{ isSavingData ? 'Сохранение...' : 'Сохранить настройки' }}
   </button>
   <button mat-stroked-button (click)="resetToDefaults()">
    <mat-icon>restore</mat-icon>
@@ -24,7 +24,7 @@
   <input #importFile type="file" accept=".json" style="display: none" (change)="importSettings($event)">
  </div>
 
- <div class="settings-content" *ngIf="!isLoading; else loadingTemplate">
+ <div class="settings-content" *ngIf="!isLoadingData; else loadingTemplate">
   <mat-expansion-panel class="settings-panel">
    <mat-expansion-panel-header>
     <mat-panel-title>
@@ -158,10 +158,10 @@
 
    <form [formGroup]="notificationForm" class="settings-form">
     <div class="toggle-options">
-     <mat-slide-toggle formControlName="enable_email_notifications">
+     <mat-slide-toggle formControlName="email_notifications">
       Email уведомления
      </mat-slide-toggle>
-     <mat-slide-toggle formControlName="enable_browser_notifications">
+     <mat-slide-toggle formControlName="browser_notifications">
       Браузерные уведомления
      </mat-slide-toggle>
      <mat-slide-toggle formControlName="notify_on_parse_completion">

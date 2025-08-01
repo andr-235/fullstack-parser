@@ -5,7 +5,7 @@ import {
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { AsyncPipe, CommonModule, NgOptimizedImage } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import {
@@ -16,8 +16,11 @@ import {
 } from '@angular/material/sidenav';
 import { MatListModule, MatNavList, MatListItem } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { map, shareReplay } from 'rxjs/operators';
+import { ThemeToggleComponent } from './shared/components/theme-toggle/theme-toggle.component';
 
 @Component({
   selector: 'app-root',
@@ -25,9 +28,7 @@ import { map, shareReplay } from 'rxjs/operators';
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
-    AsyncPipe,
     CommonModule,
-    NgOptimizedImage,
     MatToolbarModule,
     MatButtonModule,
     MatSidenavModule,
@@ -38,6 +39,9 @@ import { map, shareReplay } from 'rxjs/operators';
     MatSidenavContainer,
     MatSidenav,
     MatSidenavContent,
+    MatMenuModule,
+    MatTooltipModule,
+    ThemeToggleComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',

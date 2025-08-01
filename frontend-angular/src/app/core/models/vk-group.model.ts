@@ -1,22 +1,26 @@
 export interface BaseEntity {
   id: number;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PaginatedResponse<T> {
   total: number;
   page: number;
-  size: number;
-  items: T[];
+  limit: number;
+  totalPages: number;
+  groups?: T[];
+  keywords?: T[];
+  comments?: T[];
+  items?: T[];
 }
 
 export interface VKGroupBase {
-  screen_name: string;
+  screenName: string;
   name: string;
   description?: string;
-  is_active: boolean;
-  max_posts_to_check: number;
+  isActive: boolean;
+  maxPostsToCheck: number;
 }
 
 export interface VKGroupCreate {
@@ -37,31 +41,23 @@ export interface VKGroupUpdate {
 
 export interface VKGroupResponse {
   id: number;
+  vkId: number;
+  screenName: string;
   name: string;
-  screen_name: string;
   description: string;
-  members_count: number;
-  is_closed: boolean;
-  type: string;
-  photo_100: string;
-  photo_200: string;
-  status: 'active' | 'inactive' | 'pending';
-  category: string;
-  created_at: string;
-  updated_at: string;
-  last_parsed_at?: string;
-  parsing_enabled: boolean;
-  keywords_count: number;
-  comments_count: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  postCount: number;
 }
 
 export interface VKGroupStats {
-  total_groups: number;
-  active_groups: number;
-  inactive_groups: number;
-  pending_groups: number;
-  total_members: number;
-  total_comments: number;
-  total_keywords: number;
-  parsing_enabled_groups: number;
+  totalGroups: number;
+  activeGroups: number;
+  inactiveGroups: number;
+  pendingGroups: number;
+  totalMembers: number;
+  totalComments: number;
+  totalKeywords: number;
+  parsingEnabledGroups: number;
 }
