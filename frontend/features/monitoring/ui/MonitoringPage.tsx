@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { VKGroupMonitoring } from '@/types/api'
+import { VKGroupMonitoring } from '@/shared/types'
 import {
   Card,
   CardContent,

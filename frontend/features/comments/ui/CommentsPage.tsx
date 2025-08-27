@@ -60,7 +60,7 @@ import {
 } from 'lucide-react'
 import { useDebounce } from '@/shared/hooks'
 import Link from 'next/link'
-import type { VKCommentResponse, KeywordResponse } from '@/types/api'
+import type { VKCommentResponse, KeywordResponse } from '@/shared/types'
 
 // Helper to highlight keywords in text
 const HighlightedText = ({

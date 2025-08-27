@@ -15,10 +15,10 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /app
 
 # Копирование файлов зависимостей для кеширования
-COPY package.json bun.lockb* ./
+COPY package.json ./
 
 # Установка зависимостей с кешированием
-RUN bun install --frozen-lockfile
+RUN bun install
 
 # ----------- Stage 2: Builder (optimized build) -----------
 FROM oven/bun:1.2.19-alpine AS builder
@@ -26,7 +26,7 @@ WORKDIR /app
 
 # Копирование зависимостей
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/bun.lockb ./bun.lockb
+COPY --from=deps /app/bun.lock ./bun.lock
 
 # Копирование исходного кода
 COPY . .

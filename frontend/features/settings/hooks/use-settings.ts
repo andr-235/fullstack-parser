@@ -5,7 +5,7 @@ import type {
   SettingsUpdateRequest,
   SettingsResponse,
   SettingsHealthStatus,
-} from '@/types/settings'
+} from '@/shared/types'
 import { toast } from 'react-hot-toast'
 
 /**

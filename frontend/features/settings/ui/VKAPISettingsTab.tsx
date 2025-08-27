@@ -22,7 +22,7 @@ import {
 } from '@/shared/ui'
 import { Badge } from '@/shared/ui'
 import { Wifi, Eye, EyeOff, TestTube } from 'lucide-react'
-import { SETTINGS_VALIDATION } from '@/types/settings'
+import { SETTINGS_VALIDATION } from '@/shared/types'
 
 export function VKAPISettingsTab() {
   const { data: settingsData, isLoading } = useSettings()

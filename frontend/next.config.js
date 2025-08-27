@@ -160,7 +160,7 @@ const nextConfig = {
       return [
         {
           source: '/api/v1/:path*',
-          destination: `${process.env.NEXT_PUBLIC_API_URL || 'https://parser.mysite.ru'}/api/v1/:path*`,
+          destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api/v1'}/api/v1/:path*`,
         },
       ]
     }

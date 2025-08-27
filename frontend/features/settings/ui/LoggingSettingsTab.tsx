@@ -24,7 +24,7 @@ import {
   CardTitle,
 } from '@/shared/ui'
 import { FileText } from 'lucide-react'
-import { LOG_LEVEL_OPTIONS, LOG_FORMAT_OPTIONS } from '@/types/settings'
+import { LOG_LEVEL_OPTIONS, LOG_FORMAT_OPTIONS } from '@/shared/types'
 
 export function LoggingSettingsTab() {
   const { data: settingsData, isLoading } = useSettings()

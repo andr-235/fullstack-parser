@@ -8,7 +8,7 @@ import { DebugPanel } from '@/shared/ui/debug/DebugPanel'
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 import { ThemeProvider } from '@/shared/ui/theme-provider'
 
-import { QueryProvider } from '@/providers/QueryProvider'
+import { QueryProvider } from '@/app/providers/QueryProvider'
 
 import { Sidebar, Header } from '@/widgets/layout'
 
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   title: APP_CONFIG.name,
   description: APP_CONFIG.description,
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || 'https://parser.mysite.ru'
+    process.env.NEXT_PUBLIC_APP_URL || 'http://localhost'
   ),
   icons: {
     icon: [

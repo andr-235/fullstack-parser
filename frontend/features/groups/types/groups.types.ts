@@ -1,5 +1,5 @@
 // Groups feature types
-import type { VKGroupResponse } from '@/types/api'
+import type { VKGroupResponse } from '@/shared/types'
 
 // Props для компонентов
 export interface GroupsHeaderProps {

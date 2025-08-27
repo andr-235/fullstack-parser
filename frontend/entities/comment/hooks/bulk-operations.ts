@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiService } from '@/shared/lib'
-import type { VKCommentResponse } from '@/types/api'
+import type { VKCommentResponse } from '@/shared/types'
 
 /**
  * Хук для массовой отметки комментариев как просмотренных

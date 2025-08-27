@@ -25,7 +25,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import type { VKGroupUploadResponse } from '@/types/api'
+import type { VKGroupUploadResponse } from '@/shared/types'
 
 interface UploadGroupsModalProps {
   onSuccess?: () => void

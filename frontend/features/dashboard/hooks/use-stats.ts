@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/shared/lib/api'
-import type { DashboardStats, GlobalStats } from '@/types/api'
+import type { DashboardStats, GlobalStats } from '@/shared/types'
 
 // Хук для получения статистики дашборда
 export function useDashboardStats() {

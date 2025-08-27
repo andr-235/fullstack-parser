@@ -13,7 +13,7 @@ import { Input } from '@/shared/ui'
 import { Button } from '@/shared/ui'
 import { Search, Filter, XCircle } from 'lucide-react'
 import { useDebounce } from '@/shared/hooks'
-import type { VKGroupResponse, KeywordResponse } from '@/types/api'
+import type { VKGroupResponse, KeywordResponse } from '@/shared/types'
 
 interface CommentsFiltersProps {
   groups: VKGroupResponse[]

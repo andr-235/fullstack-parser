@@ -11,10 +11,7 @@ import { api, type ApiResponse, type ApiError } from '@/shared/lib/api'
 export function useApiQuery<T>(
   key: readonly unknown[],
   url: string,
-  options?: Omit<
-    UseQueryOptions<ApiResponse<T>, ApiError>,
-    'queryKey' | 'queryFn'
-  >
+  options?: Omit<UseQueryOptions<T, ApiError>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
     queryKey: key,
@@ -26,7 +23,7 @@ export function useApiQuery<T>(
 // Хук для API мутаций
 export function useApiMutation<T, V = any>(
   url: string,
-  options?: Omit<UseMutationOptions<ApiResponse<T>, ApiError, V>, 'mutationFn'>
+  options?: Omit<UseMutationOptions<T, ApiError, V>, 'mutationFn'>
 ) {
   return useMutation({
     mutationFn: (data: V) => api.post<T>(url, data),
@@ -37,7 +34,7 @@ export function useApiMutation<T, V = any>(
 // Хук для API обновлений (PUT)
 export function useApiUpdate<T, V = any>(
   url: string,
-  options?: Omit<UseMutationOptions<ApiResponse<T>, ApiError, V>, 'mutationFn'>
+  options?: Omit<UseMutationOptions<T, ApiError, V>, 'mutationFn'>
 ) {
   return useMutation({
     mutationFn: (data: V) => api.put<T>(url, data),
@@ -48,7 +45,7 @@ export function useApiUpdate<T, V = any>(
 // Хук для API обновлений (PATCH)
 export function useApiPatch<T, V = any>(
   url: string,
-  options?: Omit<UseMutationOptions<ApiResponse<T>, ApiError, V>, 'mutationFn'>
+  options?: Omit<UseMutationOptions<T, ApiError, V>, 'mutationFn'>
 ) {
   return useMutation({
     mutationFn: (data: V) => api.patch<T>(url, data),
@@ -60,7 +57,7 @@ export function useApiPatch<T, V = any>(
 export function useApiDelete<T>(
   url: string,
   options?: Omit<
-    UseMutationOptions<ApiResponse<T>, ApiError, void>,
+    UseMutationOptions<T, ApiError, void>,
     'mutationFn'
   >
 ) {
@@ -75,7 +72,7 @@ export function useApiUpload<T>(
   url: string,
   options?: Omit<
     UseMutationOptions<
-      ApiResponse<T>,
+      T,
       ApiError,
       { file: File; onProgress?: (progress: number) => void }
     >,

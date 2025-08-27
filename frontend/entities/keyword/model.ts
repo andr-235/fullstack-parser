@@ -1,4 +1,4 @@
-import type { KeywordResponse } from '@/types/api'
+import type { KeywordResponse } from '@/shared/types'
 
 export class Keyword {
   id: number

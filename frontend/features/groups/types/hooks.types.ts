@@ -4,7 +4,7 @@ import type {
   VKGroupCreate,
   VKGroupUpdate,
   PaginationParams,
-} from '@/types/api'
+} from '@/shared/types'
 import type { GroupsFilters, SortConfig } from './groups.types'
 
 // Типы для параметров хуков

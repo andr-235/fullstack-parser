@@ -36,7 +36,7 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import type { VKGroupResponse } from '@/types/api'
+import type { VKGroupResponse } from '@/shared/types'
 import { toast } from 'react-hot-toast'
 import { useDebounce, useInfiniteScroll } from '@/shared/hooks'
 import {

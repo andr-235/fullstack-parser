@@ -6,7 +6,7 @@ import type {
   PaginatedResponse,
   ParserState,
   ParserStats,
-} from '@/types/api'
+} from '@/shared/types'
 import { toast } from 'sonner'
 
 /**

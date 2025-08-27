@@ -5,7 +5,7 @@ import { CommentsTable } from '@/widgets/comments-table'
 import { LoadingSpinner } from '@/shared/ui'
 import { Button } from '@/shared/ui'
 import { RefreshCw } from 'lucide-react'
-import type { VKCommentResponse } from '@/types/api'
+import type { VKCommentResponse } from '@/shared/types'
 
 interface CommentsListProps {
   comments: VKCommentResponse[]

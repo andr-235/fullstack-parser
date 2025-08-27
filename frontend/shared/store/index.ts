@@ -1,341 +1,345 @@
 import { create } from 'zustand'
-import { devtools, persist, subscribeWithSelector } from 'zustand/middleware'
-import { immer } from 'zustand/middleware/immer'
+import { devtools, persist } from 'zustand/middleware'
 
-// Типы для состояния приложения
-export interface AppState {
-  // UI состояние
-  ui: {
-    theme: 'light' | 'dark' | 'system'
-    sidebarCollapsed: boolean
-    notifications: Notification[]
-    loading: boolean
-  }
-
-  // Пользователь
-  user: {
-    id?: number
-    email?: string
-    name?: string
-    isAuthenticated: boolean
-    preferences: UserPreferences
-  }
-
-  // Фильтры и настройки
-  filters: {
-    comments: CommentFilters
-    groups: GroupFilters
-    keywords: KeywordFilters
-  }
-
-  // Кеш
-  cache: {
-    lastVisitedPages: string[]
-    searchHistory: string[]
-    recentGroups: number[]
-  }
-}
-
-// Типы для уведомлений
-export interface Notification {
-  id: string
-  type: 'success' | 'error' | 'warning' | 'info'
-  title: string
-  message: string
-  timestamp: Date
-  read: boolean
-}
-
-// Типы для пользовательских настроек
-export interface UserPreferences {
-  language: string
-  timezone: string
-  dateFormat: string
-  pageSize: number
+/**
+ * Типы для store
+ */
+interface AppSettings {
+  theme: 'light' | 'dark' | 'system'
+  sidebarCollapsed: boolean
   autoRefresh: boolean
-  notifications: {
-    email: boolean
-    browser: boolean
-    sound: boolean
+  refreshInterval: number // в секундах
+  itemsPerPage: number
+  dateFormat: string
+  showNotifications: boolean
+}
+
+interface UIState {
+  // Модальные окна
+  isCreateGroupModalOpen: boolean
+  isCreateKeywordModalOpen: boolean
+  isBulkKeywordModalOpen: boolean
+
+  // Фильтры
+  groupsFilter: {
+    activeOnly: boolean
+    searchTerm: string
   }
-}
-
-// Типы для фильтров
-export interface CommentFilters {
-  status: 'all' | 'new' | 'viewed' | 'archived'
-  sentiment: 'all' | 'positive' | 'negative' | 'neutral'
-  dateRange: {
-    from?: Date
-    to?: Date
+  keywordsFilter: {
+    activeOnly: boolean
+    category?: string
+    searchTerm: string
   }
-  groups: number[]
-  keywords: string[]
-  search: string
+  commentsFilter: {
+    groupId?: number
+    keywordId?: number
+    authorId?: number
+    dateFrom?: string
+    dateTo?: string
+    searchTerm: string
+  }
+
+  // Выборка элементов
+  selectedGroups: number[]
+  selectedKeywords: number[]
+  selectedComments: number[]
 }
 
-export interface GroupFilters {
-  status: 'all' | 'active' | 'inactive'
-  monitoring: 'all' | 'enabled' | 'disabled'
-  search: string
-}
+interface AppStore {
+  // Настройки
+  settings: AppSettings
+  updateSettings: (settings: Partial<AppSettings>) => void
+  resetSettings: () => void
 
-export interface KeywordFilters {
-  category: 'all' | string
-  status: 'all' | 'active' | 'inactive'
-  search: string
-}
+  // UI состояние
+  ui: UIState
+  updateUI: (ui: Partial<UIState>) => void
+  resetUI: () => void
 
-// Действия для store
-export interface AppActions {
-  // UI действия
-  setTheme: (theme: 'light' | 'dark' | 'system') => void
-  toggleSidebar: () => void
-  addNotification: (
-    notification: Omit<Notification, 'id' | 'timestamp' | 'read'>
+  // Модальные окна
+  openModal: (
+    modal: keyof Pick<
+      UIState,
+      | 'isCreateGroupModalOpen'
+      | 'isCreateKeywordModalOpen'
+      | 'isBulkKeywordModalOpen'
+    >
   ) => void
-  removeNotification: (id: string) => void
-  markNotificationAsRead: (id: string) => void
-  clearNotifications: () => void
-  setLoading: (loading: boolean) => void
+  closeModal: (
+    modal: keyof Pick<
+      UIState,
+      | 'isCreateGroupModalOpen'
+      | 'isCreateKeywordModalOpen'
+      | 'isBulkKeywordModalOpen'
+    >
+  ) => void
+  closeAllModals: () => void
 
-  // Пользовательские действия
-  setUser: (user: Partial<AppState['user']>) => void
-  logout: () => void
-  updatePreferences: (preferences: Partial<UserPreferences>) => void
+  // Фильтры
+  updateGroupsFilter: (filter: Partial<UIState['groupsFilter']>) => void
+  updateKeywordsFilter: (filter: Partial<UIState['keywordsFilter']>) => void
+  updateCommentsFilter: (filter: Partial<UIState['commentsFilter']>) => void
+  resetFilters: () => void
 
-  // Действия с фильтрами
-  setCommentFilters: (filters: Partial<CommentFilters>) => void
-  resetCommentFilters: () => void
-  setGroupFilters: (filters: Partial<GroupFilters>) => void
-  resetGroupFilters: () => void
-  setKeywordFilters: (filters: Partial<KeywordFilters>) => void
-  resetKeywordFilters: () => void
+  // Выборка
+  selectGroup: (id: number) => void
+  unselectGroup: (id: number) => void
+  selectAllGroups: (ids: number[]) => void
+  clearGroupSelection: () => void
 
-  // Действия с кешем
-  addToSearchHistory: (query: string) => void
-  clearSearchHistory: () => void
-  addToRecentGroups: (groupId: number) => void
-  addToLastVisitedPages: (page: string) => void
+  selectKeyword: (id: number) => void
+  unselectKeyword: (id: number) => void
+  selectAllKeywords: (ids: number[]) => void
+  clearKeywordSelection: () => void
+
+  selectComment: (id: number) => void
+  unselectComment: (id: number) => void
+  selectAllComments: (ids: number[]) => void
+  clearCommentSelection: () => void
+
+  // Утилиты
+  clearAllSelections: () => void
 }
 
-// Начальное состояние
-const initialState: AppState = {
-  ui: {
-    theme: 'system',
-    sidebarCollapsed: false,
-    notifications: [],
-    loading: false,
-  },
-  user: {
-    isAuthenticated: false,
-    preferences: {
-      language: 'ru',
-      timezone: 'Europe/Moscow',
-      dateFormat: 'dd.MM.yyyy HH:mm',
-      pageSize: 20,
-      autoRefresh: true,
-      notifications: {
-        email: true,
-        browser: true,
-        sound: false,
-      },
-    },
-  },
-  filters: {
-    comments: {
-      status: 'all',
-      sentiment: 'all',
-      dateRange: {},
-      groups: [],
-      keywords: [],
-      search: '',
-    },
-    groups: {
-      status: 'all',
-      monitoring: 'all',
-      search: '',
-    },
-    keywords: {
-      category: 'all',
-      status: 'all',
-      search: '',
-    },
-  },
-  cache: {
-    lastVisitedPages: [],
-    searchHistory: [],
-    recentGroups: [],
-  },
+/**
+ * Дефолтные настройки
+ */
+const defaultSettings: AppSettings = {
+  theme: 'system',
+  sidebarCollapsed: false,
+  autoRefresh: true,
+  refreshInterval: 30,
+  itemsPerPage: 20,
+  dateFormat: 'dd.MM.yyyy HH:mm',
+  showNotifications: true,
 }
 
-// Создание store
-export const useAppStore = create<AppState & AppActions>()(
+const defaultUI: UIState = {
+  isCreateGroupModalOpen: false,
+  isCreateKeywordModalOpen: false,
+  isBulkKeywordModalOpen: false,
+
+  groupsFilter: {
+    activeOnly: true,
+    searchTerm: '',
+  },
+  keywordsFilter: {
+    activeOnly: true,
+    searchTerm: '',
+  },
+  commentsFilter: {
+    searchTerm: '',
+  },
+
+  selectedGroups: [],
+  selectedKeywords: [],
+  selectedComments: [],
+}
+
+/**
+ * Основной store приложения
+ */
+export const useAppStore = create<AppStore>()(
   devtools(
     persist(
-      subscribeWithSelector(
-        immer((set, get) => ({
-          ...initialState,
+      (set, get) => ({
+        // Начальное состояние
+        settings: defaultSettings,
+        ui: defaultUI,
 
-          // UI действия
-          setTheme: (theme) =>
-            set((state) => {
-              state.ui.theme = theme
-            }),
+        // Методы для настроек
+        updateSettings: (newSettings) =>
+          set((state) => ({
+            settings: { ...state.settings, ...newSettings },
+          })),
+        resetSettings: () =>
+          set((state) => ({
+            settings: { ...defaultSettings },
+          })),
 
-          toggleSidebar: () =>
-            set((state) => {
-              state.ui.sidebarCollapsed = !state.ui.sidebarCollapsed
-            }),
+        // Методы для UI состояния
+        updateUI: (newUI) =>
+          set((state) => ({
+            ui: { ...state.ui, ...newUI },
+          })),
+        resetUI: () =>
+          set((state) => ({
+            ui: { ...defaultUI },
+          })),
 
-          addNotification: (notification) =>
-            set((state) => {
-              const newNotification: Notification = {
-                ...notification,
-                id: Date.now().toString(),
-                timestamp: new Date(),
-                read: false,
-              }
-              state.ui.notifications.unshift(newNotification)
+        // Модальные окна
+        openModal: (modal) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              [modal]: true,
+            },
+          })),
+        closeModal: (modal) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              [modal]: false,
+            },
+          })),
+        closeAllModals: () =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              isCreateGroupModalOpen: false,
+              isCreateKeywordModalOpen: false,
+              isBulkKeywordModalOpen: false,
+            },
+          })),
 
-              // Ограничиваем количество уведомлений
-              if (state.ui.notifications.length > 50) {
-                state.ui.notifications = state.ui.notifications.slice(0, 50)
-              }
-            }),
+        // Фильтры
+        updateGroupsFilter: (filter) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              groupsFilter: { ...state.ui.groupsFilter, ...filter },
+            },
+          })),
+        updateKeywordsFilter: (filter) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              keywordsFilter: { ...state.ui.keywordsFilter, ...filter },
+            },
+          })),
+        updateCommentsFilter: (filter) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              commentsFilter: { ...state.ui.commentsFilter, ...filter },
+            },
+          })),
+        resetFilters: () =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              groupsFilter: { ...defaultUI.groupsFilter },
+              keywordsFilter: { ...defaultUI.keywordsFilter },
+              commentsFilter: { ...defaultUI.commentsFilter },
+            },
+          })),
 
-          removeNotification: (id) =>
-            set((state) => {
-              state.ui.notifications = state.ui.notifications.filter(
-                (n: Notification) => n.id !== id
-              )
-            }),
+        // Выборка групп
+        selectGroup: (id) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              selectedGroups: [...state.ui.selectedGroups, id],
+            },
+          })),
+        unselectGroup: (id) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              selectedGroups: state.ui.selectedGroups.filter(
+                (groupId) => groupId !== id
+              ),
+            },
+          })),
+        selectAllGroups: (ids) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              selectedGroups: ids,
+            },
+          })),
+        clearGroupSelection: () =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              selectedGroups: [],
+            },
+          })),
 
-          markNotificationAsRead: (id) =>
-            set((state) => {
-              const notification = state.ui.notifications.find(
-                (n: Notification) => n.id === id
-              )
-              if (notification) {
-                notification.read = true
-              }
-            }),
+        // Выборка ключевых слов
+        selectKeyword: (id) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              selectedKeywords: [...state.ui.selectedKeywords, id],
+            },
+          })),
+        unselectKeyword: (id) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              selectedKeywords: state.ui.selectedKeywords.filter(
+                (keywordId) => keywordId !== id
+              ),
+            },
+          })),
+        selectAllKeywords: (ids) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              selectedKeywords: ids,
+            },
+          })),
+        clearKeywordSelection: () =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              selectedKeywords: [],
+            },
+          })),
 
-          clearNotifications: () =>
-            set((state) => {
-              state.ui.notifications = []
-            }),
+        // Выборка комментариев
+        selectComment: (id) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              selectedComments: [...state.ui.selectedComments, id],
+            },
+          })),
+        unselectComment: (id) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              selectedComments: state.ui.selectedComments.filter(
+                (commentId) => commentId !== id
+              ),
+            },
+          })),
+        selectAllComments: (ids) =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              selectedComments: ids,
+            },
+          })),
+        clearCommentSelection: () =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              selectedComments: [],
+            },
+          })),
 
-          setLoading: (loading) =>
-            set((state) => {
-              state.ui.loading = loading
-            }),
-
-          // Пользовательские действия
-          setUser: (user) =>
-            set((state) => {
-              Object.assign(state.user, user)
-            }),
-
-          logout: () =>
-            set((state) => {
-              state.user = initialState.user
-              state.ui.notifications = []
-            }),
-
-          updatePreferences: (preferences) =>
-            set((state) => {
-              Object.assign(state.user.preferences, preferences)
-            }),
-
-          // Действия с фильтрами
-          setCommentFilters: (filters) =>
-            set((state) => {
-              Object.assign(state.filters.comments, filters)
-            }),
-
-          resetCommentFilters: () =>
-            set((state) => {
-              state.filters.comments = initialState.filters.comments
-            }),
-
-          setGroupFilters: (filters) =>
-            set((state) => {
-              Object.assign(state.filters.groups, filters)
-            }),
-
-          resetGroupFilters: () =>
-            set((state) => {
-              state.filters.groups = initialState.filters.groups
-            }),
-
-          setKeywordFilters: (filters) =>
-            set((state) => {
-              Object.assign(state.filters.keywords, filters)
-            }),
-
-          resetKeywordFilters: () =>
-            set((state) => {
-              state.filters.keywords = initialState.filters.keywords
-            }),
-
-          // Действия с кешем
-          addToSearchHistory: (query) =>
-            set((state) => {
-              if (!state.cache.searchHistory.includes(query)) {
-                state.cache.searchHistory.unshift(query)
-                // Ограничиваем историю поиска
-                if (state.cache.searchHistory.length > 20) {
-                  state.cache.searchHistory = state.cache.searchHistory.slice(
-                    0,
-                    20
-                  )
-                }
-              }
-            }),
-
-          clearSearchHistory: () =>
-            set((state) => {
-              state.cache.searchHistory = []
-            }),
-
-          addToRecentGroups: (groupId) =>
-            set((state) => {
-              const index = state.cache.recentGroups.indexOf(groupId)
-              if (index > -1) {
-                state.cache.recentGroups.splice(index, 1)
-              }
-              state.cache.recentGroups.unshift(groupId)
-              // Ограничиваем количество недавних групп
-              if (state.cache.recentGroups.length > 10) {
-                state.cache.recentGroups = state.cache.recentGroups.slice(0, 10)
-              }
-            }),
-
-          addToLastVisitedPages: (page) =>
-            set((state) => {
-              const index = state.cache.lastVisitedPages.indexOf(page)
-              if (index > -1) {
-                state.cache.lastVisitedPages.splice(index, 1)
-              }
-              state.cache.lastVisitedPages.unshift(page)
-              // Ограничиваем количество страниц
-              if (state.cache.lastVisitedPages.length > 10) {
-                state.cache.lastVisitedPages =
-                  state.cache.lastVisitedPages.slice(0, 10)
-              }
-            }),
-        }))
-      ),
+        // Утилиты
+        clearAllSelections: () =>
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              selectedGroups: [],
+              selectedKeywords: [],
+              selectedComments: [],
+            },
+          })),
+      }),
       {
         name: 'app-store',
         partialize: (state) => ({
+          settings: state.settings,
           ui: {
-            theme: state.ui.theme,
-            sidebarCollapsed: state.ui.sidebarCollapsed,
+            groupsFilter: state.ui.groupsFilter,
+            keywordsFilter: state.ui.keywordsFilter,
+            commentsFilter: state.ui.commentsFilter,
           },
-          user: { preferences: state.user.preferences },
-          filters: state.filters,
-          cache: state.cache,
         }),
       }
     ),
@@ -344,24 +348,3 @@ export const useAppStore = create<AppState & AppActions>()(
     }
   )
 )
-
-// Селекторы для оптимизации
-export const useTheme = () => useAppStore((state) => state.ui.theme)
-export const useSidebarCollapsed = () =>
-  useAppStore((state) => state.ui.sidebarCollapsed)
-export const useNotifications = () =>
-  useAppStore((state) => state.ui.notifications)
-export const useLoading = () => useAppStore((state) => state.ui.loading)
-export const useUser = () => useAppStore((state) => state.user)
-export const useUserPreferences = () =>
-  useAppStore((state) => state.user.preferences)
-export const useCommentFilters = () =>
-  useAppStore((state) => state.filters.comments)
-export const useGroupFilters = () =>
-  useAppStore((state) => state.filters.groups)
-export const useKeywordFilters = () =>
-  useAppStore((state) => state.filters.keywords)
-export const useSearchHistory = () =>
-  useAppStore((state) => state.cache.searchHistory)
-export const useRecentGroups = () =>
-  useAppStore((state) => state.cache.recentGroups)

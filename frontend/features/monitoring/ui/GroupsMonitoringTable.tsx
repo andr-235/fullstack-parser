@@ -43,7 +43,7 @@ import {
   calculateProgress,
   formatNextRunTime,
 } from '@/shared/lib/time-utils'
-import type { VKGroupMonitoring } from '@/types/api'
+import type { VKGroupMonitoring } from '@/shared/types'
 import MonitoringSettings from './MonitoringSettings'
 
 interface GroupsMonitoringTableProps {

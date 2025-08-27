@@ -7,7 +7,20 @@ import type {
   PaginationParams,
   PaginatedResponse,
   VKGroupUploadResponse,
-} from '@/types/api'
+} from '@/shared/types'
+
+// Вспомогательная функция для исправления MIME типов файлов
+function processFileForUpload(file: File): File {
+  const fileExtension = file.name.split('.').pop()?.toLowerCase()
+
+  if (fileExtension === 'txt') {
+    return new File([file], file.name, { type: 'text/plain' })
+  } else if (fileExtension === 'csv') {
+    return new File([file], file.name, { type: 'text/csv' })
+  }
+
+  return file
+}
 
 // Хук для получения групп
 export function useGroups(
@@ -26,7 +39,7 @@ export function useGroups(
       if (search) searchParams.append('search', search)
 
       return api.get<PaginatedResponse<VKGroupResponse>>(
-        `/groups?${searchParams.toString()}`
+        `/groups/?${searchParams.toString()}`
       )
     },
     staleTime: 5 * 60 * 1000, // 5 минут
@@ -120,7 +133,8 @@ export function useUploadGroupsWithProgress() {
     }) => {
       return new Promise<VKGroupUploadResponse>((resolve, reject) => {
         const formData = new FormData()
-        formData.append('file', file)
+
+        formData.append('file', processFileForUpload(file))
         if (options?.is_active !== undefined)
           formData.append('is_active', options.is_active.toString())
         if (options?.max_posts_to_check)
@@ -130,26 +144,19 @@ export function useUploadGroupsWithProgress() {
           )
 
         // Отправляем файл и получаем upload_id
-        fetch('/groups/upload-with-progress/', {
-          method: 'POST',
-          body: formData,
-        })
-          .then((response) => response.json())
+        api
+          .post('/groups/upload-with-progress/', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          })
           .then((data: { upload_id: string; status: string }) => {
             const uploadId = data.upload_id
 
             // Функция для проверки прогресса
             const checkProgress = () => {
-              fetch(`/groups/upload-progress/${uploadId}`)
-                .then((response) => {
-                  if (response.ok) {
-                    return response.json()
-                  } else if (response.status === 404) {
-                    throw new Error('Прогресс загрузки не найден')
-                  } else {
-                    throw new Error('Ошибка получения прогресса')
-                  }
-                })
+              api
+                .get(`/groups/upload-progress/${uploadId}`)
                 .then((progressData) => {
                   onProgress?.(progressData)
 
@@ -207,7 +214,8 @@ export function useUploadGroupsFromFile() {
       onProgress?: (progress: number) => void
     }) => {
       const formData = new FormData()
-      formData.append('file', file)
+
+      formData.append('file', processFileForUpload(file))
       if (options?.is_active !== undefined)
         formData.append('is_active', options.is_active.toString())
       if (options?.max_posts_to_check)
@@ -216,13 +224,10 @@ export function useUploadGroupsFromFile() {
           options.max_posts_to_check.toString()
         )
 
-      const res = await api.post<VKGroupUploadResponse>(
+      const res = await api.upload<VKGroupUploadResponse>(
         '/groups/upload',
         formData,
         {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
           onUploadProgress: (progressEvent) => {
             if (onProgress && progressEvent.total) {
               const progress = Math.round(

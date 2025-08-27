@@ -1,4 +1,4 @@
-import type { VKGroupResponse } from '@/types/api'
+import type { VKGroupResponse } from '@/shared/types'
 
 export class Group {
   id: number

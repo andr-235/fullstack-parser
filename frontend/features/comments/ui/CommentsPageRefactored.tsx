@@ -12,7 +12,7 @@ import { useKeywords } from '@/entities/keyword'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react'
 import { CommentsFilters, CommentsList, CommentsStats } from './components'
-import type { VKCommentResponse } from '@/types/api'
+import type { VKCommentResponse } from '@/shared/types'
 
 export default function CommentsPage() {
   // Состояние фильтров

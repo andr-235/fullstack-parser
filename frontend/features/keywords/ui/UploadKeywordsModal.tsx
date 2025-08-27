@@ -25,7 +25,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import type { KeywordUploadResponse } from '@/types/api'
+import type { KeywordUploadResponse } from '@/shared/types'
 
 interface UploadKeywordsModalProps {
   onSuccess?: () => void

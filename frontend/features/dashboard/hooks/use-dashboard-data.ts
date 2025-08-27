@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/shared/lib/api'
-import type { DashboardStats, GlobalStats, ParserState } from '@/types/api'
+import type { DashboardStats, GlobalStats, ParserState } from '@/shared/types'
 
 // Хук для получения статистики активности
 export function useActivityData(timeRange: string = '7d') {

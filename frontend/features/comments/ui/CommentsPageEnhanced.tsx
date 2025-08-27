@@ -26,7 +26,7 @@ import {
   type SortField,
   type SortOrder,
 } from './components'
-import type { VKCommentResponse } from '@/types/api'
+import type { VKCommentResponse } from '@/shared/types'
 
 export default function CommentsPageEnhanced() {
   // Состояние фильтров

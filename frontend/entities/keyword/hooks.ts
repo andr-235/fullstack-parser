@@ -12,7 +12,7 @@ import type {
   KeywordUpdate,
   PaginationParams,
   KeywordUploadResponse,
-} from '@/types/api'
+} from '@/shared/types'
 
 /**
  * Хук для получения списка ключевых слов

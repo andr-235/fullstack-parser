@@ -27,7 +27,7 @@ export function FileUpload({
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
-      if (acceptedFiles.length > 0) {
+      if (acceptedFiles.length > 0 && acceptedFiles[0]) {
         const file = acceptedFiles[0]
         setSelectedFile(file)
         onFileSelect(file)

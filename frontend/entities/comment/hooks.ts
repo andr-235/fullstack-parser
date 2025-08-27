@@ -10,7 +10,7 @@ import type {
   CommentSearchParams,
   PaginationParams,
   PaginatedResponse,
-} from '@/types/api'
+} from '@/shared/types'
 
 // Хук для получения комментариев
 export function useComments(params?: CommentSearchParams & PaginationParams) {

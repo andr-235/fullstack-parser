@@ -11,7 +11,7 @@ import type {
   VKGroupUpdate,
   PaginatedResponse,
   PaginationParams,
-} from '@/types/api'
+} from '@/shared/types'
 
 // Параметры для получения групп
 export interface UseGroupsParams extends PaginationParams {

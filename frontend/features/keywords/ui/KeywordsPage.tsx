@@ -42,7 +42,7 @@ import {
   Activity,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import type { KeywordResponse, KeywordUpdate } from '@/types/api'
+import type { KeywordResponse, KeywordUpdate } from '@/shared/types'
 import { useDebounce } from '@/shared/hooks'
 import {
   Select,

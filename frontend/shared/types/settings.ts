@@ -33,7 +33,7 @@ export interface LoggingSettings {
 
 // Настройки пользовательского интерфейса
 export interface UISettings {
-  theme: string
+  theme: 'light' | 'dark' | 'system'
   auto_refresh: boolean
   refresh_interval: number
   items_per_page: number
@@ -69,6 +69,11 @@ export interface SettingsHealthStatus {
   status: 'healthy' | 'warning' | 'error'
   message: string
   details?: Record<string, any>
+  settings_valid?: boolean
+  database_connected?: boolean
+  redis_connected?: boolean
+  vk_api_accessible?: boolean
+  last_check?: string
 }
 
 // Опции для темы

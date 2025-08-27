@@ -1,5 +1,5 @@
 // Groups types exports
-export type { VKGroupResponse } from '@/types/api'
+export type { VKGroupResponse } from '@/shared/types'
 
 // Groups feature types
 export * from './groups.types'

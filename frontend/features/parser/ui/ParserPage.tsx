@@ -50,17 +50,34 @@ import {
 import { Progress } from '@/shared/ui'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import type { ParseTaskResponse } from '@/types/api'
+import type { ParseTaskResponse } from '@/shared/types'
 
-const statusConfig: Record<
-  string,
-  {
+const statusConfig: {
+  running: {
     label: string
     variant: BadgeProps['variant']
     icon: React.ElementType
     color: string
   }
-> = {
+  completed: {
+    label: string
+    variant: BadgeProps['variant']
+    icon: React.ElementType
+    color: string
+  }
+  failed: {
+    label: string
+    variant: BadgeProps['variant']
+    icon: React.ElementType
+    color: string
+  }
+  stopped: {
+    label: string
+    variant: BadgeProps['variant']
+    icon: React.ElementType
+    color: string
+  }
+} = {
   running: {
     label: 'В работе',
     variant: 'default',
@@ -87,7 +104,7 @@ const statusConfig: Record<
   },
 }
 
-const ParserStatus = ({ status }: { status: string }) => {
+const ParserStatus = ({ status }: { status: keyof typeof statusConfig }) => {
   const config = statusConfig[status] || statusConfig.stopped
   return (
     <Badge className={`flex items-center gap-1.5 ${config.color}`}>
@@ -284,11 +301,10 @@ export default function ParserPage() {
                 </Button>
               ) : (
                 <Button
-                  className={`w-full flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105 ${
-                    isProcessing || startParserMutation.isPending
+                  className={`w-full flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105 ${isProcessing || startParserMutation.isPending
                       ? 'bg-yellow-600 hover:bg-yellow-700 cursor-wait'
                       : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
+                    }`}
                   onClick={handleStart}
                   disabled={!selectedGroupId || isActionInProgress}
                 >
@@ -387,12 +403,12 @@ export default function ParserPage() {
                                 <span className="text-slate-300">
                                   {task.completed_at
                                     ? formatDistanceToNow(
-                                        new Date(task.completed_at),
-                                        {
-                                          addSuffix: true,
-                                          locale: ru,
-                                        }
-                                      )
+                                      new Date(task.completed_at),
+                                      {
+                                        addSuffix: true,
+                                        locale: ru,
+                                      }
+                                    )
                                     : '-'}
                                 </span>
                               </div>

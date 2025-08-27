@@ -1,4 +1,4 @@
-import type { VKCommentResponse, CommentWithKeywords } from '@/types/api'
+import type { VKCommentResponse, CommentWithKeywords } from '@/shared/types'
 
 export class Comment {
   id: number

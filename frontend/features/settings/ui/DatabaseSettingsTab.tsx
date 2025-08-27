@@ -18,7 +18,7 @@ import {
 } from '@/shared/ui'
 import { Badge } from '@/shared/ui'
 import { Database } from 'lucide-react'
-import { SETTINGS_VALIDATION } from '@/types/settings'
+import { SETTINGS_VALIDATION } from '@/shared/types'
 
 export function DatabaseSettingsTab() {
   const { data: settingsData, isLoading } = useSettings()

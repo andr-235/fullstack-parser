@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui'
 import { Checkbox } from '@/shared/ui'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import type { VKCommentResponse } from '@/types/api'
+import type { VKCommentResponse } from '@/shared/types'
 import { Comment } from '@/entities/comment'
 
 interface CommentsTableProps {

@@ -1,5 +1,5 @@
 // Groups API types
-import type { VKGroupResponse } from '@/types/api'
+import type { VKGroupResponse } from '@/shared/types'
 import type { GroupsUploadRequest, GroupsUploadResponse } from './groups.types'
 
 // Базовые типы для API

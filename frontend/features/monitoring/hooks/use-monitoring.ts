@@ -6,7 +6,7 @@ import type {
   MonitoringGroupUpdate,
   MonitoringRunResult,
   SchedulerStatus,
-} from '@/types/api'
+} from '@/shared/types'
 import toast from 'react-hot-toast'
 
 /**

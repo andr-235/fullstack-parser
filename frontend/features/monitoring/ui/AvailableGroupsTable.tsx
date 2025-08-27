@@ -15,7 +15,7 @@ import { useEnableGroupMonitoring, useRunGroupMonitoring } from '../hooks'
 
 import { Play, Settings, Plus, Clock } from 'lucide-react'
 
-import type { VKGroupMonitoring } from '@/types/api'
+import type { VKGroupMonitoring } from '@/shared/types'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { formatDateTimeShort } from '@/shared/lib/time-utils'

@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui'
-import type { VKGroupMonitoring, MonitoringGroupUpdate } from '@/types/api'
+import type { VKGroupMonitoring, MonitoringGroupUpdate } from '@/shared/types'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { formatDateTimeShort } from '@/shared/lib/time-utils'

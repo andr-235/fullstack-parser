@@ -24,9 +24,7 @@
       "@/entities/*": ["./entities/*"],
       "@/features/*": ["./features/*"],
       "@/widgets/*": ["./widgets/*"],
-      "@/app/*": ["./app/*"],
-      "@/providers/*": ["./providers/*"],
-      "@/types/*": ["./types/*"]
+      "@/app/*": ["./app/*"]
     },
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,
@@ -39,7 +37,7 @@
   },
   "include": [
     "next-env.d.ts",
-    "types/**/*.d.ts",
+    "@types/**/*.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"

@@ -235,7 +235,7 @@ const handleInputChange = (field: string, value: string | number) => {
 ### Client-side Validation
 
 ```tsx
-import { SETTINGS_VALIDATION } from '@/types/settings'
+import { SETTINGS_VALIDATION } from '@/shared/types'
 
 const isTokenValid = formData.access_token.length > 0
 const isRequestsValid =

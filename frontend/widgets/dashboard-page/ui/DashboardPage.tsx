@@ -16,7 +16,7 @@ import {
   BarChart3,
   Settings,
 } from 'lucide-react'
-import type { DashboardStats } from '@/types/api'
+import type { DashboardStats } from '@/shared/types'
 
 export function DashboardPage() {
   const {
@@ -124,10 +124,10 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {globalStats?.data?.active_groups || 0}
+              {globalStats?.active_groups || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              из {globalStats?.data?.total_groups || 0} всего
+              из {globalStats?.total_groups || 0} всего
             </p>
           </CardContent>
         </Card>
@@ -139,10 +139,10 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {globalStats?.data?.active_keywords || 0}
+              {globalStats?.active_keywords || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              из {globalStats?.data?.total_keywords || 0} всего
+              из {globalStats?.total_keywords || 0} всего
             </p>
           </CardContent>
         </Card>

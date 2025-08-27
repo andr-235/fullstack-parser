@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui'
 import { useGlobalStats, useDashboardStats } from '../hooks'
 import { useDashboardData } from '../hooks/use-dashboard-data'
 import { LoadingSpinner } from '@/shared/ui'
-import type { KeywordResponse, VKGroupResponse } from '@/types/api'
+import type { KeywordResponse, VKGroupResponse } from '@/shared/types'
 import {
   Users,
   MessageSquare,
