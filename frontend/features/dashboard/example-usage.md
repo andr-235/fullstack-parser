@@ -295,8 +295,8 @@ function MyDataDrivenDashboard() {
 ### Создание собственного виджета
 
 ```tsx
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
 
 interface CustomWidgetProps {
   title: string

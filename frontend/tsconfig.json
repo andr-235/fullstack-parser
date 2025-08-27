@@ -25,8 +25,7 @@
       "@/features/*": ["./features/*"],
       "@/widgets/*": ["./widgets/*"],
       "@/app/*": ["./app/*"],
-      "@/lib/*": ["./shared/lib/*"],
-      "@/components/*": ["./components/*"]
+      "@/lib/*": ["./shared/lib/*"]
     },
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,
