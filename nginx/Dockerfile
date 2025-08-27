@@ -1,14 +1,32 @@
 FROM nginx:alpine
 
-# Копируем конфигурацию nginx
+# Устанавливаем необходимые пакеты для production
+RUN apk add --no-cache \
+ dumb-init \
+ curl \
+ && rm -rf /var/cache/apk/*
+
+# Создаем директорию для логов и устанавливаем правильные права
+RUN mkdir -p /var/log/nginx \
+ && chown -R nginx:nginx /var/log/nginx \
+ && touch /var/run/nginx.pid \
+ && chown -R nginx:nginx /var/run/nginx.pid \
+ && mkdir -p /var/cache/nginx \
+ && chown -R nginx:nginx /var/cache/nginx
+
+# Копируем оптимизированную конфигурацию nginx
 COPY nginx.prod.ip.conf /etc/nginx/nginx.conf
 
-# Копируем SSL сертификаты
-COPY ssl/ /etc/nginx/ssl/
+# Проверяем конфигурацию nginx на этапе сборки (убрано, так как upstream сервисы еще не запущены)
+# RUN nginx -t
 
-# Создаем директорию для логов
-RUN mkdir -p /var/log/nginx
+# Устанавливаем nginx как пользователя по умолчанию
+USER nginx
 
-EXPOSE 80 443
+# Используем dumb-init для правильной обработки сигналов
+ENTRYPOINT ["dumb-init", "--"]
 
+EXPOSE 80
+
+# Запускаем nginx в foreground режиме
 CMD ["nginx", "-g", "daemon off;"] 

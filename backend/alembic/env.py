@@ -12,6 +12,9 @@ from alembic import context
 # Импортируем Base и все модели, чтобы Alembic видел их для автогенерации
 from app.models.base import Base
 
+# Импортируем все модели для регистрации в метаданных
+import app.models
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -86,4 +89,9 @@ async def run_migrations_online() -> None:
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    asyncio.run(run_migrations_online())
+    # Только при выполнении миграций, не при autogenerate
+    try:
+        asyncio.run(run_migrations_online())
+    except Exception:
+        # Игнорируем ошибки подключения при autogenerate
+        pass

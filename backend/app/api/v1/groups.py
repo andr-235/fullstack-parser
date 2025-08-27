@@ -482,6 +482,16 @@ async def get_groups(
     )
 
 
+@router.get("", response_model=PaginatedResponse[VKGroupRead])
+async def get_groups_no_slash(
+    active_only: bool = True,
+    search: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+) -> PaginatedResponse[VKGroupRead]:
+    """Получить список VK групп (без trailing slash) - алиас для основного endpoint"""
+    return await get_groups(active_only=active_only, search=search, db=db)
+
+
 @router.get("/{group_id}", response_model=VKGroupRead)
 async def get_group(
     group_id: int,

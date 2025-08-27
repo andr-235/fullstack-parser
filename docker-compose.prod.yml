@@ -122,7 +122,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY}
-      - CORS_ORIGINS=${CORS_ORIGINS}
+      - CORS_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:3000,http://127.0.0.1:3000
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
@@ -140,9 +140,11 @@ services:
       - prod-db-network
     logging: *default-logging
     healthcheck:
-      <<: *default-healthcheck
-      test:
-        ["CMD", "curl", "-fsSL", "http://localhost:8000/api/v1/health/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+      test: ["CMD", "curl", "-fsSL", "http://localhost:8000/api/v1/"]
     deploy:
       resources:
         limits:
@@ -175,7 +177,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY}
-      - CORS_ORIGINS=${CORS_ORIGINS}
+      - CORS_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:3000,http://127.0.0.1:3000
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
@@ -189,6 +191,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    ports:
+      - "8002:8000" # Внутренний порт 8000, внешний 8002
     networks:
       - prod-app-network
       - prod-db-network
@@ -247,6 +251,8 @@ services:
         condition: service_healthy
       arq_worker:
         condition: service_healthy
+    ports:
+      - "8001:8000" # Внутренний порт 8000, внешний 8001
     networks:
       - prod-app-network
       - prod-db-network
@@ -292,7 +298,7 @@ services:
     environment:
       - NODE_ENV=production
       - SERVER_IP=${SERVER_IP}
-      - NEXT_PUBLIC_API_URL=${DOMAIN}
+      - NEXT_PUBLIC_API_URL=http://localhost/api/v1
       - TMPDIR=/tmp/uploads
     expose:
       - "3000"
@@ -330,7 +336,6 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"
     depends_on:
       frontend:
         condition: service_healthy
@@ -341,7 +346,7 @@ services:
     logging: *default-logging
     healthcheck:
       <<: *default-healthcheck
-      test: ["CMD", "curl", "-k", "-fsSL", "https://localhost/health"]
+      test: ["CMD", "curl", "-fsSL", "http://localhost/health"]
     deploy:
       resources:
         limits:

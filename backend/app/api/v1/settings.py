@@ -32,6 +32,12 @@ async def get_settings() -> SettingsResponse:
         )
 
 
+@router.get("", response_model=SettingsResponse)
+async def get_settings_no_slash() -> SettingsResponse:
+    """Получить текущие настройки приложения (без trailing slash) - алиас для основного endpoint"""
+    return await get_settings()
+
+
 @router.put("/", response_model=SettingsResponse)
 async def update_settings(request: SettingsUpdateRequest) -> SettingsResponse:
     """Обновить настройки приложения"""
@@ -60,6 +66,14 @@ async def update_settings(request: SettingsUpdateRequest) -> SettingsResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка обновления настроек: {str(e)}",
         )
+
+
+@router.put("", response_model=SettingsResponse)
+async def update_settings_no_slash(
+    request: SettingsUpdateRequest,
+) -> SettingsResponse:
+    """Обновить настройки приложения (без trailing slash) - алиас для основного endpoint"""
+    return await update_settings(request)
 
 
 @router.post("/reset", response_model=SettingsResponse)

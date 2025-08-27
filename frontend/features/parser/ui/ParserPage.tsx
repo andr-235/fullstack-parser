@@ -50,7 +50,7 @@ import {
 import { Progress } from '@/shared/ui'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import type { ParseTaskResponse } from '@/shared/types'
+import type { ParseTaskResponse, VKGroupResponse } from '@/shared/types'
 
 const statusConfig: {
   running: {
@@ -277,7 +277,7 @@ export default function ParserPage() {
                     <SelectValue placeholder="Выберите группу" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-600">
-                    {groups.map((group) => (
+                    {groups.map((group: VKGroupResponse) => (
                       <SelectItem
                         key={group.id}
                         value={String(group.id)}
@@ -302,8 +302,8 @@ export default function ParserPage() {
               ) : (
                 <Button
                   className={`w-full flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105 ${isProcessing || startParserMutation.isPending
-                      ? 'bg-yellow-600 hover:bg-yellow-700 cursor-wait'
-                      : 'bg-blue-600 hover:bg-blue-700'
+                    ? 'bg-yellow-600 hover:bg-yellow-700 cursor-wait'
+                    : 'bg-blue-600 hover:bg-blue-700'
                     }`}
                   onClick={handleStart}
                   disabled={!selectedGroupId || isActionInProgress}

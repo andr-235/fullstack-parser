@@ -1,231 +1,92 @@
 ---
-description: Управление зависимостями backend проекта
+description: Backend Python/FastAPI best practices
 alwaysApply: false
 ---
-# Управление зависимостями Backend
 
-## **Основные зависимости**
+# ==== Общие принципы ====
 
-### **Web Framework**
+- Используй FastAPI как основной web framework.
+- Весь код должен быть асинхронным (async/await).
+- Следуй принципам SOLID, DRY, KISS.
+- Используй типизацию Python 3.11+.
+- Всегда добавляй docstring к публичным функциям и классам.
+- Не храни секреты и ключи в коде — только в .env или pydantic-settings.
 
-- **fastapi**: `0.116.1` - Современный веб-фреймворк
-- **uvicorn**: `0.35.0` - ASGI сервер
-- **starlette**: `0.46.2` - ASGI toolkit
+# ==== Структура проекта ====
 
-### **Валидация и сериализация**
+- Делай четкое разделение слоев:
+  - `routers/` — обработчики запросов
+  - `services/` — бизнес-логика
+  - `repositories/` — доступ к БД
+  - `models/` — Pydantic и SQLAlchemy модели
+  - `core/` — конфиги, middleware, utils
+- Не смешивай синхронный и асинхронный код.
+- Все HTTP-запросы должны идти через httpx (async).
 
-- **pydantic**: `>=2.5.0,<3.0.0` - Валидация данных
-- **pydantic-settings**: `2.1.0` - Управление настройками
+# ==== Зависимости ====
 
-### **База данных**
+- Фиксируй версии production-зависимостей (fastapi, sqlalchemy, redis).
+- Используй poetry для управления зависимостями.
+- Для dev-зависимостей разрешено указывать диапазоны версий.
+- Регулярно выполняй:
+  - `poetry run pip-audit` (уязвимости)
+  - `poetry update` (обновления)
+  - `poetry run pytest` (совместимость)
 
-- **sqlalchemy**: `>=2.0.25` - ORM
-- **alembic**: `>=1.13.0` - Миграции БД
-- **asyncpg**: `0.30.0` - PostgreSQL драйвер
-- **psycopg2-binary**: `>=2.9.9` - PostgreSQL адаптер
+# ==== База данных ====
 
-### **Кеширование и очереди**
+- Используй SQLAlchemy 2.x + asyncpg.
+- Для миграций — alembic.
+- Все SQL-запросы асинхронные.
+- Репозитории инкапсулируют работу с БД, не смешивай с бизнес-логикой.
 
-- **redis**: `5.3.0` - In-memory хранилище
-- **arq**: `^0.26.3` - Асинхронные задачи
+# ==== Кеширование и задачи ====
 
-### **Аутентификация и безопасность**
+- Для кеширования используй Redis.
+- Для фоновых задач — arq.
+- Все операции с Redis должны быть асинхронными.
 
-- **python-jose**: `3.5.0` - JWT токены
-- **passlib**: `1.7.4` - Хеширование паролей
-- **python-multipart**: `0.0.20` - Обработка форм
+# ==== Аутентификация и безопасность ====
 
-### **HTTP клиенты**
+- Для JWT используй python-jose.
+- Для паролей — passlib (bcrypt).
+- Все чувствительные данные хранить в .env (pydantic-settings).
+- Валидация входных данных только через Pydantic.
 
-- **requests**: `2.32.4` - Синхронные HTTP запросы
-- **httpx**: `0.26.0` - Асинхронные HTTP запросы
+# ==== Тестирование ====
 
-### **Внешние API**
+- Unit-тесты обязательны для сервисов.
+- Интеграционные тесты для API.
+- Минимальное покрытие — 70%.
+- Используй pytest + pytest-asyncio.
+- Для моков — pytest-mock.
 
-- **vkbottle**: `^4.5.2` - VK API клиент
-- **natasha**: `^1.6.0` - NLP библиотека
+# ==== Стиль кода ====
 
-### **Утилиты**
+- Форматирование: black (79 символов в строке).
+- Импорты: isort (profile=black).
+- Линтинг: ruff (правила E,W,F,I,C,B).
+- Типизация: mypy (Python 3.11, ignore_missing_imports=true).
+- Не используй `*` импорты.
+- Не используй "magic numbers", выноси в константы.
 
-- **python-dateutil**: `2.8.2` - Работа с датами
-- **pytz**: `2023.3` - Временные зоны
-- **structlog**: `^25.4.0` - Структурированное логирование
-- **setuptools**: `^78.1.1` - Инструменты сборки
+# ==== Безопасность ====
 
-## **Dev зависимости**
+- Перед коммитами проверяй:
+  - `poetry run pip-audit`
+  - `poetry run bandit -r app/`
+  - `poetry run mypy app/`
+- Не оставляй закомментированный код.
+- Не отключай линтеры без причины.
 
-### **Тестирование**
+# ==== Оптимизация ====
 
-- **pytest**: `>=8.4.1` - Тестовый фреймворк
-- **pytest-cov**: `4.1.0` - Покрытие кода
-- **pytest-mock**: `3.14.1` - Моки для тестов
-- **pytest-env**: `>=1.1.5` - Переменные окружения
-- **pytest-aio**: `>=1.9.0` - Асинхронные тесты
+- Все сетевые запросы делать через httpx.AsyncClient.
+- Для тяжёлых операций — кеширование в Redis.
+- Не выполняй блокирующие операции в event loop.
 
-### **Линтинг и форматирование**
+# ==== Документация ====
 
-- **black**: `25.1.0` - Форматирование кода
-- **isort**: `5.13.2` - Сортировка импортов
-- **ruff**: `0.12.1` - Быстрый линтер
-- **mypy**: `1.8.0` - Статическая типизация
-
-### **Безопасность**
-
-- **bandit**: `>=1.7.6` - Анализ безопасности
-- **pip-audit**: `^2.9.0` - Проверка уязвимостей
-
-### **Разработка**
-
-- **python-dotenv**: `1.1.1` - Загрузка .env файлов
-- **watchdog**: `3.0.0` - Отслеживание изменений файлов
-- **types-passlib**: `>=1.7.7.20250602` - Типы для passlib
-
-## **Конфигурация инструментов**
-
-### **Black (форматирование)**
-
-```toml
-[tool.black]
-line-length = 79
-target-version = ['py311']
-include = '\.pyi?$'
-```
-
-### **isort (сортировка импортов)**
-
-```toml
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 79
-```
-
-### **Ruff (линтер)**
-
-```toml
-[tool.ruff]
-line-length = 79
-target-version = "py311"
-
-[tool.ruff.lint]
-select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort
-    "C",  # flake8-comprehensions
-    "B",  # flake8-bugbear
-]
-```
-
-### **MyPy (типизация)**
-
-```toml
-[tool.mypy]
-python_version = "3.11"
-check_untyped_defs = false
-ignore_missing_imports = true
-```
-
-## **Рекомендации по версиям**
-
-### **✅ DO:**
-
-- Используйте Poetry для управления зависимостями
-- Фиксируйте версии критичных пакетов (fastapi, sqlalchemy)
-- Используйте диапазоны для dev зависимостей
-- Регулярно обновляйте зависимости безопасности
-- Используйте `^` для minor версий, `>=` для patch
-
-### **❌ DON'T:**
-
-- Не используйте `*` для версий в продакшене
-- Не обновляйте все зависимости одновременно
-- Не игнорируйте breaking changes в major версиях
-- Не смешивайте pip и poetry
-
-## **План обновлений**
-
-### **Критичные обновления (ежемесячно)**
-
-```bash
-# Проверка уязвимостей
-poetry run pip-audit
-
-# Обновление зависимостей
-poetry update
-
-# Проверка совместимости
-poetry run pytest
-```
-
-### **Major версии (квартально)**
-
-- FastAPI 0.116 → FastAPI 1.0 (когда выйдет)
-- SQLAlchemy 2.0 → SQLAlchemy 3.0
-- Pydantic 2.x → Pydantic 3.x
-
-### **Мониторинг**
-
-- Настройте Dependabot для автоматических PR
-- Используйте `poetry show --outdated` для проверки
-- Следите за security advisories
-
-## **Оптимизация производительности**
-
-### **Асинхронность**
-
-```python
-# ✅ DO: Используйте async/await
-async def get_user_data(user_id: int):
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"/api/users/{user_id}")
-        return response.json()
-
-# ❌ DON'T: Блокирующие операции
-def get_user_data(user_id: int):
-    response = requests.get(f"/api/users/{user_id}")
-    return response.json()
-```
-
-### **Кеширование**
-
-```python
-# ✅ DO: Используйте Redis для кеширования
-@cache(expire=3600)
-async def get_expensive_data():
-    return await expensive_operation()
-
-# ❌ DON'T: Повторные вычисления
-def get_expensive_data():
-    return expensive_operation()  # Выполняется каждый раз
-```
-
-## **Безопасность**
-
-### **Регулярные проверки**
-
-```bash
-# Проверка уязвимостей
-poetry run pip-audit
-
-# Анализ безопасности кода
-poetry run bandit -r app/
-
-# Проверка типов
-poetry run mypy app/
-```
-
-### **Защита от уязвимостей**
-
-- Регулярно обновляйте зависимости
-- Используйте `pip-audit` для проверки
-- Настройте автоматические security scans
-- Следите за CVE базами
-
-## **Ссылки**
-
-- [FastAPI документация](https://fastapi.tiangolo.com/)
-- [SQLAlchemy документация](https://docs.sqlalchemy.org/)
-- [Pydantic документация](https://docs.pydantic.dev/)
-- [Poetry документация](https://python-poetry.org/docs/)
+- Всегда добавляй README с инструкцией запуска.
+- Автогенерация OpenAPI через FastAPI должна быть доступна.
+- Для новых модулей указывай usage-примеры.

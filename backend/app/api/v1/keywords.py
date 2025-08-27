@@ -48,6 +48,24 @@ async def get_keywords(
     )
 
 
+@router.get("", response_model=PaginatedResponse[KeywordResponse])
+async def get_keywords_no_slash(
+    pagination: PaginationParams = Depends(),
+    active_only: bool = True,
+    category: Optional[str] = None,
+    q: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+) -> PaginatedResponse[KeywordResponse]:
+    """Получить список ключевых слов (без trailing slash) - алиас для основного endpoint"""
+    return await get_keywords(
+        pagination=pagination,
+        active_only=active_only,
+        category=category,
+        q=q,
+        db=db,
+    )
+
+
 @router.get("/categories", response_model=list[str])
 async def get_keyword_categories(
     db: AsyncSession = Depends(get_db),

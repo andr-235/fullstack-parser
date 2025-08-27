@@ -33,7 +33,8 @@ api_router = APIRouter(
 )
 
 # Подключение всех роутеров с консистентным форматированием
-api_router.include_router(health.router, prefix="/health", tags=["Health"])
+# Подключаем health роутер
+api_router.include_router(health.router, tags=["Health"])
 
 api_router.include_router(
     background_tasks.router,

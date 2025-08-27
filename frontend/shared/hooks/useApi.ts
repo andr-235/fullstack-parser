@@ -56,10 +56,7 @@ export function useApiPatch<T, V = any>(
 // Хук для API удалений
 export function useApiDelete<T>(
   url: string,
-  options?: Omit<
-    UseMutationOptions<T, ApiError, void>,
-    'mutationFn'
-  >
+  options?: Omit<UseMutationOptions<T, ApiError, void>, 'mutationFn'>
 ) {
   return useMutation({
     mutationFn: () => api.delete<T>(url),

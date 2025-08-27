@@ -51,6 +51,28 @@ async def health_check() -> Dict[str, Any]:
 
 
 @router.get(
+    "/health/",
+    summary="Basic Health Check (with trailing slash)",
+    description="Базовая проверка состояния сервиса с trailing slash",
+    response_description="Статус здоровья сервиса",
+)
+async def health_check_trailing_slash() -> Dict[str, Any]:
+    """
+    Базовая проверка состояния сервиса с trailing slash.
+    Алиас для основного health endpoint.
+
+    Returns:
+        Dict[str, Any]: Словарь с базовой информацией о состоянии сервиса
+    """
+    return {
+        "status": "healthy",
+        "service": "vk-comments-parser",
+        "version": "1.0.0",
+        "timestamp": "2024-01-01T00:00:00Z",  # TODO: Добавить реальное время
+    }
+
+
+@router.get(
     "/health/detailed",
     summary="Detailed Health Check",
     description="Детальная проверка состояния с проверкой компонентов",
