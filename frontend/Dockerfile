@@ -1,9 +1,9 @@
 # =============================================================================
-# Optimized Multi-stage Dockerfile for Next.js 15 Frontend Application
+# Optimized Multi-stage Dockerfile for Next.js 15 Frontend Application with Bun
 # =============================================================================
 
 # ----------- Stage 1: Dependencies (with enhanced caching) -----------
-FROM node:20-alpine AS deps
+FROM oven/bun:1.2.19-alpine AS deps
 
 # Установка системных зависимостей
 RUN apk add --no-cache libc6-compat
@@ -15,24 +15,18 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /app
 
 # Копирование файлов зависимостей для кеширования
-COPY package.json pnpm-lock.yaml* ./
-COPY yarn.lock* ./
+COPY package.json bun.lockb* ./
 
-# Установка pnpm и зависимостей с кешированием
-RUN npm install -g pnpm@10.12.4 && \
-    pnpm install --frozen-lockfile --prod=false && \
-    pnpm store prune
+# Установка зависимостей с кешированием
+RUN bun install --frozen-lockfile
 
 # ----------- Stage 2: Builder (optimized build) -----------
-FROM node:20-alpine AS builder
+FROM oven/bun:1.2.19-alpine AS builder
 WORKDIR /app
-
-# Установка pnpm в builder stage
-RUN npm install -g pnpm@10.12.4
 
 # Копирование зависимостей
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /root/.local/share/pnpm/store /root/.local/share/pnpm/store
+COPY --from=deps /app/bun.lockb ./bun.lockb
 
 # Копирование исходного кода
 COPY . .
@@ -45,7 +39,7 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
 
 # Сборка приложения с кешированием
 RUN --mount=type=cache,target=/app/.next/cache \
-    pnpm build
+    bun run build
 
 # ----------- Stage 3: Production (minimal runtime) -----------
 FROM node:20-alpine AS runner
@@ -56,8 +50,7 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
 
 # Установка только необходимых пакетов
-RUN apk add --no-cache dumb-init curl && \
-    npm install -g pnpm@10.12.4
+RUN apk add --no-cache dumb-init curl
 
 # Копирование только необходимых файлов
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
@@ -70,8 +63,8 @@ USER nextjs
 
 # Метаданные образа
 LABEL maintainer="team@company.com" \
-      version="1.0" \
-      description="Production Next.js application"
+    version="1.0" \
+    description="Production Next.js application with Bun"
 
 # Проверка здоровья
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

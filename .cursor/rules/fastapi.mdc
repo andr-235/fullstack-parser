@@ -1,9 +1,7 @@
 ---
 description: Правила и лучшие практики использования FastAPI в проекте
-globs: backend/**/*.py
-alwaysApply: true
+alwaysApply: false
 ---
-
 # FastAPI Best Practices
 
 ## **Основные принципы архитектуры**

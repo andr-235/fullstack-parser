@@ -1,9 +1,7 @@
 ---
 description: Правила и стандарты работы с Git в проекте
-globs: **/*
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Git Workflow и Стандарты
 
 ## **Основные принципы работы с репозиторием**

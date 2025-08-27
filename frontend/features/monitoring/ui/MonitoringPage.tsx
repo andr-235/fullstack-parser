@@ -234,7 +234,7 @@ export default function MonitoringPage() {
     }
 
     const groupsToAdd = allGroups.items.filter(
-      (group) => !activeGroups?.items.some((active) => active.id === group.id)
+      (group) => !activeGroups?.items.some((active: any) => active.id === group.id)
     )
 
     if (groupsToAdd.length === 0) {
@@ -257,6 +257,11 @@ export default function MonitoringPage() {
       }
 
       const group = groupsToAdd[index]
+      if (!group) {
+        errorCount++
+        return
+      }
+
       try {
         await enableMonitoringMutation.mutateAsync({
           groupId: group.id,
@@ -334,14 +339,13 @@ export default function MonitoringPage() {
                   startSchedulerMutation.isPending ||
                   stopSchedulerMutation.isPending
                 }
-                className={`transition-all duration-200 hover:scale-105 ${
-                  schedulerStatus?.is_running
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
+                className={`transition-all duration-200 hover:scale-105 ${schedulerStatus?.is_running
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+                  }`}
               >
                 {startSchedulerMutation.isPending ||
-                stopSchedulerMutation.isPending ? (
+                  stopSchedulerMutation.isPending ? (
                   <LoadingSpinner className="h-4 w-4 mr-2" />
                 ) : schedulerStatus?.is_running ? (
                   <Pause className="h-4 w-4 mr-2" />
@@ -406,13 +410,12 @@ export default function MonitoringPage() {
                   Следующий запуск
                 </p>
                 <p
-                  className={`text-sm font-medium ${
-                    nextMonitoringTime.status === 'overdue'
-                      ? 'text-red-400'
-                      : nextMonitoringTime.status === 'waiting'
-                        ? 'text-slate-400'
-                        : 'text-purple-400'
-                  }`}
+                  className={`text-sm font-medium ${nextMonitoringTime.status === 'overdue'
+                    ? 'text-red-400'
+                    : nextMonitoringTime.status === 'waiting'
+                      ? 'text-slate-400'
+                      : 'text-purple-400'
+                    }`}
                 >
                   {nextMonitoringTime.text}
                 </p>

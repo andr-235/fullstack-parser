@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, createQueryKey } from '@/shared/lib/api'
+import { apiService, createQueryKey } from '@/shared/lib'
 
 interface ErrorReport {
   report_id: string
@@ -55,7 +55,7 @@ interface ErrorStats {
 export function useErrorReports(filters?: ErrorReportFilters) {
   return useQuery({
     queryKey: createQueryKey.errorReports(filters),
-    queryFn: () => api.getErrorReports(filters),
+    queryFn: () => apiService.getErrorReports(filters),
     staleTime: 5 * 60 * 1000, // 5 минут
   })
 }
@@ -66,7 +66,7 @@ export function useErrorReports(filters?: ErrorReportFilters) {
 export function useErrorReport(reportId: string) {
   return useQuery({
     queryKey: createQueryKey.errorReport(reportId),
-    queryFn: () => api.getErrorReport(reportId),
+    queryFn: () => apiService.getErrorReport(reportId),
     enabled: !!reportId,
     staleTime: 5 * 60 * 1000,
   })
@@ -78,7 +78,7 @@ export function useErrorReport(reportId: string) {
 export function useErrorStats(days: number = 7) {
   return useQuery({
     queryKey: createQueryKey.errorStats(days),
-    queryFn: () => api.getErrorStats(days),
+    queryFn: () => apiService.getErrorStats(days),
     staleTime: 10 * 60 * 1000, // 10 минут
   })
 }
@@ -90,7 +90,7 @@ export function useAcknowledgeErrorReport() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (reportId: string) => api.acknowledgeErrorReport(reportId),
+    mutationFn: (reportId: string) => apiService.acknowledgeErrorReport(reportId),
     onSuccess: (data, reportId) => {
       // Инвалидируем кеш отчетов
       queryClient.invalidateQueries({
@@ -110,7 +110,7 @@ export function useDeleteErrorReport() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (reportId: string) => api.deleteErrorReport(reportId),
+    mutationFn: (reportId: string) => apiService.deleteErrorReport(reportId),
     onSuccess: (_, reportId) => {
       // Инвалидируем кеш отчетов
       queryClient.invalidateQueries({

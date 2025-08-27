@@ -1,9 +1,7 @@
 ---
 description: Feature-Sliced Design архитектурная организация фронтенда
-globs: frontend/**/*.{ts,tsx,js,jsx}
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Feature-Sliced Design (FSD) Архитектура
 
 ## **Основные принципы**

@@ -72,14 +72,14 @@ export default function DashboardPage() {
   const error = globalError || dashboardError
 
   // Используем реальные данные из API
-  const { data: dashboardData } = useDashboardData()
+  const dashboardData = useDashboardData()
 
   // Данные для графиков активности
-  const activityData = dashboardData?.activityData || []
+  const activityData = dashboardData.activityData?.data?.recent_activity || []
 
   // Данные для круговой диаграммы ключевых слов
   const keywordData =
-    dashboardData?.topKeywords?.map(
+    dashboardData.topKeywords?.data?.map(
       (keyword: KeywordResponse, index: number) => ({
         name: keyword.word,
         value: keyword.total_matches,
@@ -91,7 +91,7 @@ export default function DashboardPage() {
 
   // Данные для производительности групп
   const groupPerformanceData =
-    dashboardData?.topGroups?.map((group: VKGroupResponse) => ({
+    dashboardData.topGroups?.data?.map((group: VKGroupResponse) => ({
       name: group.name,
       posts: group.total_posts_parsed,
       comments: group.total_comments_found,
@@ -633,7 +633,7 @@ export default function DashboardPage() {
 interface MetricCardProps {
   title: string
   value: number
-  icon: React.ComponentType<{ className?: string }>
+  icon: any // Временно используем any для иконок
   trend: string
   trendUp: boolean
   description: string

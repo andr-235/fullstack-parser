@@ -1,9 +1,7 @@
 ---
 description: Управление зависимостями frontend проекта
-globs: frontend/package.json, frontend/**/*.{ts,tsx,js,jsx}
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Управление зависимостями
 
 ## **Основные зависимости**

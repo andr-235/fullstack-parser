@@ -1,2 +1,2 @@
 // Keywords hooks exports
-export * from './use-keywords'
+// Хук useKeywords находится в entities/keyword

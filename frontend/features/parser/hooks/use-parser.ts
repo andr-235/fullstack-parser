@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, createQueryKey } from '@/shared/lib/api'
+import { apiService, createQueryKey } from '@/shared/lib'
 import type {
   ParseTaskCreate,
   ParseTaskResponse,
@@ -15,7 +15,7 @@ import { toast } from 'sonner'
 export function useParserState() {
   return useQuery<ParserState>({
     queryKey: createQueryKey.parserState(),
-    queryFn: () => api.getParserState(),
+    queryFn: () => apiService.getParserState(),
     refetchInterval: 5000, // Опрашивать каждые 5 секунд
   })
 }
@@ -26,7 +26,7 @@ export function useParserState() {
 export function useParserStats() {
   return useQuery<ParserStats>({
     queryKey: createQueryKey.parserStats(),
-    queryFn: () => api.getParserStats(),
+    queryFn: () => apiService.getParserStats(),
     staleTime: 60 * 1000, // 1 минута
   })
 }
@@ -37,7 +37,7 @@ export function useParserStats() {
 export function useRecentRuns() {
   return useQuery<PaginatedResponse<ParseTaskResponse>>({
     queryKey: createQueryKey.parserRuns(),
-    queryFn: () => api.getRecentParseTasks(),
+    queryFn: () => apiService.getRecentParseTasks(),
     staleTime: 30 * 1000, // 30 секунд
   })
 }
@@ -48,7 +48,7 @@ export function useRecentRuns() {
 export function useStartParser() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: ParseTaskCreate) => api.startParser(data),
+    mutationFn: (data: ParseTaskCreate) => apiService.startParser(data),
     onSuccess: () => {
       toast.success('Парсинг запущен')
       queryClient.invalidateQueries({ queryKey: createQueryKey.parserState() })
@@ -66,7 +66,7 @@ export function useStartParser() {
 export function useStopParser() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => api.stopParser(),
+    mutationFn: () => apiService.stopParser(),
     onSuccess: () => {
       toast.info('Парсер останавливается...')
       queryClient.invalidateQueries({ queryKey: createQueryKey.parserState() })

@@ -1,9 +1,7 @@
 ---
 description: TypeScript лучшие практики для строгого, чистого и читаемого кода
-globs: **/*.ts, **/*.tsx, **/*.d.ts
-alwaysApply: true
+alwaysApply: false
 ---
-
 # TypeScript Best Practices
 
 ## **Основные принципы**

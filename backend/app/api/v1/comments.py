@@ -1,11 +1,13 @@
 """
 API endpoints для управления комментариями
+
+Этот модуль предоставляет эндпоинты для работы с комментариями VK,
+включая получение, обновление и фильтрацию комментариев.
 """
 
 from datetime import datetime, timezone
-from typing import Optional
-
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import Optional, Dict, Any, List
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Path
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -19,21 +21,50 @@ router = APIRouter(tags=["Comments"])
 logger = get_logger(__name__)
 
 
-@router.get("/")
+@router.get(
+    "/",
+    summary="Get Comments",
+    description="Получить список комментариев с пагинацией и фильтрацией",
+    response_description="Список комментариев с метаданными",
+)
 async def get_comments(
-    page: int = Query(1, ge=1, description="Номер страницы"),
-    size: int = Query(20, ge=1, le=100, description="Размер страницы"),
+    page: int = Query(
+        default=1, ge=1, description="Номер страницы", examples=[1, 2, 3]
+    ),
+    size: int = Query(
+        default=20,
+        ge=1,
+        le=100,
+        description="Размер страницы",
+        examples=[10, 20, 50],
+    ),
     is_viewed: Optional[bool] = Query(
-        None, description="Фильтр по просмотренности"
+        default=None, description="Фильтр по просмотренности"
     ),
     keyword_id: Optional[int] = Query(
-        None, description="Фильтр по ключевому слову"
+        default=None, description="Фильтр по ключевому слову"
     ),
-    group_id: Optional[int] = Query(None, description="Фильтр по группе"),
+    group_id: Optional[int] = Query(
+        default=None, description="Фильтр по группе"
+    ),
     db: AsyncSession = Depends(get_db),
-):
+) -> Dict[str, Any]:
     """
     Получение списка комментариев с пагинацией и фильтрацией.
+
+    Args:
+        page: Номер страницы (начиная с 1)
+        size: Размер страницы (от 1 до 100)
+        is_viewed: Фильтр по статусу просмотра
+        keyword_id: Фильтр по ID ключевого слова
+        group_id: Фильтр по ID группы
+        db: Сессия базы данных
+
+    Returns:
+        Dict[str, Any]: Словарь с комментариями и метаданными пагинации
+
+    Raises:
+        HTTPException: При ошибках получения данных
     """
     try:
         offset = (page - 1) * size
@@ -52,7 +83,7 @@ async def get_comments(
         )
 
         # Применяем фильтры
-        filters = []
+        filters: List[Any] = []
         if is_viewed is not None:
             filters.append(VKComment.is_viewed == is_viewed)
         if keyword_id is not None:
@@ -79,7 +110,7 @@ async def get_comments(
         pages = (total + size - 1) // size if total > 0 else 1
 
         # Преобразуем комментарии в словари с данными о группе
-        items = []
+        items: List[Dict[str, Any]] = []
 
         # Получаем все ключевые слова для комментариев одним запросом
         comment_ids = [comment.id for comment in comments]
@@ -93,7 +124,7 @@ async def get_comments(
         keyword_matches = keyword_result.fetchall()
 
         # Группируем ключевые слова по комментариям
-        keywords_by_comment: dict[int, list[str]] = {}
+        keywords_by_comment: Dict[int, List[str]] = {}
         for comment_id, keyword in keyword_matches:
             if comment_id not in keywords_by_comment:
                 keywords_by_comment[comment_id] = []
@@ -161,13 +192,30 @@ async def get_comments(
         )
 
 
-@router.get("/{comment_id}")
+@router.get(
+    "/{comment_id}",
+    summary="Get Comment by ID",
+    description="Получить комментарий по его уникальному идентификатору",
+    response_description="Детальная информация о комментарии",
+)
 async def get_comment(
-    comment_id: int,
+    comment_id: int = Path(
+        ..., description="ID комментария", examples=[12345, 67890]
+    ),
     db: AsyncSession = Depends(get_db),
-):
+) -> Dict[str, Any]:
     """
     Получение комментария по ID.
+
+    Args:
+        comment_id: Уникальный идентификатор комментария
+        db: Сессия базы данных
+
+    Returns:
+        Dict[str, Any]: Детальная информация о комментарии
+
+    Raises:
+        HTTPException: Если комментарий не найден
     """
     try:
         result = await db.execute(

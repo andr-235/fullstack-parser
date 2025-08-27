@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/shared/lib/api'
+import { apiService } from '@/shared/lib'
 import type { VKCommentResponse } from '@/types/api'
 
 /**
@@ -10,7 +10,7 @@ export function useBulkMarkAsViewed() {
 
   return useMutation({
     mutationFn: (commentIds: number[]) =>
-      api.bulkMarkCommentsAsViewed(commentIds),
+      apiService.bulkMarkCommentsAsViewed(commentIds),
     onMutate: async (commentIds) => {
       await queryClient.cancelQueries({ queryKey: ['comments'] })
       const previousComments = queryClient.getQueryData([
@@ -65,7 +65,8 @@ export function useBulkArchive() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (commentIds: number[]) => api.bulkArchiveComments(commentIds),
+    mutationFn: (commentIds: number[]) =>
+      apiService.bulkArchiveComments(commentIds),
     onMutate: async (commentIds) => {
       await queryClient.cancelQueries({ queryKey: ['comments'] })
       const previousComments = queryClient.getQueryData([
@@ -119,7 +120,8 @@ export function useBulkUnarchive() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (commentIds: number[]) => api.bulkUnarchiveComments(commentIds),
+    mutationFn: (commentIds: number[]) =>
+      apiService.bulkUnarchiveComments(commentIds),
     onMutate: async (commentIds) => {
       await queryClient.cancelQueries({ queryKey: ['comments'] })
       const previousComments = queryClient.getQueryData([
@@ -171,7 +173,8 @@ export function useBulkDelete() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (commentIds: number[]) => api.bulkDeleteComments(commentIds),
+    mutationFn: (commentIds: number[]) =>
+      apiService.bulkDeleteComments(commentIds),
     onMutate: async (commentIds) => {
       await queryClient.cancelQueries({ queryKey: ['comments'] })
       const previousComments = queryClient.getQueryData([

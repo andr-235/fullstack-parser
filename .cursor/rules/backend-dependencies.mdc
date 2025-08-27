@@ -1,9 +1,7 @@
 ---
 description: Управление зависимостями backend проекта
-globs: backend/pyproject.toml, backend/**/*.py
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Управление зависимостями Backend
 
 ## **Основные зависимости**

@@ -1,9 +1,7 @@
 ---
 description: Комплексное правило по использованию Pydantic V2 для валидации данных, сериализации и интеграции с FastAPI
-globs: **/*.py
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Pydantic Best Practices
 
 ## **1. Общие рекомендации по использованию Pydantic**

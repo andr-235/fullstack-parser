@@ -1,10 +1,12 @@
 """
 Health check endpoints for monitoring system status.
+
+Этот модуль предоставляет эндпоинты для проверки состояния
+системы, включая проверку базы данных и кеша.
 """
 
-from typing import Any, Dict
-
-from fastapi import APIRouter, Depends
+from typing import Any, Dict, Literal
+from fastapi import APIRouter, Depends, HTTPException, status
 from redis.asyncio import Redis
 from structlog import get_logger
 
@@ -18,45 +20,69 @@ router = APIRouter()
 
 
 async def get_redis_client() -> Redis:
-    """Get Redis client for health checks."""
+    """
+    Получить Redis клиент для health checks.
+
+    Returns:
+        Redis: Redis клиент для проверки состояния кеша
+    """
     return Redis.from_url(str(settings.redis.url), decode_responses=True)
 
 
-@router.get("/health")
+@router.get(
+    "/health",
+    summary="Basic Health Check",
+    description="Базовая проверка состояния сервиса",
+    response_description="Статус здоровья сервиса",
+)
 async def health_check() -> Dict[str, Any]:
     """
-    Basic health check endpoint.
+    Базовая проверка состояния сервиса.
 
     Returns:
-        Dict with health status
+        Dict[str, Any]: Словарь с базовой информацией о состоянии сервиса
     """
     return {
         "status": "healthy",
         "service": "vk-comments-parser",
         "version": "1.0.0",
+        "timestamp": "2024-01-01T00:00:00Z",  # TODO: Добавить реальное время
     }
 
 
-@router.get("/health/detailed")
+@router.get(
+    "/health/detailed",
+    summary="Detailed Health Check",
+    description="Детальная проверка состояния с проверкой компонентов",
+    response_description="Детальная информация о состоянии всех компонентов",
+)
 async def detailed_health_check(
     db=Depends(get_db), redis_client: Redis = Depends(get_redis_client)
 ) -> Dict[str, Any]:
     """
-    Detailed health check with database and cache status.
+    Детальная проверка состояния с проверкой базы данных и кеша.
+
+    Args:
+        db: Сессия базы данных
+        redis_client: Redis клиент для проверки кеша
 
     Returns:
-        Dict with detailed health status
+        Dict[str, Any]: Словарь с детальной информацией о состоянии компонентов
+
+    Raises:
+        HTTPException: При критических ошибках компонентов
     """
-    health_status = {
+    health_status: Dict[str, Any] = {
         "status": "healthy",
         "service": "vk-comments-parser",
         "version": "1.0.0",
         "components": {"database": "unknown", "cache": "unknown"},
+        "timestamp": "2024-01-01T00:00:00Z",  # TODO: Добавить реальное время
     }
 
-    # Check database
+    # Проверка базы данных
     try:
-        # Simple query to check database connectivity
+        # Простой запрос для проверки подключения к БД
         await db.execute("SELECT 1")
         health_status["components"]["database"] = "healthy"
         logger.debug("Database health check passed")
@@ -65,7 +91,7 @@ async def detailed_health_check(
         health_status["database_error"] = str(e)
         logger.error("Database health check failed", error=str(e))
 
-    # Check cache
+    # Проверка кеша
     try:
         await redis_client.ping()
         health_status["components"]["cache"] = "healthy"
@@ -75,46 +101,94 @@ async def detailed_health_check(
         health_status["cache_error"] = str(e)
         logger.error("Cache health check failed", error=str(e))
 
-    # Determine overall status
-    if any(
-        status == "unhealthy"
+    # Определение общего статуса
+    unhealthy_components = [
+        status
         for status in health_status["components"].values()
-    ):
+        if status == "unhealthy"
+    ]
+
+    if unhealthy_components:
         health_status["status"] = "degraded"
+        if len(unhealthy_components) == len(health_status["components"]):
+            health_status["status"] = "unhealthy"
+            # Если все компоненты нездоровы, возвращаем ошибку
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="All system components are unhealthy",
+            )
 
     return health_status
 
 
-@router.get("/health/ready")
+@router.get(
+    "/health/ready",
+    summary="Readiness Check",
+    description="Проверка готовности для Kubernetes/контейнерной оркестрации",
+    response_description="Статус готовности сервиса",
+)
 async def readiness_check(
     db=Depends(get_db), redis_client: Redis = Depends(get_redis_client)
 ) -> Dict[str, Any]:
     """
-    Readiness check for Kubernetes/container orchestration.
+    Проверка готовности для Kubernetes/контейнерной оркестрации.
+
+    Этот эндпоинт используется для проверки готовности сервиса
+    к обработке запросов.
+
+    Args:
+        db: Сессия базы данных
+        redis_client: Redis клиент для проверки кеша
 
     Returns:
-        Dict with readiness status
+        Dict[str, Any]: Словарь с информацией о готовности сервиса
+
+    Raises:
+        HTTPException: При неготовности сервиса
     """
     try:
-        # Check database
+        # Проверка базы данных
         await db.execute("SELECT 1")
 
-        # Check cache
+        # Проверка кеша
         await redis_client.ping()
 
-        return {"status": "ready", "service": "vk-comments-parser"}
+        return {
+            "status": "ready",
+            "service": "vk-comments-parser",
+            "version": "1.0.0",
+            "message": "Service is ready to handle requests",
+            "timestamp": "2024-01-01T00:00:00Z",  # TODO: Добавить реальное время
+        }
 
     except Exception as e:
         logger.error("Readiness check failed", error=str(e))
-        raise ServiceUnavailableError(f"Service not ready: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Service is not ready to handle requests",
+        )
 
 
-@router.get("/health/live")
+@router.get(
+    "/health/live",
+    summary="Liveness Check",
+    description="Проверка жизнеспособности процесса",
+    response_description="Статус жизнеспособности процесса",
+)
 async def liveness_check() -> Dict[str, Any]:
     """
-    Liveness check for Kubernetes/container orchestration.
+    Проверка жизнеспособности процесса.
+
+    Этот эндпоинт используется для проверки того, что процесс
+    все еще работает и не завис.
 
     Returns:
-        Dict with liveness status
+        Dict[str, Any]: Словарь с информацией о жизнеспособности процесса
     """
-    return {"status": "alive", "service": "vk-comments-parser"}
+    return {
+        "status": "alive",
+        "service": "vk-comments-parser",
+        "version": "1.0.0",
+        "pid": "12345",  # TODO: Добавить реальный PID
+        "timestamp": "2024-01-01T00:00:00Z",  # TODO: Добавить реальное время
+    }

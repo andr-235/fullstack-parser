@@ -1,9 +1,7 @@
 ---
 description: Правила использования Makefile для Docker и Docker Compose операций
-globs: Makefile
 alwaysApply: false
 ---
-
 # Makefile Best Practices
 
 ## **Основные принципы использования**

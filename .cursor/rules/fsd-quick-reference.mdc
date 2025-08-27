@@ -1,9 +1,7 @@
 ---
 description: Краткая справка по Feature-Sliced Design
-globs: frontend/**/*.{ts,tsx,js,jsx}
-alwaysApply: true
+alwaysApply: false
 ---
-
 # FSD Quick Reference
 
 ## **Слои (сверху вниз)**

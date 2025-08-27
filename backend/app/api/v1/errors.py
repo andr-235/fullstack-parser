@@ -1,11 +1,13 @@
 """
 API endpoints для работы с отчетами об ошибках
+
+Этот модуль предоставляет эндпоинты для работы с отчетами об ошибках,
+включая получение, создание и обновление отчетов.
 """
 
 from datetime import datetime
-from typing import Optional
-
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import Optional, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -21,26 +23,46 @@ from app.services.error_report_db_service import ErrorReportDBService
 router = APIRouter(tags=["Error Reports"])
 
 
-@router.get("/reports", response_model=PaginatedResponse[ErrorReport])
+@router.get(
+    "/reports",
+    summary="Get Error Reports",
+    description="Получить список отчетов об ошибках с фильтрацией и пагинацией",
+    response_model=PaginatedResponse[ErrorReport],
+    response_description="Пагинированный список отчетов об ошибках",
+)
 async def get_error_reports(
-    page: int = Query(1, ge=1, description="Номер страницы"),
-    size: int = Query(20, ge=1, le=100, description="Размер страницы"),
+    page: int = Query(
+        default=1, ge=1, description="Номер страницы", examples=[1, 2, 3]
+    ),
+    size: int = Query(
+        default=20,
+        ge=1,
+        le=100,
+        description="Размер страницы",
+        examples=[10, 20, 50],
+    ),
     error_type: Optional[ErrorType] = Query(
-        None, description="Фильтр по типу ошибки"
+        default=None, description="Фильтр по типу ошибки"
     ),
     severity: Optional[ErrorSeverity] = Query(
-        None, description="Фильтр по серьезности"
+        default=None, description="Фильтр по серьезности"
     ),
-    operation: Optional[str] = Query(None, description="Фильтр по операции"),
-    start_date: Optional[datetime] = Query(None, description="Начальная дата"),
-    end_date: Optional[datetime] = Query(None, description="Конечная дата"),
+    operation: Optional[str] = Query(
+        default=None, description="Фильтр по операции"
+    ),
+    start_date: Optional[datetime] = Query(
+        default=None, description="Начальная дата"
+    ),
+    end_date: Optional[datetime] = Query(
+        default=None, description="Конечная дата"
+    ),
     is_acknowledged: Optional[bool] = Query(
-        None, description="Фильтр по статусу подтверждения"
+        default=None, description="Фильтр по статусу подтверждения"
     ),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[ErrorReport]:
     """
-    Получить список отчетов об ошибках с фильтрацией
+    Получить список отчетов об ошибках с фильтрацией.
 
     Args:
         page: Номер страницы
@@ -54,50 +76,81 @@ async def get_error_reports(
         db: Сессия базы данных
 
     Returns:
-        Пагинированный список отчетов об ошибках
+        PaginatedResponse[ErrorReport]: Пагинированный список отчетов об ошибках
+
+    Raises:
+        HTTPException: При ошибках получения данных
     """
-    error_db_service = ErrorReportDBService(db)
-    return await error_db_service.get_error_reports(
-        page=page,
-        size=size,
-        error_type=error_type,
-        severity=severity,
-        operation=operation,
-        start_date=start_date,
-        end_date=end_date,
-        is_acknowledged=is_acknowledged,
-    )
+    try:
+        error_db_service = ErrorReportDBService(db)
+        return await error_db_service.get_error_reports(
+            page=page,
+            size=size,
+            error_type=error_type,
+            severity=severity,
+            operation=operation,
+            start_date=start_date,
+            end_date=end_date,
+            is_acknowledged=is_acknowledged,
+        )
+    except Exception as e:
+        # Логирование ошибки
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при получении отчетов об ошибках",
+        )
 
 
-@router.get("/reports/{report_id}", response_model=ErrorReportResponse)
+@router.get(
+    "/reports/{report_id}",
+    summary="Get Error Report by ID",
+    description="Получить конкретный отчет об ошибках по его ID",
+    response_model=ErrorReportResponse,
+    response_description="Отчет об ошибках",
+)
 async def get_error_report(
-    report_id: str,
+    report_id: str = Path(
+        ...,
+        description="ID отчета об ошибках",
+        examples=["error_12345", "error_67890"],
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> ErrorReportResponse:
     """
-    Получить конкретный отчет об ошибках
+    Получить конкретный отчет об ошибках.
 
     Args:
         report_id: ID отчета
         db: Сессия базы данных
 
     Returns:
-        Отчет об ошибках
+        ErrorReportResponse: Отчет об ошибках
+
+    Raises:
+        HTTPException: Если отчет не найден
     """
-    error_db_service = ErrorReportDBService(db)
-    report = await error_db_service.get_error_report(report_id)
+    try:
+        error_db_service = ErrorReportDBService(db)
+        report = await error_db_service.get_error_report(report_id)
 
-    if not report:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Отчет не найден",
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Отчет не найден",
+            )
+
+        return ErrorReportResponse(
+            success=True,
+            report=report,
+            message="Отчет успешно получен",
         )
-
-    return ErrorReportResponse(
-        success=True,
-        report=report,
-        message="Отчет успешно получен",
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при получении отчета",
+        )
 
 
 @router.get("/stats", response_model=dict)

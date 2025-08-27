@@ -1,9 +1,7 @@
 ---
 description: Структура проекта и организация файлов
-globs: **/*
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Структура проекта
 
 ## **Корневая структура**

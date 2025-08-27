@@ -1,9 +1,7 @@
 ---
 description: Интеграция Feature-Sliced Design с Next.js App Router
-globs: frontend/**/*.{ts,tsx,js,jsx}
-alwaysApply: true
+alwaysApply: false
 ---
-
 # FSD + Next.js App Router
 
 ## **Структура проекта**

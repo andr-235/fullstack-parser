@@ -1,9 +1,7 @@
 ---
 description: SQLAlchemy и Alembic best practices для профессиональных проектов
-globs: **/*.py, **/alembic.ini, **/env.py, **/migrations/**/*.py
-alwaysApply: true
+alwaysApply: false
 ---
-
 # SQLAlchemy и Alembic Best Practices
 
 ## **Основные принципы**

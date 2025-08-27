@@ -1,4 +1,4 @@
 // keywords feature exports
 export * from './ui'
-export * from './hooks'
+// export * from './hooks' // hooks пустые
 export * from './types'

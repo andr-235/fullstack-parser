@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, createQueryKey } from '@/shared/lib/api'
+import { apiService, createQueryKey } from '@/shared/lib'
 import type {
   MonitoringStats,
   VKGroupMonitoring,
@@ -15,7 +15,7 @@ import toast from 'react-hot-toast'
 export function useMonitoringStats() {
   return useQuery<MonitoringStats>({
     queryKey: createQueryKey.monitoringStats(),
-    queryFn: () => api.getMonitoringStats(),
+    queryFn: () => apiService.getMonitoringStats(),
     staleTime: 30 * 1000, // 30 секунд
     refetchInterval: 60 * 1000, // Обновляем каждую минуту
   })
@@ -27,7 +27,7 @@ export function useMonitoringStats() {
 export function useSchedulerStatus() {
   return useQuery<SchedulerStatus>({
     queryKey: createQueryKey.schedulerStatus(),
-    queryFn: () => api.getSchedulerStatus(),
+    queryFn: () => apiService.getSchedulerStatus(),
     staleTime: 10 * 1000, // 10 секунд - частое обновление
     refetchInterval: 30 * 1000, // Обновляем каждые 30 секунд
   })
@@ -42,7 +42,7 @@ export function useMonitoringGroups(params?: {
 }) {
   return useQuery({
     queryKey: createQueryKey.monitoringGroups(params),
-    queryFn: () => api.getMonitoringGroups(params),
+    queryFn: () => apiService.getMonitoringGroups(params),
     staleTime: 60 * 1000, // 1 минута
   })
 }
@@ -53,7 +53,7 @@ export function useMonitoringGroups(params?: {
 export function useAvailableGroupsForMonitoring() {
   return useQuery({
     queryKey: createQueryKey.availableGroupsForMonitoring(),
-    queryFn: () => api.getAvailableGroupsForMonitoring(),
+    queryFn: () => apiService.getAvailableGroupsForMonitoring(),
     staleTime: 60 * 1000, // 1 минута
   })
 }
@@ -64,7 +64,7 @@ export function useAvailableGroupsForMonitoring() {
 export function useActiveMonitoringGroups() {
   return useQuery({
     queryKey: createQueryKey.activeMonitoringGroups(),
-    queryFn: () => api.getActiveMonitoringGroups(),
+    queryFn: () => apiService.getActiveMonitoringGroups(),
     staleTime: 30 * 1000, // 30 секунд - более частое обновление
     refetchInterval: 60 * 1000, // Обновляем каждую минуту
   })
@@ -85,7 +85,7 @@ export function useEnableGroupMonitoring() {
       groupId: number
       intervalMinutes: number
       priority: number
-    }) => api.enableGroupMonitoring(groupId, intervalMinutes, priority),
+    }) => apiService.enableGroupMonitoring(groupId, intervalMinutes, priority),
     onSuccess: () => {
       toast.success('Мониторинг группы включен')
       queryClient.invalidateQueries({
@@ -114,7 +114,7 @@ export function useDisableGroupMonitoring() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (groupId: number) => api.disableGroupMonitoring(groupId),
+    mutationFn: (groupId: number) => apiService.disableGroupMonitoring(groupId),
     onSuccess: () => {
       toast.success('Мониторинг группы отключен')
       queryClient.invalidateQueries({
@@ -149,7 +149,7 @@ export function useUpdateGroupMonitoring() {
     }: {
       groupId: number
       updateData: MonitoringGroupUpdate
-    }) => api.updateGroupMonitoring(groupId, updateData),
+    }) => apiService.updateGroupMonitoring(groupId, updateData),
     onSuccess: () => {
       toast.success('Настройки мониторинга обновлены')
       queryClient.invalidateQueries({
@@ -178,7 +178,7 @@ export function useRunGroupMonitoring() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (groupId: number) => api.runGroupMonitoring(groupId),
+    mutationFn: (groupId: number) => apiService.runGroupMonitoring(groupId),
     onSuccess: () => {
       toast.success('Мониторинг группы запущен')
       queryClient.invalidateQueries({
@@ -207,7 +207,7 @@ export function useRunMonitoringCycle() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: () => api.runMonitoringCycle(),
+    mutationFn: () => apiService.runMonitoringCycle(),
     onSuccess: (data: MonitoringRunResult) => {
       toast.success(
         `Цикл мониторинга завершён. Обработано групп: ${data.monitored_groups}, успешно: ${data.successful_runs}, ошибок: ${data.failed_runs}`
@@ -233,13 +233,14 @@ export function useRunMonitoringCycle() {
 
 /**
  * Хук для запуска планировщика мониторинга
+ * TODO: Добавить функции startScheduler и stopScheduler в api-compat.ts
  */
 export function useStartScheduler() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (intervalSeconds: number = 300) =>
-      api.startScheduler(intervalSeconds),
+      Promise.reject(new Error('Функция startScheduler не реализована')),
     onSuccess: () => {
       toast.success('Планировщик мониторинга запущен')
       queryClient.invalidateQueries({
@@ -254,12 +255,14 @@ export function useStartScheduler() {
 
 /**
  * Хук для остановки планировщика мониторинга
+ * TODO: Добавить функции startScheduler и stopScheduler в api-compat.ts
  */
 export function useStopScheduler() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: () => api.stopScheduler(),
+    mutationFn: () =>
+      Promise.reject(new Error('Функция stopScheduler не реализована')),
     onSuccess: () => {
       toast.success('Планировщик мониторинга остановлен')
       queryClient.invalidateQueries({

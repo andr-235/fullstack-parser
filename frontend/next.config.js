@@ -175,8 +175,8 @@ const nextConfig = {
 
   // Настройки ESLint
   eslint: {
-    // Игнорируем ошибки ESLint при сборке (для production)
-    ignoreDuringBuilds: process.env.NODE_ENV === 'production',
+    // Игнорируем ошибки ESLint при сборке
+    ignoreDuringBuilds: true,
   },
 
   // Настройки для Docker

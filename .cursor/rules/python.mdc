@@ -1,9 +1,7 @@
 ---
 description: Python Best Practices - стиль кода, именование, структура, обработка ошибок
-globs: **/*.py, **/pyproject.toml, **/requirements.txt
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Python Best Practices
 
 ## **Основные принципы стиля кода (PEP 8)**

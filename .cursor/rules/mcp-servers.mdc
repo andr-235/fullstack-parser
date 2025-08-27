@@ -1,9 +1,7 @@
 ---
 description: Управление и использование MCP серверов в проекте
-globs: .cursor/mcp.json, **/*.{ts,tsx,js,jsx,py}
-alwaysApply: true
+alwaysApply: false
 ---
-
 # MCP Серверы
 
 ## **Настроенные серверы**

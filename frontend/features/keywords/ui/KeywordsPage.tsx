@@ -88,7 +88,7 @@ const KeywordRow = ({
       onUpdate(
         keyword.id,
         { word: editedWord },
-        { onSuccess: () => {}, onError: () => {} }
+        { onSuccess: () => { }, onError: () => { } }
       )
     }
     setIsEditing(false)
@@ -202,7 +202,7 @@ export default function KeywordsPage() {
 
   const keywords = data?.items || []
   const total = data?.total || 0
-  const active = keywords.filter((k) => k.is_active).length || 0
+  const active = keywords.filter((k: any) => k.is_active).length || 0
 
   // Получаем общее количество совпадений
   const { data: totalMatchesData } = useTotalMatches()
@@ -235,7 +235,7 @@ export default function KeywordsPage() {
         is_active: true,
         is_case_sensitive: false,
         is_whole_word: false,
-        category: newKeywordCategory.trim() || undefined,
+        category: newKeywordCategory.trim() || '',
       },
       {
         onSuccess: () => {
@@ -476,7 +476,7 @@ export default function KeywordsPage() {
                   </tr>
                 ) : keywords.length ? (
                   <>
-                    {keywords.map((keyword, idx) => (
+                    {keywords.map((keyword: any, idx: number) => (
                       <KeywordRow
                         key={keyword.id}
                         keyword={keyword}

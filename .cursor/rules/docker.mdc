@@ -1,9 +1,7 @@
 ---
 description: Docker и Docker Compose best practices для production-ready контейнеризации
-globs: docker-compose*.yml, Dockerfile*, .dockerignore, .env*
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Docker и Docker Compose Best Practices
 
 ## **Основные принципы**
