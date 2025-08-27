@@ -72,10 +72,6 @@
             "from": "./entities"
           },
           {
-            "target": "./app",
-            "from": "./shared"
-          },
-          {
             "target": "./widgets",
             "from": "./features"
           },
@@ -97,7 +93,7 @@
         "varsIgnorePattern": "^_"
       }
     ],
-    "@typescript-eslint/prefer-const": "error",
+
     "@typescript-eslint/no-explicit-any": "warn",
     "prefer-const": "error",
     "no-var": "error"

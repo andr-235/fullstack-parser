@@ -1,16 +1,12 @@
 import { Inter } from 'next/font/google'
-
 import type { Metadata } from 'next'
 
 import './globals.css'
+
 import { APP_CONFIG } from '@/shared/config'
-import { DebugPanel } from '@/shared/ui/debug/DebugPanel'
-import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
-import { ThemeProvider } from '@/shared/ui/theme-provider'
 
 import { QueryProvider } from '@/app/providers/QueryProvider'
-
-import { Sidebar, Header } from '@/widgets/layout'
+import { ThemeProvider } from '@/shared/ui/theme-provider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -55,27 +51,16 @@ export default function RootLayout({
   return (
     <html lang="ru" suppressHydrationWarning>
       <body className={inter.className}>
-        <div id="__next">
-          <ErrorBoundary>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="dark"
-              enableSystem
-              disableTransitionOnChange
-            >
-              <QueryProvider>
-                <div className="flex h-screen">
-                  <Sidebar />
-                  <div className="flex-1 flex flex-col">
-                    <Header />
-                    <main className="flex-1 overflow-auto">{children}</main>
-                  </div>
-                </div>
-                <DebugPanel />
-              </QueryProvider>
-            </ThemeProvider>
-          </ErrorBoundary>
-        </div>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <QueryProvider>
+            {children}
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

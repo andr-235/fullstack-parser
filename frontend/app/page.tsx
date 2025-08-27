@@ -1,5 +1,6 @@
-import HomePage from '@/features/dashboard/ui/HomePage'
+import { redirect } from 'next/navigation'
 
 export default function MainRoute() {
-  return <HomePage />
+  // Перенаправляем на dashboard как основную страницу
+  redirect('/dashboard')
 }
