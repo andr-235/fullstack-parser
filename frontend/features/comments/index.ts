@@ -1,3 +1,2 @@
-// Comments feature exports
-export * from './ui'
-export * from './types'
+// Comments feature
+export { CommentsList } from './ui/CommentsList'

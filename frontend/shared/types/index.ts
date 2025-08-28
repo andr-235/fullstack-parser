@@ -1,65 +1,22 @@
-// API типы
-export type {
-  BaseEntity,
-  PaginatedResponse,
-  StatusResponse,
-  VKGroupBase,
-  VKGroupCreate,
-  VKGroupUpdate,
-  VKGroupResponse,
-  VKGroupStats,
-  VKGroupUploadResponse,
-  KeywordBase,
-  KeywordCreate,
-  KeywordUpdate,
-  KeywordResponse,
-  KeywordUploadResponse,
-  KeywordStats,
-  VKCommentBase,
-  VKCommentResponse,
-  CommentWithKeywords,
-  CommentUpdateRequest,
-  CommentSearchParams,
-  ParseTaskCreate,
-  ParseTaskResponse,
-  ParseStats,
-  ParserState,
-  ParserStats,
-  GlobalStats,
-  DashboardStats,
-  APIError,
-  PaginationParams,
-  MonitoringStats,
-  VKGroupMonitoring,
-  MonitoringGroupUpdate,
-  MonitoringRunResult,
-  SchedulerStatus,
-} from './api'
+// Shared types
+export type ID = string | number
 
-// Settings типы
-export type {
-  VKAPISettings,
-  MonitoringSettings,
-  DatabaseSettings,
-  LoggingSettings,
-  UISettings,
-  ApplicationSettings,
-  SettingsUpdateRequest,
-  SettingsResponse,
-  SettingsHealthStatus,
-} from './settings'
+export interface ApiResponse<T = any> {
+  data: T
+  success: boolean
+  message?: string
+}
 
-export {
-  THEME_OPTIONS,
-  LOG_LEVEL_OPTIONS,
-  LOG_FORMAT_OPTIONS,
-  SETTINGS_VALIDATION,
-} from './settings'
+export interface PaginationParams {
+  page: number
+  limit: number
+}
 
-// Иконки
-export type {
-  AppIconInfo,
-  AppIconSize,
-  AppIconProps,
-  AppManifest,
-} from './icon'
+export interface PaginatedResponse<T = any> extends ApiResponse<T[]> {
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}

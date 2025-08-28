@@ -1,114 +1,97 @@
-// Базовые компоненты
-export { Button } from './button'
-export { Input } from './input'
-export { Label } from './label'
-export { Badge, type BadgeProps } from './badge'
+// UI Components - shadcn/ui
+export { Alert, AlertDescription, AlertTitle } from './alert'
+export { Avatar, AvatarFallback, AvatarImage } from './avatar'
+export { Badge, badgeVariants } from './badge'
+export { Button, buttonVariants } from './button'
 export {
   Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardContent,
 } from './card'
-export {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from './dialog'
-export {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from './select'
 export { Checkbox } from './checkbox'
-export { Switch } from './switch'
-export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
-export { Progress } from './progress'
-export { Separator } from './separator'
-export { Avatar, AvatarImage, AvatarFallback } from './avatar'
-export { Skeleton } from './skeleton'
-export { Alert, AlertTitle, AlertDescription } from './alert'
 export {
   Collapsible,
-  CollapsibleTrigger,
   CollapsibleContent,
+  CollapsibleTrigger,
 } from './collapsible'
 export {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from './table'
-
-// Специальные компоненты
-export { LoadingSpinner, LoadingSpinnerWithText } from './loading-spinner'
-export { FileUpload } from './file-upload'
-export { InfiniteScroll } from './infinite-scroll'
-export { VirtualizedList } from './virtualized-list'
-export { AppIcon } from './app-icon'
-export { ErrorBoundary, ErrorFallback } from './ErrorBoundary'
-export {
-  TooltipProvider,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from './tooltip'
-export { StatsCard, StatsGrid } from './stats-card'
-export { LoadingState, EmptyState, ErrorState, NoResultsState } from './states'
-export { PageHeader, CompactPageHeader } from './page-header'
-export { MetricCard, MetricsGrid, SimpleMetricCard } from './metric-card'
-export { PageContainer, CompactContainer } from './page-container'
-export {
-  ErrorCard,
-  ErrorsGrid,
-  SimpleErrorCard,
-  NetworkErrorCard,
-} from './error-card'
-export { ChartCard, ChartsGrid, useChartConfig } from './chart-card'
-export { SearchInput, AdvancedSearchInput, useSearch } from './search-input'
-export { DataTable, SimpleDataTable, type Column } from './data-table'
-export { FilterPanel, useFilters } from './filter-panel'
-export { ActivityList, type ActivityItem } from './activity-list'
-export { TimeStats, type TimeStatsItem } from './time-stats'
-
-// Shadcn UI компоненты
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from './dialog'
 export {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuCheckboxItem,
-  DropdownMenuRadioItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuGroup,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuRadioGroup,
+  DropdownMenuTrigger,
 } from './dropdown-menu'
 export {
-  type ToastProps,
-  type ToastActionElement,
-  ToastProvider,
-  ToastViewport,
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from './form'
+export { HoverCard, HoverCardContent, HoverCardTrigger } from './hover-card'
+export { Input } from './input'
+export { Label } from './label'
+export {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuIndicator,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  NavigationMenuViewport,
+  navigationMenuTriggerStyle,
+} from './navigation-menu'
+export { Popover, PopoverContent, PopoverTrigger } from './popover'
+export { Progress } from './progress'
+export { RadioGroup, RadioGroupItem } from './radio-group'
+export { ScrollArea, ScrollBar } from './scroll-area'
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectScrollDownButton,
+  SelectScrollUpButton,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from './select'
+export { Separator } from './separator'
+export { Skeleton } from './skeleton'
+export { Switch } from './switch'
+export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs'
+export { Textarea } from './textarea'
+export {
   Toast,
-  ToastTitle,
-  ToastDescription,
-  ToastClose,
   ToastAction,
+  ToastClose,
+  ToastDescription,
+  ToastProvider,
+  ToastTitle,
+  ToastViewport,
 } from './toast'
 export { Toaster } from './toaster'
-
-// Debug компоненты
-export { DebugPanel } from './debug/DebugPanel'
+export {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './tooltip'

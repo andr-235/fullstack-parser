@@ -1,18 +1,23 @@
-import {
-  BaseEntity,
-  KeywordBase,
-  KeywordCreate,
-  KeywordUpdate,
-  KeywordResponse,
-} from '@/shared/types/api'
+import { ID } from '@/shared/types'
 
-// Re-export types from shared
-export type { KeywordBase, KeywordCreate, KeywordUpdate, KeywordResponse }
+export interface Keyword {
+  id: ID
+  name: string
+  description?: string
+  category: string
+  usageCount: number
+  createdAt: string
+  updatedAt: string
+}
 
-export interface KeywordStats {
-  keyword_id: number
-  word: string
-  total_matches: number
-  recent_matches: number
-  top_groups: string[]
+export interface CreateKeywordRequest {
+  name: string
+  description?: string
+  category: string
+}
+
+export interface UpdateKeywordRequest {
+  name?: string
+  description?: string
+  category?: string
 }

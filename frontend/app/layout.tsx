@@ -4,11 +4,13 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 import { APP_CONFIG } from '@/shared/config'
-
+import { SidebarInset } from '@/shared/ui/sidebar'
 import { QueryProvider } from '@/app/providers/QueryProvider'
 import { ThemeProvider } from '@/shared/ui/theme-provider'
-import { Sidebar } from '@/widgets/sidebar'
 import { Topbar } from '@/widgets/topbar'
+import { AppSidebar, SidebarProvider, SidebarTrigger } from '@/widgets/sidebar'
+import { AuthProvider } from '@/providers/AuthProvider'
+import { ToastProvider } from '@/providers/ToastProvider'
 
 // Force dynamic rendering to avoid prerendering issues
 export const dynamic = 'force-dynamic'
@@ -63,15 +65,22 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-            <div className="flex h-screen bg-background">
-              <Sidebar />
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <Topbar />
-                <main className="flex-1 overflow-auto">
-                  {children}
-                </main>
-              </div>
-            </div>
+            <AuthProvider>
+              <SidebarProvider>
+                <AppSidebar />
+                <SidebarInset>
+                  <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                    <SidebarTrigger className="-ml-1" />
+                    <div className="flex-1" />
+                    <Topbar />
+                  </header>
+                  <main className="flex-1 overflow-auto p-4">
+                    {children}
+                  </main>
+                </SidebarInset>
+              </SidebarProvider>
+              <ToastProvider />
+            </AuthProvider>
           </QueryProvider>
         </ThemeProvider>
       </body>

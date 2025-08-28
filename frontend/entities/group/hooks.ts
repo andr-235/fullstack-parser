@@ -1,248 +1,46 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/shared/lib/api'
-import type {
-  VKGroupResponse,
-  VKGroupCreate,
-  VKGroupUpdate,
-  PaginationParams,
-  PaginatedResponse,
-  VKGroupUploadResponse,
-} from '@/shared/types'
+import { useState } from 'react'
+import { Group, CreateGroupRequest, UpdateGroupRequest } from './types'
 
-// Вспомогательная функция для исправления MIME типов файлов
-function processFileForUpload(file: File): File {
-  const fileExtension = file.name.split('.').pop()?.toLowerCase()
+export const useGroups = () => {
+  const [groups, setGroups] = useState<Group[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  if (fileExtension === 'txt') {
-    return new File([file], file.name, { type: 'text/plain' })
-  } else if (fileExtension === 'csv') {
-    return new File([file], file.name, { type: 'text/csv' })
+  const fetchGroups = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/groups')
+      const data = await response.json()
+      setGroups(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch groups')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  return file
-}
-
-// Хук для получения групп
-export function useGroups(
-  params?: { active_only?: boolean; search?: string } & PaginationParams
-) {
-  const { page = 1, size = 20, active_only, search } = params || {}
-
-  return useQuery({
-    queryKey: ['groups', { page, size, active_only, search }],
-    queryFn: () => {
-      const searchParams = new URLSearchParams()
-      searchParams.append('page', page.toString())
-      searchParams.append('size', size.toString())
-      if (active_only !== undefined)
-        searchParams.append('active_only', active_only.toString())
-      if (search) searchParams.append('search', search)
-
-      return api.get<PaginatedResponse<VKGroupResponse>>(
-        `/groups/?${searchParams.toString()}`
-      )
-    },
-    staleTime: 5 * 60 * 1000, // 5 минут
-  })
-}
-
-// Хук для получения одной группы
-export function useGroup(groupId: number) {
-  return useQuery({
-    queryKey: ['group', groupId],
-    queryFn: () => api.get<VKGroupResponse>(`/groups/${groupId}`),
-    enabled: !!groupId,
-    staleTime: 10 * 60 * 1000, // 10 минут
-  })
-}
-
-// Хук для создания группы
-export function useCreateGroup() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (data: VKGroupCreate) =>
-      api.post<VKGroupResponse>('/groups', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['groups'] })
-    },
-  })
-}
-
-// Хук для обновления группы
-export function useUpdateGroup() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: ({ groupId, data }: { groupId: number; data: VKGroupUpdate }) =>
-      api.patch<VKGroupResponse>(`/groups/${groupId}`, data),
-    onSuccess: (_, { groupId }) => {
-      queryClient.invalidateQueries({ queryKey: ['groups'] })
-      queryClient.invalidateQueries({ queryKey: ['group', groupId] })
-    },
-  })
-}
-
-// Хук для удаления группы
-export function useDeleteGroup() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (groupId: number) => api.delete(`/groups/${groupId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['groups'] })
-    },
-  })
-}
-
-// Хук для получения статистики группы
-export function useGroupStats(groupId: number) {
-  return useQuery({
-    queryKey: ['group-stats', groupId],
-    queryFn: () => api.get<any>(`/groups/${groupId}/stats`),
-    enabled: !!groupId,
-    staleTime: 5 * 60 * 1000, // 5 минут
-  })
-}
-
-// Хук для загрузки групп из файла с отслеживанием прогресса
-export function useUploadGroupsWithProgress() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({
-      file,
-      options,
-      onProgress,
-    }: {
-      file: File
-      options?: {
-        is_active?: boolean
-        max_posts_to_check?: number
-      }
-      onProgress?: (progress: {
-        status: string
-        progress: number
-        current_group: string
-        total_groups: number
-        processed_groups: number
-        created: number
-        skipped: number
-        errors: string[]
-      }) => void
-    }) => {
-      return new Promise<VKGroupUploadResponse>((resolve, reject) => {
-        const formData = new FormData()
-
-        formData.append('file', processFileForUpload(file))
-        if (options?.is_active !== undefined)
-          formData.append('is_active', options.is_active.toString())
-        if (options?.max_posts_to_check)
-          formData.append(
-            'max_posts_to_check',
-            options.max_posts_to_check.toString()
-          )
-
-        // Отправляем файл и получаем upload_id
-        api
-          .post('/groups/upload-with-progress/', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          })
-          .then((data: { upload_id: string; status: string }) => {
-            const uploadId = data.upload_id
-
-            // Функция для проверки прогресса
-            const checkProgress = () => {
-              api
-                .get(`/groups/upload-progress/${uploadId}`)
-                .then((progressData) => {
-                  onProgress?.(progressData)
-
-                  if (progressData.status === 'completed') {
-                    // Загрузка завершена
-                    const result: VKGroupUploadResponse = {
-                      status: 'success',
-                      message: 'Загрузка завершена',
-                      total_processed: progressData.total_groups,
-                      created: progressData.created,
-                      skipped: progressData.skipped,
-                      errors: progressData.errors,
-                      created_groups: [],
-                    }
-                    resolve(result)
-                  } else if (progressData.status === 'error') {
-                    reject(new Error(progressData.errors.join(', ')))
-                  } else {
-                    // Продолжаем проверять прогресс
-                    setTimeout(checkProgress, 500) // Уменьшаем интервал до 500мс
-                  }
-                })
-                .catch((error) => {
-                  reject(error)
-                })
-            }
-
-            // Начинаем проверку прогресса
-            checkProgress()
-          })
-          .catch(reject)
+  const createGroup = async (groupData: CreateGroupRequest) => {
+    try {
+      const response = await fetch('/api/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(groupData),
       })
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['groups'] })
-    },
-  })
-}
-
-// Хук для загрузки групп из файла
-export function useUploadGroupsFromFile() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({
-      file,
-      options,
-      onProgress,
-    }: {
-      file: File
-      options?: {
-        is_active?: boolean
-        max_posts_to_check?: number
-      }
-      onProgress?: (progress: number) => void
-    }) => {
-      const formData = new FormData()
-
-      formData.append('file', processFileForUpload(file))
-      if (options?.is_active !== undefined)
-        formData.append('is_active', options.is_active.toString())
-      if (options?.max_posts_to_check)
-        formData.append(
-          'max_posts_to_check',
-          options.max_posts_to_check.toString()
-        )
-
-      const res = await api.upload<VKGroupUploadResponse>(
-        '/groups/upload',
-        formData,
-        {
-          onUploadProgress: (progressEvent) => {
-            if (onProgress && progressEvent.total) {
-              const progress = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              )
-              onProgress(progress)
-            }
-          },
-        }
+      const newGroup = await response.json()
+      setGroups((prev) => [...prev, newGroup])
+      return newGroup
+    } catch (err) {
+      throw new Error(
+        err instanceof Error ? err.message : 'Failed to create group'
       )
+    }
+  }
 
-      return res
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['groups'] })
-    },
-  })
+  return {
+    groups,
+    loading,
+    error,
+    fetchGroups,
+    createGroup,
+  }
 }

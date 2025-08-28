@@ -1,19 +1,24 @@
-import {
-  BaseEntity,
-  VKGroupBase,
-  VKGroupCreate,
-  VKGroupUpdate,
-  VKGroupResponse,
-} from '@/shared/types/api'
+import { ID } from '@/shared/types'
 
-// Re-export types from shared
-export type { VKGroupBase, VKGroupCreate, VKGroupUpdate, VKGroupResponse }
+export interface Group {
+  id: ID
+  name: string
+  description: string
+  ownerId: ID
+  memberIds: ID[]
+  isPrivate: boolean
+  createdAt: string
+  updatedAt: string
+}
 
-export interface VKGroupStats {
-  group_id: number
-  total_posts: number
-  total_comments: number
-  comments_with_keywords: number
-  last_activity?: string
-  top_keywords: string[]
+export interface CreateGroupRequest {
+  name: string
+  description: string
+  isPrivate?: boolean
+}
+
+export interface UpdateGroupRequest {
+  name?: string
+  description?: string
+  isPrivate?: boolean
 }

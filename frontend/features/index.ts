@@ -1,10 +1,8 @@
-// Features layer exports
+// Feature modules
 export * from './comments'
-export * from './parser'
+export * from './dashboard'
 export * from './groups'
 export * from './keywords'
-export * from './dashboard'
-export * from './settings'
 export * from './monitoring'
-export * from './error-reports'
-export * from './comment-processing'
+export * from './parser'
+export * from './settings'
