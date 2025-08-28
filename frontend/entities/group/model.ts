@@ -33,22 +33,36 @@ export class Group {
 
   get isRecentlyActive(): boolean {
     if (!this.lastParsedAt) return false
-    const lastParsed = new Date(this.lastParsedAt)
-    const now = new Date()
-    const diffInHours =
-      (now.getTime() - lastParsed.getTime()) / (1000 * 60 * 60)
-    return diffInHours < 24
+    try {
+      const lastParsed = new Date(this.lastParsedAt)
+      const now = new Date()
+      if (isNaN(lastParsed.getTime())) {
+        return false
+      }
+      const diffInHours =
+        (now.getTime() - lastParsed.getTime()) / (1000 * 60 * 60)
+      return diffInHours < 24
+    } catch {
+      return false
+    }
   }
 
   get formattedLastParsedAt(): string {
     if (!this.lastParsedAt) return 'Никогда'
-    return new Date(this.lastParsedAt).toLocaleDateString('ru-RU', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+    try {
+      const date = new Date(this.lastParsedAt)
+      return isNaN(date.getTime())
+        ? 'Неверная дата'
+        : date.toLocaleDateString('ru-RU', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+    } catch {
+      return 'Неверная дата'
+    }
   }
 
   get vkUrl(): string {
