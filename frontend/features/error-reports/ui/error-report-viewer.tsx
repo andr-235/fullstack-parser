@@ -27,15 +27,15 @@ import { ru } from 'date-fns/locale'
 interface ErrorEntry {
   timestamp: string
   error_type:
-    | 'validation'
-    | 'database'
-    | 'api'
-    | 'network'
-    | 'authentication'
-    | 'authorization'
-    | 'rate_limit'
-    | 'timeout'
-    | 'unknown'
+  | 'validation'
+  | 'database'
+  | 'api'
+  | 'network'
+  | 'authentication'
+  | 'authorization'
+  | 'rate_limit'
+  | 'timeout'
+  | 'unknown'
   severity: 'low' | 'medium' | 'high' | 'critical'
   message: string
   details?: string
@@ -116,7 +116,14 @@ export function ErrorReportViewer({
   }
 
   const formatTimestamp = (timestamp: string) => {
-    return format(new Date(timestamp), 'dd.MM.yyyy HH:mm:ss', { locale: ru })
+    try {
+      const date = new Date(timestamp)
+      return isNaN(date.getTime())
+        ? 'Неверная дата'
+        : format(date, 'dd.MM.yyyy HH:mm:ss', { locale: ru })
+    } catch {
+      return 'Неверная дата'
+    }
   }
 
   const getSeverityIcon = (severity: ErrorEntry['severity']) => {

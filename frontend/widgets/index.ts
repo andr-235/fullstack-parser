@@ -1,14 +1,4 @@
 // Widgets exports
-export * from './comments-table'
-export * from './parser-form'
-export * from './keywords-manager'
-export * from './dashboard-stats'
-export * from './groups-list'
-export * from './comments-page'
-export * from './dashboard-page'
-export * from './layout'
-export * from './groups-page'
-export * from './keywords-page'
-export * from './monitoring-page'
-export * from './parser-page'
-export * from './settings-page'
+// Виджеты - композиция компонентов для сложных UI блоков
+export * from './sidebar'
+export * from './topbar'
