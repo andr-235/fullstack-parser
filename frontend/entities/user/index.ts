@@ -1,4 +1,3 @@
-// User entity exports
-// TODO: Add user types when needed
-
-export {}
+// User entity
+export * from './types'
+export * from './hooks'
