@@ -45,24 +45,24 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="flex items-center justify-center min-h-screen p-4">
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
               </div>
-              <CardTitle className="text-lg font-semibold text-gray-900">
+              <CardTitle className="text-lg font-semibold">
                 Что-то пошло не так
               </CardTitle>
             </CardHeader>
             <CardContent className="text-center">
-              <p className="mb-4 text-sm text-gray-600">
+              <p className="mb-4 text-sm text-muted-foreground">
                 Произошла непредвиденная ошибка. Попробуйте обновить страницу
                 или обратитесь к администратору.
               </p>
               {process.env.NODE_ENV === 'development' && this.state.error && (
                 <details className="mb-4 text-left">
-                  <summary className="cursor-pointer text-sm font-medium text-gray-700">
+                  <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
                     Детали ошибки (только для разработки)
                   </summary>
-                  <pre className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded overflow-auto">
+                  <pre className="mt-2 text-xs text-destructive bg-destructive/10 p-2 rounded overflow-auto">
                     {this.state.error.stack}
                   </pre>
                 </details>
@@ -98,13 +98,13 @@ export function ErrorFallback({
     <div className="flex items-center justify-center min-h-[200px] p-4">
       <Card className="w-full max-w-md">
         <CardContent className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-            <AlertTriangle className="h-6 w-6 text-red-600" />
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+            <AlertTriangle className="h-6 w-6 text-destructive" />
           </div>
-          <h3 className="mb-2 text-lg font-semibold text-gray-900">
+          <h3 className="mb-2 text-lg font-semibold">
             Ошибка загрузки
           </h3>
-          <p className="mb-4 text-sm text-gray-600">
+          <p className="mb-4 text-sm text-muted-foreground">
             Не удалось загрузить данные. Попробуйте еще раз.
           </p>
           <Button onClick={resetErrorBoundary} size="sm">

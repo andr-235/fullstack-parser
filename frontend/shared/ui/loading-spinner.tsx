@@ -19,7 +19,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   return (
     <div
       className={cn(
-        'animate-spin rounded-full border-2 border-gray-300 border-t-blue-600',
+        'animate-spin rounded-full border-2 border-muted border-t-primary',
         sizeClasses[size],
         className
       )}
@@ -36,7 +36,7 @@ const LoadingSpinnerWithText: React.FC<{
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <LoadingSpinner size={size} />
-      <span className="text-sm text-gray-600">{text}</span>
+      <span className="text-sm text-muted-foreground">{text}</span>
     </div>
   )
 }

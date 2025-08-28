@@ -59,11 +59,11 @@ export function FileUpload({
     const extension = fileName.split('.').pop()?.toLowerCase()
     switch (extension) {
       case 'csv':
-        return <FileSpreadsheet className="h-8 w-8 text-blue-500" />
+        return <FileSpreadsheet className="h-8 w-8 text-primary" />
       case 'txt':
-        return <FileText className="h-8 w-8 text-green-500" />
+        return <FileText className="h-8 w-8 text-green-600" />
       default:
-        return <FileText className="h-8 w-8 text-gray-500" />
+        return <FileText className="h-8 w-8 text-muted-foreground" />
     }
   }
 
@@ -82,32 +82,32 @@ export function FileUpload({
           {...getRootProps()}
           className={cn(
             'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors',
-            isDragActive && !isDragReject && 'border-blue-500 bg-blue-50',
-            isDragReject && 'border-red-500 bg-red-50',
+            isDragActive && !isDragReject && 'border-primary bg-primary/5',
+            isDragReject && 'border-destructive bg-destructive/5',
             disabled && 'opacity-50 cursor-not-allowed',
-            'hover:border-gray-400'
+            'hover:border-muted-foreground'
           )}
         >
           <input {...getInputProps()} />
-          <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <p className="text-sm text-gray-600 mb-2">{placeholder}</p>
-          <p className="text-xs text-gray-500">
+          <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-sm text-muted-foreground mb-2">{placeholder}</p>
+          <p className="text-xs text-muted-foreground">
             Поддерживаемые форматы: {acceptedFileTypes.join(', ')}
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             Максимальный размер: {formatFileSize(maxSize)}
           </p>
         </div>
       ) : (
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <div className="border rounded-lg p-4 bg-muted/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               {getFileIcon(selectedFile.name)}
               <div>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-foreground">
                   {selectedFile.name}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   {formatFileSize(selectedFile.size)}
                 </p>
               </div>
@@ -116,7 +116,7 @@ export function FileUpload({
               variant="ghost"
               size="sm"
               onClick={removeFile}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-muted-foreground hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </Button>

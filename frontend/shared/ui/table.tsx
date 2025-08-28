@@ -12,7 +12,7 @@ const Table = React.forwardRef<
     ref={ref}
     className={cn(
       // Строгие границы, минимальное скругление, без тени
-      'w-full border border-slate-700 rounded-sm bg-slate-900 text-slate-100 text-sm',
+      'w-full border border-border rounded-sm bg-background text-foreground text-sm',
       className
     )}
     {...props}
@@ -26,7 +26,7 @@ const TableHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <thead
     ref={ref}
-    className={cn('bg-slate-800 border-b border-slate-700', className)}
+    className={cn('bg-muted border-b border-border', className)}
     {...props}
   />
 ))
@@ -38,7 +38,7 @@ const TableBody = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tbody
     ref={ref}
-    className={cn('divide-y divide-slate-700', className)}
+    className={cn('divide-y divide-border', className)}
     {...props}
   />
 ))
@@ -52,7 +52,7 @@ const TableRow = React.forwardRef<
     ref={ref}
     className={cn(
       // Zebra-striping, hover подчёркивание
-      'even:bg-slate-800 hover:underline',
+      'even:bg-muted hover:bg-muted/50',
       className
     )}
     {...props}
@@ -67,7 +67,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      'px-4 py-2 font-bold text-slate-300 border-r border-slate-700 last:border-r-0',
+      'px-4 py-2 font-bold text-foreground border-r border-border last:border-r-0',
       className
     )}
     {...props}
@@ -82,7 +82,7 @@ const TableCell = React.forwardRef<
   <td
     ref={ref}
     className={cn(
-      'px-4 py-2 border-r border-slate-700 last:border-r-0',
+      'px-4 py-2 border-r border-border last:border-r-0',
       className
     )}
     {...props}

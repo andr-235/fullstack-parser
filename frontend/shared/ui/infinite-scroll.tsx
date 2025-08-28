@@ -55,7 +55,7 @@ export function InfiniteScroll({
       {/* Индикатор загрузки */}
       {isFetchingNextPage && (
         <div className="flex justify-center py-4">
-          <div className="flex items-center gap-2 text-slate-400">
+          <div className="flex items-center gap-2 text-muted-foreground">
             <LoadingSpinner className="h-4 w-4" />
             <span className="text-sm">Загрузка...</span>
           </div>
@@ -64,7 +64,7 @@ export function InfiniteScroll({
 
       {/* Сообщение о конце списка */}
       {!hasNextPage && !isFetchingNextPage && (
-        <div className="text-center py-4 text-slate-400 text-sm">
+        <div className="text-center py-4 text-muted-foreground text-sm">
           Все группы загружены
         </div>
       )}

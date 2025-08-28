@@ -91,3 +91,6 @@ export const SUCCESS_MESSAGES = {
   CREATED: 'Элемент успешно создан.',
   UPDATED: 'Данные успешно обновлены.',
 } as const
+
+// Цвета и темы
+export * from './colors'

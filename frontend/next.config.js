@@ -4,15 +4,6 @@ const nextConfig = {
   experimental: {
     // Включаем оптимизации для production
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
-    // Включаем turbo для быстрой сборки
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
   },
 
   // Настройки изображений
@@ -178,6 +169,12 @@ const nextConfig = {
     // Игнорируем ошибки ESLint при сборке
     ignoreDuringBuilds: true,
   },
+
+  // Отключаем статическую генерацию для страниц с ошибками
+  staticPageGenerationTimeout: 1000,
+
+  // Отключаем статическую оптимизацию
+  trailingSlash: false,
 
   // Настройки для Docker
   output: 'standalone',

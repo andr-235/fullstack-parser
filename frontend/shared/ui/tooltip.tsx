@@ -1,123 +1,30 @@
-'use client'
+"use client"
 
-import * as React from 'react'
-import { cn } from '@/shared/lib/utils'
+import * as React from "react"
+import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
-interface TooltipContextType {
-  isVisible: boolean
-  setIsVisible: (visible: boolean) => void
-}
+import { cn } from "@/shared/lib/utils"
 
-const TooltipContext = React.createContext<TooltipContextType | undefined>(
-  undefined
-)
+const TooltipProvider = TooltipPrimitive.Provider
 
-export function TooltipProvider({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
-}
+const Tooltip = TooltipPrimitive.Root
 
-export function Tooltip({ children }: { children: React.ReactNode }) {
-  const [isVisible, setIsVisible] = React.useState(false)
+const TooltipTrigger = TooltipPrimitive.Trigger
 
-  return (
-    <TooltipContext.Provider value={{ isVisible, setIsVisible }}>
-      {children}
-    </TooltipContext.Provider>
-  )
-}
+const TooltipContent = React.forwardRef<
+  React.ElementRef<typeof TooltipPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
+>(({ className, sideOffset = 4, ...props }, ref) => (
+  <TooltipPrimitive.Content
+    ref={ref}
+    sideOffset={sideOffset}
+    className={cn(
+      "z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+      className
+    )}
+    {...props}
+  />
+))
+TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
-export function TooltipTrigger({
-  children,
-  asChild = false,
-}: {
-  children: React.ReactNode
-  asChild?: boolean
-}) {
-  const context = React.useContext(TooltipContext)
-
-  if (!context) {
-    return <>{children}</>
-  }
-
-  const { setIsVisible } = context
-
-  const handleMouseEnter = () => setIsVisible(true)
-  const handleMouseLeave = () => setIsVisible(false)
-
-  if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement<any>, {
-      onMouseEnter: handleMouseEnter,
-      onMouseLeave: handleMouseLeave,
-    })
-  }
-
-  return (
-    <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-      {children}
-    </div>
-  )
-}
-
-export function TooltipContent({
-  children,
-  className,
-  side = 'top',
-  align = 'center',
-}: {
-  children: React.ReactNode
-  className?: string
-  side?: 'top' | 'bottom' | 'left' | 'right'
-  align?: 'start' | 'center' | 'end'
-}) {
-  const context = React.useContext(TooltipContext)
-
-  if (!context || !context.isVisible) {
-    return null
-  }
-
-  const { isVisible } = context
-
-  const getPositionClasses = () => {
-    const baseClasses =
-      'absolute z-50 px-2 py-1 text-xs text-white bg-slate-800 rounded-md shadow-lg whitespace-nowrap'
-
-    switch (side) {
-      case 'top':
-        return cn(
-          baseClasses,
-          'bottom-full left-1/2 transform -translate-x-1/2 mb-2',
-          'after:content-[""] after:absolute after:top-full after:left-1/2 after:transform after:-translate-x-1/2',
-          'after:border-4 after:border-transparent after:border-t-slate-800'
-        )
-      case 'bottom':
-        return cn(
-          baseClasses,
-          'top-full left-1/2 transform -translate-x-1/2 mt-2',
-          'after:content-[""] after:absolute after:bottom-full after:left-1/2 after:transform after:-translate-x-1/2',
-          'after:border-4 after:border-transparent after:border-b-slate-800'
-        )
-      case 'left':
-        return cn(
-          baseClasses,
-          'right-full top-1/2 transform -translate-y-1/2 mr-2',
-          'after:content-[""] after:absolute after:right-full after:top-1/2 after:transform after:-translate-y-1/2',
-          'after:border-4 after:border-transparent after:border-l-slate-800'
-        )
-      case 'right':
-        return cn(
-          baseClasses,
-          'left-full top-1/2 transform -translate-y-1/2 ml-2',
-          'after:content-[""] after:absolute after:left-full after:top-1/2 after:transform after:-translate-y-1/2',
-          'after:border-4 after:border-transparent after:border-r-slate-800'
-        )
-      default:
-        return baseClasses
-    }
-  }
-
-  return (
-    <div className={cn('relative inline-block')}>
-      <div className={cn(getPositionClasses(), className)}>{children}</div>
-    </div>
-  )
-}
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }

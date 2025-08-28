@@ -1,6 +1,7 @@
 'use client'
 
 import React, { Component, ErrorInfo, ReactNode } from 'react'
+import { Button } from '../button'
 
 interface Props {
   children: ReactNode
@@ -35,11 +36,11 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6">
-            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full">
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="max-w-md w-full bg-card border shadow-lg rounded-lg p-6">
+            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-destructive/10 rounded-full">
               <svg
-                className="w-6 h-6 text-red-600"
+                className="w-6 h-6 text-destructive"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -53,18 +54,18 @@ export class ErrorBoundary extends Component<Props, State> {
               </svg>
             </div>
             <div className="mt-4 text-center">
-              <h3 className="text-lg font-medium text-gray-900">
+              <h3 className="text-lg font-medium text-card-foreground">
                 Что-то пошло не так
               </h3>
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-muted-foreground">
                 Произошла ошибка в приложении. Попробуйте обновить страницу.
               </p>
               {process.env.NODE_ENV === 'development' && this.state.error && (
                 <details className="mt-4 text-left">
-                  <summary className="cursor-pointer text-sm font-medium text-gray-700">
+                  <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
                     Детали ошибки (только для разработки)
                   </summary>
-                  <div className="mt-2 p-3 bg-gray-100 rounded text-xs font-mono text-gray-800 overflow-auto">
+                  <div className="mt-2 p-3 bg-muted rounded text-xs font-mono text-foreground overflow-auto">
                     <div className="mb-2">
                       <strong>Ошибка:</strong> {this.state.error.message}
                     </div>
@@ -85,12 +86,9 @@ export class ErrorBoundary extends Component<Props, State> {
                   </div>
                 </details>
               )}
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
+              <Button onClick={() => window.location.reload()} className="mt-4">
                 Обновить страницу
-              </button>
+              </Button>
             </div>
           </div>
         </div>

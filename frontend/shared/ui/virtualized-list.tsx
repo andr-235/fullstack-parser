@@ -62,7 +62,7 @@ export function VirtualizedList<T>({
             itemCount={itemCountWithNextPage}
             itemSize={itemHeight}
             onItemsRendered={onItemsRendered}
-            className="scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800"
+            className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-muted/20"
           >
             {({
               index,
@@ -78,8 +78,8 @@ export function VirtualizedList<T>({
                     className="flex items-center justify-center p-4"
                   >
                     <div className="animate-pulse">
-                      <div className="h-4 bg-slate-700 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-slate-700 rounded w-1/2"></div>
+                      <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-muted rounded w-1/2"></div>
                     </div>
                   </div>
                 )
