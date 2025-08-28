@@ -1,4 +1,4 @@
-import { GroupsPage } from '@/widgets/groups-page'
+import { GroupsPage } from '@/features/groups'
 
 export default function GroupsRoute() {
   return <GroupsPage />

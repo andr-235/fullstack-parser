@@ -1,4 +1,4 @@
-import { KeywordsPage } from '@/widgets/keywords-page'
+import { KeywordsPage } from '@/features/keywords'
 
 export default function KeywordsRoute() {
   return <KeywordsPage />

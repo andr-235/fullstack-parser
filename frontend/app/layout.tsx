@@ -7,6 +7,11 @@ import { APP_CONFIG } from '@/shared/config'
 
 import { QueryProvider } from '@/app/providers/QueryProvider'
 import { ThemeProvider } from '@/shared/ui/theme-provider'
+import { Sidebar } from '@/widgets/sidebar'
+import { Topbar } from '@/widgets/topbar'
+
+// Force dynamic rendering to avoid prerendering issues
+export const dynamic = 'force-dynamic'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -58,7 +63,15 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-            {children}
+            <div className="flex h-screen bg-background">
+              <Sidebar />
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <Topbar />
+                <main className="flex-1 overflow-auto">
+                  {children}
+                </main>
+              </div>
+            </div>
           </QueryProvider>
         </ThemeProvider>
       </body>

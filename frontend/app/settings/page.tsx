@@ -4,9 +4,11 @@
  * должна быть перенесена в pages/settings слой
  */
 
+import { PageContainer } from '@/shared/ui'
+
 export default function SettingsPage() {
   return (
-    <div className="space-y-6">
+    <PageContainer maxWidth="full" background="gradient">
       <div className="text-center py-12">
         <h1 className="text-2xl font-bold text-foreground mb-4">
           Настройки приложения
@@ -15,6 +17,6 @@ export default function SettingsPage() {
           Компоненты настроек будут реализованы в pages/settings слое
         </p>
       </div>
-    </div>
+    </PageContainer>
   )
 }

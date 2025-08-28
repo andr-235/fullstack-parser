@@ -1,4 +1,4 @@
-import { MonitoringPage } from '@/widgets/monitoring-page'
+import { MonitoringPage } from '@/features/monitoring'
 
 export default function MonitoringPageComponent() {
   return <MonitoringPage />
