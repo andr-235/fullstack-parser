@@ -402,13 +402,19 @@ export default function ParserPage() {
                                 <Clock className="h-4 w-4 text-blue-400" />
                                 <span className="text-slate-300">
                                   {task.completed_at
-                                    ? formatDistanceToNow(
-                                      new Date(task.completed_at),
-                                      {
-                                        addSuffix: true,
-                                        locale: ru,
+                                    ? (() => {
+                                      try {
+                                        const date = new Date(task.completed_at)
+                                        return isNaN(date.getTime())
+                                          ? 'Неверная дата'
+                                          : formatDistanceToNow(date, {
+                                            addSuffix: true,
+                                            locale: ru,
+                                          })
+                                      } catch {
+                                        return 'Неверная дата'
                                       }
-                                    )
+                                    })()
                                     : '-'}
                                 </span>
                               </div>

@@ -1,2 +1,2 @@
 // Comments UI exports
-export { default as CommentsPage } from './CommentsPageRefactored'
+export { default as CommentsPage } from './CommentsPage'

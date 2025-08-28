@@ -10,6 +10,18 @@ import {
 import { useGroups } from '@/entities/group'
 import { useKeywords } from '@/entities/keyword'
 import {
+  PageHeader,
+  StatsGrid,
+  StatsCard,
+  DataTable,
+  LoadingState,
+  EmptyState,
+  ErrorState,
+  SearchInput,
+  FilterPanel,
+  useSearch,
+  useFilters,
+  PageContainer,
   Card,
   CardContent,
   CardDescription,
@@ -262,9 +274,11 @@ export default function CommentsPage() {
     // Сортировка на фронтенде
     return allComments.sort((a, b) => {
       if (sortField === 'published_at') {
-        const dateA = new Date(a.published_at).getTime()
-        const dateB = new Date(b.published_at).getTime()
-        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB
+        const dateA = new Date(a.published_at)
+        const dateB = new Date(b.published_at)
+        const timeA = isNaN(dateA.getTime()) ? 0 : dateA.getTime()
+        const timeB = isNaN(dateB.getTime()) ? 0 : dateB.getTime()
+        return sortOrder === 'desc' ? timeB - timeA : timeA - timeB
       }
       if (sortField === 'author_name') {
         const nameA = (
@@ -423,81 +437,70 @@ export default function CommentsPage() {
   const totalKeywords = keywordsData?.items?.length || 0
 
   return (
-    <div className="space-y-4">
+    <PageContainer maxWidth="full" background="gradient">
       {/* Заголовок */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl p-4 text-white">
-        <div className="flex items-center space-x-3 mb-2">
-          <div className="p-2 bg-white/10 rounded-lg">
-            <MessageSquare className="h-5 w-5" />
-          </div>
-          <h1 className="text-xl font-bold">Просмотр комментариев</h1>
-        </div>
-        <p className="text-slate-300 text-sm">
-          Фильтрация и просмотр комментариев с ключевыми словами. По умолчанию
-          показываются новые комментарии.
-        </p>
-      </div>
+      <PageHeader
+        title="Просмотр комментариев"
+        description="Фильтрация и просмотр комментариев с ключевыми словами. По умолчанию показываются новые комментарии."
+        icon={MessageSquare}
+      />
 
       {/* Статистика */}
-      <CollapsibleSection
-        title="Статистика"
-        icon={Target}
-        defaultExpanded={false}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
-            <CardContent className="p-3">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-slate-700 rounded-lg">
-                  <MessageSquare className="h-4 w-4 text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-slate-300">
-                    Комментариев
-                  </p>
-                  <p className="text-lg font-bold text-blue-400">
-                    {totalComments}
-                  </p>
-                </div>
+      {/* Statistics replaced with StatsGrid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
+          <CardContent className="p-3">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-slate-700 rounded-lg">
+                <MessageSquare className="h-4 w-4 text-blue-400" />
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <p className="text-xs font-medium text-slate-300">
+                  Комментариев
+                </p>
+                <p className="text-lg font-bold text-blue-400">
+                  {totalComments}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
-            <CardContent className="p-3">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-slate-700 rounded-lg">
-                  <Users className="h-4 w-4 text-green-400" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-slate-300">Групп</p>
-                  <p className="text-lg font-bold text-green-400">
-                    {totalGroups}
-                  </p>
-                </div>
+        <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
+          <CardContent className="p-3">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-slate-700 rounded-lg">
+                <Users className="h-4 w-4 text-green-400" />
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <p className="text-xs font-medium text-slate-300">Групп</p>
+                <p className="text-lg font-bold text-green-400">
+                  {totalGroups}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
-            <CardContent className="p-3">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-slate-700 rounded-lg">
-                  <Target className="h-4 w-4 text-purple-400" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-slate-300">
-                    Ключевых слов
-                  </p>
-                  <p className="text-lg font-bold text-purple-400">
-                    {totalKeywords}
-                  </p>
-                </div>
+        <Card className="bg-gradient-to-br from-slate-800 to-slate-700 border-slate-600 hover:shadow-lg transition-shadow duration-300">
+          <CardContent className="p-3">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-slate-700 rounded-lg">
+                <Target className="h-4 w-4 text-purple-400" />
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </CollapsibleSection>
+              <div>
+                <p className="text-xs font-medium text-slate-300">
+                  Ключевых слов
+                </p>
+                <p className="text-lg font-bold text-purple-400">
+                  {totalKeywords}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
 
       {/* Фильтры */}
       <CollapsibleSection
@@ -737,9 +740,8 @@ export default function CommentsPage() {
                 {comments.map((comment: VKCommentResponse, index: number) => (
                   <TableRow
                     key={comment.id}
-                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${
-                      comment.is_viewed ? 'opacity-60' : ''
-                    }`}
+                    className={`group-row animate-fade-in-up transition-all duration-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:shadow-md transform hover:scale-[1.01] ${comment.is_viewed ? 'opacity-60' : ''
+                      }`}
                     style={{ animationDelay: `${index * 30}ms` }}
                   >
                     <TableCell>
@@ -816,11 +818,16 @@ export default function CommentsPage() {
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
                         <span className="text-sm text-slate-400 text-xs">
-                          {format(
-                            new Date(comment.published_at),
-                            'dd.MM.yyyy HH:mm',
-                            { locale: ru }
-                          )}
+                          {(() => {
+                            try {
+                              const date = new Date(comment.published_at)
+                              return isNaN(date.getTime())
+                                ? 'Неверная дата'
+                                : format(date, 'dd.MM.yyyy HH:mm', { locale: ru })
+                            } catch {
+                              return 'Неверная дата'
+                            }
+                          })()}
                         </span>
                       </div>
                     </TableCell>
@@ -954,6 +961,6 @@ export default function CommentsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

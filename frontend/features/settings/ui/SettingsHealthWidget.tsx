@@ -136,7 +136,16 @@ export function SettingsHealthWidget() {
             <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Последняя проверка:{' '}
-                {new Date(health.last_check).toLocaleTimeString()}
+                {(() => {
+                  try {
+                    const date = new Date(health.last_check)
+                    return isNaN(date.getTime())
+                      ? 'Неверная дата'
+                      : date.toLocaleTimeString()
+                  } catch {
+                    return 'Неверная дата'
+                  }
+                })()}
               </p>
             </div>
           )}

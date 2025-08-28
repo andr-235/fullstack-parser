@@ -1,2 +1,2 @@
 // dashboard UI exports
-export { default as DashboardPage } from './DashboardPage'
+export { DashboardPage } from './DashboardPage'

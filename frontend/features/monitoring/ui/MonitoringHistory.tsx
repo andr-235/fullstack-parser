@@ -29,7 +29,7 @@ interface MonitoringHistoryProps {
   // Пока используем заглушки
 }
 
-export default function MonitoringHistory({}: MonitoringHistoryProps) {
+export default function MonitoringHistory({ }: MonitoringHistoryProps) {
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('7d')
 
   // Заглушечные данные для демонстрации
@@ -97,11 +97,10 @@ export default function MonitoringHistory({}: MonitoringHistoryProps) {
             <button
               key={range.key}
               onClick={() => setTimeRange(range.key as any)}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                timeRange === range.key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-              }`}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${timeRange === range.key
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
             >
               {range.label}
             </button>
@@ -210,7 +209,16 @@ export default function MonitoringHistory({}: MonitoringHistoryProps) {
                   >
                     <div className="flex items-center space-x-4">
                       <div className="text-sm font-medium text-slate-300">
-                        {format(new Date(day.date), 'dd MMM', { locale: ru })}
+                        {(() => {
+                          try {
+                            const date = new Date(day.date)
+                            return isNaN(date.getTime())
+                              ? 'Неверная дата'
+                              : format(date, 'dd MMM', { locale: ru })
+                          } catch {
+                            return 'Неверная дата'
+                          }
+                        })()}
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge
