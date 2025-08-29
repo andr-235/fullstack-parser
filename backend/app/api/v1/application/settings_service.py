@@ -1,175 +1,409 @@
 """
-Application Service для системы настроек (DDD)
+SettingsService - DDD Application Service для управления настройками
+
+Мигрирован из app/services/settings_service.py
 """
 
-from typing import Dict, Any, Optional
-from ..domain.settings import SystemSettings, SettingsSection
-from .base import ApplicationService
+from typing import Dict, List, Optional, Any
+from datetime import datetime
 
 
-class SettingsApplicationService(ApplicationService):
-    """Application Service для работы с настройками системы"""
+class SettingsService:
+    """
+    DDD Application Service для управления настройками приложения.
 
-    def __init__(self, settings_repository=None):
+    Предоставляет высокоуровневый интерфейс для:
+    - Получения текущих настроек
+    - Обновления настроек
+    - Сброса к значениям по умолчанию
+    - Управления различными секциями настроек
+    """
+
+    def __init__(self, settings_repository=None, cache_service=None):
+        """
+        Инициализация SettingsService.
+
+        Args:
+            settings_repository: Репозиторий настроек
+            cache_service: Сервис кеширования
+        """
         self.settings_repository = settings_repository
+        self.cache_service = cache_service
+        self._settings_cache: Optional[Dict[str, Any]] = None
+        self._cache_timestamp: Optional[datetime] = None
+        self._cache_ttl = 300  # 5 минут
 
-    async def get_current_settings(self) -> SystemSettings:
-        """Получить текущие настройки системы"""
-        settings = await self.settings_repository.find_by_id("system_settings")
-        if not settings:
-            # Создать дефолтные настройки
-            settings = self._create_default_settings()
-            await self.settings_repository.save(settings)
-        return settings
+    # =============== МИГРАЦИЯ SettingsService В DDD ===============
 
-    async def update_settings(self, updates: Dict[str, Any]) -> SystemSettings:
-        """Обновить настройки системы"""
-        settings = await self.get_current_settings()
+    async def get_current_settings(self) -> Dict[str, Any]:
+        """
+        Получить текущие настройки приложения (мигрировано из SettingsService)
 
-        # Обновить секции
-        for section_name, section_updates in updates.items():
-            if isinstance(section_updates, dict):
-                # Создать или обновить секцию
-                section = settings.get_section(section_name)
-                if not section:
-                    section = SettingsSection(section_name, {})
+        Returns:
+            Текущие настройки приложения
+        """
+        # Проверяем кеш
+        if self._is_cache_valid():
+            return self._settings_cache
 
-                # Обновить значения
-                for key, value in section_updates.items():
-                    section.values[key] = value
+        # Загружаем настройки из конфигурации
+        current_settings = await self._load_settings_from_config()
 
-                settings.update_section(section)
+        # Обновляем кеш
+        self._update_cache(current_settings)
+        return current_settings
 
-        await self.settings_repository.save(settings)
-        return settings
+    async def update_settings(
+        self, settings_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Обновить настройки приложения (мигрировано из SettingsService)
 
-    async def get_section(
-        self, section_name: str
-    ) -> Optional[SettingsSection]:
-        """Получить секцию настроек"""
-        settings = await self.get_current_settings()
-        return settings.get_section(section_name)
+        Args:
+            settings_data: Данные для обновления настроек
 
-    async def update_section(
-        self, section_name: str, values: Dict[str, Any]
-    ) -> SystemSettings:
-        """Обновить секцию настроек"""
-        settings = await self.get_current_settings()
+        Returns:
+            Обновленные настройки
+        """
+        current_settings = await self.get_current_settings()
 
-        section = settings.get_section(section_name)
-        if not section:
-            section = SettingsSection(section_name, values)
-        else:
-            section.values.update(values)
+        # Обновляем только переданные секции
+        if "vk_api" in settings_data:
+            current_settings["vk_api"].update(settings_data["vk_api"])
+        if "monitoring" in settings_data:
+            current_settings["monitoring"].update(settings_data["monitoring"])
+        if "database" in settings_data:
+            current_settings["database"].update(settings_data["database"])
+        if "logging" in settings_data:
+            current_settings["logging"].update(settings_data["logging"])
+        if "ui" in settings_data:
+            current_settings["ui"].update(settings_data["ui"])
 
-        settings.update_section(section)
-        await self.settings_repository.save(settings)
-        return settings
+        # Валидируем обновленные настройки
+        await self._validate_settings(current_settings)
 
-    async def get_setting_value(self, section_name: str, key: str) -> Any:
-        """Получить значение настройки"""
-        settings = await self.get_current_settings()
-        return settings.get_value(section_name, key)
+        # Применяем настройки
+        await self._apply_settings(current_settings)
 
-    async def set_setting_value(
-        self, section_name: str, key: str, value: Any
-    ) -> SystemSettings:
-        """Установить значение настройки"""
-        settings = await self.get_current_settings()
-        settings.set_value(section_name, key, value)
-        await self.settings_repository.save(settings)
-        return settings
+        # Публикуем Domain Event об обновлении настроек
+        from ..infrastructure.events.settings_events import (
+            SettingsUpdatedEvent,
+            create_settings_updated_event,
+        )
+        from ..infrastructure.events.domain_event_publisher import (
+            publish_domain_event,
+        )
 
-    async def reset_to_defaults(self) -> SystemSettings:
-        """Сбросить настройки к значениям по умолчанию"""
-        default_settings = self._create_default_settings()
-        await self.settings_repository.save(default_settings)
-        return default_settings
+        for section in settings_data.keys():
+            settings_updated_event = create_settings_updated_event(
+                section=section,
+                updated_keys=(
+                    list(settings_data[section].keys())
+                    if isinstance(settings_data[section], dict)
+                    else []
+                ),
+                updated_by=None,  # TODO: передать реального пользователя
+            )
+            await publish_domain_event(settings_updated_event)
 
-    async def validate_settings(self) -> Dict[str, Any]:
-        """Валидировать настройки системы"""
-        settings = await self.get_current_settings()
-        return settings.validate_settings()
+        # Обновляем кеш
+        self._update_cache(current_settings)
 
-    async def get_health_status(self) -> Dict[str, Any]:
-        """Получить статус здоровья настроек"""
-        try:
-            settings = await self.get_current_settings()
-            validation = settings.validate_settings()
+        return current_settings
 
-            return {
-                "valid": validation["valid"],
-                "issues": validation["issues"],
-                "total_sections": validation["total_sections"],
-                "sections_with_issues": validation["sections_with_issues"],
-                "last_check": settings.updated_at.isoformat(),
-                "database_connected": True,  # Проверяем подключение к БД
-                "redis_connected": True,  # Проверяем подключение к Redis
-                "vk_api_accessible": True,  # Проверяем доступ к VK API
-            }
-        except Exception as e:
-            return {
-                "valid": False,
-                "error": str(e),
-                "last_check": None,
-                "database_connected": False,
-                "redis_connected": False,
-                "vk_api_accessible": False,
-            }
+    async def reset_to_defaults(self) -> Dict[str, Any]:
+        """
+        Сбросить настройки к значениям по умолчанию (мигрировано из SettingsService)
 
-    def _create_default_settings(self) -> SystemSettings:
-        """Создать настройки по умолчанию"""
-        settings = SystemSettings()
-
-        # Database settings
-        db_section = SettingsSection(
-            "database",
-            {
-                "url": "postgresql://localhost/vk_comments",
+        Returns:
+            Настройки по умолчанию
+        """
+        default_settings = {
+            "vk_api": {
+                "access_token": "",
+                "api_version": "5.131",
+                "requests_per_second": 3,
+            },
+            "monitoring": {
+                "scheduler_interval_seconds": 300,
+                "max_concurrent_groups": 10,
+                "group_delay_seconds": 1,
+                "auto_start_scheduler": False,
+            },
+            "database": {
                 "pool_size": 10,
                 "max_overflow": 20,
-                "pool_timeout": 30,
+                "pool_recycle": 3600,
             },
-            "Настройки подключения к базе данных",
-        )
-        settings.update_section(db_section)
-
-        # VK API settings
-        vk_section = SettingsSection(
-            "vk_api",
-            {
-                "api_version": "5.199",
-                "timeout": 30,
-                "max_retries": 3,
-                "rate_limit": 3,
+            "logging": {
+                "level": "INFO",
+                "format": "json",
+                "include_timestamp": True,
             },
-            "Настройки VK API",
-        )
-        settings.update_section(vk_section)
-
-        # Redis settings
-        redis_section = SettingsSection(
-            "redis",
-            {
-                "url": "redis://localhost:6379",
-                "db": 0,
-                "ttl": 3600,
+            "ui": {
+                "theme": "system",
+                "auto_refresh": True,
+                "refresh_interval": 30,
+                "items_per_page": 20,
+                "show_notifications": True,
             },
-            "Настройки Redis",
-        )
-        settings.update_section(redis_section)
+        }
 
-        # Application settings
-        app_section = SettingsSection(
-            "application",
-            {
-                "debug": False,
-                "log_level": "INFO",
-                "max_workers": 4,
-                "request_timeout": 60,
+        # Применяем дефолтные настройки
+        await self._apply_settings(default_settings)
+
+        # Публикуем Domain Event о сбросе настроек
+        from ..infrastructure.events.settings_events import (
+            SettingsResetEvent,
+            create_settings_reset_event,
+        )
+        from ..infrastructure.events.domain_event_publisher import (
+            publish_domain_event,
+        )
+
+        settings_reset_event = create_settings_reset_event(
+            reset_sections=list(default_settings.keys()),
+            reset_by=None,  # TODO: передать реального пользователя
+            reason="api_request",
+        )
+        await publish_domain_event(settings_reset_event)
+
+        # Обновляем кеш
+        self._update_cache(default_settings)
+
+        return default_settings
+
+    async def get_settings_by_section(self, section: str) -> Dict[str, Any]:
+        """
+        Получить настройки конкретной секции (мигрировано из SettingsService)
+
+        Args:
+            section: Название секции (vk_api, monitoring, database, logging, ui)
+
+        Returns:
+            Настройки секции
+        """
+        current_settings = await self.get_current_settings()
+
+        if section not in current_settings:
+            raise ValueError(f"Unknown settings section: {section}")
+
+        return current_settings[section]
+
+    async def update_settings_section(
+        self, section: str, section_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Обновить настройки конкретной секции (мигрировано из SettingsService)
+
+        Args:
+            section: Название секции
+            section_data: Данные для обновления секции
+
+        Returns:
+            Обновленные настройки секции
+        """
+        current_settings = await self.get_current_settings()
+
+        if section not in current_settings:
+            raise ValueError(f"Unknown settings section: {section}")
+
+        # Обновляем секцию
+        current_settings[section].update(section_data)
+
+        # Валидируем обновленные настройки
+        await self._validate_settings(current_settings)
+
+        # Применяем настройки
+        await self._apply_settings(current_settings)
+
+        # Обновляем кеш
+        self._update_cache(current_settings)
+
+        return current_settings[section]
+
+    async def export_settings(self) -> Dict[str, Any]:
+        """
+        Экспортировать все настройки (мигрировано из SettingsService)
+
+        Returns:
+            Все настройки с метаданными
+        """
+        current_settings = await self.get_current_settings()
+
+        return {
+            "settings": current_settings,
+            "exported_at": datetime.utcnow().isoformat(),
+            "version": "1.0",
+            "format": "json",
+        }
+
+    async def import_settings(
+        self, settings_data: Dict[str, Any], merge: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Импортировать настройки (мигрировано из SettingsService)
+
+        Args:
+            settings_data: Данные настроек для импорта
+            merge: Объединить с существующими или заменить полностью
+
+        Returns:
+            Импортированные настройки
+        """
+        if merge:
+            current_settings = await self.get_current_settings()
+            # Рекурсивно объединяем настройки
+            updated_settings = self._deep_merge(
+                current_settings, settings_data.get("settings", {})
+            )
+        else:
+            updated_settings = settings_data.get("settings", {})
+
+        # Валидируем импортированные настройки
+        await self._validate_settings(updated_settings)
+
+        # Применяем настройки
+        await self._apply_settings(updated_settings)
+
+        # Обновляем кеш
+        self._update_cache(updated_settings)
+
+        return updated_settings
+
+    # =============== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===============
+
+    async def _load_settings_from_config(self) -> Dict[str, Any]:
+        """
+        Загрузить настройки из конфигурации
+
+        Returns:
+            Настройки из конфигурации
+        """
+        # Импортируем здесь чтобы избежать циклических зависимостей
+        from app.core.config import settings
+
+        return {
+            "vk_api": {
+                "access_token": settings.vk_access_token or "",
+                "api_version": settings.vk_api_version or "5.131",
+                "requests_per_second": 3,
             },
-            "Общие настройки приложения",
-        )
-        settings.update_section(app_section)
+            "monitoring": {
+                "scheduler_interval_seconds": settings.monitoring_interval
+                or 300,
+                "max_concurrent_groups": 5,
+                "group_delay_seconds": 1,
+                "auto_start_scheduler": settings.monitoring_enabled or False,
+            },
+            "database": {
+                "pool_size": 10,
+                "max_overflow": 20,
+                "pool_recycle": 3600,
+            },
+            "logging": {
+                "level": settings.log_level or "INFO",
+                "format": "json",
+                "include_timestamp": True,
+            },
+            "ui": {
+                "theme": "system",
+                "auto_refresh": True,
+                "refresh_interval": 30,
+                "items_per_page": 20,
+                "show_notifications": True,
+            },
+        }
 
-        return settings
+    async def _validate_settings(self, settings: Dict[str, Any]) -> None:
+        """
+        Валидировать настройки
+
+        Args:
+            settings: Настройки для валидации
+
+        Raises:
+            ValueError: Если настройки невалидны
+        """
+        # Валидация VK API настроек
+        if "vk_api" in settings:
+            vk_api = settings["vk_api"]
+            if vk_api.get("requests_per_second", 0) <= 0:
+                raise ValueError("requests_per_second must be positive")
+
+        # Валидация настроек мониторинга
+        if "monitoring" in settings:
+            monitoring = settings["monitoring"]
+            if monitoring.get("scheduler_interval_seconds", 0) <= 0:
+                raise ValueError("scheduler_interval_seconds must be positive")
+            if monitoring.get("max_concurrent_groups", 0) <= 0:
+                raise ValueError("max_concurrent_groups must be positive")
+
+        # Валидация настроек базы данных
+        if "database" in settings:
+            database = settings["database"]
+            if database.get("pool_size", 0) <= 0:
+                raise ValueError("pool_size must be positive")
+            if database.get("max_overflow", 0) < 0:
+                raise ValueError("max_overflow must be non-negative")
+
+    async def _apply_settings(self, settings: Dict[str, Any]) -> None:
+        """
+        Применить настройки к системе
+
+        Args:
+            settings: Настройки для применения
+        """
+        # Здесь можно добавить логику применения настроек
+        # Например, обновление конфигурации логгера, перезапуск планировщика и т.д.
+        pass
+
+    def _is_cache_valid(self) -> bool:
+        """
+        Проверить валидность кеша
+
+        Returns:
+            True если кеш валиден
+        """
+        if not self._settings_cache or not self._cache_timestamp:
+            return False
+
+        elapsed = (datetime.utcnow() - self._cache_timestamp).total_seconds()
+        return elapsed < self._cache_ttl
+
+    def _update_cache(self, settings: Dict[str, Any]) -> None:
+        """
+        Обновить кеш настроек
+
+        Args:
+            settings: Настройки для кеширования
+        """
+        self._settings_cache = settings.copy()
+        self._cache_timestamp = datetime.utcnow()
+
+    def _deep_merge(
+        self, base: Dict[str, Any], update: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Рекурсивно объединить словари
+
+        Args:
+            base: Базовый словарь
+            update: Словарь с обновлениями
+
+        Returns:
+            Объединенный словарь
+        """
+        result = base.copy()
+
+        for key, value in update.items():
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
+                result[key] = self._deep_merge(result[key], value)
+            else:
+                result[key] = value
+
+        return result

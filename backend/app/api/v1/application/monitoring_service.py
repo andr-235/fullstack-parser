@@ -1,359 +1,497 @@
 """
-Application Service для системы мониторинга VK групп (DDD)
+MonitoringService - DDD Application Service для мониторинга групп VK
+
+Мигрирован из app/services/monitoring_service.py
 """
 
-from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta
-from ..domain.monitoring import (
-    VKGroupMonitoring,
-    MonitoringConfig,
-    MonitoringResult,
-    MonitoringStats,
-    MonitoringStatus,
-)
-from .base import ApplicationService
+import asyncio
+from datetime import datetime, timedelta, timezone
+from typing import List, Dict, Any, Optional
+
+import structlog
+from arq import create_pool
+from arq.connections import RedisSettings
+from sqlalchemy import and_, or_, select
+
+from app.models.vk_group import VKGroup
 
 
-class MonitoringApplicationService(ApplicationService):
-    """Application Service для работы с мониторингом VK групп"""
+class MonitoringService:
+    """
+    DDD Application Service для автоматического мониторинга групп VK.
 
-    def __init__(self, monitoring_repository=None, vk_api_service=None):
-        self.monitoring_repository = monitoring_repository
-        self.vk_api_service = vk_api_service
+    Предоставляет высокоуровневый интерфейс для:
+    - Управления автоматическим мониторингом групп
+    - Планирования задач мониторинга
+    - Статистики мониторинга
+    - Включения/отключения мониторинга
+    """
 
-    async def create_monitoring(
-        self,
-        group_id: int,
-        group_name: str,
-        owner_id: str,
-        config: Optional[Dict[str, Any]] = None,
-    ) -> VKGroupMonitoring:
-        """Создать мониторинг для VK группы"""
-        # Проверить, не существует ли уже мониторинг для этой группы
-        existing = await self.monitoring_repository.find_by_group_id(group_id)
-        if existing:
-            raise ValueError(f"Monitoring already exists for group {group_id}")
+    def __init__(self, db=None, vk_service=None):
+        """
+        Инициализация MonitoringService.
 
-        # Создать конфигурацию
-        monitoring_config = MonitoringConfig()
-        if config:
-            monitoring_config = MonitoringConfig(**config)
+        Args:
+            db: Асинхронная сессия базы данных
+            vk_service: Сервис VK API
+        """
+        self.db = db
+        self.vk_service = vk_service
+        self.logger = structlog.get_logger(__name__)
+        self.redis_pool = None
 
-        # Создать мониторинг
-        monitoring = VKGroupMonitoring(
-            group_id=group_id,
-            group_name=group_name,
-            owner_id=owner_id,
-        )
-        monitoring.config = monitoring_config
+    # =============== МИГРАЦИЯ MonitoringService В DDD ===============
 
-        await self.monitoring_repository.save(monitoring)
-        return monitoring
+    async def get_groups_for_monitoring_ddd(self) -> Dict[str, Any]:
+        """
+        Получить группы, готовые для мониторинга (мигрировано из MonitoringService)
 
-    async def get_monitoring(
-        self, monitoring_id: str
-    ) -> Optional[VKGroupMonitoring]:
-        """Получить мониторинг по ID"""
-        return await self.monitoring_repository.find_by_id(monitoring_id)
-
-    async def get_monitoring_by_group(
-        self, group_id: int
-    ) -> Optional[VKGroupMonitoring]:
-        """Получить мониторинг по ID группы VK"""
-        return await self.monitoring_repository.find_by_group_id(group_id)
-
-    async def get_user_monitorings(
-        self,
-        owner_id: str,
-        page: int = 1,
-        size: int = 20,
-    ) -> Dict[str, Any]:
-        """Получить список мониторингов пользователя"""
-        monitorings = await self.monitoring_repository.find_by_owner(owner_id)
-
-        # Пагинация
-        total = len(monitorings)
-        start_index = (page - 1) * size
-        end_index = start_index + size
-        paginated_monitorings = monitorings[start_index:end_index]
-
-        return {
-            "items": [m.to_dict() for m in paginated_monitorings],
-            "total": total,
-            "page": page,
-            "size": size,
-            "pages": (total + size - 1) // size,
-            "has_next": page * size < total,
-            "has_prev": page > 1,
-        }
-
-    async def start_monitoring(self, monitoring_id: str) -> VKGroupMonitoring:
-        """Запустить мониторинг"""
-        monitoring = await self.monitoring_repository.find_by_id(monitoring_id)
-        if not monitoring:
-            raise ValueError(f"Monitoring with id {monitoring_id} not found")
-
-        monitoring.start_monitoring()
-        await self.monitoring_repository.save(monitoring)
-        return monitoring
-
-    async def pause_monitoring(self, monitoring_id: str) -> VKGroupMonitoring:
-        """Приостановить мониторинг"""
-        monitoring = await self.monitoring_repository.find_by_id(monitoring_id)
-        if not monitoring:
-            raise ValueError(f"Monitoring with id {monitoring_id} not found")
-
-        monitoring.pause_monitoring()
-        await self.monitoring_repository.save(monitoring)
-        return monitoring
-
-    async def stop_monitoring(self, monitoring_id: str) -> VKGroupMonitoring:
-        """Остановить мониторинг"""
-        monitoring = await self.monitoring_repository.find_by_id(monitoring_id)
-        if not monitoring:
-            raise ValueError(f"Monitoring with id {monitoring_id} not found")
-
-        monitoring.stop_monitoring()
-        await self.monitoring_repository.save(monitoring)
-        return monitoring
-
-    async def update_config(
-        self, monitoring_id: str, config_updates: Dict[str, Any]
-    ) -> VKGroupMonitoring:
-        """Обновить конфигурацию мониторинга"""
-        monitoring = await self.monitoring_repository.find_by_id(monitoring_id)
-        if not monitoring:
-            raise ValueError(f"Monitoring with id {monitoring_id} not found")
-
-        # Создать новую конфигурацию на основе обновлений
-        current_config = monitoring.config
-        new_config_dict = {
-            "interval_seconds": config_updates.get(
-                "interval_seconds", current_config.interval_seconds
-            ),
-            "max_concurrent_groups": config_updates.get(
-                "max_concurrent_groups", current_config.max_concurrent_groups
-            ),
-            "enable_auto_retry": config_updates.get(
-                "enable_auto_retry", current_config.enable_auto_retry
-            ),
-            "max_retries": config_updates.get(
-                "max_retries", current_config.max_retries
-            ),
-            "timeout_seconds": config_updates.get(
-                "timeout_seconds", current_config.timeout_seconds
-            ),
-            "enable_notifications": config_updates.get(
-                "enable_notifications", current_config.enable_notifications
-            ),
-            "notification_channels": config_updates.get(
-                "notification_channels", current_config.notification_channels
-            ),
-        }
-
-        new_config = MonitoringConfig(**new_config_dict)
-        monitoring.update_config(new_config)
-        await self.monitoring_repository.save(monitoring)
-        return monitoring
-
-    async def delete_monitoring(self, monitoring_id: str) -> bool:
-        """Удалить мониторинг"""
-        return await self.monitoring_repository.delete(monitoring_id)
-
-    async def execute_monitoring_cycle(
-        self, monitoring_id: str
-    ) -> MonitoringResult:
-        """Выполнить цикл мониторинга"""
-        monitoring = await self.monitoring_repository.find_by_id(monitoring_id)
-        if not monitoring:
-            raise ValueError(f"Monitoring with id {monitoring_id} not found")
-
-        if not monitoring.status.is_active():
-            raise ValueError(f"Monitoring is not active: {monitoring.status}")
-
-        # Выполнить мониторинг через VK API
-        result = await self._perform_monitoring_cycle(monitoring)
-
-        # Записать результат
-        monitoring.record_cycle_result(result)
-        await self.monitoring_repository.save(monitoring)
-
-        return result
-
-    async def get_system_stats(
-        self, owner_id: Optional[str] = None
-    ) -> MonitoringStats:
-        """Получить статистику системы мониторинга"""
-        # Получить все мониторинги (или только для пользователя)
-        if owner_id:
-            monitorings = await self.monitoring_repository.find_by_owner(
-                owner_id
-            )
-        else:
-            monitorings = await self.monitoring_repository.find_all()
-
-        # Рассчитать статистику
-        total_groups = len(monitorings)
-        active_groups = len([m for m in monitorings if m.status.is_active()])
-        paused_groups = len([m for m in monitorings if m.status.is_paused()])
-        error_groups = len(
-            [
-                m
-                for m in monitorings
-                if m.status.status == MonitoringStatus.ERROR
-            ]
-        )
-
-        # Статистика за сегодня
-        today = datetime.utcnow().date()
-        total_cycles_today = sum(m.total_cycles for m in monitorings)
-        successful_cycles_today = sum(m.successful_cycles for m in monitorings)
-
-        # Среднее время обработки (упрощенное)
-        avg_processing_time = 0.0
-        total_results = sum(1 for m in monitorings if m.last_result)
-        if total_results > 0:
-            total_time = sum(
-                m.last_result.processing_time
-                for m in monitorings
-                if m.last_result
-            )
-            avg_processing_time = total_time / total_results
-
-        # Общее количество найденных комментариев и постов
-        total_comments = sum(
-            m.last_result.comments_found
-            for m in monitorings
-            if m.last_result
-            and m.last_cycle_at
-            and m.last_cycle_at.date() == today
-        )
-        total_posts = sum(
-            m.last_result.posts_found
-            for m in monitorings
-            if m.last_result
-            and m.last_cycle_at
-            and m.last_cycle_at.date() == today
-        )
-
-        return MonitoringStats(
-            total_groups=total_groups,
-            active_groups=active_groups,
-            paused_groups=paused_groups,
-            error_groups=error_groups,
-            total_cycles_today=total_cycles_today,
-            successful_cycles_today=successful_cycles_today,
-            average_processing_time=avg_processing_time,
-            total_comments_found_today=total_comments,
-            total_posts_processed_today=total_posts,
-        )
-
-    async def bulk_start_monitoring(
-        self, monitoring_ids: List[str]
-    ) -> Dict[str, Any]:
-        """Массовый запуск мониторинга"""
-        successful = []
-        failed = []
-
-        for monitoring_id in monitoring_ids:
-            try:
-                monitoring = await self.start_monitoring(monitoring_id)
-                successful.append(monitoring_id)
-            except Exception as e:
-                failed.append({"id": monitoring_id, "error": str(e)})
-
-        return {
-            "successful": successful,
-            "failed": failed,
-            "total_processed": len(monitoring_ids),
-            "success_count": len(successful),
-            "failure_count": len(failed),
-        }
-
-    async def bulk_stop_monitoring(
-        self, monitoring_ids: List[str]
-    ) -> Dict[str, Any]:
-        """Массовая остановка мониторинга"""
-        successful = []
-        failed = []
-
-        for monitoring_id in monitoring_ids:
-            try:
-                monitoring = await self.stop_monitoring(monitoring_id)
-                successful.append(monitoring_id)
-            except Exception as e:
-                failed.append({"id": monitoring_id, "error": str(e)})
-
-        return {
-            "successful": successful,
-            "failed": failed,
-            "total_processed": len(monitoring_ids),
-            "success_count": len(successful),
-            "failure_count": len(failed),
-        }
-
-    async def _perform_monitoring_cycle(
-        self, monitoring: VKGroupMonitoring
-    ) -> MonitoringResult:
-        """Выполнить цикл мониторинга через VK API"""
-        start_time = datetime.utcnow()
-
+        Returns:
+            Список групп для мониторинга с метаданными
+        """
         try:
-            if not self.vk_api_service:
-                raise ValueError("VK API service not configured")
+            now = datetime.now(timezone.utc)
 
-            # Получить последние посты группы
-            posts = await self.vk_api_service.get_group_posts(
-                group_id=monitoring.group_id,
-                count=10,  # последние 10 постов
-                timeout=monitoring.config.timeout_seconds,
+            # Получаем активные группы с включенным мониторингом
+            query = (
+                select(VKGroup)
+                .where(
+                    and_(
+                        VKGroup.is_active == True,
+                        VKGroup.auto_monitoring_enabled == True,
+                        or_(
+                            VKGroup.next_monitoring_at.is_(None),
+                            VKGroup.next_monitoring_at <= now,
+                        ),
+                    )
+                )
+                .order_by(
+                    VKGroup.monitoring_priority.desc(),
+                    VKGroup.next_monitoring_at.asc().nulls_last(),
+                )
+                .limit(50)
             )
 
-            # Анализировать комментарии к постам
-            total_comments = 0
-            keywords_found = []
+            result = await self.db.execute(query)
+            groups = list(result.scalars().all())
 
-            for post in posts.get("items", []):
-                post_id = post["id"]
-
-                # Получить комментарии к посту
-                comments = await self.vk_api_service.get_post_comments(
-                    owner_id=-monitoring.group_id,  # отрицательный ID для групп
-                    post_id=post_id,
-                    count=100,
-                    timeout=monitoring.config.timeout_seconds,
+            # Преобразуем в response формат
+            groups_response = []
+            for group in groups:
+                groups_response.append(
+                    {
+                        "id": group.id,
+                        "name": group.name,
+                        "screen_name": group.screen_name,
+                        "next_monitoring_at": (
+                            group.next_monitoring_at.isoformat()
+                            if group.next_monitoring_at
+                            else None
+                        ),
+                        "monitoring_priority": group.monitoring_priority,
+                        "is_active": group.is_active,
+                        "auto_monitoring_enabled": group.auto_monitoring_enabled,
+                    }
                 )
 
-                total_comments += len(comments.get("items", []))
-
-                # Здесь можно добавить анализ ключевых слов
-                # keywords_found.extend(await self._analyze_keywords_in_comments(comments))
-
-            processing_time = (datetime.utcnow() - start_time).total_seconds()
-
-            result = MonitoringResult(
-                group_id=monitoring.group_id,
-                posts_found=len(posts.get("items", [])),
-                comments_found=total_comments,
-                keywords_found=keywords_found,
-                processing_time=processing_time,
-                started_at=start_time,
-                completed_at=datetime.utcnow(),
-            )
-
-            result.mark_completed()
-            return result
+            return {
+                "groups": groups_response,
+                "total": len(groups_response),
+                "current_time": now.isoformat(),
+                "monitoring_ready": len(groups_response) > 0,
+            }
 
         except Exception as e:
-            processing_time = (datetime.utcnow() - start_time).total_seconds()
+            self.logger.error(f"Error getting groups for monitoring: {e}")
+            raise
 
-            result = MonitoringResult(
-                group_id=monitoring.group_id,
-                processing_time=processing_time,
-                started_at=start_time,
-                completed_at=datetime.utcnow(),
+    async def schedule_group_monitoring_ddd(
+        self, group_id: int, delay_minutes: int = 0
+    ) -> Dict[str, Any]:
+        """
+        Запланировать мониторинг группы (мигрировано из MonitoringService)
+
+        Args:
+            group_id: ID группы VK
+            delay_minutes: Задержка в минутах
+
+        Returns:
+            Результат планирования
+        """
+        try:
+            # Находим группу
+            query = select(VKGroup).where(VKGroup.id == group_id)
+            result = await self.db.execute(query)
+            group = result.scalar_one_or_none()
+
+            if not group:
+                return {
+                    "scheduled": False,
+                    "reason": "Group not found",
+                    "group_id": group_id,
+                }
+
+            # Вычисляем время следующего мониторинга
+            now = datetime.now(timezone.utc)
+            next_monitoring = now + timedelta(minutes=delay_minutes)
+
+            # Обновляем время мониторинга
+            group.next_monitoring_at = next_monitoring
+            group.updated_at = now
+
+            await self.db.commit()
+
+            # Получаем Redis pool для планирования задачи
+            redis_pool = await self._get_redis_pool()
+
+            # Планируем задачу в ARQ
+            await redis_pool.enqueue_job(
+                "monitor_group",
+                group.id,
+                _defer_by=timedelta(minutes=delay_minutes),
             )
-            result.add_error(str(e))
-            result.mark_completed()
 
-            return result
+            return {
+                "scheduled": True,
+                "group_id": group_id,
+                "group_name": group.name,
+                "next_monitoring_at": next_monitoring.isoformat(),
+                "delay_minutes": delay_minutes,
+                "scheduled_at": now.isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error scheduling group monitoring: {e}")
+            raise
+
+    async def start_group_monitoring_ddd(
+        self, group_id: int
+    ) -> Dict[str, Any]:
+        """
+        Начать мониторинг группы (мигрировано из MonitoringService)
+
+        Args:
+            group_id: ID группы VK
+
+        Returns:
+            Результат запуска мониторинга
+        """
+        try:
+            # Находим группу
+            query = select(VKGroup).where(VKGroup.id == group_id)
+            result = await self.db.execute(query)
+            group = result.scalar_one_or_none()
+
+            if not group:
+                return {
+                    "started": False,
+                    "reason": "Group not found",
+                    "group_id": group_id,
+                }
+
+            if not group.is_active:
+                return {
+                    "started": False,
+                    "reason": "Group is not active",
+                    "group_id": group_id,
+                }
+
+            # Включаем мониторинг
+            now = datetime.now(timezone.utc)
+            group.auto_monitoring_enabled = True
+            group.last_monitoring_at = now
+            group.next_monitoring_at = now  # Начать сразу
+            group.monitoring_success_count = 0
+            group.monitoring_error_count = 0
+            group.updated_at = now
+
+            await self.db.commit()
+
+            # Запускаем задачу мониторинга
+            redis_pool = await self._get_redis_pool()
+            await redis_pool.enqueue_job("monitor_group", group.id)
+
+            return {
+                "started": True,
+                "group_id": group_id,
+                "group_name": group.name,
+                "monitoring_enabled": True,
+                "started_at": now.isoformat(),
+                "next_monitoring_at": now.isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error starting group monitoring: {e}")
+            raise
+
+    async def run_monitoring_cycle_ddd(self) -> Dict[str, Any]:
+        """
+        Запустить цикл мониторинга (мигрировано из MonitoringService)
+
+        Returns:
+            Результат цикла мониторинга
+        """
+        try:
+            # Получаем группы для мониторинга
+            groups_data = await self.get_groups_for_monitoring_ddd()
+            groups = groups_data["groups"]
+
+            if not groups:
+                return {
+                    "cycle_completed": True,
+                    "groups_processed": 0,
+                    "message": "No groups ready for monitoring",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+
+            # Обрабатываем группы
+            processed = 0
+            successful = 0
+            failed = 0
+
+            for group_data in groups:
+                try:
+                    group_id = group_data["id"]
+                    result = await self.start_group_monitoring_ddd(group_id)
+
+                    if result["started"]:
+                        successful += 1
+                    else:
+                        failed += 1
+
+                    processed += 1
+
+                    # Небольшая задержка между группами
+                    await asyncio.sleep(0.1)
+
+                except Exception as e:
+                    self.logger.error(
+                        f"Error monitoring group {group_data['id']}: {e}"
+                    )
+                    failed += 1
+                    processed += 1
+
+            return {
+                "cycle_completed": True,
+                "groups_processed": processed,
+                "successful": successful,
+                "failed": failed,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "message": f"Monitoring cycle completed: {successful}/{processed} successful",
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error running monitoring cycle: {e}")
+            raise
+
+    async def enable_group_monitoring_ddd(
+        self, group_id: int, priority: int = 1, interval_hours: int = 24
+    ) -> Dict[str, Any]:
+        """
+        Включить мониторинг группы (мигрировано из MonitoringService)
+
+        Args:
+            group_id: ID группы VK
+            priority: Приоритет мониторинга (1-10)
+            interval_hours: Интервал мониторинга в часах
+
+        Returns:
+            Результат включения мониторинга
+        """
+        try:
+            # Находим группу
+            query = select(VKGroup).where(VKGroup.id == group_id)
+            result = await self.db.execute(query)
+            group = result.scalar_one_or_none()
+
+            if not group:
+                return {
+                    "enabled": False,
+                    "reason": "Group not found",
+                    "group_id": group_id,
+                }
+
+            if not group.is_active:
+                return {
+                    "enabled": False,
+                    "reason": "Group is not active",
+                    "group_id": group_id,
+                }
+
+            # Включаем мониторинг
+            now = datetime.now(timezone.utc)
+            group.auto_monitoring_enabled = True
+            group.monitoring_priority = priority
+            group.monitoring_interval_hours = interval_hours
+            group.next_monitoring_at = now
+            group.updated_at = now
+
+            await self.db.commit()
+
+            return {
+                "enabled": True,
+                "group_id": group_id,
+                "group_name": group.name,
+                "priority": priority,
+                "interval_hours": interval_hours,
+                "next_monitoring_at": now.isoformat(),
+                "enabled_at": now.isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error enabling group monitoring: {e}")
+            raise
+
+    async def disable_group_monitoring_ddd(
+        self, group_id: int
+    ) -> Dict[str, Any]:
+        """
+        Отключить мониторинг группы (мигрировано из MonitoringService)
+
+        Args:
+            group_id: ID группы VK
+
+        Returns:
+            Результат отключения мониторинга
+        """
+        try:
+            # Находим группу
+            query = select(VKGroup).where(VKGroup.id == group_id)
+            result = await self.db.execute(query)
+            group = result.scalar_one_or_none()
+
+            if not group:
+                return {
+                    "disabled": False,
+                    "reason": "Group not found",
+                    "group_id": group_id,
+                }
+
+            # Отключаем мониторинг
+            now = datetime.now(timezone.utc)
+            group.auto_monitoring_enabled = False
+            group.next_monitoring_at = None
+            group.updated_at = now
+
+            await self.db.commit()
+
+            return {
+                "disabled": True,
+                "group_id": group_id,
+                "group_name": group.name,
+                "disabled_at": now.isoformat(),
+                "message": f"Monitoring disabled for group {group.name}",
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error disabling group monitoring: {e}")
+            raise
+
+    async def get_monitoring_stats_ddd(self) -> Dict[str, Any]:
+        """
+        Получить статистику мониторинга (мигрировано из MonitoringService)
+
+        Returns:
+            Статистика мониторинга
+        """
+        try:
+            # Получаем все группы
+            query = select(VKGroup)
+            result = await self.db.execute(query)
+            all_groups = result.scalars().all()
+
+            # Подсчитываем статистику
+            total_groups = len(all_groups)
+            active_groups = len([g for g in all_groups if g.is_active])
+            monitoring_enabled = len(
+                [g for g in all_groups if g.auto_monitoring_enabled]
+            )
+            monitoring_ready = len(
+                [
+                    g
+                    for g in all_groups
+                    if g.is_active
+                    and g.auto_monitoring_enabled
+                    and (
+                        g.next_monitoring_at is None
+                        or g.next_monitoring_at <= datetime.now(timezone.utc)
+                    )
+                ]
+            )
+
+            # Группируем по приоритетам
+            priorities = {}
+            for group in all_groups:
+                if group.auto_monitoring_enabled:
+                    priority = group.monitoring_priority or 1
+                    if priority not in priorities:
+                        priorities[priority] = 0
+                    priorities[priority] += 1
+
+            return {
+                "total_groups": total_groups,
+                "active_groups": active_groups,
+                "monitoring_enabled": monitoring_enabled,
+                "monitoring_ready": monitoring_ready,
+                "monitoring_disabled": total_groups - monitoring_enabled,
+                "priorities": priorities,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error getting monitoring stats: {e}")
+            raise
+
+    async def reset_monitoring_times_ddd(self) -> Dict[str, Any]:
+        """
+        Сбросить времена мониторинга (мигрировано из MonitoringService)
+
+        Returns:
+            Результат сброса
+        """
+        try:
+            # Сбрасываем времена мониторинга для всех активных групп
+            query = select(VKGroup).where(
+                and_(
+                    VKGroup.is_active == True,
+                    VKGroup.auto_monitoring_enabled == True,
+                )
+            )
+
+            result = await self.db.execute(query)
+            groups = result.scalars().all()
+
+            now = datetime.now(timezone.utc)
+            reset_count = 0
+
+            for group in groups:
+                group.next_monitoring_at = now
+                group.updated_at = now
+                reset_count += 1
+
+            await self.db.commit()
+
+            return {
+                "reset": True,
+                "groups_reset": reset_count,
+                "reset_at": now.isoformat(),
+                "message": f"Monitoring times reset for {reset_count} groups",
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error resetting monitoring times: {e}")
+            raise
+
+    # =============== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===============
+
+    async def _get_redis_pool(self):
+        """
+        Получить Redis pool для ARQ
+        """
+        if self.redis_pool is None:
+            from app.core.config import settings
+
+            self.redis_pool = await create_pool(
+                RedisSettings.from_dsn(settings.redis_url)
+            )
+        return self.redis_pool

@@ -629,3 +629,535 @@ class GroupApplicationService(ApplicationService):
             )
 
         return groups_response
+
+    # =============== МИГРАЦИЯ GroupValidator В DDD ===============
+
+    async def validate_screen_name_ddd(
+        self, screen_name: str
+    ) -> Dict[str, Any]:
+        """
+        Проверить существование группы по screen_name (мигрировано из GroupValidator)
+
+        Args:
+            screen_name: Короткое имя группы
+
+        Returns:
+            Результат валидации
+        """
+        try:
+            # Используем VK API сервис для проверки
+            group_data = await self.vk_api_service.get_group_info(screen_name)
+            exists = "error" not in group_data
+
+            return {
+                "valid": exists,
+                "screen_name": screen_name,
+                "group_data": group_data if exists else None,
+                "validated_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error validating screen_name {screen_name}: {e}")
+            return {
+                "valid": False,
+                "screen_name": screen_name,
+                "error": str(e),
+                "validated_at": datetime.utcnow().isoformat(),
+            }
+
+    async def validate_vk_id_ddd(self, vk_id: int) -> Dict[str, Any]:
+        """
+        Проверить существование группы по VK ID (мигрировано из GroupValidator)
+
+        Args:
+            vk_id: VK ID группы
+
+        Returns:
+            Результат валидации
+        """
+        try:
+            # Используем VK API сервис для проверки
+            group_data = await self.vk_api_service.get_group_info(str(vk_id))
+            exists = "error" not in group_data
+
+            return {
+                "valid": exists,
+                "vk_id": vk_id,
+                "group_data": group_data if exists else None,
+                "validated_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error validating VK ID {vk_id}: {e}")
+            return {
+                "valid": False,
+                "vk_id": vk_id,
+                "error": str(e),
+                "validated_at": datetime.utcnow().isoformat(),
+            }
+
+    async def get_group_data_from_vk_ddd(
+        self, identifier: str
+    ) -> Dict[str, Any]:
+        """
+        Получить данные группы из VK API (мигрировано из GroupValidator)
+
+        Args:
+            identifier: screen_name или VK ID группы
+
+        Returns:
+            Данные группы из VK API
+        """
+        try:
+            group_data = await self.vk_api_service.get_group_info(identifier)
+
+            if "error" in group_data:
+                return {
+                    "found": False,
+                    "identifier": identifier,
+                    "error": group_data["error"],
+                    "retrieved_at": datetime.utcnow().isoformat(),
+                }
+
+            return {
+                "found": True,
+                "identifier": identifier,
+                "group_data": group_data,
+                "retrieved_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting group data from VK: {e}")
+            return {
+                "found": False,
+                "identifier": identifier,
+                "error": str(e),
+                "retrieved_at": datetime.utcnow().isoformat(),
+            }
+
+    async def extract_screen_name_ddd(self, identifier: str) -> Dict[str, Any]:
+        """
+        Извлечь screen_name из идентификатора (мигрировано из GroupValidator)
+
+        Args:
+            identifier: Идентификатор группы
+
+        Returns:
+            Результат извлечения screen_name
+        """
+        try:
+            # Если это числовой ID
+            if identifier.isdigit() or (
+                identifier.startswith("-") and identifier[1:].isdigit()
+            ):
+                # Получаем данные группы для извлечения screen_name
+                group_data = await self.vk_api_service.get_group_info(
+                    identifier
+                )
+
+                if "error" not in group_data:
+                    screen_name = group_data.get("screen_name")
+                    return {
+                        "extracted": True,
+                        "original_identifier": identifier,
+                        "screen_name": screen_name,
+                        "type": "vk_id",
+                    }
+
+            # Если это уже screen_name
+            else:
+                return {
+                    "extracted": True,
+                    "original_identifier": identifier,
+                    "screen_name": identifier,
+                    "type": "screen_name",
+                }
+
+            return {
+                "extracted": False,
+                "original_identifier": identifier,
+                "error": "Could not extract screen_name",
+            }
+
+        except Exception as e:
+            logger.error(f"Error extracting screen_name: {e}")
+            return {
+                "extracted": False,
+                "original_identifier": identifier,
+                "error": str(e),
+            }
+
+    async def validate_group_access_ddd(self, group_id: int) -> Dict[str, Any]:
+        """
+        Проверить доступ к группе (мигрировано из GroupValidator)
+
+        Args:
+            group_id: ID группы VK
+
+        Returns:
+            Результат проверки доступа
+        """
+        try:
+            # Проверяем существование группы
+            group_data = await self.vk_api_service.get_group_info(
+                str(group_id)
+            )
+
+            if "error" in group_data:
+                return {
+                    "has_access": False,
+                    "group_id": group_id,
+                    "error": group_data["error"],
+                    "checked_at": datetime.utcnow().isoformat(),
+                }
+
+            # Проверяем, можем ли мы получить посты (как индикатор доступа)
+            try:
+                posts_data = await self.vk_api_service.get_group_posts(
+                    group_id=group_id, count=1, offset=0
+                )
+
+                has_access = "error" not in posts_data
+
+                return {
+                    "has_access": has_access,
+                    "group_id": group_id,
+                    "group_name": group_data.get("name"),
+                    "can_read_posts": has_access,
+                    "checked_at": datetime.utcnow().isoformat(),
+                }
+
+            except Exception:
+                return {
+                    "has_access": False,
+                    "group_id": group_id,
+                    "group_name": group_data.get("name"),
+                    "can_read_posts": False,
+                    "error": "Cannot access group posts",
+                    "checked_at": datetime.utcnow().isoformat(),
+                }
+
+        except Exception as e:
+            logger.error(f"Error validating group access: {e}")
+            return {
+                "has_access": False,
+                "group_id": group_id,
+                "error": str(e),
+                "checked_at": datetime.utcnow().isoformat(),
+            }
+
+    async def refresh_group_data_ddd(self, group_id: int) -> Dict[str, Any]:
+        """
+        Обновить данные группы из VK API (мигрировано из GroupValidator)
+
+        Args:
+            group_id: ID группы
+
+        Returns:
+            Результат обновления данных
+        """
+        try:
+            # Находим группу в БД
+            group = await self.group_repository.find_by_id(group_id)
+            if not group:
+                return {
+                    "refreshed": False,
+                    "reason": "Group not found in database",
+                    "group_id": group_id,
+                }
+
+            # Получаем актуальные данные из VK
+            vk_data = await self.vk_api_service.get_group_info(
+                str(group.content.vk_id)
+            )
+
+            if "error" in vk_data:
+                return {
+                    "refreshed": False,
+                    "reason": "Could not get data from VK API",
+                    "group_id": group_id,
+                    "vk_error": vk_data["error"],
+                }
+
+            # Обновляем данные группы
+            group.content.name = vk_data.get("name", group.content.name)
+            group.content.description = vk_data.get("description", "")
+            group.content.members_count = vk_data.get("members_count", 0)
+            group.content.photo_url = vk_data.get("photo_200", "")
+            group.content.is_closed = vk_data.get("is_closed", False)
+            group.updated_at = datetime.utcnow()
+
+            # Сохраняем изменения
+            await self.group_repository.save(group)
+
+            return {
+                "refreshed": True,
+                "group_id": group_id,
+                "group_name": group.content.name,
+                "updated_fields": [
+                    "name",
+                    "description",
+                    "members_count",
+                    "photo_url",
+                    "is_closed",
+                ],
+                "refreshed_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error refreshing group data: {e}")
+            return {
+                "refreshed": False,
+                "group_id": group_id,
+                "error": str(e),
+            }
+
+    async def compare_with_vk_data_ddd(
+        self, group_id: int, vk_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Сравнить данные группы с данными из VK API (мигрировано из GroupValidator)
+
+        Args:
+            group_id: ID группы
+            vk_data: Данные из VK API
+
+        Returns:
+            Результат сравнения
+        """
+        try:
+            # Находим группу в БД
+            group = await self.group_repository.find_by_id(group_id)
+            if not group:
+                return {
+                    "compared": False,
+                    "reason": "Group not found in database",
+                    "group_id": group_id,
+                }
+
+            # Сравниваем поля
+            differences = {}
+
+            if group.content.name != vk_data.get("name"):
+                differences["name"] = {
+                    "database": group.content.name,
+                    "vk": vk_data.get("name"),
+                }
+
+            if group.content.description != vk_data.get("description", ""):
+                differences["description"] = {
+                    "database": group.content.description,
+                    "vk": vk_data.get("description", ""),
+                }
+
+            if group.content.members_count != vk_data.get("members_count", 0):
+                differences["members_count"] = {
+                    "database": group.content.members_count,
+                    "vk": vk_data.get("members_count", 0),
+                }
+
+            if group.content.is_closed != vk_data.get("is_closed", False):
+                differences["is_closed"] = {
+                    "database": group.content.is_closed,
+                    "vk": vk_data.get("is_closed", False),
+                }
+
+            return {
+                "compared": True,
+                "group_id": group_id,
+                "has_differences": len(differences) > 0,
+                "differences": differences,
+                "differences_count": len(differences),
+                "compared_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error comparing with VK data: {e}")
+            return {
+                "compared": False,
+                "group_id": group_id,
+                "error": str(e),
+            }
+
+    async def validate_multiple_groups_ddd(
+        self, group_identifiers: List[str]
+    ) -> Dict[str, Any]:
+        """
+        Проверить несколько групп одновременно (мигрировано из GroupValidator)
+
+        Args:
+            group_identifiers: Список идентификаторов групп
+
+        Returns:
+            Результаты валидации всех групп
+        """
+        try:
+            results = []
+            valid_count = 0
+            invalid_count = 0
+
+            for identifier in group_identifiers:
+                try:
+                    # Определяем тип идентификатора
+                    if identifier.isdigit() or (
+                        identifier.startswith("-") and identifier[1:].isdigit()
+                    ):
+                        result = await self.validate_vk_id_ddd(int(identifier))
+                    else:
+                        result = await self.validate_screen_name_ddd(
+                            identifier
+                        )
+
+                    results.append(
+                        {
+                            "identifier": identifier,
+                            "valid": result["valid"],
+                            "group_data": result.get("group_data"),
+                            "error": result.get("error"),
+                        }
+                    )
+
+                    if result["valid"]:
+                        valid_count += 1
+                    else:
+                        invalid_count += 1
+
+                except Exception as e:
+                    results.append(
+                        {
+                            "identifier": identifier,
+                            "valid": False,
+                            "error": str(e),
+                        }
+                    )
+                    invalid_count += 1
+
+            return {
+                "validated": True,
+                "total_groups": len(group_identifiers),
+                "valid_groups": valid_count,
+                "invalid_groups": invalid_count,
+                "results": results,
+                "validated_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error validating multiple groups: {e}")
+            return {
+                "validated": False,
+                "error": str(e),
+                "total_groups": len(group_identifiers),
+                "validated_at": datetime.utcnow().isoformat(),
+            }
+
+    async def refresh_group_from_vk_ddd(
+        self, identifier: str, create_if_not_exists: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Обновить или создать группу из VK API (мигрировано из GroupValidator)
+
+        Args:
+            identifier: Идентификатор группы
+            create_if_not_exists: Создать если не существует
+
+        Returns:
+            Результат операции
+        """
+        try:
+            # Получаем данные из VK
+            vk_result = await self.get_group_data_from_vk_ddd(identifier)
+
+            if not vk_result["found"]:
+                return {
+                    "refreshed": False,
+                    "identifier": identifier,
+                    "reason": "Group not found in VK",
+                    "vk_error": vk_result.get("error"),
+                }
+
+            vk_data = vk_result["group_data"]
+
+            # Ищем существующую группу
+            existing_group = None
+            if vk_data.get("id"):
+                existing_group = await self.group_repository.find_by_vk_id(
+                    vk_data["id"]
+                )
+            elif vk_data.get("screen_name"):
+                # Ищем по screen_name среди существующих групп
+                all_groups = await self.group_repository.find_all()
+                for group in all_groups:
+                    if group.content.screen_name == vk_data["screen_name"]:
+                        existing_group = group
+                        break
+
+            if existing_group:
+                # Обновляем существующую группу
+                existing_group.content.name = vk_data.get(
+                    "name", existing_group.content.name
+                )
+                existing_group.content.description = vk_data.get(
+                    "description", ""
+                )
+                existing_group.content.members_count = vk_data.get(
+                    "members_count", 0
+                )
+                existing_group.content.photo_url = vk_data.get("photo_200", "")
+                existing_group.content.is_closed = vk_data.get(
+                    "is_closed", False
+                )
+                existing_group.updated_at = datetime.utcnow()
+
+                await self.group_repository.save(existing_group)
+
+                return {
+                    "refreshed": True,
+                    "action": "updated",
+                    "group_id": existing_group.id,
+                    "group_name": existing_group.content.name,
+                    "identifier": identifier,
+                }
+
+            elif create_if_not_exists:
+                # Создаем новую группу
+                from ..domain.group import Group, GroupContent
+
+                content = GroupContent(
+                    vk_id=vk_data.get("id"),
+                    screen_name=vk_data.get("screen_name", ""),
+                    name=vk_data.get("name", ""),
+                    description=vk_data.get("description", ""),
+                    members_count=vk_data.get("members_count", 0),
+                    photo_url=vk_data.get("photo_200", ""),
+                    is_closed=vk_data.get("is_closed", False),
+                )
+
+                new_group = Group(
+                    id=None,
+                    content=content,
+                )
+
+                await self.group_repository.save(new_group)
+
+                return {
+                    "refreshed": True,
+                    "action": "created",
+                    "group_id": new_group.id,
+                    "group_name": new_group.content.name,
+                    "identifier": identifier,
+                }
+
+            else:
+                return {
+                    "refreshed": False,
+                    "identifier": identifier,
+                    "reason": "Group not found in database and create_if_not_exists is False",
+                }
+
+        except Exception as e:
+            logger.error(f"Error refreshing group from VK: {e}")
+            return {
+                "refreshed": False,
+                "identifier": identifier,
+                "error": str(e),
+            }
