@@ -78,10 +78,12 @@ class GroupFileImporter:
             content = await self._read_file_content(file)
             if not content:
                 return VKGroupUploadResponse(
-                    success=False,
+                    status="error",
                     message="Файл пустой или не удалось прочитать",
-                    imported=0,
+                    total_processed=0,
+                    created=0,
                     skipped=0,
+                    failed=0,
                     errors=[],
                 )
 
@@ -90,10 +92,12 @@ class GroupFileImporter:
 
             if not groups_data:
                 return VKGroupUploadResponse(
-                    success=False,
+                    status="error",
                     message="Не найдено данных для импорта",
-                    imported=0,
+                    total_processed=0,
+                    created=0,
                     skipped=0,
+                    failed=0,
                     errors=[],
                 )
 
@@ -105,9 +109,9 @@ class GroupFileImporter:
         except Exception as e:
             logger.error(f"Error importing from CSV: {e}")
             return VKGroupUploadResponse(
-                success=False,
+                status="error",
                 message=f"Ошибка импорта: {str(e)}",
-                imported=0,
+                total_processed=0,
                 skipped=0,
                 errors=[str(e)],
             )
@@ -137,10 +141,12 @@ class GroupFileImporter:
             content = await self._read_file_content(file)
             if not content:
                 return VKGroupUploadResponse(
-                    success=False,
+                    status="error",
                     message="Файл пустой или не удалось прочитать",
-                    imported=0,
+                    total_processed=0,
+                    created=0,
                     skipped=0,
+                    failed=0,
                     errors=[],
                 )
 
@@ -149,10 +155,12 @@ class GroupFileImporter:
 
             if not screen_names:
                 return VKGroupUploadResponse(
-                    success=False,
+                    status="error",
                     message="Не найдено screen_name для импорта",
-                    imported=0,
+                    total_processed=0,
+                    created=0,
                     skipped=0,
+                    failed=0,
                     errors=[],
                 )
 
@@ -170,10 +178,12 @@ class GroupFileImporter:
         except Exception as e:
             logger.error(f"Error importing from text file: {e}")
             return VKGroupUploadResponse(
-                success=False,
+                status="error",
                 message=f"Ошибка импорта: {str(e)}",
-                imported=0,
+                total_processed=0,
+                created=0,
                 skipped=0,
+                failed=1,
                 errors=[str(e)],
             )
 
@@ -243,11 +253,11 @@ class GroupFileImporter:
 
                 # Создаем группу
                 create_data = VKGroupCreate(
-                    screen_name=vk_data.get("screen_name", screen_name),
+                    vk_id_or_screen_name=vk_data.get(
+                        "screen_name", screen_name
+                    ),
                     name=vk_data.get("name", group_data.get("name", "")),
-                    vk_id=vk_data.get("id", 0),
                     description=group_data.get("description", ""),
-                    member_count=vk_data.get("members_count", 0),
                 )
 
                 await self.group_manager.create_group(db, create_data)
@@ -264,18 +274,19 @@ class GroupFileImporter:
                 continue
 
         # Формируем результат
-        success = imported > 0
-        message = (
-            f"Импорт завершен: {imported} импортировано, {skipped} пропущено"
-        )
+        # Импорт успешен, если обработали хотя бы одну строку (даже если ничего не импортировали)
+        success = (imported + skipped + len(errors)) > 0
+        message = f"Импорт завершен: {imported} импортировано, {skipped} пропущено, {len(errors)} ошибок"
 
         logger.info(message)
 
         return VKGroupUploadResponse(
-            success=success,
+            status="success" if success else "error",
             message=message,
-            imported=imported,
+            total_processed=imported + skipped + len(errors),
+            created=imported,
             skipped=skipped,
+            failed=len(errors),
             errors=errors[:100],  # Ограничиваем количество ошибок
         )
 

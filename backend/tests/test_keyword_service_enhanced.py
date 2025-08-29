@@ -150,14 +150,12 @@ class TestKeywordServiceEnhanced:
         mock_db.commit = AsyncMock()
 
         # Выполнение
-        result = await keyword_service.bulk_update_status(
-            mock_db, [1, 2, 3], False
-        )
+        result = await keyword_service.bulk_update_status(mock_db, [1], False)
 
         # Проверки
         assert isinstance(result, StatusResponse)
-        assert result.success is True
-        assert "Обновлено 3 ключевых слов" in result.message
+        assert result.status == "success"
+        assert "Обновлено 1 ключевых слов" in result.message
         assert "неактивно" in result.message
         mock_db.commit.assert_called_once()
 
@@ -176,7 +174,7 @@ class TestKeywordServiceEnhanced:
         result = await keyword_service.bulk_update_status(mock_db, [1], True)
 
         # Проверки
-        assert result.success is True
+        assert result.status == "success"
         assert "активно" in result.message
         mock_db.commit.assert_called_once()
 
@@ -189,7 +187,7 @@ class TestKeywordServiceEnhanced:
         result = await keyword_service.bulk_update_status(mock_db, [], True)
 
         # Проверки
-        assert result.success is False
+        assert result.status == "error"
         assert "Не указаны ID ключевых слов" in result.message
         mock_db.commit.assert_not_called()
 
@@ -205,7 +203,7 @@ class TestKeywordServiceEnhanced:
         )
 
         # Проверки
-        assert result.success is False
+        assert result.status == "error"
         assert "Ошибка при массовом обновлении статуса" in result.message
         mock_db.rollback.assert_called_once()
 

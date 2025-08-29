@@ -435,7 +435,9 @@ class TestVKDataParser:
 
         # Проверяем результат
         assert count == 0
-        mock_vk_service.get_post_comments_count.assert_called_once_with(-123456789, 100)
+        mock_vk_service.get_post_comments_count.assert_called_once_with(
+            -123456789, 100
+        )
 
     def test_parser_initialization(self, vk_data_parser, mock_vk_service):
         """Тест инициализации парсера"""

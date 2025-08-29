@@ -40,6 +40,23 @@ class GroupManager(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
         super().__init__(VKGroup)
         self.logger = logging.getLogger(__name__)
 
+    async def get_by_id(self, db: AsyncSession, id: int) -> Optional[VKGroup]:
+        """
+        Получить группу по ее ID.
+
+        Args:
+            db: Сессия базы данных
+            id: ID группы
+
+        Returns:
+            Объект группы или None
+        """
+        try:
+            return await self.get(db, id)
+        except Exception as e:
+            logger.error(f"Error getting group by ID {id}: {e}")
+            return None
+
     async def get_by_screen_name(
         self, db: AsyncSession, screen_name: str
     ) -> Optional[VKGroup]:
@@ -125,12 +142,14 @@ class GroupManager(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
             Количество групп
         """
         try:
-            query = select(self.model)
+            from sqlalchemy import func
+
+            query = select(func.count()).select_from(self.model)
             if active_only:
                 query = query.where(self.model.is_active == True)
 
             result = await db.execute(query)
-            return len(result.scalars().all())
+            return result.scalar()
 
         except Exception as e:
             logger.error(f"Error counting groups: {e}")
@@ -153,17 +172,39 @@ class GroupManager(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
             ValueError: Если группа с таким screen_name уже существует
         """
         try:
-            # Проверяем существование группы с таким же screen_name
-            existing = await self.get_by_screen_name(
-                db, group_data.screen_name
+            # Определяем screen_name для проверки существования
+            screen_name = (
+                group_data.screen_name or group_data.vk_id_or_screen_name
             )
+
+            # Проверяем существование группы с таким же screen_name
+            existing = await self.get_by_screen_name(db, screen_name)
             if existing:
                 raise ValueError(
-                    f"Group with screen_name '{group_data.screen_name}' already exists"
+                    f"Group with screen_name '{screen_name}' already exists"
                 )
 
+            # Подготавливаем данные для создания VKGroup
+            group_dict = group_data.model_dump()
+
+            # Удаляем поле vk_id_or_screen_name, так как VKGroup его не знает
+            group_dict.pop("vk_id_or_screen_name", None)
+
+            # Если screen_name не указан, используем vk_id_or_screen_name
+            if not group_dict.get("screen_name"):
+                # Если это число, то это VK ID, иначе screen_name
+                if group_data.vk_id_or_screen_name.isdigit():
+                    group_dict["vk_id"] = int(group_data.vk_id_or_screen_name)
+                    # Для VK ID нужно будет получить screen_name из VK API
+                    # Пока оставим пустым или сгенерируем временный
+                    group_dict["screen_name"] = (
+                        f"id{group_data.vk_id_or_screen_name}"
+                    )
+                else:
+                    group_dict["screen_name"] = group_data.vk_id_or_screen_name
+
             # Создаем новую группу
-            new_group = self.model(**group_data.model_dump())
+            new_group = self.model(**group_dict)
             db.add(new_group)
             await db.commit()
             await db.refresh(new_group)
@@ -178,7 +219,7 @@ class GroupManager(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
 
         except Exception as e:
             await db.rollback()
-            logger.error(f"Error creating group {group_data.screen_name}: {e}")
+            logger.error(f"Error creating group: {e}")
             raise
 
     async def update_group(

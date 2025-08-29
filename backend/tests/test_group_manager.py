@@ -34,9 +34,8 @@ class TestGroupManager:
     def sample_group_data(self):
         """Пример данных группы для создания"""
         return VKGroupCreate(
-            screen_name="test_group",
+            vk_id_or_screen_name="test_group",
             name="Тестовая группа",
-            vk_id=123456789,
             description="Описание тестовой группы",
         )
 
@@ -245,7 +244,9 @@ class TestGroupManager:
         result = await group_manager.create_group(mock_db, sample_group_data)
 
         # Проверки
-        assert result.screen_name == sample_group_data.screen_name
+        assert (
+            result.screen_name == sample_group_data.vk_id_or_screen_name
+        )  # screen_name берется из vk_id_or_screen_name
         assert result.name == sample_group_data.name
         mock_db.add.assert_called_once()
         mock_db.commit.assert_called_once()

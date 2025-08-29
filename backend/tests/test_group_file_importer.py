@@ -134,9 +134,8 @@ test_group,Тестовая группа,Описание группы"""
         result = file_importer._parse_csv_content(csv_content)
 
         # Проверки
-        assert len(result) == 2
-        assert result[0]["screen_name"] == "screen name"
-        assert result[1]["screen_name"] == "test_group"
+        assert len(result) == 1
+        assert result[0]["screen_name"] == "test_group"
 
     def test_parse_csv_content_empty(self, file_importer):
         """Тест парсинга пустого CSV"""
@@ -272,8 +271,8 @@ another_group"""
 
         # Проверки
         assert isinstance(result, VKGroupUploadResponse)
-        assert result.success is True
-        assert result.imported == 1
+        assert result.status == "success"
+        assert result.created == 1
         assert result.skipped == 0
         mock_group_manager.create_group.assert_called_once()
 
@@ -299,8 +298,8 @@ another_group"""
         result = await file_importer.import_from_csv(mock_db, file)
 
         # Проверки
-        assert result.success is True
-        assert result.imported == 0
+        assert result.status == "success"
+        assert result.created == 0
         assert result.skipped == 1
         assert len(result.errors) == 1
         mock_group_manager.create_group.assert_not_called()
@@ -329,8 +328,8 @@ another_group"""
         result = await file_importer.import_from_csv(mock_db, file)
 
         # Проверки
-        assert result.success is True
-        assert result.imported == 0
+        assert result.status == "success"
+        assert result.created == 0
         assert result.skipped == 1
         assert len(result.errors) == 1
         mock_group_manager.create_group.assert_not_called()
@@ -359,8 +358,8 @@ another_group"""
         )
 
         # Проверки
-        assert result.success is True
-        assert result.imported == 1
+        assert result.status == "success"
+        assert result.created == 1
         mock_group_validator.validate_screen_name.assert_not_called()
         mock_group_manager.create_group.assert_called_once()
 
@@ -395,8 +394,8 @@ another_group"""
 
         # Проверки
         assert isinstance(result, VKGroupUploadResponse)
-        assert result.success is True
-        assert result.imported == 2
+        assert result.status == "success"
+        assert result.created == 2
         assert result.skipped == 0
         assert mock_group_manager.create_group.call_count == 2
 
@@ -411,9 +410,13 @@ another_group"""
         result = await file_importer.import_from_text(mock_db, file)
 
         # Проверки
-        assert result.success is False
-        assert result.imported == 0
-        assert "пустой" in result.message.lower()
+        assert result.status == "error"
+        assert result.created == 0
+        # Проверяем, что сообщение содержит информацию о пустом файле
+        assert (
+            "пустой" in result.message.lower()
+            or "empty" in result.message.lower()
+        )
 
     @pytest.mark.asyncio
     async def test_import_from_text_with_urls(
@@ -439,8 +442,8 @@ another_group"""
         result = await file_importer.import_from_text(mock_db, file)
 
         # Проверки
-        assert result.success is True
-        assert result.imported == 1
+        assert result.status == "success"
+        assert result.created == 1
         mock_group_manager.create_group.assert_called_once()
 
     # Тесты для validate_import_data

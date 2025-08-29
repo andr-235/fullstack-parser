@@ -347,12 +347,16 @@ class KeywordService:
         """
         try:
             # Общая статистика
-            total_result = await db.execute(select(func.count()).select_from(Keyword))
+            total_result = await db.execute(
+                select(func.count()).select_from(Keyword)
+            )
             total = total_result.scalar()
 
             # Активные ключевые слова
             active_result = await db.execute(
-                select(func.count()).select_from(Keyword).where(Keyword.is_active == True)
+                select(func.count())
+                .select_from(Keyword)
+                .where(Keyword.is_active == True)
             )
             active = active_result.scalar()
 
@@ -379,10 +383,12 @@ class KeywordService:
                 "categories_count": len(categories_stats),
                 "categories_stats": categories_stats,
                 "longest_keywords": longest_keywords,
-                "average_word_length": await self._get_average_word_length(db)
+                "average_word_length": await self._get_average_word_length(db),
             }
 
-            self.logger.info(f"Generated keyword statistics: {total} total keywords")
+            self.logger.info(
+                f"Generated keyword statistics: {total} total keywords"
+            )
             return stats
 
         except Exception as e:
@@ -390,10 +396,7 @@ class KeywordService:
             return {}
 
     async def bulk_update_status(
-        self,
-        db: AsyncSession,
-        keyword_ids: List[int],
-        is_active: bool
+        self, db: AsyncSession, keyword_ids: List[int], is_active: bool
     ) -> StatusResponse:
         """
         Массовое обновление статуса ключевых слов.
@@ -409,8 +412,8 @@ class KeywordService:
         try:
             if not keyword_ids:
                 return StatusResponse(
-                    success=False,
-                    message="Не указаны ID ключевых слов для обновления"
+                    status="error",
+                    message="Не указаны ID ключевых слов для обновления",
                 )
 
             # Обновляем статус
@@ -429,19 +432,13 @@ class KeywordService:
             message = f"Обновлено {updated_count} ключевых слов, статус: {'активно' if is_active else 'неактивно'}"
             self.logger.info(message)
 
-            return StatusResponse(
-                success=True,
-                message=message
-            )
+            return StatusResponse(status="success", message=message)
 
         except Exception as e:
             await db.rollback()
             error_msg = f"Ошибка при массовом обновлении статуса: {str(e)}"
             self.logger.error(error_msg)
-            return StatusResponse(
-                success=False,
-                message=error_msg
-            )
+            return StatusResponse(status="error", message=error_msg)
 
     async def search_keywords(
         self,
@@ -450,7 +447,7 @@ class KeywordService:
         category: Optional[str] = None,
         active_only: bool = True,
         limit: int = 20,
-        offset: int = 0
+        offset: int = 0,
     ) -> PaginatedResponse[KeywordResponse]:
         """
         Поиск ключевых слов по различным критериям.
@@ -477,7 +474,7 @@ class KeywordService:
                 conditions.append(
                     or_(
                         Keyword.word.ilike(search_pattern),
-                        Keyword.description.ilike(search_pattern)
+                        Keyword.description.ilike(search_pattern),
                     )
                 )
 
@@ -496,36 +493,34 @@ class KeywordService:
             total = total_result.scalar()
 
             # Получаем результаты с пагинацией
-            sql_query = sql_query.order_by(Keyword.word).limit(limit).offset(offset)
+            sql_query = (
+                sql_query.order_by(Keyword.word).limit(limit).offset(offset)
+            )
             result = await db.execute(sql_query)
             keywords = result.scalars().all()
 
             # Преобразуем в response
-            items = [KeywordResponse.model_validate(keyword) for keyword in keywords]
+            items = [
+                KeywordResponse.model_validate(keyword) for keyword in keywords
+            ]
 
-            self.logger.info(f"Search completed: {len(items)} results for query '{query}'")
+            self.logger.info(
+                f"Search completed: {len(items)} results for query '{query}'"
+            )
 
             return PaginatedResponse(
                 total=total,
                 page=(offset // limit) + 1,
                 size=limit,
-                items=items
+                items=items,
             )
 
         except Exception as e:
             self.logger.error(f"Error searching keywords: {e}")
-            return PaginatedResponse(
-                total=0,
-                page=1,
-                size=limit,
-                items=[]
-            )
+            return PaginatedResponse(total=0, page=1, size=limit, items=[])
 
     async def get_keywords_by_category(
-        self,
-        db: AsyncSession,
-        category: str,
-        pagination: PaginationParams
+        self, db: AsyncSession, category: str, pagination: PaginationParams
     ) -> PaginatedResponse[KeywordResponse]:
         """
         Получить ключевые слова по категории.
@@ -540,10 +535,13 @@ class KeywordService:
         """
         try:
             # Получаем общее количество
-            count_query = select(func.count()).select_from(Keyword).where(
-                and_(
-                    Keyword.category == category,
-                    Keyword.is_active == True
+            count_query = (
+                select(func.count())
+                .select_from(Keyword)
+                .where(
+                    and_(
+                        Keyword.category == category, Keyword.is_active == True
+                    )
                 )
             )
             count_result = await db.execute(count_query)
@@ -554,8 +552,7 @@ class KeywordService:
                 select(Keyword)
                 .where(
                     and_(
-                        Keyword.category == category,
-                        Keyword.is_active == True
+                        Keyword.category == category, Keyword.is_active == True
                     )
                 )
                 .order_by(Keyword.word)
@@ -567,30 +564,31 @@ class KeywordService:
             keywords = result.scalars().all()
 
             # Преобразуем в response
-            items = [KeywordResponse.model_validate(keyword) for keyword in keywords]
+            items = [
+                KeywordResponse.model_validate(keyword) for keyword in keywords
+            ]
 
-            self.logger.info(f"Retrieved {len(items)} keywords for category '{category}'")
+            self.logger.info(
+                f"Retrieved {len(items)} keywords for category '{category}'"
+            )
 
             return PaginatedResponse(
                 total=total,
                 page=pagination.page,
                 size=pagination.size,
-                items=items
+                items=items,
             )
 
         except Exception as e:
-            self.logger.error(f"Error getting keywords by category '{category}': {e}")
+            self.logger.error(
+                f"Error getting keywords by category '{category}': {e}"
+            )
             return PaginatedResponse(
-                total=0,
-                page=pagination.page,
-                size=pagination.size,
-                items=[]
+                total=0, page=pagination.page, size=pagination.size, items=[]
             )
 
     async def duplicate_keywords_check(
-        self,
-        db: AsyncSession,
-        words: List[str]
+        self, db: AsyncSession, words: List[str]
     ) -> Dict[str, bool]:
         """
         Проверить наличие дубликатов среди списка слов.
