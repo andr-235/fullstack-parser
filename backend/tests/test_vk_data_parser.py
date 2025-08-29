@@ -426,10 +426,7 @@ class TestVKDataParser:
     ):
         """Тест получения количества комментариев для поста без комментариев"""
         # Настраиваем мок для пустого результата
-        mock_vk_service.get_post_comments.return_value = {
-            "items": [],
-            "count": 0,
-        }
+        mock_vk_service.get_post_comments_count.return_value = 0
 
         # Вызываем метод
         count = await vk_data_parser.get_post_comments_count(
@@ -438,6 +435,7 @@ class TestVKDataParser:
 
         # Проверяем результат
         assert count == 0
+        mock_vk_service.get_post_comments_count.assert_called_once_with(-123456789, 100)
 
     def test_parser_initialization(self, vk_data_parser, mock_vk_service):
         """Тест инициализации парсера"""
@@ -449,8 +447,13 @@ class TestVKDataParser:
         assert hasattr(vk_data_parser, "parse_user_info")
         assert hasattr(vk_data_parser, "parse_group_info")
 
-    def test_parser_initialization_with_db(self, mock_vk_service, mock_db):
+    def test_parser_initialization_with_db(self, mock_vk_service):
         """Тест инициализации парсера с базой данных"""
+        from unittest.mock import MagicMock
+
+        # Создаем мок базы данных
+        mock_db = MagicMock()
+
         # Создаем парсер с базой данных
         parser = VKDataParser(mock_vk_service, mock_db)
 
