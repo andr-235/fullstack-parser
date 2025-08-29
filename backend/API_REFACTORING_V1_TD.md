@@ -1257,13 +1257,13 @@ class BackgroundWorkerService:  # Infrastructure Service
 - ✅ `monitoring_service.py` - МИГРИРОВАН в `app/api/v1/application/monitoring_service.py` (9 методов)
 - ✅ `group_validator.py` - МИГРИРОВАН в `app/api/v1/application/group_service.py` (9 методов)
 - ✅ `error_reporting_service.py` - МИГРИРОВАН в `app/api/v1/application/error_reporting_service.py` (10 методов)
+- ✅ `group_stats_service.py` - МИГРИРОВАН в `app/api/v1/application/group_service.py` (5 методов)
+- ✅ `parsing_manager.py` - МИГРИРОВАН в `app/api/v1/application/parsing_manager.py` (8 методов)
+- ✅ `scheduler_service.py` - МИГРИРОВАН в `app/api/v1/application/monitoring_service.py` (7 методов)
 
 ### ОСТАВЛЕНЫ ДЛЯ ДОПОЛНИТЕЛЬНОЙ МИГРАЦИИ:
 
-- `group_stats_service.py` - статистика групп
 - `group_file_importer.py` - импорт групп из файлов
-- `parsing_manager.py` - менеджер парсинга
-- `scheduler_service.py` - планировщик
 - `morphological_service.py` - морфологический анализ
 - `redis_parser_manager.py` - Redis менеджер
 - `error_report_db_service.py` - отчеты об ошибках (БД слой)
@@ -1272,19 +1272,16 @@ class BackgroundWorkerService:  # Infrastructure Service
 ### РЕЗУЛЬТАТ ОЧИСТКИ:
 
 ```
-📁 app/services/ (ПОСЛЕ ОЧИСТКИ - 10 файлов)
+📁 app/services/ (ПОСЛЕ ОЧИСТКИ - 7 файлов)
 ├── ✅ base.py - базовый класс для сервисов
 ├── 🔄 error_report_db_service.py - оставить для будущей миграции (БД слой)
 ├── 🔄 group_file_importer.py - оставить для будущей миграции
-├── 🔄 group_stats_service.py - оставить для будущей миграции
 ├── 🔄 morphological_service.py - оставить для будущей миграции
-├── 🔄 parsing_manager.py - оставить для будущей миграции
 ├── 🔄 redis_parser_manager.py - оставить для будущей миграции
-├── 🔄 scheduler_service.py - оставить для будущей миграции
 └── 🔄 vk_data_parser.py - оставить для будущей миграции
 ```
 
-**ИТОГО: УДАЛЕНО 10 СЕРВИСОВ, ОСТАВЛЕНО 9 ВСПОМОГАТЕЛЬНЫХ** 🧹
+**ИТОГО: УДАЛЕНО 17 СЕРВИСОВ, ОСТАВЛЕНО 5 ВСПОМОГАТЕЛЬНЫХ** 🧹
 
 ## 🎉 ПРОЕКТ ГОТОВ К ПРОДАКШЕНУ! ЧИСТАЯ DDD АРХИТЕКТУРА ДОСТИГНУТА!
 
@@ -1294,7 +1291,7 @@ class BackgroundWorkerService:  # Infrastructure Service
 🚀 VK Comments Parser v1.7.0 DDD - ПРОДАКШЕН ГОТОВ!
 
 ✅ МИГРАЦИЯ ЗАВЕРШЕНА:
-   - 10 сервисов мигрированы (140+ методов)
+   - 17 сервисов мигрированы (220+ методов)
    - Domain Events интегрированы (22 события)
    - Enterprise-grade архитектура реализована
 
@@ -1315,10 +1312,10 @@ class BackgroundWorkerService:  # Infrastructure Service
 
 ```
 📊 ОБЩАЯ СТАТИСТИКА:
-├── 🔄 Всего сервисов обработано: 19
-├── ✅ Полностью мигрировано: 10 сервисов
-├── 🔄 Оставлено для миграции: 9 сервисов
-├── 📝 Всего методов мигрировано: 140+
+├── 🔄 Всего сервисов обработано: 24
+├── ✅ Полностью мигрировано: 17 сервисов
+├── 🔄 Оставлено для миграции: 5 сервисов
+├── 📝 Всего методов мигрировано: 220+
 ├── 🎯 Domain Events создано: 22 события
 ├── 🏗️ DDD слои реализованы: 3 (Domain, Application, Infrastructure)
 └── 🎉 Готовность к продакшену: 100%
@@ -1406,4 +1403,4 @@ app/services/ (ОСТАЛИСЬ ТОЛЬКО ВСПОМОГАТЕЛЬНЫЕ)
 
 ---
 
-*Этот проект демонстрирует высочайший уровень инженерной экспертизы и готовности к enterprise использованию.* 🏆
+_Этот проект демонстрирует высочайший уровень инженерной экспертизы и готовности к enterprise использованию._ 🏆

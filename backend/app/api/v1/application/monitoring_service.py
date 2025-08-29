@@ -495,3 +495,313 @@ class MonitoringService:
                 RedisSettings.from_dsn(settings.redis_url)
             )
         return self.redis_pool
+
+    # =============== МИГРАЦИЯ SchedulerService В DDD ===============
+
+    async def initialize_scheduler_ddd(self):
+        """
+        Инициализация планировщика (мигрировано из SchedulerService)
+
+        Returns:
+            Результат инициализации
+        """
+        try:
+            redis_pool = await self._get_redis_pool()
+
+            return {
+                "initialized": True,
+                "redis_connected": True,
+                "message": "Scheduler initialized successfully",
+                "initialized_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error initializing scheduler: {e}")
+            return {
+                "initialized": False,
+                "error": str(e),
+                "redis_connected": False,
+            }
+
+    async def start_monitoring_scheduler_ddd(
+        self, interval_seconds: int = 300
+    ) -> Dict[str, Any]:
+        """
+        Запустить планировщик мониторинга (мигрировано из SchedulerService)
+
+        Args:
+            interval_seconds: Интервал между циклами в секундах
+
+        Returns:
+            Результат запуска планировщика
+        """
+        try:
+            # Проверяем, не запущен ли уже планировщик
+            if hasattr(self, "_scheduler_running") and self._scheduler_running:
+                return {
+                    "started": False,
+                    "error": "Scheduler is already running",
+                    "interval_seconds": interval_seconds,
+                }
+
+            # Инициализируем планировщик
+            init_result = await self.initialize_scheduler_ddd()
+            if not init_result["initialized"]:
+                return {
+                    "started": False,
+                    "error": init_result["error"],
+                    "interval_seconds": interval_seconds,
+                }
+
+            # Запускаем планировщик
+            self._scheduler_running = True
+            self._scheduler_interval = interval_seconds
+
+            # Запускаем фоновую задачу
+            import asyncio
+
+            asyncio.create_task(self._run_scheduler_loop_ddd(interval_seconds))
+
+            return {
+                "started": True,
+                "interval_seconds": interval_seconds,
+                "message": f"Monitoring scheduler started with {interval_seconds}s interval",
+                "started_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error starting monitoring scheduler: {e}")
+            return {
+                "started": False,
+                "error": str(e),
+                "interval_seconds": interval_seconds,
+            }
+
+    async def stop_monitoring_scheduler_ddd(self) -> Dict[str, Any]:
+        """
+        Остановить планировщик мониторинга (мигрировано из SchedulerService)
+
+        Returns:
+            Результат остановки планировщика
+        """
+        try:
+            if (
+                not hasattr(self, "_scheduler_running")
+                or not self._scheduler_running
+            ):
+                return {
+                    "stopped": False,
+                    "message": "Scheduler is not running",
+                }
+
+            self._scheduler_running = False
+
+            return {
+                "stopped": True,
+                "message": "Monitoring scheduler stopped",
+                "stopped_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error stopping monitoring scheduler: {e}")
+            return {
+                "stopped": False,
+                "error": str(e),
+            }
+
+    async def run_manual_monitoring_cycle_ddd(self) -> Dict[str, Any]:
+        """
+        Запустить цикл мониторинга вручную (мигрировано из SchedulerService)
+
+        Returns:
+            Результат выполнения цикла
+        """
+        try:
+            redis_pool = await self._get_redis_pool()
+
+            # Ставим задачу в очередь
+            job = await redis_pool.enqueue_job("run_monitoring_cycle")
+
+            if job:
+                return {
+                    "executed": True,
+                    "job_id": job.job_id,
+                    "message": "Manual monitoring cycle enqueued",
+                    "enqueued_at": datetime.now(timezone.utc).isoformat(),
+                }
+            else:
+                return {
+                    "executed": False,
+                    "error": "Failed to enqueue monitoring cycle",
+                }
+
+        except Exception as e:
+            self.logger.error(f"Error running manual monitoring cycle: {e}")
+            return {
+                "executed": False,
+                "error": str(e),
+            }
+
+    async def process_scheduled_tasks_ddd(
+        self, redis_manager=None
+    ) -> Dict[str, Any]:
+        """
+        Обработать запланированные задачи (мигрировано из SchedulerService)
+
+        Args:
+            redis_manager: Менеджер Redis (опционально)
+
+        Returns:
+            Результат обработки задач
+        """
+        try:
+            # Используем переданный менеджер или получаем свой
+            redis_pool = redis_manager or await self._get_redis_pool()
+
+            # Получаем активные задачи
+            active_jobs = await redis_pool.get_active_jobs()
+
+            # Получаем ожидающие задачи
+            pending_jobs = await redis_pool.get_pending_jobs()
+
+            # Обрабатываем просроченные задачи
+            expired_count = 0
+            for job in pending_jobs:
+                # Проверяем, не просрочена ли задача
+                enqueued_at = job.get("enqueued_at")
+                if enqueued_at:
+                    # Если задача ждет больше часа, считаем ее просроченной
+                    import time
+
+                    if time.time() - enqueued_at.timestamp() > 3600:
+                        await redis_pool.abort_job(job["job_id"])
+                        expired_count += 1
+
+            return {
+                "processed": True,
+                "active_jobs": len(active_jobs),
+                "pending_jobs": len(pending_jobs),
+                "expired_jobs": expired_count,
+                "processed_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error processing scheduled tasks: {e}")
+            return {
+                "processed": False,
+                "error": str(e),
+            }
+
+    async def get_scheduler_status_ddd(self) -> Dict[str, Any]:
+        """
+        Получить статус планировщика (мигрировано из SchedulerService)
+
+        Returns:
+            Статус планировщика
+        """
+        try:
+            status = {
+                "service": "monitoring_scheduler",
+                "is_running": getattr(self, "_scheduler_running", False),
+                "interval_seconds": getattr(self, "_scheduler_interval", None),
+                "redis_connected": self.redis_pool is not None,
+            }
+
+            # Получаем статистику задач
+            if self.redis_pool:
+                try:
+                    active_jobs = await self.redis_pool.get_active_jobs()
+                    pending_jobs = await self.redis_pool.get_pending_jobs()
+
+                    status.update(
+                        {
+                            "active_jobs_count": len(active_jobs),
+                            "pending_jobs_count": len(pending_jobs),
+                            "total_queued_jobs": len(active_jobs)
+                            + len(pending_jobs),
+                        }
+                    )
+                except Exception as e:
+                    status["queue_error"] = str(e)
+
+            status["checked_at"] = datetime.now(timezone.utc).isoformat()
+
+            return status
+
+        except Exception as e:
+            self.logger.error(f"Error getting scheduler status: {e}")
+            return {
+                "service": "monitoring_scheduler",
+                "status": "error",
+                "error": str(e),
+                "checked_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+    # =============== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ SchedulerService ===============
+
+    async def _run_scheduler_loop_ddd(self, interval_seconds: int):
+        """
+        Основной цикл планировщика
+        """
+        try:
+            while getattr(self, "_scheduler_running", False):
+                try:
+                    # Запускаем цикл мониторинга
+                    await self._run_monitoring_cycle_ddd()
+                except Exception as e:
+                    self.logger.error(f"Error in monitoring cycle: {e}")
+
+                # Ждем следующий интервал
+                await asyncio.sleep(interval_seconds)
+
+        except Exception as e:
+            self.logger.error(f"Error in scheduler loop: {e}")
+        finally:
+            self._scheduler_running = False
+
+    async def _run_monitoring_cycle_ddd(self):
+        """
+        Запустить один цикл мониторинга
+        """
+        try:
+            if not self.redis_pool:
+                self.logger.error("Redis pool not initialized")
+                return
+
+            # Ставим задачу в очередь
+            job = await self.redis_pool.enqueue_job("run_monitoring_cycle")
+
+            if job:
+                self.logger.info(
+                    "Monitoring cycle task enqueued",
+                    job_id=job.job_id,
+                )
+            else:
+                self.logger.warning("Failed to enqueue monitoring cycle")
+
+        except Exception as e:
+            self.logger.error(f"Error running monitoring cycle: {e}")
+
+    async def close_scheduler_ddd(self):
+        """
+        Закрыть соединения планировщика
+        """
+        try:
+            if self.redis_pool:
+                await self.redis_pool.close()
+                self.redis_pool = None
+
+            self._scheduler_running = False
+
+            return {
+                "closed": True,
+                "message": "Scheduler connections closed",
+                "closed_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error closing scheduler: {e}")
+            return {
+                "closed": False,
+                "error": str(e),
+            }

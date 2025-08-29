@@ -1161,3 +1161,304 @@ class GroupApplicationService(ApplicationService):
                 "identifier": identifier,
                 "error": str(e),
             }
+
+    # =============== МИГРАЦИЯ GroupStatsService В DDD ===============
+
+    async def get_group_stats_ddd(self, group_id: int) -> Dict[str, Any]:
+        """
+        Получить статистику по группе (мигрировано из GroupStatsService)
+
+        Args:
+            group_id: ID группы в базе данных
+
+        Returns:
+            Статистика группы
+        """
+        try:
+            from app.models.vk_group import VKGroup
+            from app.models.comment_keyword_match import CommentKeywordMatch
+            from app.models.keyword import Keyword
+            from app.models.vk_comment import VKComment
+            from app.models.vk_post import VKPost
+
+            # Находим группу
+            group = await self.db.get(VKGroup, group_id)
+            if not group:
+                return {
+                    "error": True,
+                    "message": f"Группа с ID {group_id} не найдена",
+                    "group_id": group_id,
+                }
+
+            # Подсчитываем комментарии с ключевыми словами
+            comments_with_keywords_query = (
+                select(func.count(VKComment.id))
+                .select_from(VKComment)
+                .join(VKPost, VKComment.post_id == VKPost.id)
+                .where(VKPost.group_id == group_id)
+                .where(VKComment.matched_keywords_count > 0)
+            )
+            comments_with_keywords = (
+                await self.db.scalar(comments_with_keywords_query) or 0
+            )
+
+            # Получаем топ ключевых слов
+            top_keywords = await self._get_top_keywords_ddd(group_id, limit=10)
+
+            return {
+                "group_id": group.vk_id,
+                "group_name": group.name,
+                "total_posts": group.total_posts_parsed or 0,
+                "total_comments": group.total_comments_found or 0,
+                "comments_with_keywords": comments_with_keywords,
+                "last_activity": (
+                    group.last_parsed_at.isoformat()
+                    if group.last_parsed_at
+                    else None
+                ),
+                "top_keywords": top_keywords,
+                "generated_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(
+                f"Error getting group stats for group {group_id}: {e}"
+            )
+            return {
+                "error": True,
+                "message": str(e),
+                "group_id": group_id,
+            }
+
+    async def get_groups_overview_ddd(self) -> Dict[str, Any]:
+        """
+        Получить обзор всех групп (мигрировано из GroupStatsService)
+
+        Returns:
+            Обзор статистики всех групп
+        """
+        try:
+            from app.models.vk_group import VKGroup
+            from app.models.vk_comment import VKComment
+            from app.models.vk_post import VKPost
+
+            # Получаем общее количество групп
+            total_groups = await self.db.scalar(select(func.count(VKGroup.id)))
+
+            # Получаем активные группы
+            active_groups = await self.db.scalar(
+                select(func.count(VKGroup.id)).where(VKGroup.is_active == True)
+            )
+
+            # Получаем общее количество постов
+            total_posts = (
+                await self.db.scalar(
+                    select(func.sum(VKGroup.total_posts_parsed)).where(
+                        VKGroup.total_posts_parsed.isnot(None)
+                    )
+                )
+                or 0
+            )
+
+            # Получаем общее количество комментариев
+            total_comments = (
+                await self.db.scalar(
+                    select(func.sum(VKGroup.total_comments_found)).where(
+                        VKGroup.total_comments_found.isnot(None)
+                    )
+                )
+                or 0
+            )
+
+            # Получаем группы с наибольшим количеством комментариев
+            top_groups_query = (
+                select(VKGroup)
+                .order_by(VKGroup.total_comments_found.desc().nulls_last())
+                .limit(5)
+            )
+            top_groups_result = await self.db.execute(top_groups_query)
+            top_groups = top_groups_result.scalars().all()
+
+            top_groups_list = []
+            for group in top_groups:
+                top_groups_list.append(
+                    {
+                        "id": group.id,
+                        "vk_id": group.vk_id,
+                        "name": group.name,
+                        "total_comments": group.total_comments_found or 0,
+                        "total_posts": group.total_posts_parsed or 0,
+                    }
+                )
+
+            return {
+                "total_groups": total_groups,
+                "active_groups": active_groups,
+                "inactive_groups": total_groups - active_groups,
+                "total_posts": total_posts,
+                "total_comments": total_comments,
+                "average_comments_per_group": total_comments
+                / max(total_groups, 1),
+                "top_groups_by_comments": top_groups_list,
+                "generated_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting groups overview: {e}")
+            return {
+                "error": True,
+                "message": str(e),
+            }
+
+    async def get_group_activity_trends_ddd(
+        self, group_id: int, days: int = 7
+    ) -> Dict[str, Any]:
+        """
+        Получить тренды активности группы (мигрировано из GroupStatsService)
+
+        Args:
+            group_id: ID группы
+            days: Количество дней для анализа
+
+        Returns:
+            Тренды активности группы
+        """
+        try:
+            from app.models.vk_group import VKGroup
+            from app.models.vk_comment import VKComment
+            from app.models.vk_post import VKPost
+            from datetime import timedelta
+
+            # Находим группу
+            group = await self.db.get(VKGroup, group_id)
+            if not group:
+                return {
+                    "error": True,
+                    "message": f"Группа с ID {group_id} не найдена",
+                    "group_id": group_id,
+                }
+
+            # Вычисляем дату начала периода
+            start_date = datetime.utcnow() - timedelta(days=days)
+
+            # Получаем статистику по дням
+            daily_stats = []
+            for i in range(days):
+                day_start = start_date + timedelta(days=i)
+                day_end = day_start + timedelta(days=1)
+
+                # Подсчитываем посты за день
+                posts_query = (
+                    select(func.count(VKPost.id))
+                    .where(VKPost.group_id == group_id)
+                    .where(VKPost.published_at >= day_start)
+                    .where(VKPost.published_at < day_end)
+                )
+                posts_count = await self.db.scalar(posts_query) or 0
+
+                # Подсчитываем комментарии за день
+                comments_query = (
+                    select(func.count(VKComment.id))
+                    .select_from(VKComment)
+                    .join(VKPost, VKComment.post_id == VKPost.id)
+                    .where(VKPost.group_id == group_id)
+                    .where(VKComment.published_at >= day_start)
+                    .where(VKComment.published_at < day_end)
+                )
+                comments_count = await self.db.scalar(comments_query) or 0
+
+                daily_stats.append(
+                    {
+                        "date": day_start.strftime("%Y-%m-%d"),
+                        "posts": posts_count,
+                        "comments": comments_count,
+                        "comments_per_post": comments_count
+                        / max(posts_count, 1),
+                    }
+                )
+
+            # Вычисляем тренды
+            total_posts = sum(day["posts"] for day in daily_stats)
+            total_comments = sum(day["comments"] for day in daily_stats)
+            avg_comments_per_post = total_comments / max(total_posts, 1)
+
+            # Определяем тренд активности
+            recent_posts = sum(day["posts"] for day in daily_stats[-3:])
+            older_posts = sum(day["posts"] for day in daily_stats[:-3])
+            activity_trend = (
+                "increasing"
+                if recent_posts > older_posts
+                else "decreasing" if recent_posts < older_posts else "stable"
+            )
+
+            return {
+                "group_id": group_id,
+                "group_name": group.name,
+                "analysis_period_days": days,
+                "daily_stats": daily_stats,
+                "summary": {
+                    "total_posts": total_posts,
+                    "total_comments": total_comments,
+                    "avg_comments_per_post": avg_comments_per_post,
+                    "activity_trend": activity_trend,
+                },
+                "generated_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(
+                f"Error getting group activity trends for group {group_id}: {e}"
+            )
+            return {
+                "error": True,
+                "message": str(e),
+                "group_id": group_id,
+            }
+
+    # =============== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ GroupStatsService ===============
+
+    async def _get_top_keywords_ddd(
+        self, group_id: int, limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Получить топ ключевых слов для группы
+        """
+        try:
+            from app.models.comment_keyword_match import CommentKeywordMatch
+            from app.models.keyword import Keyword
+
+            # Получаем топ ключевых слов по количеству совпадений
+            query = (
+                select(
+                    Keyword.word,
+                    Keyword.category,
+                    func.count(CommentKeywordMatch.id).label("matches_count"),
+                )
+                .select_from(CommentKeywordMatch)
+                .join(Keyword, CommentKeywordMatch.keyword_id == Keyword.id)
+                .where(CommentKeywordMatch.group_id == group_id)
+                .group_by(Keyword.word, Keyword.category)
+                .order_by(func.count(CommentKeywordMatch.id).desc())
+                .limit(limit)
+            )
+
+            result = await self.db.execute(query)
+            rows = result.all()
+
+            top_keywords = []
+            for row in rows:
+                top_keywords.append(
+                    {
+                        "word": row.word,
+                        "category": row.category,
+                        "matches_count": row.matches_count,
+                    }
+                )
+
+            return top_keywords
+
+        except Exception as e:
+            logger.error(
+                f"Error getting top keywords for group {group_id}: {e}"
+            )
+            return []
