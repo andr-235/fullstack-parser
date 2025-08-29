@@ -485,3 +485,475 @@ class VKAPIService:
             owner_id для VK API
         """
         return -abs(group_id)
+
+    # =============== МИГРАЦИЯ VKDataParser В DDD ===============
+
+    async def parse_group_posts_ddd(
+        self, group_id: int, limit: int = 10, offset: int = 0
+    ) -> Dict[str, Any]:
+        """
+        Парсинг постов группы из VK API (мигрировано из VKDataParser)
+
+        Args:
+            group_id: ID группы VK (без знака минус)
+            limit: Максимальное количество постов (1-100)
+            offset: Смещение для пагинации
+
+        Returns:
+            Результат парсинга постов
+        """
+        try:
+            # Преобразуем group_id в owner_id для VK API
+            owner_id = -abs(group_id)
+
+            self.logger.info(
+                f"Parsing posts for group {group_id} (owner_id: {owner_id})",
+                extra={
+                    "group_id": group_id,
+                    "owner_id": owner_id,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            )
+
+            # Вызываем VK API
+            posts = await self.get_group_posts(
+                group_id=group_id,
+                count=min(limit, 100),  # Ограничение VK API
+                offset=offset,
+            )
+
+            if not posts:
+                return {
+                    "posts": [],
+                    "total_posts": 0,
+                    "group_id": group_id,
+                    "message": f"No posts found for group {group_id}",
+                    "parsed_at": datetime.utcnow().isoformat(),
+                }
+
+            self.logger.info(
+                f"Successfully parsed {len(posts)} posts for group {group_id}",
+                extra={
+                    "group_id": group_id,
+                    "posts_count": len(posts),
+                },
+            )
+
+            return {
+                "posts": posts,
+                "total_posts": len(posts),
+                "group_id": group_id,
+                "limit": limit,
+                "offset": offset,
+                "parsed_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error parsing posts for group {group_id}: {e}")
+            return {
+                "posts": [],
+                "total_posts": 0,
+                "group_id": group_id,
+                "error": str(e),
+                "parsed_at": datetime.utcnow().isoformat(),
+            }
+
+    async def parse_post_comments_ddd(
+        self, post_id: int, owner_id: int, limit: int = 100, offset: int = 0
+    ) -> Dict[str, Any]:
+        """
+        Парсинг комментариев к посту из VK API (мигрировано из VKDataParser)
+
+        Args:
+            post_id: ID поста
+            owner_id: ID владельца поста (группы)
+            limit: Максимальное количество комментариев
+            offset: Смещение для пагинации
+
+        Returns:
+            Результат парсинга комментариев
+        """
+        try:
+            self.logger.info(
+                f"Parsing comments for post {post_id} in group {owner_id}",
+                extra={
+                    "post_id": post_id,
+                    "owner_id": owner_id,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            )
+
+            # Вызываем VK API для получения комментариев
+            comments = await self.get_post_comments(
+                post_id=post_id,
+                owner_id=owner_id,
+                count=min(limit, 100),  # Ограничение VK API
+                offset=offset,
+            )
+
+            if not comments:
+                return {
+                    "comments": [],
+                    "total_comments": 0,
+                    "post_id": post_id,
+                    "owner_id": owner_id,
+                    "message": f"No comments found for post {post_id}",
+                    "parsed_at": datetime.utcnow().isoformat(),
+                }
+
+            self.logger.info(
+                f"Successfully parsed {len(comments)} comments for post {post_id}",
+                extra={
+                    "post_id": post_id,
+                    "comments_count": len(comments),
+                },
+            )
+
+            return {
+                "comments": comments,
+                "total_comments": len(comments),
+                "post_id": post_id,
+                "owner_id": owner_id,
+                "limit": limit,
+                "offset": offset,
+                "parsed_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(
+                f"Error parsing comments for post {post_id}: {e}"
+            )
+            return {
+                "comments": [],
+                "total_comments": 0,
+                "post_id": post_id,
+                "owner_id": owner_id,
+                "error": str(e),
+                "parsed_at": datetime.utcnow().isoformat(),
+            }
+
+    async def parse_user_info_ddd(self, user_ids: List[int]) -> Dict[str, Any]:
+        """
+        Парсинг информации о пользователях из VK API (мигрировано из VKDataParser)
+
+        Args:
+            user_ids: Список ID пользователей
+
+        Returns:
+            Результат парсинга информации о пользователях
+        """
+        try:
+            if not user_ids:
+                return {
+                    "users": {},
+                    "total_users": 0,
+                    "message": "No user IDs provided",
+                    "parsed_at": datetime.utcnow().isoformat(),
+                }
+
+            self.logger.info(
+                f"Parsing info for {len(user_ids)} users",
+                extra={"user_ids": user_ids},
+            )
+
+            # Группируем запросы по 1000 пользователей (ограничение VK API)
+            all_users_info = {}
+            batch_size = 1000
+
+            for i in range(0, len(user_ids), batch_size):
+                batch_user_ids = user_ids[i : i + batch_size]
+
+                try:
+                    # Получаем информацию о пользователях
+                    users_info = await self.get_user_info(
+                        user_ids=batch_user_ids
+                    )
+
+                    if users_info:
+                        all_users_info.update(users_info)
+
+                except Exception as e:
+                    self.logger.error(f"Error parsing user info batch: {e}")
+                    continue
+
+            return {
+                "users": all_users_info,
+                "total_users": len(all_users_info),
+                "requested_users": len(user_ids),
+                "successful_parses": len(all_users_info),
+                "failed_parses": len(user_ids) - len(all_users_info),
+                "parsed_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error parsing user info: {e}")
+            return {
+                "users": {},
+                "total_users": 0,
+                "error": str(e),
+                "parsed_at": datetime.utcnow().isoformat(),
+            }
+
+    async def parse_group_info_ddd(
+        self, group_ids: List[int]
+    ) -> Dict[str, Any]:
+        """
+        Парсинг информации о группах из VK API (мигрировано из VKDataParser)
+
+        Args:
+            group_ids: Список ID групп
+
+        Returns:
+            Результат парсинга информации о группах
+        """
+        try:
+            if not group_ids:
+                return {
+                    "groups": {},
+                    "total_groups": 0,
+                    "message": "No group IDs provided",
+                    "parsed_at": datetime.utcnow().isoformat(),
+                }
+
+            self.logger.info(
+                f"Parsing info for {len(group_ids)} groups",
+                extra={"group_ids": group_ids},
+            )
+
+            # Группируем запросы по 500 групп (ограничение VK API)
+            all_groups_info = {}
+            batch_size = 500
+
+            for i in range(0, len(group_ids), batch_size):
+                batch_group_ids = group_ids[i : i + batch_size]
+
+                try:
+                    # Получаем информацию о группах
+                    groups_info = await self.get_group_info_batch(
+                        group_ids=batch_group_ids
+                    )
+
+                    if groups_info:
+                        all_groups_info.update(groups_info)
+
+                except Exception as e:
+                    self.logger.error(f"Error parsing group info batch: {e}")
+                    continue
+
+            return {
+                "groups": all_groups_info,
+                "total_groups": len(all_groups_info),
+                "requested_groups": len(group_ids),
+                "successful_parses": len(all_groups_info),
+                "failed_parses": len(group_ids) - len(all_groups_info),
+                "parsed_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error parsing group info: {e}")
+            return {
+                "groups": {},
+                "total_groups": 0,
+                "error": str(e),
+                "parsed_at": datetime.utcnow().isoformat(),
+            }
+
+    async def validate_group_access_ddd(self, group_id: int) -> Dict[str, Any]:
+        """
+        Валидация доступа к группе через VK API (мигрировано из VKDataParser)
+
+        Args:
+            group_id: ID группы VK
+
+        Returns:
+            Результат валидации доступа
+        """
+        try:
+            self.logger.info(f"Validating access to group {group_id}")
+
+            # Проверяем доступ через получение информации о группе
+            group_info = await self.get_group_info(group_id=str(group_id))
+
+            if "error" in group_info:
+                return {
+                    "has_access": False,
+                    "group_id": group_id,
+                    "error": group_info["error"],
+                    "validated_at": datetime.utcnow().isoformat(),
+                }
+
+            # Проверяем возможность получения постов
+            try:
+                posts = await self.get_group_posts(
+                    group_id=group_id, count=1, offset=0
+                )
+
+                has_access = "error" not in posts
+
+                return {
+                    "has_access": has_access,
+                    "group_id": group_id,
+                    "group_name": group_info.get("name"),
+                    "can_read_posts": has_access,
+                    "validated_at": datetime.utcnow().isoformat(),
+                }
+
+            except Exception:
+                return {
+                    "has_access": False,
+                    "group_id": group_id,
+                    "group_name": group_info.get("name"),
+                    "can_read_posts": False,
+                    "error": "Cannot access group posts",
+                    "validated_at": datetime.utcnow().isoformat(),
+                }
+
+        except Exception as e:
+            self.logger.error(f"Error validating group access {group_id}: {e}")
+            return {
+                "has_access": False,
+                "group_id": group_id,
+                "error": str(e),
+                "validated_at": datetime.utcnow().isoformat(),
+            }
+
+    async def get_group_posts_count_ddd(self, group_id: int) -> Dict[str, Any]:
+        """
+        Получение количества постов группы через VK API (мигрировано из VKDataParser)
+
+        Args:
+            group_id: ID группы VK
+
+        Returns:
+            Результат получения количества постов
+        """
+        try:
+            self.logger.info(f"Getting posts count for group {group_id}")
+
+            # Получаем 1 пост с максимальным offset для определения общего количества
+            # VK API возвращает общее количество в поле 'count'
+            posts_data = await self.get_group_posts(
+                group_id=group_id, count=1, offset=0
+            )
+
+            if "error" in posts_data:
+                return {
+                    "posts_count": 0,
+                    "group_id": group_id,
+                    "error": posts_data["error"],
+                    "retrieved_at": datetime.utcnow().isoformat(),
+                }
+
+            # Извлекаем общее количество из ответа VK API
+            total_count = posts_data.get("count", 0)
+
+            return {
+                "posts_count": total_count,
+                "group_id": group_id,
+                "retrieved_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(
+                f"Error getting posts count for group {group_id}: {e}"
+            )
+            return {
+                "posts_count": 0,
+                "group_id": group_id,
+                "error": str(e),
+                "retrieved_at": datetime.utcnow().isoformat(),
+            }
+
+    async def get_post_comments_count_ddd(
+        self, post_id: int, owner_id: int
+    ) -> Dict[str, Any]:
+        """
+        Получение количества комментариев к посту через VK API (мигрировано из VKDataParser)
+
+        Args:
+            post_id: ID поста
+            owner_id: ID владельца поста (группы)
+
+        Returns:
+            Результат получения количества комментариев
+        """
+        try:
+            self.logger.info(
+                f"Getting comments count for post {post_id} in group {owner_id}"
+            )
+
+            # Получаем 1 комментарий с максимальным offset для определения общего количества
+            comments_data = await self.get_post_comments(
+                post_id=post_id, owner_id=owner_id, count=1, offset=0
+            )
+
+            if "error" in comments_data:
+                return {
+                    "comments_count": 0,
+                    "post_id": post_id,
+                    "owner_id": owner_id,
+                    "error": comments_data["error"],
+                    "retrieved_at": datetime.utcnow().isoformat(),
+                }
+
+            # Извлекаем общее количество из ответа VK API
+            total_count = comments_data.get("count", 0)
+
+            return {
+                "comments_count": total_count,
+                "post_id": post_id,
+                "owner_id": owner_id,
+                "retrieved_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(
+                f"Error getting comments count for post {post_id}: {e}"
+            )
+            return {
+                "comments_count": 0,
+                "post_id": post_id,
+                "owner_id": owner_id,
+                "error": str(e),
+                "retrieved_at": datetime.utcnow().isoformat(),
+            }
+
+    # =============== ДОПОЛНИТЕЛЬНЫЕ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===============
+
+    async def get_group_info_batch(
+        self, group_ids: List[int]
+    ) -> Dict[int, Dict]:
+        """
+        Получение информации о нескольких группах одновременно
+        """
+        try:
+            groups_info = {}
+
+            # Группируем по 500 групп (ограничение VK API)
+            batch_size = 500
+
+            for i in range(0, len(group_ids), batch_size):
+                batch = group_ids[i : i + batch_size]
+
+                # Преобразуем в строки для VK API
+                group_id_strings = [str(gid) for gid in batch]
+
+                # Получаем информацию о группах
+                for gid_str in group_id_strings:
+                    try:
+                        group_info = await self.get_group_info(gid_str)
+                        if "error" not in group_info:
+                            groups_info[int(gid_str)] = group_info
+                    except Exception as e:
+                        self.logger.error(
+                            f"Error getting info for group {gid_str}: {e}"
+                        )
+                        continue
+
+            return groups_info
+
+        except Exception as e:
+            self.logger.error(f"Error getting group info batch: {e}")
+            return {}

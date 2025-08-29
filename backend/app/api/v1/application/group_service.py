@@ -1462,3 +1462,400 @@ class GroupApplicationService(ApplicationService):
                 f"Error getting top keywords for group {group_id}: {e}"
             )
             return []
+
+    # =============== МИГРАЦИЯ GroupFileImporter В DDD ===============
+
+    async def import_groups_from_csv_ddd(
+        self, file_content: str, validate_groups: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Импорт групп из CSV файла (мигрировано из GroupFileImporter)
+
+        Ожидаемый формат CSV:
+        screen_name,name,description
+        test_group,Тестовая группа,Описание группы
+
+        Args:
+            file_content: Содержимое CSV файла
+            validate_groups: Проверять существование групп через VK API
+
+        Returns:
+            Результат импорта
+        """
+        try:
+            if not file_content or not file_content.strip():
+                return {
+                    "status": "error",
+                    "message": "Файл пустой или не удалось прочитать",
+                    "total_processed": 0,
+                    "created": 0,
+                    "skipped": 0,
+                    "failed": 0,
+                    "errors": [],
+                }
+
+            # Парсим CSV
+            groups_data = await self._parse_csv_content_ddd(file_content)
+
+            if not groups_data:
+                return {
+                    "status": "error",
+                    "message": "Не найдено данных для импорта",
+                    "total_processed": 0,
+                    "created": 0,
+                    "skipped": 0,
+                    "failed": 0,
+                    "errors": [],
+                }
+
+            # Импортируем группы
+            result = await self._import_groups_data_ddd(
+                groups_data, validate_groups
+            )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Error importing groups from CSV: {e}")
+            return {
+                "status": "error",
+                "message": str(e),
+                "total_processed": 0,
+                "created": 0,
+                "skipped": 0,
+                "failed": 0,
+                "errors": [str(e)],
+            }
+
+    async def import_groups_from_text_ddd(
+        self, file_content: str, validate_groups: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Импорт групп из текстового файла (мигрировано из GroupFileImporter)
+
+        Ожидаемый формат:
+        screen_name1
+        screen_name2
+        test_group
+
+        Args:
+            file_content: Содержимое текстового файла
+            validate_groups: Проверять существование групп через VK API
+
+        Returns:
+            Результат импорта
+        """
+        try:
+            if not file_content or not file_content.strip():
+                return {
+                    "status": "error",
+                    "message": "Файл пустой или не удалось прочитать",
+                    "total_processed": 0,
+                    "created": 0,
+                    "skipped": 0,
+                    "failed": 0,
+                    "errors": [],
+                }
+
+            # Парсим текстовый файл
+            screen_names = await self._parse_text_content_ddd(file_content)
+
+            if not screen_names:
+                return {
+                    "status": "error",
+                    "message": "Не найдено screen_name для импорта",
+                    "total_processed": 0,
+                    "created": 0,
+                    "skipped": 0,
+                    "failed": 0,
+                    "errors": [],
+                }
+
+            # Преобразуем в формат данных групп
+            groups_data = []
+            for screen_name in screen_names:
+                groups_data.append(
+                    {
+                        "screen_name": screen_name.strip(),
+                        "name": "",
+                        "description": "",
+                    }
+                )
+
+            # Импортируем группы
+            result = await self._import_groups_data_ddd(
+                groups_data, validate_groups
+            )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Error importing groups from text: {e}")
+            return {
+                "status": "error",
+                "message": str(e),
+                "total_processed": 0,
+                "created": 0,
+                "skipped": 0,
+                "failed": 0,
+                "errors": [str(e)],
+            }
+
+    async def validate_import_data_ddd(
+        self, groups_data: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Валидация данных импорта групп (мигрировано из GroupFileImporter)
+
+        Args:
+            groups_data: Данные групп для валидации
+
+        Returns:
+            Результат валидации
+        """
+        try:
+            if not groups_data:
+                return {
+                    "valid": False,
+                    "message": "Нет данных для валидации",
+                    "errors": ["Пустой список данных"],
+                }
+
+            errors = []
+            valid_count = 0
+            invalid_count = 0
+
+            for i, group_data in enumerate(groups_data):
+                screen_name = group_data.get("screen_name", "").strip()
+
+                # Проверяем наличие screen_name
+                if not screen_name:
+                    errors.append(f"Строка {i+1}: отсутствует screen_name")
+                    invalid_count += 1
+                    continue
+
+                # Проверяем формат screen_name
+                if not screen_name.replace("_", "").replace("-", "").isalnum():
+                    errors.append(
+                        f"Строка {i+1}: недопустимый формат screen_name '{screen_name}'"
+                    )
+                    invalid_count += 1
+                    continue
+
+                # Проверяем длину screen_name
+                if len(screen_name) < 3 or len(screen_name) > 50:
+                    errors.append(
+                        f"Строка {i+1}: screen_name должен быть от 3 до 50 символов"
+                    )
+                    invalid_count += 1
+                    continue
+
+                # Проверяем уникальность в рамках файла
+                duplicates = [
+                    g
+                    for g in groups_data[:i]
+                    if g.get("screen_name") == screen_name
+                ]
+                if duplicates:
+                    errors.append(
+                        f"Строка {i+1}: дублированный screen_name '{screen_name}'"
+                    )
+                    invalid_count += 1
+                    continue
+
+                valid_count += 1
+
+            return {
+                "valid": len(errors) == 0,
+                "total_groups": len(groups_data),
+                "valid_groups": valid_count,
+                "invalid_groups": invalid_count,
+                "errors": errors,
+                "message": f"Валидация завершена: {valid_count} валидных, {invalid_count} ошибок",
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error validating import data: {e}")
+            return {
+                "valid": False,
+                "message": str(e),
+                "errors": [str(e)],
+            }
+
+    # =============== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ GroupFileImporter ===============
+
+    async def _import_groups_data_ddd(
+        self, groups_data: List[Dict[str, Any]], validate_groups: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Внутренний метод для импорта данных групп
+        """
+        try:
+            total_processed = len(groups_data)
+            created = 0
+            skipped = 0
+            failed = 0
+            errors = []
+
+            for group_data in groups_data:
+                try:
+                    screen_name = group_data.get("screen_name", "").strip()
+
+                    # Проверяем существование группы в БД
+                    existing_group = None
+                    if screen_name:
+                        # Ищем по screen_name среди существующих групп
+                        all_groups = await self.group_repository.find_all()
+                        for group in all_groups:
+                            if group.content.screen_name == screen_name:
+                                existing_group = group
+                                break
+
+                    if existing_group:
+                        skipped += 1
+                        continue
+
+                    # Валидируем через VK API если требуется
+                    if validate_groups:
+                        validation_result = (
+                            await self.validate_screen_name_ddd(screen_name)
+                        )
+                        if not validation_result["valid"]:
+                            failed += 1
+                            errors.append(
+                                f"Группа {screen_name}: {validation_result.get('error', 'Валидация не пройдена')}"
+                            )
+                            continue
+
+                    # Создаем группу
+                    from ..domain.group import Group, GroupContent
+
+                    content = GroupContent(
+                        vk_id=0,  # Будет обновлено при следующем парсинге
+                        screen_name=screen_name,
+                        name=group_data.get("name", ""),
+                        description=group_data.get("description", ""),
+                        members_count=0,
+                        photo_url="",
+                        is_closed=False,
+                    )
+
+                    new_group = Group(
+                        id=None,
+                        content=content,
+                    )
+
+                    await self.group_repository.save(new_group)
+                    created += 1
+
+                except Exception as e:
+                    failed += 1
+                    errors.append(
+                        f"Ошибка при импорте группы {group_data.get('screen_name', 'unknown')}: {str(e)}"
+                    )
+
+            status = (
+                "success"
+                if failed == 0
+                else "partial" if created > 0 else "error"
+            )
+
+            return {
+                "status": status,
+                "message": f"Импорт завершен: {created} создано, {skipped} пропущено, {failed} ошибок",
+                "total_processed": total_processed,
+                "created": created,
+                "skipped": skipped,
+                "failed": failed,
+                "errors": errors,
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error importing groups data: {e}")
+            return {
+                "status": "error",
+                "message": str(e),
+                "total_processed": len(groups_data),
+                "created": 0,
+                "skipped": 0,
+                "failed": len(groups_data),
+                "errors": [str(e)],
+            }
+
+    async def _parse_csv_content_ddd(
+        self, content: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Парсинг содержимого CSV файла
+        """
+        try:
+            import csv
+            import io
+
+            groups_data = []
+
+            # Читаем CSV
+            csv_reader = csv.DictReader(io.StringIO(content))
+
+            for row_num, row in enumerate(
+                csv_reader, start=2
+            ):  # +1 для заголовка
+                try:
+                    screen_name = row.get("screen_name", "").strip()
+                    name = row.get("name", "").strip()
+                    description = row.get("description", "").strip()
+
+                    if screen_name:
+                        groups_data.append(
+                            {
+                                "screen_name": screen_name,
+                                "name": name,
+                                "description": description,
+                            }
+                        )
+
+                except Exception as e:
+                    self.logger.warning(
+                        f"Error parsing CSV row {row_num}: {e}"
+                    )
+                    continue
+
+            return groups_data
+
+        except Exception as e:
+            self.logger.error(f"Error parsing CSV content: {e}")
+            return []
+
+    async def _parse_text_content_ddd(self, content: str) -> List[str]:
+        """
+        Парсинг содержимого текстового файла
+        """
+        try:
+            screen_names = []
+
+            # Разбиваем по строкам и фильтруем
+            lines = content.split("\n")
+
+            for line_num, line in enumerate(lines, start=1):
+                try:
+                    line = line.strip()
+
+                    # Пропускаем пустые строки и комментарии
+                    if not line or line.startswith("#"):
+                        continue
+
+                    screen_name = line.strip()
+                    if screen_name:
+                        screen_names.append(screen_name)
+
+                except Exception as e:
+                    self.logger.warning(
+                        f"Error parsing text line {line_num}: {e}"
+                    )
+                    continue
+
+            return screen_names
+
+        except Exception as e:
+            self.logger.error(f"Error parsing text content: {e}")
+            return []

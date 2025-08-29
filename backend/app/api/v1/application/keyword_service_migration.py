@@ -494,24 +494,28 @@ class KeywordServiceMigration:
                         )
 
                         if not word:
-                            errors.append(f"Строка {row_num}: пустое ключевое слово")
+                            errors.append(
+                                f"Строка {row_num}: пустое ключевое слово"
+                            )
                             continue
 
-                        keywords_data.append({
-                            "word": word,
-                            "category": category,
-                            "description": description,
-                            "is_active": is_active,
-                            "is_case_sensitive": is_case_sensitive,
-                            "is_whole_word": is_whole_word,
-                        })
+                        keywords_data.append(
+                            {
+                                "word": word,
+                                "category": category,
+                                "description": description,
+                                "is_active": is_active,
+                                "is_case_sensitive": is_case_sensitive,
+                                "is_whole_word": is_whole_word,
+                            }
+                        )
 
                     except Exception as e:
                         errors.append(f"Строка {row_num}: {str(e)}")
 
             elif file_extension == ".txt":
                 # Обработка TXT файла
-                lines = file_content.strip().split('\n')
+                lines = file_content.strip().split("\n")
                 for line_num, line in enumerate(lines, 1):
                     total_processed += 1
                     word = line.strip()
@@ -519,19 +523,21 @@ class KeywordServiceMigration:
                     if not word:
                         continue
 
-                    keywords_data.append({
-                        "word": word,
-                        "category": default_category,
-                        "description": None,
-                        "is_active": is_active,
-                        "is_case_sensitive": is_case_sensitive,
-                        "is_whole_word": is_whole_word,
-                    })
+                    keywords_data.append(
+                        {
+                            "word": word,
+                            "category": default_category,
+                            "description": None,
+                            "is_active": is_active,
+                            "is_case_sensitive": is_case_sensitive,
+                            "is_whole_word": is_whole_word,
+                        }
+                    )
 
             else:
                 return {
                     "status": "error",
-                    "message": f"Неподдерживаемый формат файла: {file_extension}"
+                    "message": f"Неподдерживаемый формат файла: {file_extension}",
                 }
 
             # Создаем ключевые слова массово
@@ -544,7 +550,7 @@ class KeywordServiceMigration:
                 "created": result["created"],
                 "skipped": result["skipped"],
                 "errors": errors + result["errors"],
-                "created_keywords": result["created_keywords"]
+                "created_keywords": result["created_keywords"],
             }
 
         except Exception as e:
@@ -554,7 +560,7 @@ class KeywordServiceMigration:
                 "total_processed": total_processed,
                 "created": 0,
                 "skipped": 0,
-                "errors": [str(e)]
+                "errors": [str(e)],
             }
 
     async def get_average_word_length_ddd(self) -> float:
@@ -578,7 +584,7 @@ class KeywordServiceMigration:
         category: Optional[str] = None,
         active_only: bool = True,
         limit: int = 20,
-        offset: int = 0
+        offset: int = 0,
     ) -> Dict[str, Any]:
         """
         Поиск ключевых слов с пагинацией (мигрировано из KeywordService)
@@ -598,14 +604,11 @@ class KeywordServiceMigration:
             category=category,
             search=query,
             limit=limit,
-            offset=offset
+            offset=offset,
         )
 
     async def get_keywords_by_category_paginated_ddd(
-        self,
-        category: str,
-        limit: int = 50,
-        offset: int = 0
+        self, category: str, limit: int = 50, offset: int = 0
     ) -> Dict[str, Any]:
         """
         Получить ключевые слова по категории с пагинацией (мигрировано из KeywordService)
@@ -619,10 +622,7 @@ class KeywordServiceMigration:
             Пагинированный результат
         """
         return await self.get_keywords_paginated(
-            active_only=True,
-            category=category,
-            limit=limit,
-            offset=offset
+            active_only=True, category=category, limit=limit, offset=offset
         )
 
     async def get_keyword_statistics_detailed_ddd(self) -> Dict[str, Any]:
@@ -645,17 +645,21 @@ class KeywordServiceMigration:
 
         # Статистика по длине слов
         word_lengths = [len(k.content.word) for k in all_keywords]
-        avg_word_length = sum(word_lengths) / len(word_lengths) if word_lengths else 0
+        avg_word_length = (
+            sum(word_lengths) / len(word_lengths) if word_lengths else 0
+        )
 
         # Самые длинные слова
         longest_keywords = sorted(
             [(k.content.word, len(k.content.word)) for k in all_keywords],
             key=lambda x: x[1],
-            reverse=True
+            reverse=True,
         )[:5]
 
         # Статистика по чувствительности к регистру
-        case_sensitive_count = len([k for k in all_keywords if k.is_case_sensitive])
+        case_sensitive_count = len(
+            [k for k in all_keywords if k.is_case_sensitive]
+        )
         whole_word_count = len([k for k in all_keywords if k.is_whole_word])
 
         return {
@@ -668,9 +672,21 @@ class KeywordServiceMigration:
             "longest_keywords": dict(longest_keywords),
             "case_sensitive_keywords": case_sensitive_count,
             "whole_word_keywords": whole_word_count,
-            "case_sensitive_rate": (case_sensitive_count / total_keywords * 100) if total_keywords > 0 else 0,
-            "whole_word_rate": (whole_word_count / total_keywords * 100) if total_keywords > 0 else 0,
-            "activity_rate": (active_keywords / total_keywords * 100) if total_keywords > 0 else 0,
+            "case_sensitive_rate": (
+                (case_sensitive_count / total_keywords * 100)
+                if total_keywords > 0
+                else 0
+            ),
+            "whole_word_rate": (
+                (whole_word_count / total_keywords * 100)
+                if total_keywords > 0
+                else 0
+            ),
+            "activity_rate": (
+                (active_keywords / total_keywords * 100)
+                if total_keywords > 0
+                else 0
+            ),
         }
 
     async def validate_keyword_data_ddd(
@@ -695,18 +711,22 @@ class KeywordServiceMigration:
         # Проверяем длину слова
         word = keyword_data.get("word", "")
         if len(word) > 100:
-            errors.append("Ключевое слово слишком длинное (макс. 100 символов)")
+            errors.append(
+                "Ключевое слово слишком длинное (макс. 100 символов)"
+            )
         elif len(word) < 2:
             errors.append("Ключевое слово слишком короткое (мин. 2 символа)")
 
         # Проверяем на специальные символы
-        if any(char in word for char in ['<', '>', '&', '"', "'"]):
+        if any(char in word for char in ["<", ">", "&", '"', "'"]):
             warnings.append("Ключевое слово содержит специальные символы")
 
         # Проверяем категорию
         category = keyword_data.get("category")
         if category and len(category) > 50:
-            errors.append("Название категории слишком длинное (макс. 50 символов)")
+            errors.append(
+                "Название категории слишком длинное (макс. 50 символов)"
+            )
 
         # Проверяем описание
         description = keyword_data.get("description")
@@ -717,21 +737,23 @@ class KeywordServiceMigration:
         if word:
             existing = await self.get_keyword_by_word(word)
             if existing:
-                errors.append("Ключевое слово с таким названием уже существует")
+                errors.append(
+                    "Ключевое слово с таким названием уже существует"
+                )
 
         return {
             "valid": len(errors) == 0,
             "errors": errors,
             "warnings": warnings,
             "error_count": len(errors),
-            "warning_count": len(warnings)
+            "warning_count": len(warnings),
         }
 
     async def export_keywords_ddd(
         self,
         category: Optional[str] = None,
         active_only: bool = True,
-        format: str = "json"
+        format: str = "json",
     ) -> Dict[str, Any]:
         """
         Экспорт ключевых слов (мигрировано из KeywordService)
@@ -751,7 +773,7 @@ class KeywordServiceMigration:
             active_only=active_only,
             category=category,
             limit=10000,  # Получаем все для экспорта
-            offset=0
+            offset=0,
         )
 
         keywords = result["keywords"]
@@ -759,33 +781,30 @@ class KeywordServiceMigration:
         # Форматируем для экспорта
         export_data = []
         for keyword in keywords:
-            export_data.append({
-                "id": keyword["id"],
-                "word": keyword["word"],
-                "category": keyword["category"],
-                "description": keyword["description"],
-                "is_active": keyword["is_active"],
-                "is_case_sensitive": keyword["is_case_sensitive"],
-                "is_whole_word": keyword["is_whole_word"],
-                "created_at": keyword["created_at"],
-                "updated_at": keyword["updated_at"],
-            })
+            export_data.append(
+                {
+                    "id": keyword["id"],
+                    "word": keyword["word"],
+                    "category": keyword["category"],
+                    "description": keyword["description"],
+                    "is_active": keyword["is_active"],
+                    "is_case_sensitive": keyword["is_case_sensitive"],
+                    "is_whole_word": keyword["is_whole_word"],
+                    "created_at": keyword["created_at"],
+                    "updated_at": keyword["updated_at"],
+                }
+            )
 
         return {
             "data": export_data,
             "total": len(export_data),
             "format": format,
             "exported_at": datetime.utcnow().isoformat(),
-            "filters": {
-                "category": category,
-                "active_only": active_only
-            }
+            "filters": {"category": category, "active_only": active_only},
         }
 
     async def get_keywords_count_ddd(
-        self,
-        category: Optional[str] = None,
-        active_only: bool = True
+        self, category: Optional[str] = None, active_only: bool = True
     ) -> int:
         """
         Получить количество ключевых слов с фильтрами (мигрировано из KeywordService)
@@ -798,10 +817,325 @@ class KeywordServiceMigration:
             Количество ключевых слов
         """
         result = await self.get_keywords_paginated(
-            active_only=active_only,
-            category=category,
-            limit=1,
-            offset=0
+            active_only=active_only, category=category, limit=1, offset=0
         )
 
         return result["total"]
+
+    # =============== МИГРАЦИЯ MorphologicalService В DDD ===============
+
+    async def get_word_forms_ddd(self, word: str) -> Dict[str, Any]:
+        """
+        Получить все возможные морфологические формы слова (мигрировано из MorphologicalService)
+
+        Args:
+            word: Исходное слово
+
+        Returns:
+            Множество всех возможных форм слова
+        """
+        try:
+            from natasha import MorphVocab
+
+            morph = MorphVocab()
+            forms = set()
+
+            # Добавляем исходное слово
+            forms.add(word.lower())
+
+            # Получаем нормальную форму через natasha
+            parsed_words = morph.parse(word.lower())
+            if parsed_words and len(parsed_words) > 0:
+                # Берем первый результат парсинга
+                parsed_word = parsed_words[0]
+                # Добавляем нормальную форму
+                forms.add(parsed_word.normal_form)
+                # Добавляем исходную форму
+                forms.add(parsed_word.word)
+
+            return {
+                "word": word,
+                "forms": list(forms),
+                "total_forms": len(forms),
+                "normalized_form": (
+                    parsed_word.normal_form if parsed_words else word.lower()
+                ),
+                "generated_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting word forms for {word}: {e}")
+            return {
+                "word": word,
+                "forms": [word.lower()],
+                "total_forms": 1,
+                "normalized_form": word.lower(),
+                "error": str(e),
+                "generated_at": datetime.utcnow().isoformat(),
+            }
+
+    async def get_search_patterns_ddd(self, keyword: str) -> Dict[str, Any]:
+        """
+        Получить список паттернов для поиска ключевого слова (мигрировано из MorphologicalService)
+
+        Args:
+            keyword: Ключевое слово для поиска
+
+        Returns:
+            Список паттернов для поиска
+        """
+        try:
+            word_forms_result = await self.get_word_forms_ddd(keyword)
+
+            return {
+                "keyword": keyword,
+                "search_patterns": word_forms_result["forms"],
+                "patterns_count": word_forms_result["total_forms"],
+                "normalized_keyword": word_forms_result["normalized_form"],
+                "generated_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting search patterns for {keyword}: {e}")
+            return {
+                "keyword": keyword,
+                "search_patterns": [keyword.lower()],
+                "patterns_count": 1,
+                "normalized_keyword": keyword.lower(),
+                "error": str(e),
+                "generated_at": datetime.utcnow().isoformat(),
+            }
+
+    async def find_morphological_matches_ddd(
+        self,
+        text: str,
+        keyword: str,
+        case_sensitive: bool = False,
+        whole_word: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Найти все морфологические формы ключевого слова в тексте (мигрировано из MorphologicalService)
+
+        Args:
+            text: Текст для поиска
+            keyword: Ключевое слово
+            case_sensitive: Учитывать регистр
+            whole_word: Искать только целые слова
+
+        Returns:
+            Список найденных совпадений
+        """
+        try:
+            import re
+
+            word_forms_result = await self.get_word_forms_ddd(keyword)
+            word_forms = word_forms_result["forms"]
+
+            matches = []
+            search_text = text if case_sensitive else text.lower()
+
+            for form in word_forms:
+                search_form = form if case_sensitive else form.lower()
+
+                if whole_word:
+                    # Поиск целых слов с границами
+                    pattern = r"\b" + re.escape(search_form) + r"\b"
+                    flags = re.IGNORECASE if not case_sensitive else 0
+
+                    for match in re.finditer(pattern, search_text, flags):
+                        matches.append(
+                            {
+                                "matched_word": match.group(0),
+                                "position": match.start(),
+                                "original_form": form,
+                                "search_form": search_form,
+                            }
+                        )
+                else:
+                    # Поиск подстрок
+                    pos = 0
+                    while True:
+                        found_pos = search_text.find(search_form, pos)
+                        if found_pos == -1:
+                            break
+                        matches.append(
+                            {
+                                "matched_word": search_form,
+                                "position": found_pos,
+                                "original_form": form,
+                                "search_form": search_form,
+                            }
+                        )
+                        pos = found_pos + 1
+
+            # Убираем дубликаты по позиции
+            unique_matches = []
+            seen_positions = set()
+            for match in matches:
+                if match["position"] not in seen_positions:
+                    unique_matches.append(match)
+                    seen_positions.add(match["position"])
+
+            return {
+                "keyword": keyword,
+                "text_length": len(text),
+                "matches": unique_matches,
+                "total_matches": len(unique_matches),
+                "search_forms_used": word_forms,
+                "case_sensitive": case_sensitive,
+                "whole_word": whole_word,
+                "generated_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error finding morphological matches: {e}")
+            return {
+                "keyword": keyword,
+                "text_length": len(text),
+                "matches": [],
+                "total_matches": 0,
+                "search_forms_used": [keyword.lower()],
+                "error": str(e),
+                "generated_at": datetime.utcnow().isoformat(),
+            }
+
+    async def is_russian_word_ddd(self, word: str) -> Dict[str, Any]:
+        """
+        Проверить, является ли слово русским (мигрировано из MorphologicalService)
+
+        Args:
+            word: Слово для проверки
+
+        Returns:
+            Результат проверки
+        """
+        try:
+            import re
+
+            # Простая проверка на кириллицу
+            cyrillic_pattern = re.compile(r"[а-яё]", re.IGNORECASE)
+            has_cyrillic = bool(cyrillic_pattern.search(word))
+
+            # Проверка через natasha
+            from natasha import MorphVocab
+
+            morph = MorphVocab()
+            parsed_words = morph.parse(word.lower())
+
+            is_parsed = len(parsed_words) > 0 if parsed_words else False
+
+            return {
+                "word": word,
+                "is_russian": has_cyrillic and is_parsed,
+                "has_cyrillic": has_cyrillic,
+                "can_be_parsed": is_parsed,
+                "checked_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error checking if word is Russian: {e}")
+            return {
+                "word": word,
+                "is_russian": False,
+                "has_cyrillic": False,
+                "can_be_parsed": False,
+                "error": str(e),
+                "checked_at": datetime.utcnow().isoformat(),
+            }
+
+    async def normalize_word_ddd(self, word: str) -> Dict[str, Any]:
+        """
+        Нормализовать слово (мигрировано из MorphologicalService)
+
+        Args:
+            word: Слово для нормализации
+
+        Returns:
+            Нормализованное слово
+        """
+        try:
+            from natasha import MorphVocab
+
+            morph = MorphVocab()
+            parsed_words = morph.parse(word.lower())
+
+            if parsed_words and len(parsed_words) > 0:
+                parsed_word = parsed_words[0]
+                normalized = parsed_word.normal_form
+            else:
+                normalized = word.lower()
+
+            return {
+                "original_word": word,
+                "normalized_word": normalized,
+                "was_changed": word.lower() != normalized,
+                "normalized_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error normalizing word {word}: {e}")
+            return {
+                "original_word": word,
+                "normalized_word": word.lower(),
+                "was_changed": False,
+                "error": str(e),
+                "normalized_at": datetime.utcnow().isoformat(),
+            }
+
+    async def get_word_info_ddd(self, word: str) -> Dict[str, Any]:
+        """
+        Получить информацию о слове (мигрировано из MorphologicalService)
+
+        Args:
+            word: Слово для анализа
+
+        Returns:
+            Информация о слове
+        """
+        try:
+            from natasha import MorphVocab
+
+            morph = MorphVocab()
+
+            # Получаем формы слова
+            forms_result = await self.get_word_forms_ddd(word)
+
+            # Проверяем, является ли русским
+            russian_check = await self.is_russian_word_ddd(word)
+
+            # Нормализуем
+            normalized_result = await self.normalize_word_ddd(word)
+
+            # Парсим через natasha для дополнительной информации
+            parsed_words = morph.parse(word.lower())
+            parse_info = None
+            if parsed_words and len(parsed_words) > 0:
+                parsed_word = parsed_words[0]
+                parse_info = {
+                    "normal_form": parsed_word.normal_form,
+                    "pos": getattr(parsed_word, "pos", None),
+                    "tag": getattr(parsed_word, "tag", None),
+                }
+
+            return {
+                "word": word,
+                "is_russian": russian_check["is_russian"],
+                "normalized_form": normalized_result["normalized_word"],
+                "all_forms": forms_result["forms"],
+                "forms_count": forms_result["total_forms"],
+                "parse_info": parse_info,
+                "analyzed_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting word info for {word}: {e}")
+            return {
+                "word": word,
+                "is_russian": False,
+                "normalized_form": word.lower(),
+                "all_forms": [word.lower()],
+                "forms_count": 1,
+                "parse_info": None,
+                "error": str(e),
+                "analyzed_at": datetime.utcnow().isoformat(),
+            }

@@ -452,3 +452,504 @@ class ParsingManager:
         except Exception as e:
             self.logger.error(f"Error getting group by VK ID {vk_id}: {e}")
             return None
+
+    # =============== МИГРАЦИЯ RedisParserManager В DDD ===============
+
+    async def start_task_ddd(
+        self, task_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Запустить задачу парсинга и сохранить в Redis (мигрировано из RedisParserManager)
+
+        Args:
+            task_data: Данные задачи
+
+        Returns:
+            Результат запуска задачи
+        """
+        try:
+            import uuid
+            from datetime import datetime
+
+            # Генерируем ID задачи если не указан
+            task_id = task_data.get("task_id", str(uuid.uuid4()))
+
+            # Создаем объект задачи
+            task = {
+                "task_id": task_id,
+                "group_id": task_data.get("group_id"),
+                "status": "in_progress",
+                "started_at": datetime.now(timezone.utc).isoformat(),
+                "config": task_data.get("config", {}),
+                "progress": 0,
+                "stats": {},
+            }
+
+            # Сохраняем в Redis
+            redis_pool = await self._get_redis_pool()
+
+            task_key = f"parser:task:{task_id}"
+            task_json = json.dumps(task)
+
+            async with redis_pool.pipeline() as pipe:
+                pipe.set(f"parser:current_task_id", task_id)
+                pipe.set(task_key, task_json)
+                await pipe.execute()
+
+            return {
+                "task_id": task_id,
+                "status": "started",
+                "message": "Task started and registered in Redis",
+                "started_at": task["started_at"],
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error starting task: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+            }
+
+    async def complete_task_ddd(
+        self, task_id: str, stats: Dict[str, int]
+    ) -> Dict[str, Any]:
+        """
+        Отметить задачу как завершенную в Redis (мигрировано из RedisParserManager)
+
+        Args:
+            task_id: ID задачи
+            stats: Статистика выполнения
+
+        Returns:
+            Результат завершения задачи
+        """
+        try:
+            redis_pool = await self._get_redis_pool()
+            task_key = f"parser:task:{task_id}"
+
+            # Получаем текущие данные задачи
+            task_json = await redis_pool.get(task_key)
+            if not task_json:
+                return {
+                    "status": "error",
+                    "error": f"Task {task_id} not found in Redis",
+                }
+
+            task = json.loads(task_json)
+
+            # Обновляем задачу
+            task.update(
+                {
+                    "status": "completed",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "stats": stats,
+                    "progress": 100,
+                }
+            )
+
+            # Сохраняем обновленные данные
+            async with redis_pool.pipeline() as pipe:
+                pipe.set(task_key, json.dumps(task))
+                pipe.delete("parser:current_task_id")
+                await pipe.execute()
+
+            return {
+                "task_id": task_id,
+                "status": "completed",
+                "message": "Task completed and updated in Redis",
+                "completed_at": task["completed_at"],
+                "stats": stats,
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error completing task {task_id}: {e}")
+            return {
+                "task_id": task_id,
+                "status": "error",
+                "error": str(e),
+            }
+
+    async def fail_task_ddd(
+        self, task_id: str, error_message: str
+    ) -> Dict[str, Any]:
+        """
+        Отметить задачу как проваленную в Redis (мигрировано из RedisParserManager)
+
+        Args:
+            task_id: ID задачи
+            error_message: Сообщение об ошибке
+
+        Returns:
+            Результат отметки задачи как проваленной
+        """
+        try:
+            redis_pool = await self._get_redis_pool()
+            task_key = f"parser:task:{task_id}"
+
+            # Получаем текущие данные задачи
+            task_json = await redis_pool.get(task_key)
+            if not task_json:
+                return {
+                    "status": "error",
+                    "error": f"Task {task_id} not found in Redis",
+                }
+
+            task = json.loads(task_json)
+
+            # Обновляем задачу
+            task.update(
+                {
+                    "status": "failed",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "error_message": error_message,
+                    "progress": 0,
+                }
+            )
+
+            # Сохраняем обновленные данные
+            async with redis_pool.pipeline() as pipe:
+                pipe.set(task_key, json.dumps(task))
+                pipe.delete("parser:current_task_id")
+                await pipe.execute()
+
+            return {
+                "task_id": task_id,
+                "status": "failed",
+                "message": "Task marked as failed in Redis",
+                "error_message": error_message,
+                "failed_at": task["completed_at"],
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error failing task {task_id}: {e}")
+            return {
+                "task_id": task_id,
+                "status": "error",
+                "error": str(e),
+            }
+
+    async def stop_current_task_ddd(self) -> Dict[str, Any]:
+        """
+        Остановить текущую задачу в Redis (мигрировано из RedisParserManager)
+
+        Returns:
+            Результат остановки задачи
+        """
+        try:
+            redis_pool = await self._get_redis_pool()
+
+            # Получаем ID текущей задачи
+            current_task_id = await redis_pool.get("parser:current_task_id")
+            if not current_task_id:
+                return {
+                    "status": "no_current_task",
+                    "message": "No current task running",
+                }
+
+            task_id = (
+                current_task_id.decode()
+                if isinstance(current_task_id, bytes)
+                else current_task_id
+            )
+            task_key = f"parser:task:{task_id}"
+
+            # Получаем данные задачи
+            task_json = await redis_pool.get(task_key)
+            if task_json:
+                task = json.loads(task_json)
+                task["status"] = "stopped"
+                task["stopped_at"] = datetime.now(timezone.utc).isoformat()
+
+                # Сохраняем обновленные данные
+                async with redis_pool.pipeline() as pipe:
+                    pipe.set(task_key, json.dumps(task))
+                    pipe.delete("parser:current_task_id")
+                    await pipe.execute()
+
+            return {
+                "task_id": task_id,
+                "status": "stopped",
+                "message": "Current task stopped in Redis",
+                "stopped_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error stopping current task: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+            }
+
+    async def update_task_progress_ddd(
+        self,
+        task_id: str,
+        progress: int,
+        stats: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Обновить прогресс задачи в Redis (мигрировано из RedisParserManager)
+
+        Args:
+            task_id: ID задачи
+            progress: Прогресс выполнения (0-100)
+            stats: Статистика выполнения
+
+        Returns:
+            Результат обновления прогресса
+        """
+        try:
+            redis_pool = await self._get_redis_pool()
+            task_key = f"parser:task:{task_id}"
+
+            # Получаем текущие данные задачи
+            task_json = await redis_pool.get(task_key)
+            if not task_json:
+                return {
+                    "status": "error",
+                    "error": f"Task {task_id} not found in Redis",
+                }
+
+            task = json.loads(task_json)
+
+            # Обновляем прогресс и статистику
+            task["progress"] = progress
+            if stats:
+                task["stats"] = stats
+            task["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+            # Сохраняем обновленные данные
+            await redis_pool.set(task_key, json.dumps(task))
+
+            return {
+                "task_id": task_id,
+                "progress": progress,
+                "stats": stats,
+                "message": "Task progress updated in Redis",
+                "updated_at": task["updated_at"],
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error updating task progress {task_id}: {e}")
+            return {
+                "task_id": task_id,
+                "status": "error",
+                "error": str(e),
+            }
+
+    async def get_parser_state_ddd(self) -> Dict[str, Any]:
+        """
+        Получить состояние парсера из Redis (мигрировано из RedisParserManager)
+
+        Returns:
+            Состояние парсера
+        """
+        try:
+            redis_pool = await self._get_redis_pool()
+
+            # Получаем ID текущей задачи
+            current_task_id = await redis_pool.get("parser:current_task_id")
+            current_task = None
+
+            if current_task_id:
+                task_id = (
+                    current_task_id.decode()
+                    if isinstance(current_task_id, bytes)
+                    else current_task_id
+                )
+                task_key = f"parser:task:{task_id}"
+                task_json = await redis_pool.get(task_key)
+
+                if task_json:
+                    current_task = json.loads(task_json)
+
+            # Получаем все задачи
+            all_tasks = []
+            async for key in redis_pool.scan_iter("parser:task:*"):
+                task_json = await redis_pool.get(key)
+                if task_json:
+                    task = json.loads(task_json)
+                    all_tasks.append(task)
+
+            return {
+                "current_task": current_task,
+                "total_tasks": len(all_tasks),
+                "all_tasks": all_tasks,
+                "is_running": current_task is not None,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error getting parser state: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+    async def list_tasks_ddd(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        status_filter: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Получить список задач из Redis (мигрировано из RedisParserManager)
+
+        Args:
+            limit: Максимальное количество задач
+            offset: Смещение
+            status_filter: Фильтр по статусу
+
+        Returns:
+            Список задач
+        """
+        try:
+            redis_pool = await self._get_redis_pool()
+
+            # Получаем все ключи задач
+            task_keys = []
+            async for key in redis_pool.scan_iter("parser:task:*"):
+                task_keys.append(key)
+
+            # Получаем данные задач
+            tasks = []
+            for key in task_keys[offset : offset + limit]:
+                task_json = await redis_pool.get(key)
+                if task_json:
+                    task = json.loads(task_json)
+
+                    # Применяем фильтр по статусу
+                    if status_filter and task.get("status") != status_filter:
+                        continue
+
+                    tasks.append(task)
+
+            return {
+                "tasks": tasks,
+                "total": len(task_keys),
+                "limit": limit,
+                "offset": offset,
+                "status_filter": status_filter,
+                "has_next": len(tasks) == limit,
+                "has_prev": offset > 0,
+                "retrieved_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error listing tasks: {e}")
+            return {
+                "tasks": [],
+                "total": 0,
+                "error": str(e),
+                "retrieved_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+    async def get_parser_stats_ddd(self) -> Dict[str, Any]:
+        """
+        Получить статистику парсера из Redis (мигрировано из RedisParserManager)
+
+        Returns:
+            Статистика парсера
+        """
+        try:
+            redis_pool = await self._get_redis_pool()
+
+            # Получаем все задачи
+            tasks = []
+            async for key in redis_pool.scan_iter("parser:task:*"):
+                task_json = await redis_pool.get(key)
+                if task_json:
+                    task = json.loads(task_json)
+                    tasks.append(task)
+
+            # Вычисляем статистику
+            stats = {
+                "total_tasks": len(tasks),
+                "completed_tasks": len(
+                    [t for t in tasks if t.get("status") == "completed"]
+                ),
+                "failed_tasks": len(
+                    [t for t in tasks if t.get("status") == "failed"]
+                ),
+                "running_tasks": len(
+                    [t for t in tasks if t.get("status") == "in_progress"]
+                ),
+                "stopped_tasks": len(
+                    [t for t in tasks if t.get("status") == "stopped"]
+                ),
+            }
+
+            # Вычисляем среднее время выполнения
+            completed_tasks = [
+                t for t in tasks if t.get("status") == "completed"
+            ]
+            if completed_tasks:
+                total_duration = 0
+                count = 0
+                for task in completed_tasks:
+                    if task.get("started_at") and task.get("completed_at"):
+                        try:
+                            start = datetime.fromisoformat(task["started_at"])
+                            end = datetime.fromisoformat(task["completed_at"])
+                            duration = (end - start).total_seconds()
+                            total_duration += duration
+                            count += 1
+                        except:
+                            pass
+
+                if count > 0:
+                    stats["average_task_duration_seconds"] = (
+                        total_duration / count
+                    )
+
+            stats["generated_at"] = datetime.now(timezone.utc).isoformat()
+
+            return stats
+
+        except Exception as e:
+            self.logger.error(f"Error getting parser stats: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+    async def close_redis_connection_ddd(self) -> Dict[str, Any]:
+        """
+        Закрыть соединение с Redis (мигрировано из RedisParserManager)
+
+        Returns:
+            Результат закрытия соединения
+        """
+        try:
+            if self.redis_pool:
+                await self.redis_pool.close()
+                self.redis_pool = None
+
+            return {
+                "closed": True,
+                "message": "Redis connection closed",
+                "closed_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error closing Redis connection: {e}")
+            return {
+                "closed": False,
+                "error": str(e),
+            }
+
+    # =============== ДОПОЛНИТЕЛЬНЫЕ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===============
+
+    async def _get_redis_pool(self):
+        """
+        Получить Redis pool для работы с задачами
+        """
+        if self.redis_pool is None:
+            import redis.asyncio as redis
+            from app.core.config import settings
+
+            self.redis_pool = redis.from_url(
+                str(settings.redis_url), decode_responses=True
+            )
+        return self.redis_pool
