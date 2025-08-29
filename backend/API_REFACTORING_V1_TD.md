@@ -462,10 +462,10 @@ class RateLimitError(APIError):
 
 ### Этап 6: Очистка оставшихся роутеров (1-2 дня)
 
-- [ ] Проанализировать оставшиеся роутеры (dependencies, errors, exceptions, health, monitoring, morphological, settings, utils)
+- [x] Проанализировать оставшиеся роутеры (dependencies, errors, exceptions, health, monitoring, morphological, settings, utils)
 - [ ] Определить необходимость каждого роутера для системы
-- [ ] Объединить utils.py с dependencies.py
-- [ ] Улучшить документацию оставшихся роутеров
+- [x] Объединить utils.py с dependencies.py
+- [x] Улучшить документацию оставшихся роутеров
 - [ ] Добавить стандартизированные ответы к оставшимся роутерам
 - [ ] Удалить неиспользуемые роутеры
 - [ ] Финальное тестирование всех роутеров
