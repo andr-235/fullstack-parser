@@ -301,19 +301,18 @@ class KeywordService:
                     skipped_count += 1
                     continue
 
+                # Создаем и сразу сохраняем ключевое слово
                 new_keyword = Keyword(**keyword_data.model_dump())
                 db.add(new_keyword)
+                await db.commit()
+                await db.refresh(new_keyword)
                 created_keywords.append(new_keyword)
 
             except Exception as e:
+                await db.rollback()
                 errors.append(
                     f"Ошибка создания '{keyword_data.word}': {str(e)}"
                 )
-
-        if created_keywords:
-            await db.commit()
-            for keyword in created_keywords:
-                await db.refresh(keyword)
 
         return KeywordUploadResponse(
             status="success",

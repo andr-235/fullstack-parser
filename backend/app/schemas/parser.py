@@ -3,7 +3,7 @@ Pydantic схемы для парсинга и статистики
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -18,6 +18,21 @@ class ParseTaskCreate(BaseModel):
     force_reparse: bool = Field(
         default=False,
         description="Принудительно перепарсить уже обработанные посты",
+    )
+
+
+class BulkParseTaskCreate(BaseModel):
+    """Схема для запуска массового парсинга всех активных групп"""
+
+    max_posts: Optional[int] = Field(
+        100, description="Максимальное количество постов на группу"
+    )
+    force_reparse: bool = Field(
+        default=False,
+        description="Принудительно перепарсить уже обработанные посты",
+    )
+    max_concurrent: Optional[int] = Field(
+        3, description="Максимальное количество одновременных задач"
     )
 
 
@@ -46,6 +61,23 @@ class ParseTaskResponse(BaseModel):
     )
     error_message: Optional[str] = Field(
         None, description="Сообщение об ошибке"
+    )
+
+
+class BulkParseResponse(BaseModel):
+    """Ответ на массовый парсинг"""
+
+    total_groups: int = Field(
+        ..., description="Общее количество групп для парсинга"
+    )
+    started_tasks: int = Field(..., description="Количество запущенных задач")
+    failed_groups: List[dict] = Field(
+        default_factory=lambda: [],
+        description="Группы, для которых не удалось запустить парсинг",
+    )
+    tasks: List[ParseTaskResponse] = Field(
+        default_factory=lambda: [],
+        description="Информация о запущенных задачах",
     )
 
 

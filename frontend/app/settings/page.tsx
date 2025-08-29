@@ -1,22 +1,9 @@
-/**
- * Страница настроек приложения
- * Примечание: В соответствии с FSD, основная логика настроек
- * должна быть перенесена в pages/settings слой
- */
+import { SettingsPage } from '@/features/settings'
 
-import { PageContainer } from '@/shared/ui'
-
-export default function SettingsPage() {
-  return (
-    <PageContainer maxWidth="full" background="gradient">
-      <div className="text-center py-12">
-        <h1 className="text-2xl font-bold text-foreground mb-4">
-          Настройки приложения
-        </h1>
-        <p className="text-muted-foreground">
-          Компоненты настроек будут реализованы в pages/settings слое
-        </p>
-      </div>
-    </PageContainer>
-  )
+export default function SettingsRoute() {
+  return <SettingsPage />
 }
+
+// Force cache invalidation
+export const dynamic = 'force-dynamic'
+export const revalidate = 0

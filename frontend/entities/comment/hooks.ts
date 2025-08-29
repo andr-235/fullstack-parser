@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
+import { apiClient } from '@/shared/lib'
 import {
   Comment,
   CreateCommentRequest,
   UpdateCommentRequest,
   CommentFilters,
+  CommentsResponse,
 } from './types'
 
 export const useComments = (filters?: CommentFilters) => {
@@ -15,10 +17,14 @@ export const useComments = (filters?: CommentFilters) => {
     setLoading(true)
     setError(null)
     try {
-      // TODO: Implement API call
-      const response = await fetch('/api/comments')
-      const data = await response.json()
-      setComments(data)
+      const params: any = {}
+
+      if (filters?.is_viewed !== undefined) params.is_viewed = filters.is_viewed
+      if (filters?.group_id) params.group_id = filters.group_id
+      if (filters?.keyword_id) params.keyword_id = filters.keyword_id
+
+      const response: CommentsResponse = await apiClient.getComments(params)
+      setComments(response.items)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch comments')
     } finally {
@@ -32,14 +38,9 @@ export const useComments = (filters?: CommentFilters) => {
 
   const createComment = async (comment: CreateCommentRequest) => {
     try {
-      const response = await fetch('/api/comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(comment),
-      })
-      const newComment = await response.json()
-      setComments((prev) => [...prev, newComment])
-      return newComment
+      // Note: Backend doesn't support creating comments via API
+      // This is for future use or if you add this functionality
+      throw new Error('Creating comments is not supported via API')
     } catch (err) {
       throw new Error(
         err instanceof Error ? err.message : 'Failed to create comment'
@@ -49,14 +50,14 @@ export const useComments = (filters?: CommentFilters) => {
 
   const updateComment = async (id: string, updates: UpdateCommentRequest) => {
     try {
-      const response = await fetch(`/api/comments/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      })
-      const updatedComment = await response.json()
+      const updatedComment = await apiClient.updateComment(
+        parseInt(id),
+        updates
+      )
       setComments((prev) =>
-        prev.map((comment) => (comment.id === id ? updatedComment : comment))
+        prev.map((comment) =>
+          comment.id === parseInt(id) ? updatedComment : comment
+        )
       )
       return updatedComment
     } catch (err) {
@@ -68,11 +69,30 @@ export const useComments = (filters?: CommentFilters) => {
 
   const deleteComment = async (id: string) => {
     try {
-      await fetch(`/api/comments/${id}`, { method: 'DELETE' })
-      setComments((prev) => prev.filter((comment) => comment.id !== id))
+      await apiClient.deleteComment(parseInt(id))
+      setComments((prev) =>
+        prev.filter((comment) => comment.id !== parseInt(id))
+      )
     } catch (err) {
       throw new Error(
         err instanceof Error ? err.message : 'Failed to delete comment'
+      )
+    }
+  }
+
+  const markAsViewed = async (id: string) => {
+    try {
+      await apiClient.markCommentViewed(parseInt(id))
+      setComments((prev) =>
+        prev.map((comment) =>
+          comment.id === parseInt(id)
+            ? { ...comment, is_viewed: true }
+            : comment
+        )
+      )
+    } catch (err) {
+      throw new Error(
+        err instanceof Error ? err.message : 'Failed to mark comment as viewed'
       )
     }
   }
@@ -84,6 +104,7 @@ export const useComments = (filters?: CommentFilters) => {
     createComment,
     updateComment,
     deleteComment,
+    markAsViewed,
     refetch: fetchComments,
   }
 }

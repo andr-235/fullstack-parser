@@ -79,11 +79,8 @@ class CommentWithKeywords(VKCommentResponse):
     Комментарий с найденными ключевыми словами
     """
 
-    matched_keywords: list[str] = Field(
-        default=[], description="Найденные ключевые слова"
-    )
     keyword_matches: list[dict] = Field(
-        default=[], description="Детали совпадений"
+        default=[], description="Детали совпадений с ключевыми словами"
     )
 
 

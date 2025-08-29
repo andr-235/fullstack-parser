@@ -11,7 +11,15 @@ from app.models.comment_keyword_match import CommentKeywordMatch
 from app.models.keyword import Keyword
 from app.models.vk_comment import VKComment
 from app.models.vk_group import VKGroup
-from app.schemas.stats import GlobalStats
+from app.models.vk_post import VKPost
+from app.schemas.stats import (
+    GlobalStats,
+    DashboardStats,
+    DashboardTopItem,
+    RecentActivityItem,
+)
+from datetime import datetime, timedelta
+from sqlalchemy import desc, and_, func
 
 router = APIRouter(tags=["Stats"])
 
@@ -77,40 +85,160 @@ async def get_global_stats(
 #     )
 
 
-@router.get("/dashboard", response_model=dict)
-async def get_dashboard_stats(db: AsyncSession = Depends(get_db)) -> dict:
+@router.get("/dashboard", response_model=DashboardStats)
+async def get_dashboard_stats(
+    db: AsyncSession = Depends(get_db),
+) -> DashboardStats:
     """Получить статистику для дашборда"""
 
-    return {
-        "today_comments": 42,
-        "today_matches": 8,
-        "week_comments": 287,
-        "week_matches": 56,
-        "top_groups": [
-            {"name": "Тестовая группа 1", "count": 15},
-            {"name": "Тестовая группа 2", "count": 12},
-            {"name": "Тестовая группа 3", "count": 8},
-        ],
-        "top_keywords": [
-            {"word": "важно", "count": 25},
-            {"word": "срочно", "count": 18},
-            {"word": "проблема", "count": 13},
-        ],
-        "recent_activity": [
-            {
-                "id": 1,
-                "type": "parse",
-                "message": "Запущен парсинг группы",
-                "timestamp": "2025-07-02T12:00:00Z",
-            },
-            {
-                "id": 2,
-                "type": "comment",
-                "message": "Найден новый комментарий",
-                "timestamp": "2025-07-02T11:45:00Z",
-            },
-        ],
-    }
+    try:
+        now = datetime.now()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = today_start - timedelta(days=7)
+
+        # Комментарии за сегодня
+        today_comments_result = await db.execute(
+            select(func.count(VKComment.id)).where(
+                VKComment.created_at >= today_start
+            )
+        )
+        today_comments = today_comments_result.scalar() or 0
+
+        # Совпадения за сегодня
+        today_matches_result = await db.execute(
+            select(
+                func.count(func.distinct(CommentKeywordMatch.comment_id))
+            ).where(CommentKeywordMatch.created_at >= today_start)
+        )
+        today_matches = today_matches_result.scalar() or 0
+
+        # Комментарии за неделю
+        week_comments_result = await db.execute(
+            select(func.count(VKComment.id)).where(
+                VKComment.created_at >= week_start
+            )
+        )
+        week_comments = week_comments_result.scalar() or 0
+
+        # Совпадения за неделю
+        week_matches_result = await db.execute(
+            select(
+                func.count(func.distinct(CommentKeywordMatch.comment_id))
+            ).where(CommentKeywordMatch.created_at >= week_start)
+        )
+        week_matches = week_matches_result.scalar() or 0
+
+        # Топ групп по количеству комментариев
+        try:
+            top_groups_query = (
+                select(
+                    VKGroup.name,
+                    func.count(VKComment.id).label("comment_count"),
+                )
+                .join(VKPost, VKGroup.id == VKPost.group_id)
+                .join(VKComment, VKPost.id == VKComment.post_id)
+                .group_by(VKGroup.id, VKGroup.name)
+                .order_by(desc("comment_count"))
+                .limit(10)
+            )
+            top_groups_result = await db.execute(top_groups_query)
+            top_groups = [
+                DashboardTopItem(name=row.name, count=row.comment_count)
+                for row in top_groups_result
+            ]
+        except Exception as e:
+            print(f"Error fetching top groups: {e}")
+            top_groups = []
+
+        # Топ ключевых слов по количеству совпадений
+        try:
+            top_keywords_query = (
+                select(
+                    Keyword.word,
+                    func.count(CommentKeywordMatch.id).label("match_count"),
+                )
+                .join(
+                    CommentKeywordMatch,
+                    Keyword.id == CommentKeywordMatch.keyword_id,
+                )
+                .group_by(Keyword.id, Keyword.word)
+                .order_by(desc("match_count"))
+                .limit(10)
+            )
+            top_keywords_result = await db.execute(top_keywords_query)
+            top_keywords = [
+                DashboardTopItem(name=row.word, count=row.match_count)
+                for row in top_keywords_result
+            ]
+        except Exception as e:
+            print(f"Error fetching top keywords: {e}")
+            top_keywords = []
+
+        # Недавняя активность (последние 10 записей)
+        try:
+            recent_activity_query = (
+                select(VKComment)
+                .order_by(desc(VKComment.created_at))
+                .limit(10)
+            )
+            recent_comments = (
+                (await db.execute(recent_activity_query)).scalars().all()
+            )
+
+            recent_activity = []
+            for i, comment in enumerate(recent_comments):
+                # Определяем тип активности на основе наличия совпадений
+                try:
+                    match_count = await db.execute(
+                        select(func.count(CommentKeywordMatch.id)).where(
+                            CommentKeywordMatch.comment_id == comment.id
+                        )
+                    )
+                    has_matches = (match_count.scalar() or 0) > 0
+                except Exception:
+                    has_matches = False
+
+                activity_type = "match" if has_matches else "comment"
+                message = (
+                    f"Найден комментарий в группе {comment.group_id}"
+                    if has_matches
+                    else f"Новый комментарий в группе {comment.group_id}"
+                )
+
+                recent_activity.append(
+                    RecentActivityItem(
+                        id=i + 1,
+                        type=activity_type,
+                        message=message,
+                        timestamp=comment.created_at,
+                    )
+                )
+        except Exception as e:
+            print(f"Error fetching recent activity: {e}")
+            recent_activity = []
+
+        return DashboardStats(
+            today_comments=today_comments,
+            today_matches=today_matches,
+            week_comments=week_comments,
+            week_matches=week_matches,
+            top_groups=top_groups,
+            top_keywords=top_keywords,
+            recent_activity=recent_activity,
+        )
+
+    except Exception as e:
+        print(f"Error in get_dashboard_stats: {e}")
+        # Возвращаем пустые данные в случае ошибки
+        return DashboardStats(
+            today_comments=0,
+            today_matches=0,
+            week_comments=0,
+            week_matches=0,
+            top_groups=[],
+            top_keywords=[],
+            recent_activity=[],
+        )
 
 
 @router.get("/health")

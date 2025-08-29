@@ -2,8 +2,9 @@
 API endpoints для парсинга комментариев VK
 """
 
+import asyncio
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Union, Any, cast
 
 from fastapi import (
     APIRouter,
@@ -28,6 +29,8 @@ from app.schemas.parser import (
     ParserStats,
     ParseTaskCreate,
     ParseTaskResponse,
+    BulkParseTaskCreate,
+    BulkParseResponse,
 )
 from app.schemas.vk_comment import (
     CommentSearchParams,
@@ -58,6 +61,94 @@ async def start_parsing(
     )
     service = ParserService(db, vk_service)
     return await service.start_parsing_task(task_data, parser_manager)
+
+
+@router.post("/parse/bulk", response_model=BulkParseResponse)
+async def start_bulk_parsing(
+    bulk_data: BulkParseTaskCreate,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    parser_manager=Depends(get_redis_parser_manager),
+) -> BulkParseResponse:
+    """Запустить парсинг всех активных групп"""
+    from sqlalchemy import select
+    from app.models.vk_group import VKGroup
+
+    # Получаем все активные группы
+    result = await db.execute(select(VKGroup).where(VKGroup.is_active == True))
+    active_groups = result.scalars().all()
+
+    if not active_groups:
+        return BulkParseResponse(
+            total_groups=0, started_tasks=0, failed_groups=[], tasks=[]
+        )
+
+    vk_service = VKAPIService(
+        token=settings.vk.access_token, api_version=settings.vk.api_version
+    )
+    service = ParserService(db, vk_service)
+
+    tasks: List[ParseTaskResponse] = []
+    failed_groups: List[dict] = []
+
+    # Ограничиваем количество одновременных задач
+    max_concurrent = bulk_data.max_concurrent or 3
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    async def start_single_group_parsing(group):
+        async with semaphore:
+            try:
+                task_data = ParseTaskCreate(
+                    group_id=group.id,
+                    max_posts=bulk_data.max_posts,
+                    force_reparse=bulk_data.force_reparse,
+                )
+                task = await service.start_parsing_task(
+                    task_data, parser_manager
+                )
+                return task
+            except Exception as e:
+                failed_groups.append(
+                    {
+                        "group_id": group.id,
+                        "group_name": group.name,
+                        "error": str(e),
+                    }
+                )
+                return None
+
+    # Запускаем задачи для всех групп
+    task_coroutines = [
+        start_single_group_parsing(group) for group in active_groups
+    ]
+    task_results = await asyncio.gather(
+        *task_coroutines, return_exceptions=True
+    )
+
+    # Обрабатываем результаты
+    for i, task_result in enumerate(task_results):
+        if isinstance(task_result, Exception):
+            group = active_groups[i]
+            failed_groups.append(
+                {
+                    "group_id": group.id,
+                    "group_name": group.name,
+                    "error": str(task_result),
+                }
+            )
+        elif task_result is not None and not isinstance(
+            task_result, Exception
+        ):
+            # Type cast to ensure linter understands this is ParseTaskResponse
+            task_response = cast(ParseTaskResponse, task_result)
+            tasks.append(task_response)
+
+    return BulkParseResponse(
+        total_groups=len(active_groups),
+        started_tasks=len(tasks),
+        failed_groups=failed_groups,
+        tasks=tasks,
+    )
 
 
 @router.get("/comments", response_model=PaginatedResponse[VKCommentResponse])

@@ -4,11 +4,10 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 import { APP_CONFIG } from '@/shared/config'
-import { SidebarInset } from '@/shared/ui/sidebar'
 import { QueryProvider } from '@/app/providers/QueryProvider'
 import { ThemeProvider } from '@/shared/ui/theme-provider'
-import { Topbar } from '@/widgets/topbar'
-import { AppSidebar, SidebarProvider, SidebarTrigger } from '@/widgets/sidebar'
+import { AppLayout } from '@/widgets/layout/AppLayout'
+import { NavigationProvider } from '@/shared/contexts/NavigationContext'
 import { AuthProvider } from '@/providers/AuthProvider'
 import { ToastProvider } from '@/providers/ToastProvider'
 
@@ -66,19 +65,11 @@ export default function RootLayout({
         >
           <QueryProvider>
             <AuthProvider>
-              <SidebarProvider>
-                <AppSidebar />
-                <SidebarInset>
-                  <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-                    <SidebarTrigger className="-ml-1" />
-                    <div className="flex-1" />
-                    <Topbar />
-                  </header>
-                  <main className="flex-1 overflow-auto p-4">
-                    {children}
-                  </main>
-                </SidebarInset>
-              </SidebarProvider>
+              <NavigationProvider>
+                <AppLayout>
+                  {children}
+                </AppLayout>
+              </NavigationProvider>
               <ToastProvider />
             </AuthProvider>
           </QueryProvider>

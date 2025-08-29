@@ -318,11 +318,19 @@ class CommentSearchService:
         Returns:
             Запрос с примененной сортировкой
         """
-        order_column = getattr(
-            VKComment, search_params.order_by, VKComment.published_at
-        )
+        # Определяем колонку для сортировки
+        if search_params.order_by:
+            order_column = getattr(
+                VKComment, search_params.order_by, VKComment.published_at
+            )
+        else:
+            order_column = VKComment.published_at  # Сортировка по умолчанию
 
-        if search_params.order_dir.lower() == "asc":
+        # Определяем направление сортировки
+        if (
+            search_params.order_dir
+            and search_params.order_dir.lower() == "asc"
+        ):
             query = query.order_by(order_column)
         else:
             query = query.order_by(desc(order_column))
@@ -414,8 +422,11 @@ class CommentSearchService:
         # Создаем базовый response
         base_response = self._comment_to_response(comment)
 
+        # Устанавливаем matched_keywords в базовом response
+        base_dict = base_response.model_dump()
+        base_dict["matched_keywords"] = matched_keywords
+
         return CommentWithKeywords(
-            **base_response.model_dump(),
-            matched_keywords=matched_keywords,
+            **base_dict,
             keyword_matches=keyword_matches,
         )
