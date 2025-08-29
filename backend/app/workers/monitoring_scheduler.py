@@ -20,6 +20,14 @@ from app.models.vk_group import VKGroup
 from app.services.monitoring_service import MonitoringService
 from app.services.vk_api_service import VKAPIService
 
+# Интеграция с Domain Events системой
+from app.api.v1.infrastructure.events.domain_event_publisher import (
+    publish_domain_event,
+)
+from app.api.v1.infrastructure.events.comment_events import (
+    CommentBulkOperationEvent,
+)
+
 logger = structlog.get_logger(__name__)
 
 
@@ -124,6 +132,9 @@ async def main():
                     # Запускаем цикл мониторинга
                     result = await monitoring_service.run_monitoring_cycle()
 
+                    # Интеграция с Domain Events системой
+                    await _publish_monitoring_domain_events(result)
+
                     logger.info("✅ Цикл мониторинга завершен", result=result)
 
                 # Ждем до следующего цикла
@@ -152,6 +163,90 @@ async def main():
         if "redis_pool" in locals():
             await redis_pool.close()
             logger.info("🔌 Соединение с Redis закрыто")
+
+
+# Вспомогательные функции для работы с Domain Events
+
+
+async def _publish_monitoring_domain_events(result: Dict) -> None:
+    """
+    Публикует Domain Events на основе результатов мониторинга
+
+    Args:
+        result: Результаты цикла мониторинга
+    """
+    try:
+        processed_groups = result.get("processed_groups", [])
+        total_comments = result.get("total_comments_found", 0)
+
+        # Создаем групповое событие для всех обработанных комментариев
+        if total_comments > 0 and processed_groups:
+            bulk_event = CommentBulkOperationEvent(
+                operation_type="monitoring_cycle",
+                comment_ids=[],  # Для мониторинга у нас нет конкретных ID комментариев
+                operation_params={
+                    "processed_groups": len(processed_groups),
+                    "total_comments_found": total_comments,
+                    "monitoring_cycle": True,
+                },
+                affected_count=total_comments,
+            )
+            await publish_domain_event(bulk_event)
+
+        # Можно добавить более детальные события для каждой группы
+        for group_data in processed_groups:
+            group_id = group_data.get("group_id")
+            comments_found = group_data.get("comments_found", 0)
+
+            if comments_found > 0:
+                logger.debug(
+                    f"Group {group_id} monitoring found {comments_found} comments"
+                )
+                # Здесь можно добавить специфические события для группы
+
+        logger.info(
+            f"Published monitoring domain events: {len(processed_groups)} groups, "
+            f"{total_comments} total comments"
+        )
+
+    except Exception as e:
+        logger.error(f"Error publishing monitoring domain events: {e}")
+        # Не прерываем выполнение цикла из-за ошибок в событиях
+
+
+async def _update_group_monitoring_status(
+    db: AsyncSession, group_id: int, success: bool
+) -> None:
+    """
+    Обновляет статус мониторинга группы с использованием DDD методов
+
+    Args:
+        db: Сессия базы данных
+        group_id: ID группы
+        success: Успешность выполнения мониторинга
+    """
+    try:
+        from sqlalchemy import select
+
+        stmt = select(VKGroup).where(VKGroup.id == group_id)
+        result = await db.execute(stmt)
+        group = result.scalar_one_or_none()
+
+        if group:
+            if success:
+                # Используем DDD метод для записи успешного мониторинга
+                group.record_monitoring_success()
+            else:
+                # Для ошибок можно добавить специальную логику
+                group.record_monitoring_error("Monitoring cycle failed")
+
+            await db.commit()
+            logger.debug(
+                f"Updated monitoring status for group {group_id}: success={success}"
+            )
+
+    except Exception as e:
+        logger.error(f"Error updating group monitoring status {group_id}: {e}")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 """
-ARQ задачи для фоновой обработки
+ARQ задачи для фоновой обработки - Интегрированы с Domain Events системой
 """
 
 from datetime import datetime, timezone
@@ -9,6 +9,17 @@ import structlog
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.api.v1.infrastructure.events.domain_event_publisher import (
+    publish_domain_event,
+)
+from app.api.v1.infrastructure.events.comment_events import (
+    CommentCreatedEvent,
+    CommentProcessedEvent,
+    CommentKeywordMatchedEvent,
+)
+from app.api.v1.infrastructure.services.cache_service import RedisCacheService
+
+# Импорты старых сервисов для обратной совместимости
 from app.services.monitoring_service import MonitoringService
 from app.services.parser_service import ParserService
 from app.services.redis_parser_manager import get_redis_parser_manager
@@ -66,6 +77,9 @@ async def run_parsing_task(
             )
 
         duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+
+        # Интеграция с Domain Events системой
+        await _publish_parsing_domain_events(result, group_id)
 
         logger.info(
             "Задача парсинга завершена успешно",
@@ -221,6 +235,137 @@ async def run_scheduler_task(ctx: Dict[str, Any]) -> Dict[str, Any]:
             "duration": duration,
             "error": str(e),
         }
+
+
+# Вспомогательные функции для работы с Domain Events
+
+
+async def _publish_parsing_domain_events(
+    result: Dict[str, Any], group_id: int
+) -> None:
+    """
+    Публикует Domain Events на основе результатов парсинга
+
+    Args:
+        result: Результаты парсинга
+        group_id: ID группы VK
+    """
+    try:
+        # Создаем события для новых комментариев
+        new_comments = result.get("new_comments", [])
+        for comment_data in new_comments:
+            if isinstance(comment_data, dict):
+                comment_id = comment_data.get("id")
+                post_id = comment_data.get("post_id")
+                author_id = comment_data.get("author_id")
+                text_length = len(comment_data.get("text", ""))
+
+                if comment_id:
+                    # Публикуем событие создания комментария
+                    event = CommentCreatedEvent(
+                        comment_id=comment_id,
+                        group_id=group_id,
+                        post_id=post_id,
+                        author_id=author_id,
+                        text_length=text_length,
+                    )
+                    await publish_domain_event(event)
+
+                    # Проверяем на ключевые слова и публикуем соответствующее событие
+                    matched_keywords = comment_data.get("matched_keywords", [])
+                    if matched_keywords:
+                        keyword_event = CommentKeywordMatchedEvent(
+                            comment_id=comment_id,
+                            keyword_id=matched_keywords[0].get(
+                                "keyword_id", 0
+                            ),  # Первый найденный
+                            keyword_word=matched_keywords[0].get("word", ""),
+                            match_context=f"Found {len(matched_keywords)} keywords",
+                        )
+                        await publish_domain_event(keyword_event)
+
+        # Создаем событие обработки для всех найденных комментариев
+        total_comments = result.get("total_comments", 0)
+        if total_comments > 0:
+            processed_event = CommentProcessedEvent(
+                comment_id=0,  # Групповое событие
+                processing_result="success",
+                matched_keywords=[],  # Можно добавить агрегированную информацию
+            )
+            # Для групповых событий используем специальный comment_id = 0
+            await publish_domain_event(processed_event)
+
+        logger.info(
+            f"Published {len(new_comments)} domain events for group {group_id}"
+        )
+
+    except Exception as e:
+        logger.error(f"Error publishing domain events: {e}")
+        # Не прерываем выполнение задачи из-за ошибок в событиях
+
+
+async def _invalidate_cache_for_group(group_id: int) -> None:
+    """
+    Инвалидирует кеш для группы после парсинга
+
+    Args:
+        group_id: ID группы VK
+    """
+    try:
+        cache_service = RedisCacheService()
+        await cache_service.invalidate_entity_collection("comment")
+        await cache_service.delete(f"group_stats:{group_id}")
+        await cache_service.delete(f"group:{group_id}")
+
+        logger.debug(f"Cache invalidated for group {group_id}")
+
+    except Exception as e:
+        logger.error(f"Error invalidating cache for group {group_id}: {e}")
+
+
+async def _update_monitoring_statistics(
+    group_id: int, result: Dict[str, Any]
+) -> None:
+    """
+    Обновляет статистику мониторинга группы
+
+    Args:
+        group_id: ID группы VK
+        result: Результаты парсинга
+    """
+    try:
+        async with AsyncSessionLocal() as db:
+            # Импортируем модель группы
+            from app.models.vk_group import VKGroup
+            from sqlalchemy import select
+
+            # Получаем группу
+            stmt = select(VKGroup).where(VKGroup.id == group_id)
+            result_db = await db.execute(stmt)
+            group = result_db.scalar_one_or_none()
+
+            if group:
+                # Обновляем статистику
+                posts_parsed = result.get("posts_parsed", 0)
+                comments_found = result.get("comments_found", 0)
+
+                group.update_statistics(
+                    posts_parsed=posts_parsed, comments_found=comments_found
+                )
+
+                # Записываем успешное выполнение мониторинга
+                group.record_monitoring_success()
+
+                await db.commit()
+
+                logger.debug(
+                    f"Updated monitoring statistics for group {group_id}"
+                )
+
+    except Exception as e:
+        logger.error(
+            f"Error updating monitoring statistics for group {group_id}: {e}"
+        )
 
 
 class WorkerSettings:

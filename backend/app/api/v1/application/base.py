@@ -18,10 +18,10 @@ class ApplicationService(ABC):
         pass
 
 
-class CommandHandler(ABC, Generic[TEntity]):
+class CommandHandler(ABC):
     """Базовый класс для обработчиков команд"""
 
-    def __init__(self, repository: Repository[TEntity]):
+    def __init__(self, repository):
         self.repository = repository
 
     @abstractmethod
@@ -30,10 +30,10 @@ class CommandHandler(ABC, Generic[TEntity]):
         pass
 
 
-class QueryHandler(ABC, Generic[TEntity]):
+class QueryHandler(ABC):
     """Базовый класс для обработчиков запросов"""
 
-    def __init__(self, repository: Repository[TEntity]):
+    def __init__(self, repository):
         self.repository = repository
 
     @abstractmethod

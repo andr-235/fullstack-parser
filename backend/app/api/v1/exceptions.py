@@ -1,12 +1,13 @@
 """
-Общие исключения для API v1
+Общие исключения для API v1 с DDD архитектурой
 
 Этот модуль содержит кастомные исключения, используемые
-в различных API эндпоинтах.
+в различных API эндпоинтах. Интегрирован с новой системой
+обработки ошибок и handlers.
 """
 
 from typing import Any, Dict, Optional
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Request
 
 
 class APIException(HTTPException):
@@ -138,13 +139,17 @@ class ServiceUnavailableError(APIException):
 
 def create_error_response(error: APIException) -> Dict[str, Any]:
     """
-    Создает стандартизированный ответ об ошибке.
+    Создает стандартизированный ответ об ошибке (устаревший метод).
 
     Args:
         error: Исключение API
 
     Returns:
         Dict[str, Any]: Стандартизированный ответ об ошибке
+
+    Note:
+        Этот метод устарел. Используйте create_error_response из handlers.common
+        для полной интеграции с DDD архитектурой.
     """
     response = {
         "error": {
@@ -158,3 +163,54 @@ def create_error_response(error: APIException) -> Dict[str, Any]:
         response["error"]["details"] = error.extra_data
 
     return response
+
+
+async def create_standard_error_response(
+    request: Request, error: APIException, field: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Создает стандартизированный ответ об ошибке с DDD архитектурой.
+
+    Args:
+        request: FastAPI Request объект
+        error: Исключение API
+        field: Поле, вызвавшее ошибку (опционально)
+
+    Returns:
+        Dict[str, Any]: Стандартизированный ответ об ошибке
+
+    Note:
+        Использует новую систему handlers для полной интеграции с DDD архитектурой.
+    """
+    from .handlers.common import (
+        create_error_response as create_handler_error_response,
+    )
+
+    details = error.extra_data or {}
+    if field:
+        details["field"] = field
+
+    return await create_handler_error_response(
+        request,
+        error.status_code,
+        error.error_code or "UNKNOWN_ERROR",
+        error.detail,
+        details,
+    )
+
+
+def handle_api_exception(error: APIException) -> Dict[str, Any]:
+    """
+    Обрабатывает API исключение и возвращает стандартизированный ответ.
+
+    Args:
+        error: Исключение API
+
+    Returns:
+        Dict[str, Any]: Стандартизированный ответ об ошибке
+
+    Note:
+        Утилитная функция для быстрой обработки исключений.
+        Для полной интеграции с DDD архитектурой используйте create_standard_error_response.
+    """
+    return create_error_response(error)

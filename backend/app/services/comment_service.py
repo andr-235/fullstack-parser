@@ -20,12 +20,8 @@ from sqlalchemy.orm import selectinload
 from app.models.vk_comment import VKComment
 from app.models.vk_group import VKGroup
 from app.models.vk_post import VKPost
-from app.schemas.vk_comment import (
-    CommentSearchParams,
-    CommentUpdateRequest,
-    CommentWithKeywords,
-    VKCommentResponse,
-)
+# Импорты перенесены в api/v1/schemas или оставлены для обратной совместимости
+# from app.api.v1.schemas import responses
 
 logger = logging.getLogger(__name__)
 

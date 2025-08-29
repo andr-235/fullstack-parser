@@ -1,18 +1,19 @@
 """
-Общие зависимости и утилиты для API v1
+Общие зависимости и утилиты для API v1 с DDD архитектурой
 
 Этот модуль содержит:
 - Общие зависимости для API эндпоинтов
 - Утилиты для работы с данными
 - Стандартизированные классы ответов
 - Вспомогательные функции
+- Интеграция с новой системой handlers и response formats
 
 Объединен из dependencies.py и utils.py для лучшей организации кода.
 """
 
 from typing import Annotated, Optional, Any, Dict, List, TypeVar, Generic
 from datetime import datetime
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, HTTPException, Query, status, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +21,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.logging import get_logger
 from app.api.v1.exceptions import create_error_response, APIException
+from app.api.v1.handlers.common import (
+    create_success_response,
+    create_error_response as create_standard_error_response,
+)
 
 logger = get_logger(__name__)
 
@@ -154,7 +159,8 @@ async def get_db_session() -> AsyncSession:
     Returns:
         AsyncSession: Сессия базы данных
     """
-    return await get_db()
+    async for session in get_db():
+        return session
 
 
 # Общие зависимости для использования в эндпоинтах
@@ -199,7 +205,7 @@ def create_error_json_response(
     error: APIException, status_code: Optional[int] = None
 ) -> JSONResponse:
     """
-    Создает JSONResponse с ошибкой.
+    Создает JSONResponse с ошибкой (устаревший метод, используйте handlers).
 
     Args:
         error: Исключение API
@@ -207,10 +213,55 @@ def create_error_json_response(
 
     Returns:
         JSONResponse: JSON ответ с ошибкой
+
+    Note:
+        Этот метод устарел. Используйте create_standard_error_response из handlers.common
     """
     error_data = create_error_response(error)
     return JSONResponse(
         status_code=status_code or error.status_code, content=error_data
+    )
+
+
+async def create_standard_success_response(
+    request: Request, data: Any, meta: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Создает стандартизированный успешный ответ с DDD архитектурой.
+
+    Args:
+        request: FastAPI Request объект
+        data: Данные для ответа
+        meta: Дополнительная мета-информация
+
+    Returns:
+        Dict[str, Any]: Стандартизированный ответ
+    """
+    return await create_success_response(request, data, meta)
+
+
+async def create_standard_error_response(
+    request: Request,
+    status_code: int,
+    error_code: str,
+    message: str,
+    details: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Создает стандартизированный ответ с ошибкой с DDD архитектурой.
+
+    Args:
+        request: FastAPI Request объект
+        status_code: HTTP статус код
+        error_code: Код ошибки
+        message: Сообщение об ошибке
+        details: Дополнительные детали ошибки
+
+    Returns:
+        Dict[str, Any]: Стандартизированный ответ с ошибкой
+    """
+    return await create_standard_error_response(
+        request, status_code, error_code, message, details
     )
 
 

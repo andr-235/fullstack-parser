@@ -26,13 +26,12 @@ from app.core.error_handlers import (
     validation_exception_handler,
     vk_api_exception_handler,
 )
-from app.core.exceptions import (
-    BaseAPIException,
-    CacheError,
-    DatabaseError,
+from app.api.v1.exceptions import (
+    APIException as BaseAPIException,
+    ValidationError,
+    NotFoundError,
     RateLimitError,
     ServiceUnavailableError,
-    ValidationError,
     VKAPIError,
 )
 

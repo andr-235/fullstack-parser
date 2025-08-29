@@ -183,3 +183,184 @@ class KeywordApplicationService(ApplicationService):
             "categories_count": len(categories_stats),
             "categories_stats": categories_stats,
         }
+
+    # Дополнительные методы из KeywordService для полной миграции
+
+    async def create_keywords_bulk(
+        self, keywords_data: List[Dict[str, Any]]
+    ) -> List[Keyword]:
+        """
+        Массовое создание ключевых слов (мигрировано из KeywordService)
+
+        Args:
+            keywords_data: Список данных для создания ключевых слов
+
+        Returns:
+            Список созданных ключевых слов
+        """
+        created_keywords = []
+
+        for data in keywords_data:
+            try:
+                word = data.get("word", "").strip()
+                if not word:
+                    continue
+
+                # Проверяем существование
+                existing = await self.search_keywords(word)
+                if existing:
+                    continue
+
+                # Создаем ключевое слово
+                keyword = await self.create_keyword(
+                    word=word,
+                    category_name=data.get("category"),
+                    category_description=data.get("description"),
+                )
+                created_keywords.append(keyword)
+
+            except Exception as e:
+                # Логируем ошибку и продолжаем
+                continue
+
+        return created_keywords
+
+    async def bulk_update_status(
+        self, keyword_ids: List[int], is_active: bool
+    ) -> Dict[str, Any]:
+        """
+        Массовое обновление статуса ключевых слов (мигрировано из KeywordService)
+
+        Args:
+            keyword_ids: Список ID ключевых слов
+            is_active: Новый статус активности
+
+        Returns:
+            Результат операции
+        """
+        updated_count = 0
+        errors = []
+
+        for keyword_id in keyword_ids:
+            try:
+                if is_active:
+                    success = await self.activate_keyword(keyword_id)
+                else:
+                    success = await self.deactivate_keyword(keyword_id)
+
+                if success:
+                    updated_count += 1
+                else:
+                    errors.append(f"Keyword {keyword_id} not found")
+
+            except Exception as e:
+                errors.append(f"Error updating keyword {keyword_id}: {str(e)}")
+
+        return {
+            "success": len(errors) == 0,
+            "updated_count": updated_count,
+            "total_requested": len(keyword_ids),
+            "errors": errors,
+        }
+
+    async def duplicate_keywords_check(
+        self, words: List[str]
+    ) -> Dict[str, bool]:
+        """
+        Проверить наличие дубликатов среди списка слов (мигрировано из KeywordService)
+
+        Args:
+            words: Список слов для проверки
+
+        Returns:
+            Словарь {слово: существует_ли_уже}
+        """
+        results = {}
+
+        for word in words:
+            try:
+                existing = await self.search_keywords(word.strip())
+                results[word] = len(existing) > 0
+            except Exception:
+                results[word] = False
+
+        return results
+
+    async def get_keywords_by_category_paginated(
+        self, category_name: str, limit: int = 50, offset: int = 0
+    ) -> Dict[str, Any]:
+        """
+        Получить ключевые слова по категории с пагинацией (мигрировано из KeywordService)
+
+        Args:
+            category_name: Название категории
+            limit: Максимальное количество
+            offset: Смещение
+
+        Returns:
+            Пагинированный результат
+        """
+        keywords = await self.get_keywords_by_category(category_name)
+        total = len(keywords)
+        paginated_keywords = keywords[offset : offset + limit]
+
+        return {
+            "items": paginated_keywords,
+            "total": total,
+            "page": (offset // limit) + 1,
+            "size": limit,
+            "has_next": offset + limit < total,
+            "has_prev": offset > 0,
+        }
+
+    async def search_keywords_paginated(
+        self,
+        query: str,
+        category: Optional[str] = None,
+        active_only: bool = True,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        Поиск ключевых слов с пагинацией (мигрировано из KeywordService)
+
+        Args:
+            query: Поисковый запрос
+            category: Фильтр по категории
+            active_only: Только активные
+            limit: Максимальное количество
+            offset: Смещение
+
+        Returns:
+            Пагинированный результат поиска
+        """
+        # Получаем все подходящие ключевые слова
+        keywords = await self.get_keywords(
+            active_only=active_only,
+            category=category,
+            search=query,
+            limit=10000,  # Получаем все для фильтрации
+            offset=0,
+        )
+
+        # Дополнительная фильтрация по поисковому запросу
+        if query:
+            query_lower = query.lower()
+            keywords = [
+                k
+                for k in keywords
+                if query_lower in k.word.lower()
+                or (k.category_name and query_lower in k.category_name.lower())
+            ]
+
+        total = len(keywords)
+        paginated_keywords = keywords[offset : offset + limit]
+
+        return {
+            "items": paginated_keywords,
+            "total": total,
+            "page": (offset // limit) + 1,
+            "size": limit,
+            "has_next": offset + limit < total,
+            "has_prev": offset > 0,
+        }
