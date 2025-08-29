@@ -280,15 +280,8 @@ class VKDataParser:
             Количество постов
         """
         try:
-            # Получаем 1 пост с дополнительной информацией
-            posts = await self.vk_service.get_group_posts(
-                group_id=group_id, count=1
-            )
-
-            # Если получили хотя бы один пост, возвращаем 1 (простая логика)
-            # В реальном приложении нужно было бы использовать отдельный API запрос
-            # для получения общего количества постов
-            return len(posts) if posts else 0
+            # Используем специализированный метод для получения количества постов
+            return await self.vk_service.get_group_posts_count(group_id)
 
         except Exception as e:
             logger.error(
@@ -310,15 +303,10 @@ class VKDataParser:
             Количество комментариев
         """
         try:
-            # Получаем 1 комментарий с дополнительной информацией
-            comments = await self.vk_service.get_post_comments(
-                owner_id=owner_id, post_id=post_id, count=1
+            # Используем специализированный метод для получения количества комментариев
+            return await self.vk_service.get_post_comments_count(
+                owner_id, post_id
             )
-
-            # Если получили хотя бы один комментарий, возвращаем 1 (простая логика)
-            # В реальном приложении нужно было бы использовать отдельный API запрос
-            # для получения общего количества комментариев
-            return len(comments) if comments else 0
 
         except Exception as e:
             logger.error(

@@ -202,6 +202,29 @@ class VKAPIService:
             return response.get("items", [])
         return []
 
+    async def get_group_posts_count(self, group_id: int) -> int:
+        """
+        Получает общее количество постов в группе.
+
+        Args:
+            group_id: ID группы
+
+        Returns:
+            Общее количество постов
+        """
+        owner_id = self._ensure_group_owner_id(group_id)
+
+        params = {
+            "owner_id": owner_id,
+            "count": 1,  # Получаем минимум данных
+            "offset": 0,
+        }
+
+        response = await self._make_request("wall.get", params)
+        if isinstance(response, dict):
+            return response.get("count", 0)
+        return 0
+
     async def get_post_comments(
         self,
         owner_id: int,
@@ -241,6 +264,37 @@ class VKAPIService:
         if isinstance(response, dict):
             return response.get("items", [])
         return []
+
+    async def get_post_comments_count(
+        self, owner_id: int, post_id: int
+    ) -> int:
+        """
+        Получает общее количество комментариев к посту.
+
+        Args:
+            owner_id: ID владельца поста
+            post_id: ID поста
+
+        Returns:
+            Общее количество комментариев
+        """
+        # Для групп owner_id должен быть отрицательным
+        if owner_id > 0:
+            owner_id = -owner_id
+
+        params = {
+            "owner_id": owner_id,
+            "post_id": post_id,
+            "count": 1,  # Получаем минимум данных
+            "offset": 0,
+            "need_likes": 0,  # Не нужны лайки для подсчета
+            "extended": 0,  # Не нужны расширенные данные
+        }
+
+        response = await self._make_request("wall.getComments", params)
+        if isinstance(response, dict):
+            return response.get("count", 0)
+        return 0
 
     async def get_all_post_comments(
         self, owner_id: int, post_id: int, sort: str = "asc"

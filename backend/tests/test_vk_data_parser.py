@@ -22,6 +22,8 @@ def mock_vk_service():
     service.get_post_comments = AsyncMock()
     service.get_user_info = AsyncMock()
     service.get_group_info = AsyncMock()
+    service.get_group_posts_count = AsyncMock()
+    service.get_post_comments_count = AsyncMock()
     return service
 
 
@@ -370,20 +372,20 @@ class TestVKDataParser:
 
     @pytest.mark.asyncio
     async def test_get_group_posts_count_success(
-        self, vk_data_parser, mock_vk_service, sample_post_data
+        self, vk_data_parser, mock_vk_service
     ):
         """Тест успешного получения количества постов группы"""
         # Настраиваем мок VK API
-        mock_vk_service.get_wall_posts.return_value = {
-            "items": [sample_post_data],
-            "count": 50,  # Общее количество постов
-        }
+        mock_vk_service.get_group_posts_count.return_value = 150
 
         # Вызываем метод
         count = await vk_data_parser.get_group_posts_count(group_id=123456789)
 
         # Проверяем результат
-        assert count == 50
+        assert count == 150
+        mock_vk_service.get_group_posts_count.assert_called_once_with(
+            123456789
+        )
 
     @pytest.mark.asyncio
     async def test_get_group_posts_count_no_posts(
@@ -401,14 +403,11 @@ class TestVKDataParser:
 
     @pytest.mark.asyncio
     async def test_get_post_comments_count_success(
-        self, vk_data_parser, mock_vk_service, sample_comment_data
+        self, vk_data_parser, mock_vk_service
     ):
         """Тест успешного получения количества комментариев к посту"""
         # Настраиваем мок VK API
-        mock_vk_service.get_post_comments.return_value = {
-            "items": [sample_comment_data],
-            "count": 25,  # Общее количество комментариев
-        }
+        mock_vk_service.get_post_comments_count.return_value = 75
 
         # Вызываем метод
         count = await vk_data_parser.get_post_comments_count(
@@ -416,7 +415,10 @@ class TestVKDataParser:
         )
 
         # Проверяем результат
-        assert count == 25
+        assert count == 75
+        mock_vk_service.get_post_comments_count.assert_called_once_with(
+            -123456789, 100
+        )
 
     @pytest.mark.asyncio
     async def test_get_post_comments_count_no_comments(
