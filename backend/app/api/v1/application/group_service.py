@@ -202,7 +202,9 @@ class GroupApplicationService(ApplicationService):
 
     # Дополнительные методы из GroupManager для полной миграции
 
-    async def get_group_by_screen_name(self, screen_name: str) -> Optional[VKGroup]:
+    async def get_group_by_screen_name(
+        self, screen_name: str
+    ) -> Optional[VKGroup]:
         """
         Получить группу по screen_name (мигрировано из GroupManager)
 
@@ -235,9 +237,7 @@ class GroupApplicationService(ApplicationService):
         return None
 
     async def get_groups_count(
-        self,
-        active_only: bool = True,
-        search: Optional[str] = None
+        self, active_only: bool = True, search: Optional[str] = None
     ) -> int:
         """
         Получить количество групп с фильтрами (мигрировано из GroupManager)
@@ -249,7 +249,9 @@ class GroupApplicationService(ApplicationService):
         Returns:
             Количество групп
         """
-        groups = await self.get_groups(active_only=active_only, search=search, limit=10000, offset=0)
+        groups = await self.get_groups(
+            active_only=active_only, search=search, limit=10000, offset=0
+        )
         return len(groups)
 
     async def get_groups_paginated(
@@ -257,7 +259,7 @@ class GroupApplicationService(ApplicationService):
         active_only: bool = True,
         search: Optional[str] = None,
         limit: int = 50,
-        offset: int = 0
+        offset: int = 0,
     ) -> List[VKGroup]:
         """
         Получить группы с пагинацией (мигрировано из GroupManager)
@@ -272,10 +274,7 @@ class GroupApplicationService(ApplicationService):
             Список групп
         """
         return await self.get_groups(
-            active_only=active_only,
-            search=search,
-            limit=limit,
-            offset=offset
+            active_only=active_only, search=search, limit=limit, offset=offset
         )
 
     async def search_groups(
@@ -283,7 +282,7 @@ class GroupApplicationService(ApplicationService):
         query: str,
         active_only: bool = True,
         limit: int = 20,
-        offset: int = 0
+        offset: int = 0,
     ) -> List[VKGroup]:
         """
         Поиск групп по имени или screen_name (мигрировано из GroupManager)
@@ -298,10 +297,7 @@ class GroupApplicationService(ApplicationService):
             Список найденных групп
         """
         return await self.get_groups(
-            active_only=active_only,
-            search=query,
-            limit=limit,
-            offset=offset
+            active_only=active_only, search=query, limit=limit, offset=offset
         )
 
     async def toggle_group_status(self, group_id: int) -> Optional[VKGroup]:
@@ -358,17 +354,23 @@ class GroupApplicationService(ApplicationService):
             "is_ready": group.is_ready_for_monitoring(),
             "monitoring_interval": group.monitoring_interval_minutes,
             "monitoring_priority": group.monitoring_priority,
-            "last_parsed_at": group.last_parsed_at.isoformat() if group.last_parsed_at else None,
+            "last_parsed_at": (
+                group.last_parsed_at.isoformat()
+                if group.last_parsed_at
+                else None
+            ),
             "next_monitoring_at": group.calculate_next_monitoring_time().isoformat(),
             "monitoring_runs_count": group.monitoring_runs_count,
-            "last_monitoring_success": group.last_monitoring_success.isoformat() if group.last_monitoring_success else None,
+            "last_monitoring_success": (
+                group.last_monitoring_success.isoformat()
+                if group.last_monitoring_success
+                else None
+            ),
             "last_monitoring_error": group.last_monitoring_error,
         }
 
     async def get_groups_count_with_filters(
-        self,
-        active_only: bool = True,
-        search: Optional[str] = None
+        self, active_only: bool = True, search: Optional[str] = None
     ) -> int:
         """
         Получить количество групп с фильтрами (мигрировано из GroupManager)
@@ -390,7 +392,8 @@ class GroupApplicationService(ApplicationService):
         if search:
             search_lower = search.lower()
             all_groups = [
-                g for g in all_groups
+                g
+                for g in all_groups
                 if search_lower in (g.name or "").lower()
                 or search_lower in (g.screen_name or "").lower()
             ]
@@ -398,8 +401,7 @@ class GroupApplicationService(ApplicationService):
         return len(all_groups)
 
     async def create_group_detailed(
-        self,
-        group_data: Dict[str, Any]
+        self, group_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Создать новую группу с валидацией (мигрировано из GroupManager)
@@ -414,7 +416,9 @@ class GroupApplicationService(ApplicationService):
         from datetime import datetime
 
         # Проверяем существование группы с таким же screen_name
-        existing = await self.get_group_by_screen_name(group_data.get("screen_name", ""))
+        existing = await self.get_group_by_screen_name(
+            group_data.get("screen_name", "")
+        )
         if existing:
             raise ValueError(
                 f"Group with screen_name '{group_data.get('screen_name')}' already exists"
@@ -430,7 +434,9 @@ class GroupApplicationService(ApplicationService):
             is_active=group_data.get("is_active", True),
             member_count=group_data.get("member_count", 0),
             photo_url=group_data.get("photo_url"),
-            monitoring_interval_minutes=group_data.get("monitoring_interval_minutes", 60),
+            monitoring_interval_minutes=group_data.get(
+                "monitoring_interval_minutes", 60
+            ),
             monitoring_priority=group_data.get("monitoring_priority", 1),
         )
 
@@ -443,9 +449,7 @@ class GroupApplicationService(ApplicationService):
         return await self.get_group_by_id_detailed(group.id)
 
     async def update_group_detailed(
-        self,
-        group_id: int,
-        update_data: Dict[str, Any]
+        self, group_id: int, update_data: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """
         Обновить группу с валидацией (мигрировано из GroupManager)
@@ -474,10 +478,7 @@ class GroupApplicationService(ApplicationService):
 
         return await self.get_group_by_id_detailed(group.id)
 
-    async def delete_group_detailed(
-        self,
-        group_id: int
-    ) -> Dict[str, Any]:
+    async def delete_group_detailed(self, group_id: int) -> Dict[str, Any]:
         """
         Удалить группу с проверками (мигрировано из GroupManager)
 
@@ -500,12 +501,11 @@ class GroupApplicationService(ApplicationService):
             "deleted": True,
             "group_id": group_id,
             "group_name": group_name,
-            "message": f"Group {group_name} deleted successfully"
+            "message": f"Group {group_name} deleted successfully",
         }
 
     async def toggle_group_status_detailed(
-        self,
-        group_id: int
+        self, group_id: int
     ) -> Optional[Dict[str, Any]]:
         """
         Переключить статус активности группы с деталями (мигрировано из GroupManager)
@@ -536,7 +536,7 @@ class GroupApplicationService(ApplicationService):
         query: str,
         limit: int = 20,
         offset: int = 0,
-        active_only: bool = True
+        active_only: bool = True,
     ) -> Dict[str, Any]:
         """
         Поиск групп по имени или screen_name с деталями (мигрировано из GroupManager)
@@ -551,8 +551,81 @@ class GroupApplicationService(ApplicationService):
             Детальные результаты поиска
         """
         return await self.get_groups_paginated(
-            active_only=active_only,
-            search=query,
-            limit=limit,
-            offset=offset
+            active_only=active_only, search=query, limit=limit, offset=offset
         )
+
+    # =============== ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ GroupManager ===============
+
+    async def get_group_by_vk_id(self, vk_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Получить группу по VK ID (мигрировано из GroupManager)
+
+        Args:
+            vk_id: VK ID группы
+
+        Returns:
+            Информация о группе или None
+        """
+        # Получаем все группы и ищем по vk_id
+        all_groups = await self.group_repository.find_all()
+        group = next((g for g in all_groups if g.vk_id == vk_id), None)
+
+        if not group:
+            return None
+
+        return await self.get_group_by_id_detailed(group.id)
+
+    async def get_groups_paginated_detailed(
+        self,
+        active_only: bool = True,
+        search: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
+        """
+        Получить группы с пагинацией (мигрировано из GroupManager)
+
+        Args:
+            active_only: Только активные группы
+            search: Поисковый запрос
+            limit: Максимальное количество
+            offset: Смещение
+
+        Returns:
+            Список групп
+        """
+        # Получаем все группы
+        all_groups = await self.group_repository.find_all()
+
+        # Применяем фильтры
+        if active_only:
+            all_groups = [g for g in all_groups if g.is_active]
+
+        if search:
+            search_lower = search.lower()
+            all_groups = [
+                g
+                for g in all_groups
+                if search_lower in (g.name or "").lower()
+                or search_lower in (g.screen_name or "").lower()
+            ]
+
+        # Пагинация
+        paginated_groups = all_groups[offset : offset + limit]
+
+        # Преобразуем в response формат
+        groups_response = []
+        for group in paginated_groups:
+            groups_response.append(
+                {
+                    "id": group.id,
+                    "vk_id": group.vk_id,
+                    "screen_name": group.screen_name,
+                    "name": group.name,
+                    "is_active": group.is_active,
+                    "member_count": group.member_count,
+                    "created_at": group.created_at.isoformat(),
+                }
+            )
+
+        return groups_response
