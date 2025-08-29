@@ -24,7 +24,7 @@ from app.schemas.vk_comment import (
     CommentSearchParams,
     CommentUpdateRequest,
     CommentWithKeywords,
-    VKCommentResponse
+    VKCommentResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ class CommentService:
         group_id: int,
         limit: int = 50,
         offset: int = 0,
-        include_group: bool = False
+        include_group: bool = False,
     ) -> List[VKCommentResponse]:
         """
         Получить комментарии группы с пагинацией.
@@ -98,7 +98,7 @@ class CommentService:
         self,
         search_params: CommentSearchParams,
         limit: int = 50,
-        offset: int = 0
+        offset: int = 0,
     ) -> List[CommentWithKeywords]:
         """
         Поиск комментариев по различным критериям.
@@ -114,38 +114,47 @@ class CommentService:
         try:
             query = select(VKComment).options(
                 selectinload(VKComment.post).selectinload(VKPost.group),
-                selectinload(VKComment.keyword_matches)
+                selectinload(VKComment.keyword_matches),
             )
 
             # Применяем фильтры
             conditions = []
 
             if search_params.text:
-                conditions.append(VKComment.text.ilike(f"%{search_params.text}%"))
+                conditions.append(
+                    VKComment.text.ilike(f"%{search_params.text}%")
+                )
 
             if search_params.group_id:
                 query = query.join(VKPost, VKComment.post_id == VKPost.id)
                 conditions.append(VKPost.group_id == search_params.group_id)
 
             if search_params.author_id:
-                conditions.append(VKComment.author_id == search_params.author_id)
+                conditions.append(
+                    VKComment.author_id == search_params.author_id
+                )
 
             if search_params.date_from:
-                conditions.append(VKComment.published_at >= search_params.date_from)
+                conditions.append(
+                    VKComment.published_at >= search_params.date_from
+                )
 
             if search_params.date_to:
-                conditions.append(VKComment.published_at <= search_params.date_to)
+                conditions.append(
+                    VKComment.published_at <= search_params.date_to
+                )
 
             if search_params.is_viewed is not None:
-                conditions.append(VKComment.is_viewed == search_params.is_viewed)
+                conditions.append(
+                    VKComment.is_viewed == search_params.is_viewed
+                )
 
             if conditions:
                 query = query.where(and_(*conditions))
 
             # Порядок и пагинация
             query = (
-                query
-                .order_by(desc(VKComment.published_at))
+                query.order_by(desc(VKComment.published_at))
                 .limit(limit)
                 .offset(offset)
             )
@@ -153,13 +162,18 @@ class CommentService:
             result = await self.db.execute(query)
             comments = result.scalars().all()
 
-            return [self._comment_to_response_with_keywords(comment) for comment in comments]
+            return [
+                self._comment_to_response_with_keywords(comment)
+                for comment in comments
+            ]
 
         except Exception as e:
             logger.error(f"Error searching comments: {e}")
             raise
 
-    async def get_comment_by_id(self, comment_id: int) -> Optional[VKCommentResponse]:
+    async def get_comment_by_id(
+        self, comment_id: int
+    ) -> Optional[VKCommentResponse]:
         """
         Получить комментарий по ID.
 
@@ -174,7 +188,7 @@ class CommentService:
                 select(VKComment)
                 .options(
                     selectinload(VKComment.post).selectinload(VKPost.group),
-                    selectinload(VKComment.keyword_matches)
+                    selectinload(VKComment.keyword_matches),
                 )
                 .where(VKComment.id == comment_id)
             )
@@ -189,9 +203,7 @@ class CommentService:
             raise
 
     async def update_comment(
-        self,
-        comment_id: int,
-        update_data: CommentUpdateRequest
+        self, comment_id: int, update_data: CommentUpdateRequest
     ) -> Optional[VKCommentResponse]:
         """
         Обновить статус комментария.
@@ -222,9 +234,17 @@ class CommentService:
                     setattr(db_comment, field, value)
 
                     # Устанавливаем timestamp для viewed_at или archived_at
-                    if field == 'is_viewed' and value and not db_comment.viewed_at:
+                    if (
+                        field == "is_viewed"
+                        and value
+                        and not db_comment.viewed_at
+                    ):
                         db_comment.viewed_at = datetime.now()
-                    elif field == 'is_archived' and value and not db_comment.archived_at:
+                    elif (
+                        field == "is_archived"
+                        and value
+                        and not db_comment.archived_at
+                    ):
                         db_comment.archived_at = datetime.now()
 
             await self.db.commit()
@@ -252,11 +272,9 @@ class CommentService:
             query = select(VKComment)
 
             if group_id:
-                query = (
-                    query
-                    .join(VKPost, VKComment.post_id == VKPost.id)
-                    .where(VKPost.group_id == group_id)
-                )
+                query = query.join(
+                    VKPost, VKComment.post_id == VKPost.id
+                ).where(VKPost.group_id == group_id)
 
             result = await self.db.execute(query)
             comments = result.scalars().all()
@@ -269,7 +287,9 @@ class CommentService:
 
             # Статистика по ключевым словам
             total_keywords = sum(c.matched_keywords_count for c in comments)
-            avg_keywords_per_comment = total_keywords / total_comments if total_comments > 0 else 0
+            avg_keywords_per_comment = (
+                total_keywords / total_comments if total_comments > 0 else 0
+            )
 
             return {
                 "total_comments": total_comments,
@@ -278,8 +298,16 @@ class CommentService:
                 "processed_comments": processed_comments,
                 "total_matched_keywords": total_keywords,
                 "avg_keywords_per_comment": round(avg_keywords_per_comment, 2),
-                "view_rate": round(viewed_comments / total_comments * 100, 2) if total_comments > 0 else 0,
-                "archive_rate": round(archived_comments / total_comments * 100, 2) if total_comments > 0 else 0
+                "view_rate": (
+                    round(viewed_comments / total_comments * 100, 2)
+                    if total_comments > 0
+                    else 0
+                ),
+                "archive_rate": (
+                    round(archived_comments / total_comments * 100, 2)
+                    if total_comments > 0
+                    else 0
+                ),
             }
 
         except Exception as e:
@@ -326,13 +354,16 @@ class CommentService:
                     "name": comment.post.group.name,
                     "screen_name": comment.post.group.screen_name,
                     "is_active": comment.post.group.is_active,
-                    "member_count": comment.post.group.member_count
+                    "member_count": comment.post.group.member_count,
                 }
-                if comment.post and comment.post.group else None
-            )
+                if comment.post and comment.post.group
+                else None
+            ),
         )
 
-    def _comment_to_response_with_keywords(self, comment: VKComment) -> CommentWithKeywords:
+    def _comment_to_response_with_keywords(
+        self, comment: VKComment
+    ) -> CommentWithKeywords:
         """
         Преобразовать объект комментария в схему ответа с ключевыми словами.
 
@@ -343,22 +374,32 @@ class CommentService:
             Схема ответа с ключевыми словами
         """
         # Получаем найденные ключевые слова
-        matched_keywords = [
-            match.keyword.word for match in comment.keyword_matches
-        ] if comment.keyword_matches else []
+        matched_keywords = (
+            [match.keyword.word for match in comment.keyword_matches]
+            if comment.keyword_matches
+            else []
+        )
 
         # Получаем детали совпадений
-        keyword_matches = [
-            {
-                "keyword": match.keyword.word,
-                "position": match.position,
-                "context": match.matched_text
-            }
-            for match in comment.keyword_matches
-        ] if comment.keyword_matches else []
+        keyword_matches = (
+            [
+                {
+                    "keyword": match.keyword.word,
+                    "position": match.position,
+                    "context": match.matched_text,
+                }
+                for match in comment.keyword_matches
+            ]
+            if comment.keyword_matches
+            else []
+        )
+
+        # Создаем базовый response и обновляем matched_keywords
+        base_response = self._comment_to_response(comment)
+        base_dict = base_response.model_dump()
+        base_dict["matched_keywords"] = matched_keywords
 
         return CommentWithKeywords(
-            **self._comment_to_response(comment).model_dump(),
-            matched_keywords=matched_keywords,
-            keyword_matches=keyword_matches
+            **base_dict,
+            keyword_matches=keyword_matches,
         )
