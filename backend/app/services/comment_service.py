@@ -50,50 +50,6 @@ class CommentService:
         """
         self.db = db
 
-    async def get_comments_by_group(
-        self,
-        group_id: int,
-        limit: int = 50,
-        offset: int = 0,
-        include_group: bool = False,
-    ) -> List[VKCommentResponse]:
-        """
-        Получить комментарии группы с пагинацией.
-
-        Args:
-            group_id: ID группы VK
-            limit: Максимальное количество комментариев
-            offset: Смещение для пагинации
-            include_group: Включить информацию о группе
-
-        Returns:
-            Список комментариев группы
-        """
-        try:
-            # Базовый запрос с загрузкой связанных данных
-            query = (
-                select(VKComment)
-                .join(VKPost, VKComment.post_id == VKPost.id)
-                .where(VKPost.group_id == group_id)
-                .order_by(desc(VKComment.published_at))
-                .limit(limit)
-                .offset(offset)
-            )
-
-            if include_group:
-                query = query.options(
-                    selectinload(VKComment.post).selectinload(VKPost.group)
-                )
-
-            result = await self.db.execute(query)
-            comments = result.scalars().all()
-
-            return [self._comment_to_response(comment) for comment in comments]
-
-        except Exception as e:
-            logger.error(f"Error getting comments for group {group_id}: {e}")
-            raise
-
     async def search_comments(
         self,
         search_params: CommentSearchParams,
@@ -301,12 +257,30 @@ class CommentService:
         Returns:
             Список комментариев группы
         """
-        return await self.get_comments_by_group(
-            group_id=group_id,
-            limit=limit,
-            offset=offset,
-            include_group=include_group,
-        )
+        try:
+            # Базовый запрос с загрузкой связанных данных
+            query = (
+                select(VKComment)
+                .join(VKPost, VKComment.post_id == VKPost.id)
+                .where(VKPost.group_id == group_id)
+                .order_by(desc(VKComment.published_at))
+                .limit(limit)
+                .offset(offset)
+            )
+
+            if include_group:
+                query = query.options(
+                    selectinload(VKComment.post).selectinload(VKPost.group)
+                )
+
+            result = await self.db.execute(query)
+            comments = result.scalars().all()
+
+            return [self._comment_to_response(comment) for comment in comments]
+
+        except Exception as e:
+            logger.error(f"Error getting comments for group {group_id}: {e}")
+            raise
 
     async def get_comment_stats(self, group_id: Optional[int] = None) -> dict:
         """

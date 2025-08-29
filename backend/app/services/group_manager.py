@@ -105,29 +105,6 @@ class GroupManager(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
             logger.error(f"Error getting group by VK ID {vk_id}: {e}")
             return None
 
-    async def get_active_groups(
-        self, db: AsyncSession, limit: int = 100, offset: int = 0
-    ) -> List[VKGroup]:
-        """
-        Получить список активных групп.
-
-        Args:
-            db: Сессия базы данных
-            limit: Максимальное количество групп
-            offset: Смещение для пагинации
-
-        Returns:
-            Список активных групп
-        """
-        try:
-            query = select(self.model).where(self.model.is_active == True)
-            result = await db.execute(query.limit(limit).offset(offset))
-            return result.scalars().all()
-
-        except Exception as e:
-            logger.error(f"Error getting active groups: {e}")
-            return []
-
     async def get_groups_count(
         self,
         db: AsyncSession,
