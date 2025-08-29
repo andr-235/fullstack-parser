@@ -116,8 +116,8 @@ async def main():
 
                     # Инициализируем сервисы
                     vk_service = VKAPIService(
-                        token=settings.vk.access_token,
-                        api_version=settings.vk.api_version,
+                        token=settings.vk_access_token,
+                        api_version=settings.vk_api_version,
                     )
                     monitoring_service = MonitoringService(db, vk_service)
 

@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
-from app.core.database import Base, get_db_session
+from app.core.database import Base
 from app.main import app
 
 
@@ -84,6 +84,24 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
             finally:
                 # Автоматический rollback после каждого теста
                 await session.rollback()
+
+
+@pytest.fixture(scope="function")
+async def db_session_no_transaction(
+    test_engine,
+) -> AsyncGenerator[AsyncSession, None]:
+    """Фикстура для сессии без транзакции (для простых операций)"""
+    async_session_factory = sessionmaker(
+        bind=test_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+    async with async_session_factory() as session:
+        try:
+            yield session
+        finally:
+            pass
 
 
 @pytest.fixture(scope="function")

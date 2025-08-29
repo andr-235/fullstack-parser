@@ -1,42 +1,19 @@
 """
 API v1 модуль
 
-Этот пакет содержит все API эндпоинты версии 1.0
-для VK Comments Parser.
+Этот пакет содержит все API эндпоинты версии 1.5
+для VK Comments Parser с улучшенной архитектурой.
 """
 
-from . import (
-    api,
-    background_tasks,
-    comments,
-    dependencies,
-    errors,
-    exceptions,
-    groups,
-    health,
-    keywords,
-    monitoring,
-    morphological,
-    parser,
-    settings,
-    stats,
-    utils,
-)
+# Импортируем только основной API роутер
+from . import api
+
+# Импортируем новые компоненты
+from . import schemas, handlers, middleware
 
 __all__ = [
     "api",
-    "background_tasks",
-    "comments",
-    "dependencies",
-    "errors",
-    "exceptions",
-    "groups",
-    "health",
-    "keywords",
-    "monitoring",
-    "morphological",
-    "parser",
-    "settings",
-    "stats",
-    "utils",
+    "schemas",
+    "handlers",
+    "middleware",
 ]

@@ -42,7 +42,7 @@ from app.services.vk_api_service import VKAPIService
 group_manager = GroupManager()
 group_stats_service = GroupStatsService()
 vk_service = VKAPIService(
-    token=settings.vk.access_token, api_version=settings.vk.api_version
+    token=settings.vk_access_token, api_version=settings.vk_api_version
 )
 group_validator = GroupValidator(vk_service)
 group_file_importer = GroupFileImporter(group_manager, group_validator)
@@ -490,14 +490,7 @@ async def get_groups(
     )
 
 
-@router.get("", response_model=PaginatedResponse[VKGroupRead])
-async def get_groups_no_slash(
-    active_only: bool = True,
-    search: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
-) -> PaginatedResponse[VKGroupRead]:
-    """Получить список VK групп (без trailing slash) - алиас для основного endpoint"""
-    return await get_groups(active_only=active_only, search=search, db=db)
+# Алиас для get_groups удален для избежания конфликта маршрутов
 
 
 @router.get("/{group_id}", response_model=VKGroupRead)

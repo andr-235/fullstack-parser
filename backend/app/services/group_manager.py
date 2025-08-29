@@ -129,24 +129,38 @@ class GroupManager(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
             return []
 
     async def get_groups_count(
-        self, db: AsyncSession, active_only: bool = True
+        self,
+        db: AsyncSession,
+        active_only: bool = True,
+        search: Optional[str] = None,
     ) -> int:
         """
-        Получить количество групп.
+        Получить количество групп с фильтрами.
 
         Args:
             db: Сессия базы данных
             active_only: Только активные группы
+            search: Поисковый запрос
 
         Returns:
             Количество групп
         """
         try:
-            from sqlalchemy import func
+            from sqlalchemy import func, or_
 
             query = select(func.count()).select_from(self.model)
+
             if active_only:
                 query = query.where(self.model.is_active == True)
+
+            if search:
+                search_term = f"%{search.lower()}%"
+                query = query.where(
+                    or_(
+                        self.model.name.ilike(search_term),
+                        self.model.screen_name.ilike(search_term),
+                    )
+                )
 
             result = await db.execute(query)
             return result.scalar()
@@ -154,6 +168,51 @@ class GroupManager(BaseService[VKGroup, VKGroupCreate, VKGroupUpdate]):
         except Exception as e:
             logger.error(f"Error counting groups: {e}")
             return 0
+
+    async def get_groups_paginated(
+        self,
+        db: AsyncSession,
+        active_only: bool = True,
+        search: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[VKGroup]:
+        """
+        Получить группы с пагинацией и фильтрами.
+
+        Args:
+            db: Сессия базы данных
+            active_only: Только активные группы
+            search: Поисковый запрос
+            limit: Максимальное количество групп
+            offset: Смещение для пагинации
+
+        Returns:
+            Список групп
+        """
+        try:
+            from sqlalchemy import or_
+
+            query = select(self.model)
+
+            if active_only:
+                query = query.where(self.model.is_active == True)
+
+            if search:
+                search_term = f"%{search.lower()}%"
+                query = query.where(
+                    or_(
+                        self.model.name.ilike(search_term),
+                        self.model.screen_name.ilike(search_term),
+                    )
+                )
+
+            result = await db.execute(query.limit(limit).offset(offset))
+            return result.scalars().all()
+
+        except Exception as e:
+            logger.error(f"Error getting groups paginated: {e}")
+            return []
 
     async def create_group(
         self, db: AsyncSession, group_data: VKGroupCreate

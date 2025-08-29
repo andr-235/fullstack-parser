@@ -17,12 +17,14 @@ def main():
 
     # Команда для запуска pytest
     cmd = [
-        sys.executable, "-m", "pytest",
+        sys.executable,
+        "-m",
+        "pytest",
         str(project_root / "tests" / "integration"),
         "-v",
         "--tb=short",
         "--strict-markers",
-        "--disable-warnings"
+        "--disable-warnings",
     ]
 
     # Добавляем дополнительные аргументы из командной строки

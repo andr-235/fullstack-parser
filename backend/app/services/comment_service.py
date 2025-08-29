@@ -13,7 +13,7 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import and_, desc, or_, select
+from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -256,6 +256,57 @@ class CommentService:
             logger.error(f"Error updating comment {comment_id}: {e}")
             await self.db.rollback()
             raise
+
+    async def get_comments_count(self, filters: Optional[dict] = None) -> int:
+        """
+        Получить количество комментариев с фильтрами.
+
+        Args:
+            filters: Словарь с фильтрами (group_id, etc.)
+
+        Returns:
+            Количество комментариев
+        """
+        try:
+            query = select(func.count(VKComment.id))
+
+            if filters and filters.get("group_id"):
+                query = query.join(
+                    VKPost, VKComment.post_id == VKPost.id
+                ).where(VKPost.group_id == filters["group_id"])
+
+            result = await self.db.execute(query)
+            return result.scalar()
+
+        except Exception as e:
+            logger.error(f"Error counting comments: {e}")
+            raise
+
+    async def get_comments_paginated(
+        self,
+        group_id: int,
+        limit: int = 50,
+        offset: int = 0,
+        include_group: bool = False,
+    ) -> List[VKCommentResponse]:
+        """
+        Получить комментарии группы с пагинацией (улучшенная версия).
+
+        Args:
+            group_id: ID группы VK
+            limit: Максимальное количество комментариев
+            offset: Смещение для пагинации
+            include_group: Включить информацию о группе
+
+        Returns:
+            Список комментариев группы
+        """
+        return await self.get_comments_by_group(
+            group_id=group_id,
+            limit=limit,
+            offset=offset,
+            include_group=include_group,
+        )
 
     async def get_comment_stats(self, group_id: Optional[int] = None) -> dict:
         """

@@ -43,15 +43,15 @@ class SettingsService:
         # Загружаем настройки из конфигурации
         current_settings = ApplicationSettings(
             vk_api=VKAPISettings(
-                access_token=settings.vk.access_token,
-                api_version=settings.vk.api_version,
-                requests_per_second=settings.vk.requests_per_second,
+                access_token=settings.vk_access_token,
+                api_version=settings.vk_api_version,
+                requests_per_second=3,  # Значение по умолчанию
             ),
             monitoring=MonitoringSettings(
-                scheduler_interval_seconds=settings.monitoring.scheduler_interval_seconds,
-                max_concurrent_groups=settings.monitoring.max_concurrent_groups,
-                group_delay_seconds=settings.monitoring.group_delay_seconds,
-                auto_start_scheduler=settings.monitoring.auto_start_scheduler,
+                scheduler_interval_seconds=settings.monitoring_interval,
+                max_concurrent_groups=5,  # Значение по умолчанию
+                group_delay_seconds=1,  # Значение по умолчанию
+                auto_start_scheduler=settings.monitoring_enabled,
             ),
             database=DatabaseSettings(
                 pool_size=10,  # Извлекаем из конфигурации БД

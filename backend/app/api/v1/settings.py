@@ -32,10 +32,7 @@ async def get_settings() -> SettingsResponse:
         )
 
 
-@router.get("", response_model=SettingsResponse)
-async def get_settings_no_slash() -> SettingsResponse:
-    """Получить текущие настройки приложения (без trailing slash) - алиас для основного endpoint"""
-    return await get_settings()
+# Алиас для get_settings удален для избежания конфликта маршрутов
 
 
 @router.put("/", response_model=SettingsResponse)
@@ -68,12 +65,7 @@ async def update_settings(request: SettingsUpdateRequest) -> SettingsResponse:
         )
 
 
-@router.put("", response_model=SettingsResponse)
-async def update_settings_no_slash(
-    request: SettingsUpdateRequest,
-) -> SettingsResponse:
-    """Обновить настройки приложения (без trailing slash) - алиас для основного endpoint"""
-    return await update_settings(request)
+# Алиас для update_settings удален для избежания конфликта маршрутов
 
 
 @router.post("/reset", response_model=SettingsResponse)

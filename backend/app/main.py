@@ -1,12 +1,10 @@
 """
 Production-ready FastAPI приложение для VK Comments Parser
-с централизованной обработкой ошибок и мониторингом
+с улучшенной архитектурой и middleware
 """
 
 import logging
-import time
 from contextlib import asynccontextmanager
-from typing import Callable
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +13,10 @@ from fastapi.responses import JSONResponse
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.database import init_db
+
+# Импорт нового middleware
+from app.api.v1.middleware.rate_limit import SimpleRateLimitMiddleware
+from app.api.v1.middleware.logging import RequestLoggingMiddleware
 from app.core.error_handlers import (
     base_exception_handler,
     cache_exception_handler,
@@ -42,7 +44,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Production-ready lifespan с полной инициализацией"""
-    logger.info("🚀 Запуск VK Comments Parser...")
+    logger.info("🚀 Запуск VK Comments Parser v1.5.0...")
 
     # Инициализируем базу данных
     try:
@@ -53,94 +55,44 @@ async def lifespan(app: FastAPI):
         raise
 
     logger.info("✅ Система готова к работе!")
+    logger.info("📋 API v1.5.0 доступен: /api/v1")
+    logger.info("📚 Документация: /docs")
+
     yield
 
     logger.info("🛑 Остановка VK Comments Parser...")
 
 
-async def request_logging_middleware(request: Request, call_next):
-    """
-    Middleware для логирования HTTP запросов.
-    Логирует время выполнения, статус код и ошибки.
-    """
-    start_time = time.time()
-
-    # Логируем входящий запрос
-    logger.info(
-        f"➡️  {request.method} {request.url.path}",
-        method=request.method,
-        path=request.url.path,
-        query_params=dict(request.query_params),
-        client_ip=get_client_ip(request),
-    )
-
-    try:
-        # Выполняем запрос
-        response = await call_next(request)
-
-        # Вычисляем время выполнения
-        process_time = time.time() - start_time
-
-        # Логируем успешный ответ
-        logger.info(
-            f"✅ {request.method} {request.url.path} - {response.status_code}",
-            status_code=response.status_code,
-            process_time=f"{process_time:.3f}s",
-        )
-
-        # Добавляем заголовок с временем выполнения
-        response.headers["X-Process-Time"] = str(process_time)
-        return response
-
-    except Exception as e:
-        # Логируем ошибку
-        process_time = time.time() - start_time
-        logger.error(
-            f"❌ {request.method} {request.url.path} - Error",
-            error=str(e),
-            process_time=f"{process_time:.3f}s",
-            exc_info=True,
-        )
-        raise
-
-
-def get_client_ip(request: Request) -> str:
-    """Получить IP адрес клиента с учетом прокси"""
-    # Проверяем заголовки прокси
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-
-    real_ip = request.headers.get("X-Real-IP")
-    if real_ip:
-        return real_ip
-
-    # Fallback к стандартному client
-    return request.client.host if request.client else "unknown"
-
-
 # Создание production-ready FastAPI приложения
 app = FastAPI(
     title="VK Comments Parser API",
-    version="2.0.0",
+    version="1.5.0",
     description="""
-    🚀 **Production-ready API для парсинга комментариев ВКонтакте**
+    🚀 **Улучшенная версия VK Comments Parser API**
 
-    ## ✨ Возможности:
-    - 📊 Полный анализ комментариев VK групп
-    - 🔍 Продвинутый поиск по ключевым словам
-    - 📈 Детальная статистика и аналитика
-    - ⚡ Асинхронная обработка через ARQ
-    - 🛡️ Централизованная обработка ошибок
-    - 📝 Полная документация API
+    ## ✨ Новые возможности v1.5.0:
+    - 🛡️ **Rate Limiting** - защита от перегрузок
+    - 📊 **Request Logging** - структурированное логирование
+    - 🎯 **Standardized Responses** - унифицированные ответы
+    - ⚡ **Performance Monitoring** - отслеживание производительности
+    - 🔍 **Request Tracking** - отслеживание запросов по ID
 
-    ## 🔧 Архитектура:
-    - **SOLID принципы** - модульная и поддерживаемая кодовая база
-    - **Clean Architecture** - четкое разделение ответственности
-    - **Async/Await** - высокая производительность
-    - **Type Hints** - типизированный код
+    ## 📚 API Endpoints:
+    - **Comments**: `/api/v1/comments` - работа с комментариями
+    - **Groups**: `/api/v1/groups` - управление группами VK
+    - **Keywords**: `/api/v1/keywords` - ключевые слова
+    - **Parser**: `/api/v1/parser` - парсинг данных
+    - **Health**: `/api/v1/health` - проверка здоровья системы
 
-    ## 📚 Документация:
+    ## 🔧 Улучшения:
+    - Стандартизированные ответы с метаданными
+    - Улучшенная обработка ошибок
+    - Rate limiting для защиты от DDoS
+    - Структурированное логирование всех запросов
+    - Request ID tracking для отладки
+    - Performance monitoring headers
+
+    ## 📖 Документация:
     - **Swagger UI**: `/docs`
     - **ReDoc**: `/redoc`
     - **OpenAPI**: `/openapi.json`
@@ -218,24 +170,18 @@ async def handle_unexpected_error(request: Request, exc: Exception):
     return await generic_exception_handler(request, exc)
 
 
-# 🛡️ Middleware для безопасности и мониторинга
+# 🛡️ Middleware (добавляем в правильном порядке)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=[
-        "Accept",
-        "Accept-Language",
-        "Content-Language",
-        "Content-Type",
-        "Authorization",
-        "X-Requested-With",
-    ],
+    allow_headers=["*"],
 )
 
-# 📊 Middleware для логирования запросов
-app.middleware("http")(request_logging_middleware)
+# Добавляем наше middleware
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(SimpleRateLimitMiddleware, requests_per_minute=60)
 
 # Подключаем роутеры
 app.include_router(api_router, prefix="/api/v1")

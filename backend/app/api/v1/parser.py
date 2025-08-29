@@ -38,7 +38,9 @@ from app.schemas.vk_comment import (
     CommentWithKeywords,
     VKCommentResponse,
 )
-from app.services.parser_service import ParserService
+from app.services.parsing_manager import ParsingManager
+from app.services.comment_search_service import CommentSearchService
+from app.services.comment_service import CommentService
 from app.services.redis_parser_manager import (
     RedisParserManager,
     get_redis_parser_manager,
@@ -57,10 +59,14 @@ async def start_parsing(
 ) -> ParseTaskResponse:
     """Запустить парсинг группы"""
     vk_service = VKAPIService(
-        token=settings.vk.access_token, api_version=settings.vk.api_version
+        token=settings.vk_access_token, api_version=settings.vk_api_version
     )
-    service = ParserService(db, vk_service)
-    return await service.start_parsing_task(task_data, parser_manager)
+    parsing_manager = ParsingManager(db, parser_manager)
+    return await parsing_manager.start_parsing_task(
+        group_id=task_data.group_id,
+        max_posts=task_data.max_posts,
+        keywords=task_data.keywords,
+    )
 
 
 @router.post("/parse/bulk", response_model=BulkParseResponse)
@@ -83,10 +89,7 @@ async def start_bulk_parsing(
             total_groups=0, started_tasks=0, failed_groups=[], tasks=[]
         )
 
-    vk_service = VKAPIService(
-        token=settings.vk.access_token, api_version=settings.vk.api_version
-    )
-    service = ParserService(db, vk_service)
+    parsing_manager = ParsingManager(db, parser_manager)
 
     tasks: List[ParseTaskResponse] = []
     failed_groups: List[dict] = []
@@ -103,8 +106,10 @@ async def start_bulk_parsing(
                     max_posts=bulk_data.max_posts,
                     force_reparse=bulk_data.force_reparse,
                 )
-                task = await service.start_parsing_task(
-                    task_data, parser_manager
+                task = await parsing_manager.start_parsing_task(
+                    group_id=group.id,
+                    max_posts=bulk_data.max_posts or 100,
+                    keywords=bulk_data.keywords or [],
                 )
                 return task
             except Exception as e:
@@ -186,21 +191,17 @@ async def get_comments(
         order_dir=order_dir,
     )
 
-    vk_service = VKAPIService(
-        token=settings.vk.access_token, api_version=settings.vk.api_version
-    )
-    parser_service = ParserService(db, vk_service)
+    search_service = CommentSearchService(db)
 
-    return await parser_service.filter_comments(search_params, pagination)
+    return await search_service.search_comments(search_params)
 
 
 @router.get("/comments/{comment_id}", response_model=CommentWithKeywords)
 async def get_comment_with_keywords(
     comment_id: int, db: AsyncSession = Depends(get_db)
 ) -> CommentWithKeywords:
-    vk_service = VKAPIService(token="stub", api_version="5.131")
-    service = ParserService(db, vk_service)
-    return await service.get_comment_with_keywords(comment_id)
+    comment_service = CommentService(db)
+    return await comment_service.get_comment_with_keywords(comment_id)
 
 
 @router.put("/comments/{comment_id}/status", response_model=VKCommentResponse)
@@ -250,10 +251,10 @@ async def update_comment_status(
 
     # Конвертируем в ответ
     vk_service = VKAPIService(
-        token=settings.vk.access_token, api_version=settings.vk.api_version
+        token=settings.vk_access_token, api_version=settings.vk_api_version
     )
-    service = ParserService(db, vk_service)
-    return service._convert_comment_to_response(comment)
+    comment_service = CommentService(db)
+    return await comment_service._convert_comment_to_response(comment)
 
 
 @router.post("/comments/{comment_id}/view", response_model=VKCommentResponse)
@@ -297,9 +298,8 @@ async def unarchive_comment(
 async def get_global_stats(
     db: AsyncSession = Depends(get_db),
 ) -> GlobalStats:
-    vk_service = VKAPIService(token="stub", api_version="5.131")
-    service = ParserService(db, vk_service)
-    return await service.get_global_stats()
+    comment_service = CommentService(db)
+    return await comment_service.get_global_stats()
 
 
 # ---------------------------------------------------------------------------

@@ -51,7 +51,7 @@ async def run_parsing_task(
         # Получаем зависимости
         redis_manager = get_redis_parser_manager()
         vk_service = VKAPIService(
-            token=settings.vk.access_token, api_version=settings.vk.api_version
+            token=settings.vk_access_token, api_version=settings.vk_api_version
         )
 
         # Создаем сессию БД
@@ -119,7 +119,7 @@ async def run_monitoring_cycle(ctx: Dict[str, Any]) -> Dict[str, Any]:
         # Получаем зависимости
         redis_manager = get_redis_parser_manager()
         vk_service = VKAPIService(
-            token=settings.vk.access_token, api_version=settings.vk.api_version
+            token=settings.vk_access_token, api_version=settings.vk_api_version
         )
 
         # Создаем сессию БД

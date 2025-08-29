@@ -33,7 +33,7 @@ router = APIRouter(tags=["Monitoring"])
 def _get_vk_service() -> VKAPIService:
     """Создает экземпляр VK сервиса с настройками из конфигурации"""
     return VKAPIService(
-        token=settings.vk.access_token, api_version=settings.vk.api_version
+        token=settings.vk_access_token, api_version=settings.vk_api_version
     )
 
 
