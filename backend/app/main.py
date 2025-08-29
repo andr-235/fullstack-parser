@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Production-ready lifespan с полной инициализацией"""
-    logger.info("🚀 Запуск VK Comments Parser v1.5.0...")
+    logger.info("🚀 Запуск VK Comments Parser v1.6.0 (DDD + Middleware)...")
 
     # Инициализируем базу данных
     try:
@@ -66,31 +66,45 @@ async def lifespan(app: FastAPI):
 # Создание production-ready FastAPI приложения
 app = FastAPI(
     title="VK Comments Parser API",
-    version="1.5.0",
+    version="1.6.0",
     description="""
-    🚀 **Улучшенная версия VK Comments Parser API**
+    🚀 **Enterprise-grade VK Comments Parser API v1.6.0**
 
-    ## ✨ Новые возможности v1.5.0:
-    - 🛡️ **Rate Limiting** - защита от перегрузок
-    - 📊 **Request Logging** - структурированное логирование
-    - 🎯 **Standardized Responses** - унифицированные ответы
+    ## 🏗️ **DDD Architecture + Middleware**
+    Полностью переработанная версия с **Domain-Driven Design** и enterprise-grade middleware
+
+    ## ✨ Новые возможности v1.6.0:
+    - 🏗️ **Domain-Driven Design** - чистая архитектура с Domain + Application слоями
+    - 🛡️ **Rate Limiting** - защита от перегрузок (60 запросов/минуту)
+    - 📊 **Request Logging** - структурированное логирование всех запросов
+    - 🎯 **Standardized Responses** - унифицированные ответы с метаданными
     - ⚡ **Performance Monitoring** - отслеживание производительности
-    - 🔍 **Request Tracking** - отслеживание запросов по ID
+    - 🔍 **Request ID Tracking** - полное отслеживание запросов
+    - 🏥 **Advanced Health Checks** - readiness/liveness проверки
+    - ⚙️ **Settings Management** - управление конфигурацией
+    - 📋 **Error Reporting** - система отчетов об ошибках
+    - 📈 **Monitoring System** - мониторинг VK групп
+    - 🔤 **Morphological Analysis** - морфологический анализ текста
 
     ## 📚 API Endpoints:
     - **Comments**: `/api/v1/comments` - работа с комментариями
     - **Groups**: `/api/v1/groups` - управление группами VK
     - **Keywords**: `/api/v1/keywords` - ключевые слова
     - **Parser**: `/api/v1/parser` - парсинг данных
-    - **Health**: `/api/v1/health` - проверка здоровья системы
+    - **Health**: `/api/v1/health` - расширенные проверки здоровья
+    - **Settings**: `/api/v1/settings` - управление настройками
+    - **Errors**: `/api/v1/reports` - отчеты об ошибках
+    - **Monitoring**: `/api/v1/monitoring` - мониторинг групп
+    - **Morphological**: `/api/v1/morphological` - морфологический анализ
 
-    ## 🔧 Улучшения:
-    - Стандартизированные ответы с метаданными
-    - Улучшенная обработка ошибок
-    - Rate limiting для защиты от DDoS
-    - Структурированное логирование всех запросов
-    - Request ID tracking для отладки
-    - Performance monitoring headers
+    ## 🔧 Enterprise-grade Улучшения:
+    - **DDD Architecture** - Domain + Application слои для чистоты кода
+    - **Middleware Stack** - rate limiting, logging, caching
+    - **Standardized API** - унифицированные ответы и ошибки
+    - **Production Monitoring** - health checks, метрики, логи
+    - **Error Handling** - комплексная обработка ошибок
+    - **Request Tracking** - полная трассировка запросов
+    - **Performance Headers** - время обработки в каждом ответе
 
     ## 📖 Документация:
     - **Swagger UI**: `/docs`

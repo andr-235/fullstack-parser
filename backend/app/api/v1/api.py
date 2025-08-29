@@ -6,18 +6,16 @@
 from typing import Dict, Any
 from fastapi import APIRouter
 
-# Импорт улучшенных роутеров
+# Импорт улучшенных роутеров (DDD + Middleware)
 from app.api.v1.routers.comments import router as comments_router
 from app.api.v1.routers.groups import router as groups_router
 from app.api.v1.routers.keywords import router as keywords_router
 from app.api.v1.routers.parser import router as parser_router
-
-# Импорт старых роутеров (пока оставляем для совместимости)
-from app.api.v1.monitoring import router as monitoring_router
-from app.api.v1.morphological import router as morphological_router
-from app.api.v1.errors import router as errors_router
-from app.api.v1.settings import router as settings_router
-from app.api.v1.health import router as health_router
+from app.api.v1.routers.health import router as health_router
+from app.api.v1.routers.settings import router as settings_router
+from app.api.v1.routers.errors import router as errors_router
+from app.api.v1.routers.monitoring import router as monitoring_router
+from app.api.v1.routers.morphological import router as morphological_router
 
 # Создаем главный роутер с метаданными
 api_router = APIRouter(
@@ -45,27 +43,35 @@ api_router.include_router(health_router, tags=["Health"])
 
 @api_router.get("/")
 async def api_info() -> Dict[str, Any]:
-    """Информация об API v1.5.0 с улучшениями"""
+    """Информация об API v1.6.0 с DDD архитектурой"""
     return {
         "service": "VK Comments Parser API",
-        "version": "v1.5.0",
-        "description": "🚀 Улучшенная версия API v1 с middleware и стандартизацией",
+        "version": "v1.6.0",
+        "description": "🚀 Enterprise-grade API с DDD архитектурой и middleware",
         "status": "✅ API улучшен - добавлены middleware, стандартизированные ответы",
         "features": [
+            "🏗️ Domain-Driven Design (DDD) архитектура",
             "🛡️ Rate limiting для защиты от перегрузок",
             "📊 Структурированное логирование запросов",
             "🎯 Стандартизированные ответы и ошибки",
             "⚡ Улучшенная производительность",
             "🔍 Детальная информация о запросах",
             "📝 Полная документация API",
+            "🏥 Расширенные health checks",
+            "⚙️ Управление настройками",
+            "📋 Система отчетов об ошибках",
         ],
         "improvements": [
+            "Domain-Driven Design Architecture",
+            "Application Services Layer",
             "Rate Limiting Middleware",
             "Request Logging Middleware",
             "Standardized Response Format",
             "Enhanced Error Handling",
             "Request ID Tracking",
             "Performance Monitoring",
+            "Health Check System",
+            "Settings Management",
         ],
         "endpoints": {
             "comments": "/api/v1/comments",
@@ -83,57 +89,8 @@ async def api_info() -> Dict[str, Any]:
             "redoc": "/redoc",
             "openapi": "/openapi.json",
         },
-        "health_check": "/api/v1/health",
-        "changelog": "Улучшена обработка ошибок, добавлены middleware",
+        "changelog": "Полная переработка с DDD архитектурой, middleware и enterprise-grade функциями",
     }
 
 
-@api_router.get("/health")
-async def health_check() -> Dict[str, Any]:
-    """Проверка здоровья системы"""
-    from datetime import datetime
-    from app.core.database import get_db_session
-
-    health_status = {
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "version": "2.0.0",
-        "services": {},
-    }
-
-    try:
-        # Проверяем подключение к базе данных
-        async with get_db_session() as db:
-            await db.execute("SELECT 1")
-            health_status["services"]["database"] = "✅ connected"
-    except Exception as e:
-        health_status["services"]["database"] = f"❌ error: {str(e)}"
-        health_status["status"] = "unhealthy"
-
-    # Проверяем основные сервисы
-    try:
-        from app.services.comment_service import comment_service
-
-        health_status["services"]["comment_service"] = "✅ loaded"
-    except Exception as e:
-        health_status["services"]["comment_service"] = f"❌ error: {str(e)}"
-
-    try:
-        from app.services.group_manager import group_manager
-
-        health_status["services"]["group_manager"] = "✅ loaded"
-    except Exception as e:
-        health_status["services"]["group_manager"] = f"❌ error: {str(e)}"
-
-    try:
-        from app.services.vk_api_service import VKAPIService
-
-        health_status["services"]["vk_api_service"] = "✅ loaded"
-    except Exception as e:
-        health_status["services"]["vk_api_service"] = f"❌ error: {str(e)}"
-
-    # Определяем общий статус
-    if any("❌" in status for status in health_status["services"].values()):
-        health_status["status"] = "degraded"
-
-    return health_status
+# Health check теперь обрабатывается через новый роутер health.py
