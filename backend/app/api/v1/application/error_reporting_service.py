@@ -502,3 +502,565 @@ class ErrorReportingService:
                 "error": str(e),
                 "timestamp": datetime.utcnow().isoformat(),
             }
+
+    # =============== МИГРАЦИЯ ErrorReportDBService В DDD ===============
+
+    async def create_error_report_db_ddd(
+        self,
+        report_id: str,
+        operation: str,
+        total_errors: int,
+        summary: Optional[Dict[str, int]] = None,
+        recommendations: Optional[List[str]] = None,
+        groups_processed: Optional[int] = None,
+        groups_successful: Optional[int] = None,
+        groups_failed: Optional[int] = None,
+        groups_skipped: Optional[int] = None,
+        processing_time_seconds: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """
+        Создает новый отчет об ошибках в базе данных (мигрировано из ErrorReportDBService)
+
+        Args:
+            report_id: ID отчета
+            operation: Операция
+            total_errors: Общее количество ошибок
+            summary: Сводка ошибок
+            recommendations: Рекомендации
+            groups_processed: Количество обработанных групп
+            groups_successful: Количество успешных групп
+            groups_failed: Количество проваленных групп
+            groups_skipped: Количество пропущенных групп
+            processing_time_seconds: Время обработки
+
+        Returns:
+            Созданный отчет об ошибках
+        """
+        try:
+            if not self.db:
+                return {
+                    "error": True,
+                    "message": "Database connection not available",
+                }
+
+            from app.models.error_report import ErrorReport
+
+            # Создаем отчет
+            error_report = ErrorReport(
+                report_id=report_id,
+                operation=operation,
+                total_errors=total_errors,
+                summary=summary,
+                recommendations=recommendations,
+                groups_processed=groups_processed,
+                groups_successful=groups_successful,
+                groups_failed=groups_failed,
+                groups_skipped=groups_skipped,
+                processing_time_seconds=processing_time_seconds,
+            )
+
+            self.db.add(error_report)
+            await self.db.commit()
+            await self.db.refresh(error_report)
+
+            return {
+                "created": True,
+                "report_id": report_id,
+                "report_db_id": error_report.id,
+                "operation": operation,
+                "total_errors": total_errors,
+                "created_at": error_report.created_at.isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error creating error report in DB: {e}")
+            return {
+                "created": False,
+                "error": str(e),
+                "report_id": report_id,
+            }
+
+    async def create_error_entry_db_ddd(
+        self,
+        error_report_id: int,
+        error_type: str,
+        severity: str,
+        message: str,
+        details: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+        stack_trace: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Создает новую запись об ошибке в базе данных (мигрировано из ErrorReportDBService)
+
+        Args:
+            error_report_id: ID отчета об ошибках
+            error_type: Тип ошибки
+            severity: Уровень серьезности
+            message: Сообщение об ошибке
+            details: Детали ошибки
+            context: Контекст ошибки
+            stack_trace: Трассировка стека
+
+        Returns:
+            Созданная запись об ошибке
+        """
+        try:
+            if not self.db:
+                return {
+                    "error": True,
+                    "message": "Database connection not available",
+                }
+
+            from app.models.error_entry import ErrorEntry
+
+            # Создаем запись об ошибке
+            error_entry = ErrorEntry(
+                error_report_id=error_report_id,
+                error_type=error_type,
+                severity=severity,
+                message=message,
+                details=details,
+                context=context,
+                stack_trace=stack_trace,
+            )
+
+            self.db.add(error_entry)
+            await self.db.commit()
+            await self.db.refresh(error_entry)
+
+            return {
+                "created": True,
+                "entry_id": error_entry.id,
+                "error_report_id": error_report_id,
+                "error_type": error_type,
+                "severity": severity,
+                "message": message,
+                "created_at": error_entry.created_at.isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error creating error entry in DB: {e}")
+            return {
+                "created": False,
+                "error": str(e),
+                "error_report_id": error_report_id,
+            }
+
+    async def get_error_reports_db_ddd(
+        self,
+        page: int = 1,
+        size: int = 20,
+        error_type: Optional[str] = None,
+        severity: Optional[str] = None,
+        operation: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        is_acknowledged: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        """
+        Получить отчеты об ошибках из базы данных (мигрировано из ErrorReportDBService)
+
+        Args:
+            page: Номер страницы
+            size: Размер страницы
+            error_type: Фильтр по типу ошибки
+            severity: Фильтр по уровню серьезности
+            operation: Фильтр по операции
+            start_date: Начальная дата
+            end_date: Конечная дата
+            is_acknowledged: Фильтр по подтверждению
+
+        Returns:
+            Отчеты об ошибках с пагинацией
+        """
+        try:
+            if not self.db:
+                return {
+                    "error": True,
+                    "message": "Database connection not available",
+                }
+
+            from app.models.error_report import ErrorReport
+            from app.models.error_entry import ErrorEntry
+
+            # Строим запрос
+            query = select(ErrorReport).options(
+                selectinload(ErrorReport.error_entries)
+            )
+
+            # Применяем фильтры
+            filters = []
+            if operation:
+                filters.append(ErrorReport.operation == operation)
+            if is_acknowledged is not None:
+                filters.append(ErrorReport.is_acknowledged == is_acknowledged)
+            if start_date:
+                filters.append(ErrorReport.created_at >= start_date)
+            if end_date:
+                filters.append(ErrorReport.created_at <= end_date)
+
+            if filters:
+                query = query.where(and_(*filters))
+
+            # Сортировка
+            query = query.order_by(desc(ErrorReport.created_at))
+
+            # Пагинация
+            offset = (page - 1) * size
+            query = query.offset(offset).limit(size)
+
+            # Выполняем запрос
+            result = await self.db.execute(query)
+            reports = result.scalars().all()
+
+            # Получаем общее количество
+            count_query = select(func.count(ErrorReport.id))
+            if filters:
+                count_query = count_query.where(and_(*filters))
+            total_result = await self.db.execute(count_query)
+            total = total_result.scalar()
+
+            # Форматируем результаты
+            reports_data = []
+            for report in reports:
+                reports_data.append(
+                    {
+                        "id": report.id,
+                        "report_id": report.report_id,
+                        "operation": report.operation,
+                        "total_errors": report.total_errors,
+                        "summary": report.summary,
+                        "recommendations": report.recommendations,
+                        "is_acknowledged": report.is_acknowledged,
+                        "created_at": report.created_at.isoformat(),
+                        "error_entries_count": len(report.error_entries),
+                    }
+                )
+
+            return {
+                "reports": reports_data,
+                "total": total,
+                "page": page,
+                "size": size,
+                "pages": (total + size - 1) // size,
+                "has_next": page * size < total,
+                "has_prev": page > 1,
+                "retrieved_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error getting error reports from DB: {e}")
+            return {
+                "reports": [],
+                "total": 0,
+                "error": str(e),
+                "retrieved_at": datetime.utcnow().isoformat(),
+            }
+
+    async def get_error_report_db_ddd(self, report_id: str) -> Dict[str, Any]:
+        """
+        Получить конкретный отчет об ошибках из базы данных (мигрировано из ErrorReportDBService)
+
+        Args:
+            report_id: ID отчета
+
+        Returns:
+            Отчет об ошибках с деталями
+        """
+        try:
+            if not self.db:
+                return {
+                    "error": True,
+                    "message": "Database connection not available",
+                }
+
+            from app.models.error_report import ErrorReport
+
+            # Получаем отчет с записями об ошибках
+            query = (
+                select(ErrorReport)
+                .options(selectinload(ErrorReport.error_entries))
+                .where(ErrorReport.report_id == report_id)
+            )
+
+            result = await self.db.execute(query)
+            report = result.scalar_one_or_none()
+
+            if not report:
+                return {
+                    "found": False,
+                    "report_id": report_id,
+                    "message": "Report not found",
+                }
+
+            # Форматируем записи об ошибках
+            error_entries = []
+            for entry in report.error_entries:
+                error_entries.append(
+                    {
+                        "id": entry.id,
+                        "error_type": entry.error_type,
+                        "severity": entry.severity,
+                        "message": entry.message,
+                        "details": entry.details,
+                        "context": entry.context,
+                        "stack_trace": entry.stack_trace,
+                        "created_at": entry.created_at.isoformat(),
+                    }
+                )
+
+            return {
+                "found": True,
+                "report": {
+                    "id": report.id,
+                    "report_id": report.report_id,
+                    "operation": report.operation,
+                    "total_errors": report.total_errors,
+                    "summary": report.summary,
+                    "recommendations": report.recommendations,
+                    "groups_processed": report.groups_processed,
+                    "groups_successful": report.groups_successful,
+                    "groups_failed": report.groups_failed,
+                    "groups_skipped": report.groups_skipped,
+                    "processing_time_seconds": report.processing_time_seconds,
+                    "is_acknowledged": report.is_acknowledged,
+                    "created_at": report.created_at.isoformat(),
+                    "updated_at": (
+                        report.updated_at.isoformat()
+                        if report.updated_at
+                        else None
+                    ),
+                },
+                "error_entries": error_entries,
+                "error_entries_count": len(error_entries),
+                "retrieved_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error getting error report from DB: {e}")
+            return {
+                "found": False,
+                "report_id": report_id,
+                "error": str(e),
+            }
+
+    async def acknowledge_error_report_db_ddd(
+        self, report_id: str
+    ) -> Dict[str, Any]:
+        """
+        Подтвердить отчет об ошибках в базе данных (мигрировано из ErrorReportDBService)
+
+        Args:
+            report_id: ID отчета
+
+        Returns:
+            Результат подтверждения
+        """
+        try:
+            if not self.db:
+                return {
+                    "error": True,
+                    "message": "Database connection not available",
+                }
+
+            from app.models.error_report import ErrorReport
+
+            # Находим отчет
+            query = select(ErrorReport).where(
+                ErrorReport.report_id == report_id
+            )
+            result = await self.db.execute(query)
+            report = result.scalar_one_or_none()
+
+            if not report:
+                return {
+                    "acknowledged": False,
+                    "report_id": report_id,
+                    "error": "Report not found",
+                }
+
+            # Подтверждаем отчет
+            report.is_acknowledged = True
+            report.updated_at = datetime.utcnow()
+
+            await self.db.commit()
+
+            return {
+                "acknowledged": True,
+                "report_id": report_id,
+                "report_db_id": report.id,
+                "acknowledged_at": report.updated_at.isoformat(),
+                "message": "Report acknowledged successfully",
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error acknowledging error report: {e}")
+            return {
+                "acknowledged": False,
+                "report_id": report_id,
+                "error": str(e),
+            }
+
+    async def delete_error_report_db_ddd(
+        self, report_id: str
+    ) -> Dict[str, Any]:
+        """
+        Удалить отчет об ошибках из базы данных (мигрировано из ErrorReportDBService)
+
+        Args:
+            report_id: ID отчета
+
+        Returns:
+            Результат удаления
+        """
+        try:
+            if not self.db:
+                return {
+                    "error": True,
+                    "message": "Database connection not available",
+                }
+
+            from app.models.error_report import ErrorReport
+
+            # Находим отчет
+            query = select(ErrorReport).where(
+                ErrorReport.report_id == report_id
+            )
+            result = await self.db.execute(query)
+            report = result.scalar_one_or_none()
+
+            if not report:
+                return {
+                    "deleted": False,
+                    "report_id": report_id,
+                    "error": "Report not found",
+                }
+
+            # Удаляем отчет (записи об ошибках удалятся автоматически через каскад)
+            await self.db.delete(report)
+            await self.db.commit()
+
+            return {
+                "deleted": True,
+                "report_id": report_id,
+                "report_db_id": report.id,
+                "message": "Report deleted successfully",
+                "deleted_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error deleting error report: {e}")
+            return {
+                "deleted": False,
+                "report_id": report_id,
+                "error": str(e),
+            }
+
+    async def get_error_stats_db_ddd(self, days: int = 7) -> Dict[str, Any]:
+        """
+        Получить статистику ошибок из базы данных (мигрировано из ErrorReportDBService)
+
+        Args:
+            days: Количество дней для анализа
+
+        Returns:
+            Статистика ошибок
+        """
+        try:
+            if not self.db:
+                return {
+                    "error": True,
+                    "message": "Database connection not available",
+                }
+
+            from app.models.error_report import ErrorReport
+            from app.models.error_entry import ErrorEntry
+
+            # Вычисляем дату начала периода
+            start_date = datetime.utcnow() - timedelta(days=days)
+
+            # Получаем общее количество отчетов
+            reports_query = select(func.count(ErrorReport.id)).where(
+                ErrorReport.created_at >= start_date
+            )
+            total_reports = await self.db.scalar(reports_query) or 0
+
+            # Получаем общее количество записей об ошибках
+            entries_query = (
+                select(func.count(ErrorEntry.id))
+                .select_from(ErrorEntry)
+                .join(ErrorReport)
+                .where(ErrorReport.created_at >= start_date)
+            )
+            total_entries = await self.db.scalar(entries_query) or 0
+
+            # Статистика по типам ошибок
+            error_types_query = (
+                select(ErrorEntry.error_type, func.count(ErrorEntry.id))
+                .select_from(ErrorEntry)
+                .join(ErrorReport)
+                .where(ErrorReport.created_at >= start_date)
+                .group_by(ErrorEntry.error_type)
+            )
+            error_types_result = await self.db.execute(error_types_query)
+            error_types_stats = {
+                row[0]: row[1] for row in error_types_result.all()
+            }
+
+            # Статистика по уровням серьезности
+            severity_query = (
+                select(ErrorEntry.severity, func.count(ErrorEntry.id))
+                .select_from(ErrorEntry)
+                .join(ErrorReport)
+                .where(ErrorReport.created_at >= start_date)
+                .group_by(ErrorEntry.severity)
+            )
+            severity_result = await self.db.execute(severity_query)
+            severity_stats = {row[0]: row[1] for row in severity_result.all()}
+
+            # Статистика по операциям
+            operations_query = (
+                select(ErrorReport.operation, func.count(ErrorReport.id))
+                .where(ErrorReport.created_at >= start_date)
+                .group_by(ErrorReport.operation)
+            )
+            operations_result = await self.db.execute(operations_query)
+            operations_stats = {
+                row[0]: row[1] for row in operations_result.all()
+            }
+
+            # Количество подтвержденных отчетов
+            acknowledged_query = (
+                select(func.count(ErrorReport.id))
+                .where(ErrorReport.created_at >= start_date)
+                .where(ErrorReport.is_acknowledged == True)
+            )
+            acknowledged_reports = (
+                await self.db.scalar(acknowledged_query) or 0
+            )
+
+            return {
+                "period_days": days,
+                "start_date": start_date.isoformat(),
+                "end_date": datetime.utcnow().isoformat(),
+                "total_reports": total_reports,
+                "total_error_entries": total_entries,
+                "acknowledged_reports": acknowledged_reports,
+                "unacknowledged_reports": total_reports - acknowledged_reports,
+                "error_types": error_types_stats,
+                "severity_levels": severity_stats,
+                "operations": operations_stats,
+                "average_errors_per_report": total_entries
+                / max(total_reports, 1),
+                "generated_at": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error getting error stats from DB: {e}")
+            return {
+                "error": True,
+                "message": str(e),
+                "period_days": days,
+                "generated_at": datetime.utcnow().isoformat(),
+            }
