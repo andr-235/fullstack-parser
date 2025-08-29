@@ -214,27 +214,31 @@ class GroupValidator:
             differences = {}
 
             # Сравниваем основные поля
-            if db_group.name != vk_data.get("name"):
+            if "name" in vk_data and db_group.name != vk_data.get("name"):
                 differences["name"] = {
                     "old": db_group.name,
                     "new": vk_data.get("name"),
                 }
 
-            if db_group.screen_name != vk_data.get("screen_name"):
+            if (
+                "screen_name" in vk_data
+                and db_group.screen_name != vk_data.get("screen_name")
+            ):
                 differences["screen_name"] = {
                     "old": db_group.screen_name,
                     "new": vk_data.get("screen_name"),
                 }
 
-            if db_group.vk_id != vk_data.get("id"):
+            if "id" in vk_data and db_group.vk_id != vk_data.get("id"):
                 differences["vk_id"] = {
                     "old": db_group.vk_id,
                     "new": vk_data.get("id"),
                 }
 
             # Сравниваем количество участников (если есть)
-            if hasattr(db_group, "member_count") and vk_data.get(
-                "members_count"
+            if (
+                hasattr(db_group, "member_count")
+                and "members_count" in vk_data
             ):
                 if db_group.member_count != vk_data.get("members_count"):
                     differences["member_count"] = {
@@ -287,3 +291,58 @@ class GroupValidator:
         except Exception as e:
             logger.error(f"Error validating multiple groups: {e}")
             return {}
+
+    async def refresh_group_from_vk(
+        self, db: AsyncSession, group_id: int
+    ) -> Optional[VKGroup]:
+        """
+        Обновить данные группы из VK API.
+
+        Args:
+            db: Сессия базы данных
+            group_id: ID группы в базе данных
+
+        Returns:
+            Обновленная группа или None если не найдена
+        """
+        try:
+            from app.models.vk_group import VKGroup
+            from sqlalchemy import select
+
+            # Получаем группу из БД
+            result = await db.execute(
+                select(VKGroup).where(VKGroup.id == group_id)
+            )
+            db_group = result.scalar_one_or_none()
+
+            if not db_group:
+                return None
+
+            # Получаем актуальные данные из VK API
+            vk_data = await self.refresh_group_data(db_group)
+            if not vk_data:
+                return db_group  # Возвращаем без изменений если не удалось получить данные
+
+            # Сравниваем и обновляем только изменившиеся поля
+            differences = await self.compare_with_vk_data(db_group, vk_data)
+
+            if differences:
+                # Обновляем поля в группе
+                for field, change in differences.items():
+                    if hasattr(db_group, field):
+                        setattr(db_group, field, change["new"])
+
+                await db.commit()
+                await db.refresh(db_group)
+
+                logger.info(
+                    f"Group refreshed from VK API: {db_group.screen_name}",
+                    group_id=db_group.id,
+                    updated_fields=list(differences.keys()),
+                )
+
+            return db_group
+
+        except Exception as e:
+            logger.error(f"Error refreshing group {group_id} from VK: {e}")
+            return None

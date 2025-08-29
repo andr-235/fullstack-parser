@@ -31,10 +31,21 @@ from app.schemas.vk_group import (
     VKGroupUploadResponse,
 )
 
-# from app.core.config import settings  # Удалено как неиспользуемое
-# from app.services.vk_api_service import VKAPIService  # Удалено как неиспользуемое
-from app.services.group_service import group_service
+# Импорт новых сервисов после рефакторинга
+from app.services.group_manager import GroupManager
+from app.services.group_validator import GroupValidator
+from app.services.group_file_importer import GroupFileImporter
+from app.services.group_stats_service import GroupStatsService
 from app.services.vk_api_service import VKAPIService
+
+# Инициализация новых сервисов
+group_manager = GroupManager()
+group_stats_service = GroupStatsService()
+vk_service = VKAPIService(
+    token=settings.vk.access_token, api_version=settings.vk.api_version
+)
+group_validator = GroupValidator(vk_service)
+group_file_importer = GroupFileImporter(group_manager, group_validator)
 
 router = APIRouter(tags=["Groups"])
 
@@ -75,11 +86,8 @@ async def upload_groups_from_file(
     - is_active: Активны ли загружаемые группы
     - max_posts_to_check: Максимум постов для проверки
     """
-    return await group_service.upload_groups_from_file(
-        db=db,
-        file=file,
-        is_active=is_active,
-        max_posts_to_check=max_posts_to_check,
+    return await group_file_importer.import_from_csv(
+        db=db, file=file, validate_groups=True
     )
 
 
@@ -514,7 +522,7 @@ async def update_group(
     db: AsyncSession = Depends(get_db),
 ) -> VKGroupRead:
     """Обновить настройки группы"""
-    group = await group_service.update_group(db, group_id, group_update)
+    group = await group_manager.update_group(db, group_id, group_update)
     return VKGroupRead.model_validate(group)
 
 
@@ -524,7 +532,7 @@ async def refresh_group_info(
     db: AsyncSession = Depends(get_db),
 ) -> VKGroupRead:
     """Обновить информацию о группе из VK API"""
-    group = await group_service.refresh_group_from_vk(db, group_id)
+    group = await group_validator.refresh_group_from_vk(db, group_id)
     return VKGroupRead.model_validate(group)
 
 
@@ -534,7 +542,7 @@ async def delete_group(
     db: AsyncSession = Depends(get_db),
 ):
     """Удалить группу"""
-    await group_service.delete_group(db, group_id)
+    await group_manager.delete_group(db, group_id)
     return
 
 
@@ -545,4 +553,4 @@ async def get_group_stats(
     """
     Получить статистику по группе
     """
-    return await group_service.get_group_stats(db, group_id)
+    return await group_stats_service.get_group_stats(db, group_id)
