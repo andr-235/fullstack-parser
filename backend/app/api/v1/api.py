@@ -6,6 +6,14 @@ from typing import Dict, Any
 from fastapi import APIRouter
 
 from app.api.v1.comments import router as comments_router
+from app.api.v1.groups import router as groups_router
+from app.api.v1.keywords import router as keywords_router
+from app.api.v1.parser import router as parser_router
+from app.api.v1.monitoring import router as monitoring_router
+from app.api.v1.morphological import router as morphological_router
+from app.api.v1.errors import router as errors_router
+from app.api.v1.settings import router as settings_router
+from app.api.v1.health import router as health_router
 
 # Создаем главный роутер с метаданными
 api_router = APIRouter(
@@ -19,6 +27,14 @@ api_router = APIRouter(
 
 # Подключаем роутеры
 api_router.include_router(comments_router, tags=["Comments"])
+api_router.include_router(groups_router, tags=["Groups"])
+api_router.include_router(keywords_router, tags=["Keywords"])
+api_router.include_router(parser_router, tags=["Parser"])
+api_router.include_router(monitoring_router, tags=["Monitoring"])
+api_router.include_router(morphological_router, tags=["Morphological"])
+api_router.include_router(errors_router, tags=["Errors"])
+api_router.include_router(settings_router, tags=["Settings"])
+api_router.include_router(health_router, tags=["Health"])
 
 
 @api_router.get("/")
