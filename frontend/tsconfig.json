@@ -20,10 +20,16 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@/shared/*": ["./shared/*"],
-      "@/shared/lib": ["./shared/lib", "./shared/lib/index", "./shared/lib.ts"],
-      "@/shared/lib/*": ["./shared/lib/*"]
+      "@/*": ["./*", "./src/*"],
+      "@/shared/*": ["./shared/*", "./src/shared/*"],
+      "@/shared/lib": [
+        "./shared/lib/index",
+        "./shared/lib",
+        "./src/shared/lib/index",
+        "./src/shared/lib",
+        "./shared/lib.ts"
+      ],
+      "@/shared/lib/*": ["./shared/lib/*", "./src/shared/lib/*"]
     },
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,
