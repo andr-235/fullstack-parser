@@ -807,16 +807,16 @@ class VKAPIService(BaseVKAPIService):
             time_until_reset=client_stats["time_until_reset"],
         )
 
-    def get_resilience_stats(self) -> Dict[str, Any]:
+    async def get_resilience_stats(self) -> Dict[str, Any]:
         """
         Получить статистику устойчивости системы
 
         Returns:
             Dict[str, Any]: Статистика circuit breakers и rate limiters
         """
-        # Базовый метод синхронный; приводим к dict напрямую
-        base_stats = super().get_resilience_stats()
-        return dict(base_stats)
+        # Базовый метод асинхронный; вызываем его асинхронно
+        base_stats = await super().get_resilience_stats()
+        return base_stats
 
     async def get_stats(self) -> Dict[str, Any]:
         """
