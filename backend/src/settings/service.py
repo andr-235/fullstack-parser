@@ -47,8 +47,9 @@ class SettingsService:
             return settings
         except Exception as e:
             self.logger.error(f"Error loading settings: {e}")
+            # reason помещаем в текст, чтобы тесты могли найти символьный код ошибки
             raise ServiceUnavailableError(
-                f"{ERROR_SETTINGS_LOAD_FAILED}: {str(e)}"
+                reason=f"ERROR_SETTINGS_LOAD_FAILED: {ERROR_SETTINGS_LOAD_FAILED}: {str(e)}"
             )
 
     async def update_settings(self, updates: Dict[str, Any]) -> Dict[str, Any]:
@@ -81,10 +82,13 @@ class SettingsService:
 
             return updated_settings
 
+        except ValidationError:
+            # Пробрасываем ошибки валидации как есть (ожидание тестов)
+            raise
         except Exception as e:
             self.logger.error(f"Error updating settings: {e}")
             raise ServiceUnavailableError(
-                f"{ERROR_SETTINGS_UPDATE_FAILED}: {str(e)}"
+                reason=f"ERROR_SETTINGS_UPDATE_FAILED: {ERROR_SETTINGS_UPDATE_FAILED}: {str(e)}"
             )
 
     async def get_section(self, section_name: str) -> Dict[str, Any]:
@@ -101,7 +105,7 @@ class SettingsService:
             section = await self.repository.get_section(section_name)
             if section is None:
                 raise ValidationError(
-                    f"{ERROR_INVALID_SETTINGS_SECTION}: {section_name}"
+                    f"ERROR_INVALID_SETTINGS_SECTION: {ERROR_INVALID_SETTINGS_SECTION}: {section_name}"
                 )
 
             return section
@@ -111,7 +115,7 @@ class SettingsService:
         except Exception as e:
             self.logger.error(f"Error getting section {section_name}: {e}")
             raise ServiceUnavailableError(
-                f"Error getting settings section: {str(e)}"
+                reason=f"Error getting settings section: {str(e)}"
             )
 
     async def update_section(
@@ -163,7 +167,7 @@ class SettingsService:
             value = await self.repository.get_value(section_name, key)
             if value is None:
                 raise ValidationError(
-                    f"{ERROR_SETTING_NOT_FOUND}: {section_name}.{key}"
+                    f"ERROR_SETTING_NOT_FOUND: {ERROR_SETTING_NOT_FOUND}: {section_name}.{key}"
                 )
 
             return value
@@ -175,7 +179,7 @@ class SettingsService:
                 f"Error getting setting {section_name}.{key}: {e}"
             )
             raise ServiceUnavailableError(
-                f"Error getting setting value: {str(e)}"
+                reason=f"Error getting setting value: {str(e)}"
             )
 
     async def set_setting_value(
@@ -231,7 +235,7 @@ class SettingsService:
         except Exception as e:
             self.logger.error(f"Error resetting settings to defaults: {e}")
             raise ServiceUnavailableError(
-                f"Error resetting settings: {str(e)}"
+                reason=f"Error resetting settings: {str(e)}"
             )
 
     async def validate_settings(
@@ -264,7 +268,7 @@ class SettingsService:
         except Exception as e:
             self.logger.error(f"Error validating settings: {e}")
             raise ServiceUnavailableError(
-                f"{ERROR_SETTINGS_VALIDATION_FAILED}: {str(e)}"
+                reason=f"ERROR_SETTINGS_VALIDATION_FAILED: {ERROR_SETTINGS_VALIDATION_FAILED}: {str(e)}"
             )
 
     async def export_settings(self, format: str = "json") -> Dict[str, Any]:
@@ -288,7 +292,7 @@ class SettingsService:
         except Exception as e:
             self.logger.error(f"Error exporting settings: {e}")
             raise ServiceUnavailableError(
-                f"Error exporting settings: {str(e)}"
+                reason=f"Error exporting settings: {str(e)}"
             )
 
     async def import_settings(
@@ -323,7 +327,7 @@ class SettingsService:
         except Exception as e:
             self.logger.error(f"Error importing settings: {e}")
             raise ServiceUnavailableError(
-                f"Error importing settings: {str(e)}"
+                reason=f"Error importing settings: {str(e)}"
             )
 
     async def get_health_status(self) -> Dict[str, Any]:

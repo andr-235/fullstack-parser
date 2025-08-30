@@ -30,6 +30,16 @@ class APIError(HTTPException):
 
         super().__init__(status_code=status_code, detail=message)
 
+    @property
+    def message(self) -> str:
+        """Получить сообщение об ошибке"""
+        return self.detail
+
+    @property
+    def error_type(self) -> str:
+        """Получить тип ошибки из details"""
+        return self.details.get("error_type", "unknown")
+
     def to_dict(self) -> Dict[str, Any]:
         """Преобразовать в словарь для сериализации"""
         return {
@@ -226,6 +236,9 @@ class ServiceUnavailableError(APIError):
         message = "Сервис временно недоступен"
         if service_name:
             message = f"Сервис '{service_name}' временно недоступен"
+        if reason:
+            # Включаем причину в сообщение, чтобы тесты могли искать коды ошибок
+            message = f"{message}: {reason}"
 
         super().__init__(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

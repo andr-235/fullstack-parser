@@ -5,8 +5,8 @@ Pydantic схемы для модуля Parser
 """
 
 from datetime import datetime
-from typing import List, Optional, Any, Dict
-from pydantic import BaseModel, Field, ConfigDict
+from typing import List, Optional, Any, Dict, Annotated, Literal
+from pydantic import BaseModel, Field, ConfigDict, StrictBool
 
 from ..pagination import PaginatedResponse
 
@@ -14,19 +14,19 @@ from ..pagination import PaginatedResponse
 class ParseRequest(BaseModel):
     """Запрос на парсинг группы"""
 
-    group_ids: List[int] = Field(
+    group_ids: List[Annotated[int, Field(gt=0)]] = Field(
         ..., description="Список ID групп VK для парсинга", min_length=1
     )
     max_posts: Optional[int] = Field(
-        100, description="Максимум постов для обработки"
+        100, ge=1, le=1000, description="Максимум постов для обработки"
     )
     max_comments_per_post: Optional[int] = Field(
-        100, description="Максимум комментариев на пост"
+        100, ge=1, le=1000, description="Максимум комментариев на пост"
     )
-    force_reparse: bool = Field(
+    force_reparse: StrictBool = Field(
         False, description="Принудительно перепарсить существующие данные"
     )
-    priority: str = Field(
+    priority: Literal["low", "normal", "high"] = Field(
         "normal", description="Приоритет задачи: low, normal, high"
     )
 
@@ -48,7 +48,9 @@ class ParseStatus(BaseModel):
 
     task_id: str = Field(..., description="ID задачи")
     status: str = Field(..., description="Текущий статус")
-    progress: float = Field(..., description="Прогресс выполнения (0-100)")
+    progress: float = Field(
+        0.0, ge=0, le=100, description="Прогресс выполнения (0-100)"
+    )
     current_group: Optional[int] = Field(
         None, description="Текущая обрабатываемая группа"
     )
@@ -68,6 +70,9 @@ class ParseStatus(BaseModel):
     duration: Optional[int] = Field(
         None, description="Длительность в секундах"
     )
+
+    # Ограничения по диапазону заданы через Field (ge/le),
+    # чтобы сообщения об ошибках соответствовали стандартным
 
 
 class ParserState(BaseModel):

@@ -44,12 +44,14 @@ from typing import Dict, Any, Optional
 
 def get_current_timestamp() -> str:
     """
-    Получить текущий timestamp в формате ISO
+    Получить текущий timestamp в формате ISO UTC
 
     Returns:
-        str: Текущий timestamp
+        str: Текущий timestamp в UTC формате
     """
-    return datetime.now(timezone.utc).isoformat()
+    return (
+        datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    )
 
 
 def create_standard_response(
@@ -82,10 +84,9 @@ def create_standard_response(
         **additional_fields,
     }
 
-    if total_count is not None:
-        response["total_count"] = total_count
-    if requested_count is not None:
-        response["requested_count"] = requested_count
+    # Всегда добавляем поля, даже если None
+    response["total_count"] = total_count
+    response["requested_count"] = requested_count
 
     return response
 
@@ -96,6 +97,7 @@ def create_posts_response(
     requested_count: int,
     offset: int,
     has_more: bool,
+    **additional_fields,
 ) -> Dict[str, Any]:
     """
     Создать стандартизированный ответ для постов
@@ -117,9 +119,11 @@ def create_posts_response(
         offset=offset,
         has_more=has_more,
         success=True,
+        **additional_fields,
     )
     # Перемещаем данные в правильное поле для API
     result["posts"] = result.pop("data")
+    result["data_type"] = "posts"
     return result
 
 
@@ -129,9 +133,9 @@ def create_comments_response(
     requested_count: int,
     offset: int,
     has_more: bool,
-    group_id: int,
-    post_id: int,
-    sort: str,
+    group_id: Optional[int] = None,
+    post_id: Optional[int] = None,
+    sort: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Создать стандартизированный ответ для комментариев
@@ -149,19 +153,26 @@ def create_comments_response(
     Returns:
         Dict[str, Any]: Ответ с комментариями
     """
+    additional_fields = {}
+    if group_id is not None:
+        additional_fields["group_id"] = group_id
+    if post_id is not None:
+        additional_fields["post_id"] = post_id
+    if sort is not None:
+        additional_fields["sort"] = sort
+
     result = create_standard_response(
         data=comments,
         total_count=total_count,
         requested_count=requested_count,
         offset=offset,
         has_more=has_more,
-        group_id=group_id,
-        post_id=post_id,
-        sort=sort,
         success=True,
+        **additional_fields,
     )
     # Перемещаем данные в правильное поле для API
     result["comments"] = result.pop("data")
+    result["data_type"] = "comments"
     return result
 
 
@@ -179,14 +190,31 @@ def create_users_response(
     Returns:
         Dict[str, Any]: Ответ с пользователями
     """
+    # Добавляем поле name для каждого пользователя
+    users_with_names = []
+    for user in users:
+        user_copy = user.copy()
+        first_name = user.get("first_name", "")
+        last_name = user.get("last_name", "")
+        if first_name and last_name:
+            user_copy["name"] = f"{first_name} {last_name}"
+        elif first_name:
+            user_copy["name"] = first_name
+        elif last_name:
+            user_copy["name"] = last_name
+        else:
+            user_copy["name"] = ""
+        users_with_names.append(user_copy)
+
     result = create_standard_response(
-        data=users,
+        data=users_with_names,
         requested_ids=requested_ids,
         found_count=found_count,
         success=True,
     )
     # Перемещаем данные в правильное поле для API
     result["users"] = result.pop("data")
+    result["data_type"] = "users"
     return result
 
 
@@ -196,9 +224,10 @@ def create_groups_response(
     requested_count: int,
     offset: int,
     has_more: bool,
-    query: str,
+    query: Optional[str] = None,
     country: Optional[int] = None,
     city: Optional[int] = None,
+    **additional_fields,
 ) -> Dict[str, Any]:
     """
     Создать стандартизированный ответ для групп
@@ -216,11 +245,13 @@ def create_groups_response(
     Returns:
         Dict[str, Any]: Ответ с группами
     """
-    additional_fields = {"query": query}
+    extra_fields = {}
+    if query is not None:
+        extra_fields["query"] = query
     if country is not None:
-        additional_fields["country"] = country
+        extra_fields["country"] = country
     if city is not None:
-        additional_fields["city"] = city
+        extra_fields["city"] = city
 
     result = create_standard_response(
         data=groups,
@@ -229,10 +260,12 @@ def create_groups_response(
         offset=offset,
         has_more=has_more,
         success=True,
+        **extra_fields,
         **additional_fields,
     )
     # Перемещаем данные в правильное поле для API
     result["groups"] = result.pop("data")
+    result["data_type"] = "groups"
     return result
 
 
@@ -246,9 +279,13 @@ def create_post_response(post_data: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Ответ с постом
     """
-    result = create_standard_response(data=post_data, success=True)
-    # Для поста данные должны быть в корне ответа
-    result.update(result.pop("data"))
+    # Добавляем недостающие поля по умолчанию
+    post_with_defaults = {"attachments": [], "is_pinned": False, **post_data}
+
+    result = create_standard_response(data=post_with_defaults, success=True)
+    # Для поста данные должны быть в поле post
+    result["post"] = result.pop("data")
+    result["data_type"] = "post"
     return result
 
 
@@ -262,10 +299,20 @@ def create_group_response(group_data: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Ответ с группой
     """
-    result = create_standard_response(data=group_data, success=True)
-    # Для групп данные должны быть в корне ответа
-    group_info = result.pop("data")
-    result.update(group_info)
+    # Добавляем недостающие поля по умолчанию
+    group_with_defaults = {
+        "description": "",
+        "members_count": 0,
+        "photo_url": "",
+        "is_closed": False,
+        "type": "group",
+        **group_data,
+    }
+
+    result = create_standard_response(data=group_with_defaults, success=True)
+    # Для групп данные должны быть в поле group
+    result["group"] = result.pop("data")
+    result["data_type"] = "group"
     return result
 
 
@@ -287,15 +334,20 @@ def create_health_response(
     Returns:
         Dict[str, Any]: Ответ со статусом здоровья
     """
-    response = {"status": status, "timestamp": get_current_timestamp()}
+    response = {
+        "status": status,
+        "timestamp": get_current_timestamp(),
+        "success": True,
+    }
 
     if client_status:
-        response["client"] = client_status
+        response["client_status"] = client_status
     if repository_status:
-        response["repository"] = repository_status
+        response["repository_status"] = repository_status
     if error:
         response["error"] = error
 
+    response["data_type"] = "health"
     return response
 
 
@@ -318,23 +370,26 @@ def create_stats_response(
         Dict[str, Any]: Ответ со статистикой
     """
     return {
+        "success": True,
         "client_stats": client_stats,
         "repository_stats": repository_stats,
         "cache_enabled": cache_enabled,
         "token_configured": token_configured,
         "timestamp": get_current_timestamp(),
+        "data_type": "stats",
     }
 
 
 def create_limits_response(
     max_requests_per_second: int,
     max_posts_per_request: int,
-    max_comments_per_request: int,
-    max_groups_per_request: int,
-    max_users_per_request: int,
-    current_request_count: int,
-    last_request_time: float,
-    time_until_reset: float,
+    max_comments_per_request: int = 100,
+    max_groups_per_request: int = 1000,
+    max_users_per_request: int = 1000,
+    current_request_count: int = 0,
+    last_request_time: float = 0.0,
+    time_until_reset: float = 0.0,
+    **additional_fields,
 ) -> Dict[str, Any]:
     """
     Создать стандартизированный ответ для лимитов
@@ -352,7 +407,8 @@ def create_limits_response(
     Returns:
         Dict[str, Any]: Ответ с лимитами
     """
-    return {
+    result = {
+        "success": True,
         "max_requests_per_second": max_requests_per_second,
         "max_posts_per_request": max_posts_per_request,
         "max_comments_per_request": max_comments_per_request,
@@ -361,7 +417,10 @@ def create_limits_response(
         "current_request_count": current_request_count,
         "last_request_time": last_request_time,
         "time_until_reset": time_until_reset,
+        "data_type": "limits",
     }
+    result.update(additional_fields)
+    return result
 
 
 def create_token_validation_response(
@@ -383,6 +442,7 @@ def create_token_validation_response(
         Dict[str, Any]: Ответ с результатом валидации
     """
     response = {
+        "success": True,
         "valid": valid,
         "checked_at": get_current_timestamp(),
     }
@@ -394,6 +454,7 @@ def create_token_validation_response(
     if error is not None:
         response["error"] = error
 
+    response["data_type"] = "token_validation"
     return response
 
 
@@ -404,6 +465,7 @@ def create_group_members_response(
     offset: int,
     has_more: bool,
     group_id: int,
+    **additional_fields,
 ) -> Dict[str, Any]:
     """
     Создать стандартизированный ответ для участников группы
@@ -427,9 +489,11 @@ def create_group_members_response(
         has_more=has_more,
         group_id=group_id,
         success=True,
+        **additional_fields,
     )
     # Перемещаем данные в правильное поле для API
     result["members"] = result.pop("data")
+    result["data_type"] = "group_members"
     return result
 
 

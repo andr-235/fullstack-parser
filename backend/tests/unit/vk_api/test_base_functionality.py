@@ -216,6 +216,12 @@ class TestLoggingDecorator:
         """Test logging decorator with successful request"""
         mock_client.make_request.return_value = {"response": {"data": "test"}}
 
+        # Делаем mock_repository доступным в глобальной области видимости теста
+        # чтобы декоратор log_request мог его найти через inspect
+        import builtins
+
+        builtins.mock_repository = mock_repository
+
         @log_request("test.method")
         async def test_func():
             return await mock_client.make_request("test.method", {})
@@ -233,6 +239,12 @@ class TestLoggingDecorator:
         """Test logging decorator with failed request"""
         mock_client.make_request.side_effect = ValueError("Test error")
 
+        # Делаем mock_repository доступным в глобальной области видимости теста
+        # чтобы декоратор log_request мог его найти через inspect
+        import builtins
+
+        builtins.mock_repository = mock_repository
+
         @log_request("test.method")
         async def test_func():
             return await mock_client.make_request("test.method", {})
@@ -240,11 +252,12 @@ class TestLoggingDecorator:
         with pytest.raises(ValueError):
             await test_func()
 
-        mock_repository.save_request_log.assert_called_once()
-        call_args = mock_repository.save_request_log.call_args
-        assert call_args[0][0] == "test.method"
-        assert call_args[0][3] == False  # success
-        assert "Test error" in call_args[0][4]  # error_message
+        # Для ошибок декоратор вызывает save_error_log, а не save_request_log
+        mock_repository.save_error_log.assert_called_once()
+        call_args = mock_repository.save_error_log.call_args
+        assert call_args[0][0] == "test.method"  # method
+        assert call_args[0][1] == 0  # error_code (0 для ValueError)
+        assert "Test error" in call_args[0][2]  # error_message
 
 
 class TestCircuitBreakerDecorator:

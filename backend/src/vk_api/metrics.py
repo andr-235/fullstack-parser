@@ -176,7 +176,10 @@ class VKAPIMetrics:
         self.error_rate_history = deque(maxlen=100)
 
         # Мьютекс для потокобезопасности
-        self._lock = threading.Lock()
+        # Используем RLock, так как методы метрик вызывают друг друга и
+        # повторно берут блокировку (например, record_bulk_operation -> record_request).
+        # Обычный Lock здесь приводит к дедлокам при вложенных вызовах.
+        self._lock = threading.RLock()
 
         # Запуск сбора системных метрик
         self._start_system_metrics_collection()

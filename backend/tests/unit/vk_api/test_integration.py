@@ -46,7 +46,8 @@ from src.vk_api.config import vk_api_config
 @pytest.fixture
 def integration_repository():
     """Create repository for integration tests"""
-    repo = VKAPIRepository()
+    # Используем Mock вместо реального VKAPIRepository для контроля в тестах
+    repo = Mock(spec=VKAPIRepository)
 
     # Override with mocks for controlled testing
     repo.get_cached_result = AsyncMock(return_value=None)
@@ -207,15 +208,18 @@ class TestServiceRepositoryIntegration:
 
         try:
             await integration_service.get_group_posts(group_id=12345)
-        except VKAPIRateLimitError:
-            pass  # Expected
+        except ServiceUnavailableError:
+            pass  # Expected - VKAPIRateLimitError is wrapped in ServiceUnavailableError
 
-        # Verify error was logged
+        # Verify error was logged through the log_request decorator
+        # The decorator should call save_error_log for the wrapped error
         integration_repository.save_error_log.assert_called_once()
         call_args = integration_repository.save_error_log.call_args
 
         assert call_args[0][0] == "wall.get"  # method
-        assert call_args[0][1] == 6  # VK rate limit error code
+        assert (
+            call_args[0][1] == 6
+        )  # VK rate limit error code (from VKAPIRateLimitError)
 
     @pytest.mark.asyncio
     async def test_health_check_integration(

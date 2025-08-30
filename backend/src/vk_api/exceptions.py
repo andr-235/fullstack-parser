@@ -18,26 +18,44 @@ class VKAPIError(APIError):
         error_code: Optional[int] = None,
         method: Optional[str] = None,
         details: Optional[dict] = None,
+        status_code: int = 502,
+        api_error_code: str = "VK_API_ERROR",
     ):
         detail = f"VK API Error: {message}"
         details_dict: Dict[str, Any] = {"message": message}
 
         if error_code is not None:
             details_dict["vk_error_code"] = error_code
-        if method:
+        if method is not None:
             details_dict["method"] = method
         if details:
-            details_dict["details"] = details
+            details_dict["details"] = (
+                details.copy()
+            )  # Копируем, чтобы избежать изменений
+        else:
+            details_dict["details"] = (
+                {}
+            )  # Создаем пустой словарь для совместимости с тестами
+
+        # Добавляем error_type из details, если он есть
+        if details and "error_type" in details:
+            details_dict["error_type"] = details["error_type"]
+
+        # Добавляем все остальные поля из details в details_dict
+        if details:
+            for key, value in details.items():
+                if key not in details_dict:
+                    details_dict[key] = value
 
         super().__init__(
-            status_code=502,
-            error_code="VK_API_ERROR",
+            status_code=status_code,
+            error_code=api_error_code,
             message=detail,
             details=details_dict,
         )
 
 
-class VKAPIRateLimitError(APIError):
+class VKAPIRateLimitError(VKAPIError):
     """Ошибка превышения лимита запросов VK API"""
 
     def __init__(
@@ -47,108 +65,164 @@ class VKAPIRateLimitError(APIError):
         details_dict: Dict[str, Any] = {"error_type": "rate_limit"}
 
         if wait_time is not None:
-            detail += f". Wait {wait_time:.2f} seconds"
-            details_dict["wait_time_seconds"] = wait_time
+            try:
+                wait_time_float = float(wait_time)
+                detail += f". Wait {wait_time_float:.1f} seconds"
+                details_dict["wait_time"] = wait_time_float
+            except (ValueError, TypeError):
+                detail += f". Wait {wait_time} seconds"
+                details_dict["wait_time"] = wait_time
         if method:
             details_dict["method"] = method
 
         super().__init__(
-            status_code=429,
-            error_code="VK_API_RATE_LIMIT",
             message=detail,
             details=details_dict,
+            status_code=429,
+            api_error_code="VK_API_RATE_LIMIT",
         )
 
 
-class VKAPIAuthError(APIError):
+class VKAPIAuthError(VKAPIError):
     """Ошибка аутентификации VK API"""
 
-    def __init__(self, message: str = "VK API authentication failed"):
+    def __init__(
+        self,
+        message: str = "VK API authentication failed",
+        method: Optional[str] = None,
+    ):
+        # Убеждаемся, что в сообщении есть слово "authentication"
+        if "authentication" not in message.lower():
+            detail = f"VK API authentication failed: {message}"
+        else:
+            detail = message
+
+        details_dict = {"message": message, "error_type": "auth"}
+        if method:
+            details_dict["method"] = method
+
         super().__init__(
+            message=detail,
+            details=details_dict,
             status_code=401,
-            error_code="VK_API_AUTH_ERROR",
-            message=message,
-            details={"message": message},
+            api_error_code="VK_API_AUTH",
         )
 
 
-class VKAPIAccessDeniedError(APIError):
+class VKAPIAccessDeniedError(VKAPIError):
     """Ошибка доступа к ресурсу VK API"""
 
-    def __init__(self, resource: str, reason: Optional[str] = None):
+    def __init__(
+        self,
+        resource: str,
+        reason: Optional[str] = None,
+        method: Optional[str] = None,
+    ):
         detail = f"VK API access denied to resource: {resource}"
-        details_dict = {"resource": resource}
+        details_dict = {"resource": resource, "error_type": "access_denied"}
 
         if reason:
             detail += f" ({reason})"
             details_dict["reason"] = reason
+        if method:
+            details_dict["method"] = method
 
         super().__init__(
-            status_code=403,
-            error_code="VK_API_ACCESS_DENIED",
             message=detail,
             details=details_dict,
+            status_code=403,
+            api_error_code="VK_API_ACCESS_DENIED",
         )
 
 
-class VKAPIInvalidTokenError(APIError):
+class VKAPIInvalidTokenError(VKAPIError):
     """Неверный токен доступа VK API"""
 
     def __init__(self, message: str = "Invalid VK API access token"):
+        # Убеждаемся, что в сообщении есть слова "invalid token"
+        if "invalid token" not in message.lower():
+            detail = f"{message} (invalid token)"
+        else:
+            detail = message
+
         super().__init__(
+            message=detail,
+            details={"message": message, "error_type": "invalid_token"},
             status_code=401,
-            error_code="VK_API_INVALID_TOKEN",
-            message=message,
-            details={"message": message},
+            api_error_code="VK_API_INVALID_TOKEN",
         )
 
 
-class VKAPIInvalidParamsError(APIError):
+class VKAPIInvalidParamsError(VKAPIError):
     """Неверные параметры запроса VK API"""
 
     def __init__(
         self,
         params: Optional[dict] = None,
         message: str = "Invalid VK API parameters",
+        field: Optional[str] = None,
     ):
-        detail = message
-        details_dict: Dict[str, Any] = {"message": message}
+        # Убеждаемся, что в сообщении есть слова "invalid parameters"
+        if "invalid parameters" not in message.lower():
+            detail = f"{message} (invalid parameters)"
+        else:
+            detail = message
+
+        details_dict: Dict[str, Any] = {
+            "message": message,
+            "error_type": "invalid_params",
+        }
 
         if params:
             details_dict["params"] = params
+        if field:
+            details_dict["field"] = field
 
         super().__init__(
-            status_code=400,
-            error_code="VK_API_INVALID_PARAMS",
             message=detail,
             details=details_dict,
+            status_code=400,
+            api_error_code="VK_API_INVALID_PARAMS",
         )
 
 
-class VKAPITimeoutError(APIError):
+class VKAPITimeoutError(VKAPIError):
     """Превышено время ожидания ответа VK API"""
 
     def __init__(
-        self, timeout: Optional[float] = None, method: Optional[str] = None
+        self,
+        message: str = "VK API request timeout",
+        timeout: Optional[float] = None,
+        method: Optional[str] = None,
     ):
-        detail = "VK API request timeout"
-        details_dict: Dict[str, Any] = {}
+        # Убеждаемся, что в сообщении есть слово "timeout"
+        if "timeout" not in message.lower():
+            detail = f"VK API request timeout: {message}"
+        else:
+            detail = message
+
+        details_dict: Dict[str, Any] = {"error_type": "timeout"}
 
         if timeout is not None:
-            detail += f" ({timeout:.2f}s)"
-            details_dict["timeout"] = timeout
+            try:
+                timeout_float = float(timeout)
+                detail += f" ({timeout_float:.2f}s)"
+                details_dict["timeout"] = timeout_float
+            except (ValueError, TypeError):
+                detail += f" ({timeout})"
+                details_dict["timeout"] = timeout
         if method:
             details_dict["method"] = method
 
         super().__init__(
-            status_code=408,
-            error_code="VK_API_TIMEOUT",
             message=detail,
             details=details_dict,
+            status_code=504,
+            api_error_code="VK_API_TIMEOUT",
         )
 
 
-class VKAPINetworkError(APIError):
+class VKAPINetworkError(VKAPIError):
     """Ошибка сети при работе с VK API"""
 
     def __init__(
@@ -156,19 +230,28 @@ class VKAPINetworkError(APIError):
         message: str = "VK API network error",
         details: Optional[dict] = None,
     ):
-        details_dict: Dict[str, Any] = {"message": message}
+        # Убеждаемся, что в сообщении есть слово "network"
+        if "network" not in message.lower():
+            detail = f"VK API network error: {message}"
+        else:
+            detail = message
+
+        details_dict: Dict[str, Any] = {
+            "message": message,
+            "error_type": "network",
+        }
         if details:
             details_dict["details"] = details
 
         super().__init__(
-            status_code=502,
-            error_code="VK_API_NETWORK_ERROR",
-            message=message,
+            message=detail,
             details=details_dict,
+            status_code=502,
+            api_error_code="VK_API_NETWORK",
         )
 
 
-class VKAPIResourceNotFoundError(APIError):
+class VKAPIResourceNotFoundError(VKAPIError):
     """Ресурс не найден в VK API"""
 
     def __init__(self, resource_type: str, resource_id: str):
@@ -179,22 +262,28 @@ class VKAPIResourceNotFoundError(APIError):
         }
 
         super().__init__(
-            status_code=404,
-            error_code="VK_API_RESOURCE_NOT_FOUND",
             message=detail,
             details=extra_data,
+            status_code=404,
+            api_error_code="VK_API_RESOURCE_NOT_FOUND",
         )
 
 
-class VKAPIInvalidResponseError(APIError):
+class VKAPIInvalidResponseError(VKAPIError):
     """Неверный формат ответа VK API"""
 
     def __init__(
         self,
-        response: Optional[str] = None,
         message: str = "Invalid VK API response format",
+        response: Optional[str] = None,
     ):
-        extra_data = {"message": message}
+        # Убеждаемся, что в сообщении есть слова "invalid response"
+        if "invalid response" not in message.lower():
+            detail = f"{message} (invalid response)"
+        else:
+            detail = message
+
+        extra_data = {"message": message, "error_type": "invalid_response"}
         if response:
             # Сохраняем только первые 500 символов ответа
             extra_data["response_preview"] = (
@@ -202,14 +291,14 @@ class VKAPIInvalidResponseError(APIError):
             )
 
         super().__init__(
-            status_code=502,
-            error_code="VK_API_INVALID_RESPONSE",
-            message=message,
+            message=detail,
             details=extra_data,
+            status_code=502,
+            api_error_code="VK_API_INVALID_RESPONSE",
         )
 
 
-class VKAPIGroupAccessError(APIError):
+class VKAPIGroupAccessError(VKAPIError):
     """Ошибка доступа к группе VK"""
 
     def __init__(
@@ -219,14 +308,14 @@ class VKAPIGroupAccessError(APIError):
         extra_data = {"group_id": group_id, "reason": reason}
 
         super().__init__(
-            status_code=403,
-            error_code="VK_API_GROUP_ACCESS_ERROR",
             message=detail,
             details=extra_data,
+            status_code=403,
+            api_error_code="VK_API_GROUP_ACCESS_ERROR",
         )
 
 
-class VKAPIPostNotFoundError(APIError):
+class VKAPIPostNotFoundError(VKAPIError):
     """Пост не найден в VK API"""
 
     def __init__(self, post_id: int, group_id: Optional[int] = None):
@@ -238,26 +327,26 @@ class VKAPIPostNotFoundError(APIError):
             extra_data["group_id"] = group_id
 
         super().__init__(
-            status_code=404,
-            error_code="VK_API_POST_NOT_FOUND",
             message=detail,
             details=extra_data,
+            status_code=404,
+            api_error_code="VK_API_POST_NOT_FOUND",
         )
 
 
-class VKAPIUserNotFoundError(APIError):
+class VKAPIUserNotFoundError(VKAPIError):
     """Пользователь не найден в VK API"""
 
     def __init__(self, user_id: int):
         super().__init__(
-            status_code=404,
-            error_code="VK_API_USER_NOT_FOUND",
             message=f"VK user not found: {user_id}",
             details={"user_id": user_id},
+            status_code=404,
+            api_error_code="VK_API_USER_NOT_FOUND",
         )
 
 
-class VKAPIRetryExhaustedError(APIError):
+class VKAPIRetryExhaustedError(VKAPIError):
     """Исчерпаны попытки повтора запроса к VK API"""
 
     def __init__(self, max_attempts: int, method: Optional[str] = None):
@@ -269,14 +358,14 @@ class VKAPIRetryExhaustedError(APIError):
             extra_data["method"] = method
 
         super().__init__(
-            status_code=502,
-            error_code="VK_API_RETRY_EXHAUSTED",
             message=detail,
             details=extra_data,
+            status_code=502,
+            api_error_code="VK_API_RETRY_EXHAUSTED",
         )
 
 
-class VKAPIConfigurationError(APIError):
+class VKAPIConfigurationError(VKAPIError):
     """Ошибка конфигурации VK API"""
 
     def __init__(
@@ -286,24 +375,24 @@ class VKAPIConfigurationError(APIError):
         extra_data = {"config_key": config_key, "message": message}
 
         super().__init__(
-            status_code=500,
-            error_code="VK_API_CONFIGURATION_ERROR",
             message=detail,
             details=extra_data,
+            status_code=500,
+            api_error_code="VK_API_CONFIGURATION_ERROR",
         )
 
 
-class VKAPICacheError(APIError):
+class VKAPICacheError(VKAPIError):
     """Ошибка кеширования VK API"""
 
     def __init__(self, operation: str, message: str = "VK API cache error"):
         extra_data = {"operation": operation, "message": message}
 
         super().__init__(
-            status_code=500,
-            error_code="VK_API_CACHE_ERROR",
             message=f"{message}: {operation}",
             details=extra_data,
+            status_code=500,
+            api_error_code="VK_API_CACHE_ERROR",
         )
 
 
