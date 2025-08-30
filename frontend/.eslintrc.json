@@ -1,8 +1,36 @@
 {
   "extends": ["next/core-web-vitals", "next/typescript"],
-  "plugins": ["import", "@typescript-eslint"],
+  "plugins": ["import", "@typescript-eslint", "boundaries"],
   "parser": "@typescript-eslint/parser",
   "rules": {
+    "boundaries/element-types": [
+      "error",
+      {
+        "default": "disallow",
+        "rules": [
+          {
+            "from": "app",
+            "allow": ["widgets", "features", "entities", "shared"]
+          },
+          {
+            "from": "widgets",
+            "allow": ["features", "entities", "shared"]
+          },
+          {
+            "from": "features",
+            "allow": ["entities", "shared"]
+          },
+          {
+            "from": "entities",
+            "allow": ["shared"]
+          },
+          {
+            "from": "shared",
+            "allow": ["shared"]
+          }
+        ]
+      }
+    ],
     "import/order": [
       "error",
       {
@@ -52,33 +80,26 @@
         }
       }
     ],
+    "import/no-cycle": ["error", { "maxDepth": 1 }],
     "import/no-restricted-paths": [
       "error",
       {
         "zones": [
           {
-            "target": "./widgets",
-            "from": "./widgets"
+            "target": "./**/ui",
+            "from": "./**/model"
           },
           {
-            "target": "./features",
-            "from": "./features"
+            "target": "./**/ui",
+            "from": "./**/api"
           },
           {
-            "target": "./entities",
-            "from": "./entities"
+            "target": "./**/ui",
+            "from": "./**/lib"
           },
           {
-            "target": "./widgets",
-            "from": "./features"
-          },
-          {
-            "target": "./features",
-            "from": "./entities"
-          },
-          {
-            "target": "./widgets",
-            "from": "./entities"
+            "target": "./**/ui",
+            "from": "./**/config"
           }
         ]
       }
@@ -90,10 +111,18 @@
         "varsIgnorePattern": "^_"
       }
     ],
-
     "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-var-requires": "error",
     "prefer-const": "error",
-    "no-var": "error"
+    "no-var": "error",
+    "no-console": "warn",
+    "no-debugger": "error",
+    "react/jsx-uses-react": "off",
+    "react/react-in-jsx-scope": "off",
+    "react/prop-types": "off",
+    "react/display-name": "off",
+    "@next/next/no-img-element": "warn",
+    "@next/next/no-html-link-for-pages": "error"
   },
   "settings": {
     "import/resolver": {
@@ -101,6 +130,60 @@
         "alwaysTryTypes": true,
         "project": "./tsconfig.json"
       }
-    }
+    },
+    "boundaries": [
+      {
+        "name": "app",
+        "pattern": "app/**/*",
+        "group": "app"
+      },
+      {
+        "name": "widgets",
+        "pattern": "widgets/**/*",
+        "group": "widgets"
+      },
+      {
+        "name": "features",
+        "pattern": "features/**/*",
+        "group": "features"
+      },
+      {
+        "name": "entities",
+        "pattern": "entities/**/*",
+        "group": "entities"
+      },
+      {
+        "name": "shared",
+        "pattern": "shared/**/*",
+        "group": "shared"
+      }
+    ],
+    "boundaries/elements": [
+      {
+        "name": "app",
+        "type": "app",
+        "pattern": "app/**/*"
+      },
+      {
+        "name": "widgets",
+        "type": "widgets",
+        "pattern": "widgets/**/*"
+      },
+      {
+        "name": "features",
+        "type": "features",
+        "pattern": "features/**/*"
+      },
+      {
+        "name": "entities",
+        "type": "entities",
+        "pattern": "entities/**/*"
+      },
+      {
+        "name": "shared",
+        "type": "shared",
+        "pattern": "shared/**/*"
+      }
+    ]
   }
 }

@@ -1,21 +1,16 @@
 import { Inter } from 'next/font/google'
+
 import type { Metadata } from 'next'
 
-import './globals.css'
-
-// shared слой
 import { APP_CONFIG } from '@/shared/config'
 import { NavigationProvider } from '@/shared/contexts/NavigationContext'
 import { ThemeProvider } from '@/shared/ui/theme-provider'
 
-// providers (внешние)
 import { AuthProvider } from '@/providers/AuthProvider'
 import { ToastProvider } from '@/providers/ToastProvider'
 
-// widgets слой
 import { AppLayout } from '@/widgets/layout/AppLayout'
 
-// app слой
 import { QueryProvider } from '@/app/providers/QueryProvider'
 
 // Force dynamic rendering to avoid prerendering issues
