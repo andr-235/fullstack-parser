@@ -211,7 +211,7 @@ export function KeywordCard({ keyword, onUpdate, onDelete, onToggleStatus }: Key
       </DialogHeader>
       <KeywordForm
        initialData={{
-        word: keyword.word,
+        word: keyword.word || '',
         category: keyword.category,
         description: keyword.description,
         is_active: keyword.is_active,

@@ -1,87 +1,83 @@
-import { ID } from '@/shared/types'
-
-// Типы соответствующие backend KeywordResponse схеме
 export interface Keyword {
   id: number
-  word: string
+  keyword: string
+  word?: string
   category?: string
-  description?: string
   is_active: boolean
-  is_case_sensitive: boolean
-  is_whole_word: boolean
+  is_case_sensitive?: boolean
+  is_whole_word?: boolean
   total_matches: number
+  description?: string
   created_at: string
   updated_at: string
 }
 
-// Типы для создания keyword
-export interface CreateKeywordRequest {
-  word: string
-  category?: string
-  description?: string
-  is_active?: boolean
-  is_case_sensitive?: boolean
-  is_whole_word?: boolean
-}
+export const KEYWORD_CATEGORIES = [
+  { key: 'general', label: 'Общие' },
+  { key: 'business', label: 'Бизнес' },
+  { key: 'technology', label: 'Технологии' },
+  { key: 'politics', label: 'Политика' },
+  { key: 'sports', label: 'Спорт' },
+  { key: 'entertainment', label: 'Развлечения' },
+  { key: 'health', label: 'Здоровье' },
+  { key: 'education', label: 'Образование' },
+] as const
 
-// Типы для обновления keyword
-export interface UpdateKeywordRequest {
-  word?: string
-  category?: string
-  description?: string
-  is_active?: boolean
-  is_case_sensitive?: boolean
-  is_whole_word?: boolean
-}
+// Для обратной совместимости
+export const KEYWORD_CATEGORIES_MAP = {
+  general: 'Общие',
+  business: 'Бизнес',
+  technology: 'Технологии',
+  politics: 'Политика',
+  sports: 'Спорт',
+  entertainment: 'Развлечения',
+  health: 'Здоровье',
+  education: 'Образование',
+} as const
 
-// Типы для фильтров
+export type KeywordCategory = (typeof KEYWORD_CATEGORIES)[number]['key']
+
 export interface KeywordsFilters {
-  page?: number
-  size?: number
+  is_active?: boolean
   active_only?: boolean
   category?: string
   search?: string
+  page?: number
+  size?: number
 }
 
-// API Response types
 export interface KeywordsResponse {
+  items: Keyword[]
   total: number
   page: number
   size: number
-  items: Keyword[]
+  total_pages: number
 }
 
-// Типы для загрузки keywords из файла
-export interface UploadKeywordsResponse {
-  status: string
-  message: string
-  total_processed: number
-  created: number
-  skipped: number
-  errors: string[]
-  created_keywords: Keyword[]
+export interface CreateKeywordRequest {
+  keyword: string
+  category?: string
+  is_active?: boolean
 }
 
-// Типы для статистики keyword
+export interface UpdateKeywordRequest {
+  keyword?: string
+  word?: string
+  category?: string
+  is_active?: boolean
+  is_case_sensitive?: boolean
+  is_whole_word?: boolean
+  description?: string
+}
+
 export interface KeywordStats {
-  keyword_id: number
-  word: string
-  total_matches: number
-  recent_matches: number
-  top_groups: string[]
+  total_keywords: number
+  active_keywords: number
+  inactive_keywords: number
 }
 
-// Категории ключевых слов
-export const KEYWORD_CATEGORIES = [
-  'Общие',
-  'Технические',
-  'Маркетинговые',
-  'Продажи',
-  'Поддержка',
-  'Баги',
-  'Рекомендации',
-  'Жалобы',
-  'Благодарности',
-] as const
-
-export type KeywordCategory = (typeof KEYWORD_CATEGORIES)[number]
+export interface UploadKeywordsResponse {
+  success: number
+  failed: number
+  errors: string[]
+}

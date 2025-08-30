@@ -57,11 +57,23 @@
       {
         "zones": [
           {
+            "target": "./app",
+            "from": "./features"
+          },
+          {
+            "target": "./app",
+            "from": "./entities"
+          },
+          {
             "target": "./widgets",
             "from": "./features"
           },
           {
             "target": "./widgets",
+            "from": "./entities"
+          },
+          {
+            "target": "./features",
             "from": "./entities"
           }
         ]

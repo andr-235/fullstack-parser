@@ -42,52 +42,36 @@ export const useGroups = (filters?: GroupsFilters) => {
     fetchGroups()
   }, [filters?.active_only, filters?.search])
 
-  const createGroup = async (
-    groupData: CreateGroupRequest
-  ): Promise<VKGroup> => {
+  const createGroup = async (groupData: CreateGroupRequest): Promise<VKGroup> => {
     try {
       const newGroup: VKGroup = await apiClient.createGroup(groupData)
-      setGroups((prev) => [newGroup, ...prev])
+      setGroups(prev => [newGroup, ...prev])
       return newGroup
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to create group'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to create group')
     }
   }
 
-  const updateGroup = async (
-    id: number,
-    updates: UpdateGroupRequest
-  ): Promise<VKGroup> => {
+  const updateGroup = async (id: number, updates: UpdateGroupRequest): Promise<VKGroup> => {
     try {
       const updatedGroup: VKGroup = await apiClient.updateGroup(id, updates)
-      setGroups((prev) =>
-        prev.map((group) => (group.id === id ? updatedGroup : group))
-      )
+      setGroups(prev => prev.map(group => (group.id === id ? updatedGroup : group)))
       return updatedGroup
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to update group'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to update group')
     }
   }
 
   const deleteGroup = async (id: number): Promise<void> => {
     try {
       await apiClient.deleteGroup(id)
-      setGroups((prev) => prev.filter((group) => group.id !== id))
+      setGroups(prev => prev.filter(group => group.id !== id))
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to delete group'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to delete group')
     }
   }
 
-  const toggleGroupStatus = async (
-    id: number,
-    isActive: boolean
-  ): Promise<VKGroup> => {
+  const toggleGroupStatus = async (id: number, isActive: boolean): Promise<VKGroup> => {
     return updateGroup(id, { is_active: isActive })
   }
 
@@ -149,9 +133,7 @@ export const useGroupStats = (id: number) => {
       const data: GroupStats = await apiClient.getGroupStats(id)
       setStats(data)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch group stats'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to fetch group stats')
     } finally {
       setLoading(false)
     }
@@ -170,9 +152,7 @@ export const useGroupStats = (id: number) => {
 }
 
 export const useUploadGroups = () => {
-  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(
-    null
-  )
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -190,8 +170,7 @@ export const useUploadGroups = () => {
       formData.append('is_active', isActive.toString())
       formData.append('max_posts_to_check', maxPostsToCheck.toString())
 
-      const result: UploadGroupsResponse =
-        await apiClient.uploadGroups(formData)
+      const result: UploadGroupsResponse = await apiClient.uploadGroups(formData)
       return result
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload groups')
@@ -201,9 +180,7 @@ export const useUploadGroups = () => {
     }
   }
 
-  const getUploadProgress = async (
-    uploadId: string
-  ): Promise<UploadProgress> => {
+  const getUploadProgress = async (uploadId: string): Promise<UploadProgress> => {
     try {
       // TODO: Implement upload progress tracking
       // const progress: UploadProgress = await apiClient.getGroupsUploadProgress(uploadId)
@@ -220,9 +197,7 @@ export const useUploadGroups = () => {
       setUploadProgress(progress)
       return progress
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to get upload progress'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to get upload progress')
     }
   }
 

@@ -21,9 +21,7 @@ export const useGlobalStats = () => {
       const data: GlobalStats = await apiClient.getGlobalStats()
       setStats(data)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch global stats'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to fetch global stats')
     } finally {
       setLoading(false)
     }
@@ -53,9 +51,7 @@ export const useDashboardStats = () => {
       const data: DashboardStats = await apiClient.getDashboardStats()
       setStats(data)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch dashboard stats'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to fetch dashboard stats')
     } finally {
       setLoading(false)
     }
@@ -112,13 +108,7 @@ export const useGroups = (params?: {
 
   useEffect(() => {
     fetchGroups()
-  }, [
-    params?.page,
-    params?.size,
-    params?.is_active,
-    params?.active_only,
-    params?.search,
-  ])
+  }, [params?.page, params?.size, params?.is_active, params?.active_only, params?.search])
 
   return {
     groups,
@@ -128,11 +118,7 @@ export const useGroups = (params?: {
   }
 }
 
-export const useKeywords = (params?: {
-  page?: number
-  size?: number
-  is_active?: boolean
-}) => {
+export const useKeywords = (params?: { page?: number; size?: number; is_active?: boolean }) => {
   const [keywords, setKeywords] = useState<KeywordsResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -164,8 +150,7 @@ export const useKeywords = (params?: {
 
 // Хук для вычисляемых метрик dashboard
 export const useDashboardMetrics = () => {
-  const { stats: dashboardStats, loading: dashboardLoading } =
-    useDashboardStats()
+  const { stats: dashboardStats, loading: dashboardLoading } = useDashboardStats()
   const { stats: globalStats, loading: globalLoading } = useGlobalStats()
 
   const metrics = useMemo((): DashboardMetrics | null => {
@@ -193,8 +178,7 @@ export const useDashboardMetrics = () => {
 
 // Хук для сводки активности
 export const useActivitySummary = () => {
-  const { stats: dashboardStats, loading: dashboardLoading } =
-    useDashboardStats()
+  const { stats: dashboardStats, loading: dashboardLoading } = useDashboardStats()
   const { stats: globalStats, loading: globalLoading } = useGlobalStats()
 
   const summary = useMemo((): ActivitySummary | null => {

@@ -44,52 +44,36 @@ export const useKeywords = (filters?: KeywordsFilters) => {
     fetchKeywords()
   }, [filters?.active_only, filters?.category, filters?.search])
 
-  const createKeyword = async (
-    keywordData: CreateKeywordRequest
-  ): Promise<Keyword> => {
+  const createKeyword = async (keywordData: CreateKeywordRequest): Promise<Keyword> => {
     try {
       const newKeyword: Keyword = await apiClient.createKeyword(keywordData)
-      setKeywords((prev) => [newKeyword, ...prev])
+      setKeywords(prev => [newKeyword, ...prev])
       return newKeyword
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to create keyword'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to create keyword')
     }
   }
 
-  const updateKeyword = async (
-    id: number,
-    updates: UpdateKeywordRequest
-  ): Promise<Keyword> => {
+  const updateKeyword = async (id: number, updates: UpdateKeywordRequest): Promise<Keyword> => {
     try {
       const updatedKeyword: Keyword = await apiClient.updateKeyword(id, updates)
-      setKeywords((prev) =>
-        prev.map((keyword) => (keyword.id === id ? updatedKeyword : keyword))
-      )
+      setKeywords(prev => prev.map(keyword => (keyword.id === id ? updatedKeyword : keyword)))
       return updatedKeyword
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to update keyword'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to update keyword')
     }
   }
 
   const deleteKeyword = async (id: number): Promise<void> => {
     try {
       await apiClient.deleteKeyword(id)
-      setKeywords((prev) => prev.filter((keyword) => keyword.id !== id))
+      setKeywords(prev => prev.filter(keyword => keyword.id !== id))
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to delete keyword'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to delete keyword')
     }
   }
 
-  const toggleKeywordStatus = async (
-    id: number,
-    isActive: boolean
-  ): Promise<Keyword> => {
+  const toggleKeywordStatus = async (id: number, isActive: boolean): Promise<Keyword> => {
     return updateKeyword(id, { is_active: isActive })
   }
 
@@ -151,9 +135,7 @@ export const useKeywordStats = (id: number) => {
       const data: KeywordStats = await apiClient.getKeywordStats(id)
       setStats(data)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch keyword stats'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to fetch keyword stats')
     } finally {
       setLoading(false)
     }
@@ -176,10 +158,7 @@ export const useUploadKeywords = () => {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const uploadKeywords = async (
-    file: File,
-    category?: string
-  ): Promise<UploadKeywordsResponse> => {
+  const uploadKeywords = async (file: File, category?: string): Promise<UploadKeywordsResponse> => {
     setUploading(true)
     setError(null)
 
@@ -206,9 +185,7 @@ export const useUploadKeywords = () => {
       setUploadProgress(progress)
       return progress
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to get upload progress'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to get upload progress')
     }
   }
 

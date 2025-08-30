@@ -42,58 +42,41 @@ export const useComments = (filters?: CommentFilters) => {
       // This is for future use or if you add this functionality
       throw new Error('Creating comments is not supported via API')
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to create comment'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to create comment')
     }
   }
 
   const updateComment = async (id: string, updates: UpdateCommentRequest) => {
     try {
-      const updatedComment = await apiClient.updateComment(
-        parseInt(id),
-        updates
-      )
-      setComments((prev) =>
-        prev.map((comment) =>
-          comment.id === parseInt(id) ? updatedComment : comment
-        )
+      const updatedComment = await apiClient.updateComment(parseInt(id), updates)
+      setComments(prev =>
+        prev.map(comment => (comment.id === parseInt(id) ? updatedComment : comment))
       )
       return updatedComment
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to update comment'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to update comment')
     }
   }
 
   const deleteComment = async (id: string) => {
     try {
       await apiClient.deleteComment(parseInt(id))
-      setComments((prev) =>
-        prev.filter((comment) => comment.id !== parseInt(id))
-      )
+      setComments(prev => prev.filter(comment => comment.id !== parseInt(id)))
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to delete comment'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to delete comment')
     }
   }
 
   const markAsViewed = async (id: string) => {
     try {
       await apiClient.markCommentViewed(parseInt(id))
-      setComments((prev) =>
-        prev.map((comment) =>
-          comment.id === parseInt(id)
-            ? { ...comment, is_viewed: true }
-            : comment
+      setComments(prev =>
+        prev.map(comment =>
+          comment.id === parseInt(id) ? { ...comment, is_viewed: true } : comment
         )
       )
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to mark comment as viewed'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to mark comment as viewed')
     }
   }
 

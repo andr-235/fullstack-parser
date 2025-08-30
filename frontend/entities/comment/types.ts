@@ -1,86 +1,57 @@
-import { ID } from '@/shared/types'
-
-// Типы соответствующие backend VKCommentResponse
 export interface Comment {
   id: number
-  vk_id: number
   text: string
-  author_id: number
+  author: string
   author_name?: string
   author_screen_name?: string
   author_photo_url?: string
-  published_at: string
-  likes_count: number
-  is_viewed: boolean
-  is_archived: boolean
-  matched_keywords_count: number
-  matched_keywords?: string[]
   post_id: number
-  post_vk_id?: number
+  vk_id?: string
+  post_vk_id?: string
+  group_id: number
+  group?: any
+  date: string
+  published_at?: string
+  is_viewed: boolean
+  is_archived?: boolean
+  sentiment?: string
+  keywords?: string[]
+  matched_keywords?: string[]
+  matched_keywords_count: number
+  likes_count?: number
   parent_comment_id?: number
-  has_attachments: boolean
-  is_processed: boolean
-  processed_at?: string
-  viewed_at?: string
-  archived_at?: string
-  created_at: string
-  updated_at: string
-  group?: {
-    id: number
-    name: string
-    vk_id: string
-    screen_name: string
-  }
-}
-
-// Для обратной совместимости с существующим кодом
-export interface SimpleComment {
-  id: ID
-  content: string
-  authorId: ID
-  postId: ID
-  createdAt: string
-  updatedAt: string
-  parentId: ID | null
-  likes: number
-  isApproved: boolean
 }
 
 export interface CreateCommentRequest {
-  content: string
-  postId: ID
-  parentId?: ID | null
+  text: string
+  post_id: number
+  group_id: number
+  author?: string
 }
 
 export interface UpdateCommentRequest {
   is_viewed?: boolean
-  is_archived?: boolean
+  sentiment?: string
 }
 
 export interface CommentFilters {
+  is_viewed?: boolean
+  group_id?: number
+  keyword_id?: number
+  limit?: number
+  offset?: number
   page?: number
   size?: number
   text?: string
-  postId?: ID
-  authorId?: ID
-  isApproved?: boolean
-  parentId?: ID | null
-  is_viewed?: boolean
-  is_archived?: boolean
-  group_id?: number
-  keyword_id?: number
-  author_screen_name?: string[]
+  authorId?: number
   date_from?: string
   date_to?: string
+  is_archived?: boolean
 }
 
-// API Response types
 export interface CommentsResponse {
   items: Comment[]
   total: number
-  page: number
-  size: number
-  pages: number
+  limit: number
+  offset: number
 }
-
-export interface CommentResponse extends Comment {}

@@ -98,8 +98,8 @@ export function KeywordForm({
         </FormControl>
         <SelectContent>
          {KEYWORD_CATEGORIES.map((category) => (
-          <SelectItem key={category} value={category}>
-           {category}
+          <SelectItem key={category.key} value={category.key}>
+           {category.label}
           </SelectItem>
          ))}
         </SelectContent>

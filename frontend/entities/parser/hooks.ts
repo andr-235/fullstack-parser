@@ -27,9 +27,7 @@ export const useParserState = () => {
       const data = await apiClient.getParserState()
       setState(data)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch parser state'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to fetch parser state')
     } finally {
       setLoading(false)
     }
@@ -60,9 +58,7 @@ export const useParserStats = () => {
       const data = await apiClient.getParserStats()
       setStats(data)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch parser stats'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to fetch parser stats')
     } finally {
       setLoading(false)
     }
@@ -93,11 +89,7 @@ export const useParserGlobalStats = () => {
       const data = await apiClient.getParserGlobalStats()
       setStats(data)
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to fetch parser global stats'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to fetch parser global stats')
     } finally {
       setLoading(false)
     }
@@ -128,9 +120,7 @@ export const useParserTasks = (filters?: ParserTaskFilters) => {
       const data = await apiClient.getParserTasks(filters)
       setTasks(data)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch parser tasks'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to fetch parser tasks')
     } finally {
       setLoading(false)
     }
@@ -161,9 +151,7 @@ export const useParserHistory = (skip = 0, limit = 10) => {
       const data = await apiClient.getParserHistory(skip, limit)
       setHistory(data)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch parser history'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to fetch parser history')
     } finally {
       setLoading(false)
     }
@@ -193,8 +181,7 @@ export const useStartParser = () => {
       const result = await apiClient.startParser(taskData)
       return result
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Failed to start parser'
+      const errorMessage = err instanceof Error ? err.message : 'Failed to start parser'
       setError(errorMessage)
       throw new Error(errorMessage)
     } finally {
@@ -213,8 +200,7 @@ export const useStartParser = () => {
         return result
       } catch (err) {
         console.error('Hook: Bulk parser failed:', err)
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to start bulk parser'
+        const errorMessage = err instanceof Error ? err.message : 'Failed to start bulk parser'
         setError(errorMessage)
         throw new Error(errorMessage)
       } finally {
@@ -244,8 +230,7 @@ export const useStopParser = () => {
       const result = await apiClient.stopParser()
       return result
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Failed to stop parser'
+      const errorMessage = err instanceof Error ? err.message : 'Failed to stop parser'
       setError(errorMessage)
       throw new Error(errorMessage)
     } finally {
@@ -261,14 +246,11 @@ export const useStopParser = () => {
 }
 
 // Хук для автоматического обновления данных
-export const useAutoRefresh = (
-  intervalMs: number = 5000,
-  enabled: boolean = true
-) => {
+export const useAutoRefresh = (intervalMs: number = 5000, enabled: boolean = true) => {
   const [isEnabled, setIsEnabled] = useState(enabled)
 
   const toggleAutoRefresh = useCallback(() => {
-    setIsEnabled((prev) => !prev)
+    setIsEnabled(prev => !prev)
   }, [])
 
   return {
@@ -279,16 +261,8 @@ export const useAutoRefresh = (
 
 // Хук для управления парсером (комбинированный)
 export const useParser = (autoRefreshInterval: number = 3000) => {
-  const {
-    state,
-    loading: stateLoading,
-    refetch: refetchState,
-  } = useParserState()
-  const {
-    stats,
-    loading: statsLoading,
-    refetch: refetchStats,
-  } = useParserStats()
+  const { state, loading: stateLoading, refetch: refetchState } = useParserState()
+  const { stats, loading: statsLoading, refetch: refetchStats } = useParserStats()
   const {
     stats: globalStats,
     loading: globalStatsLoading,
@@ -296,11 +270,7 @@ export const useParser = (autoRefreshInterval: number = 3000) => {
   } = useParserGlobalStats()
   const { startParser, starting } = useStartParser()
   const { stopParser, stopping } = useStopParser()
-  const {
-    tasks,
-    loading: tasksLoading,
-    refetch: refetchTasks,
-  } = useParserTasks({ size: 10 })
+  const { tasks, loading: tasksLoading, refetch: refetchTasks } = useParserTasks({ size: 10 })
 
   const isRunning = state?.status === 'running'
   const isStopped = state?.status === 'stopped'
@@ -321,14 +291,7 @@ export const useParser = (autoRefreshInterval: number = 3000) => {
     }, autoRefreshInterval)
 
     return () => clearInterval(interval)
-  }, [
-    isRunning,
-    autoRefreshInterval,
-    refetchState,
-    refetchStats,
-    refetchGlobalStats,
-    refetchTasks,
-  ])
+  }, [isRunning, autoRefreshInterval, refetchState, refetchStats, refetchGlobalStats, refetchTasks])
 
   const refetch = useCallback(() => {
     refetchState()

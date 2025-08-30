@@ -88,7 +88,7 @@ export function CommentsList({ comments, loading, onEdit, onDelete, onMarkViewed
           {comment.author_name || comment.author_screen_name || 'Неизвестный автор'}
          </CardTitle>
          <p className="text-xs text-muted-foreground">
-          {formatDistanceToNow(new Date(comment.published_at), { addSuffix: true })}
+          {comment.published_at ? formatDistanceToNow(new Date(comment.published_at), { addSuffix: true }) : 'Дата неизвестна'}
          </p>
         </div>
        </div>
