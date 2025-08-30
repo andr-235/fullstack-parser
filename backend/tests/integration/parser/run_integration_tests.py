@@ -29,6 +29,7 @@ TEST_CATEGORIES = {
     "all": "*",  # All test files
 }
 
+
 def run_command(cmd, cwd=None):
     """Run a command and return the result"""
     try:
@@ -37,11 +38,12 @@ def run_command(cmd, cwd=None):
             shell=True,
             cwd=cwd or Path(__file__).parent.parent.parent.parent,
             capture_output=True,
-            text=True
+            text=True,
         )
         return result.returncode == 0, result.stdout, result.stderr
     except Exception as e:
         return False, "", str(e)
+
 
 def run_integration_tests(
     category="all",
@@ -49,7 +51,7 @@ def run_integration_tests(
     profile=False,
     verbose=False,
     fail_fast=False,
-    benchmark=False
+    benchmark=False,
 ):
     """Run integration tests with specified options"""
 
@@ -79,11 +81,13 @@ def run_integration_tests(
         cmd_parts.append("--tb=short -x")
 
     if coverage:
-        cmd_parts.extend([
-            "--cov=src.parser",
-            "--cov-report=html",
-            "--cov-report=term-missing"
-        ])
+        cmd_parts.extend(
+            [
+                "--cov=src.parser",
+                "--cov-report=html",
+                "--cov-report=term-missing",
+            ]
+        )
 
     if benchmark:
         cmd_parts.append("--benchmark-enable")
@@ -113,6 +117,7 @@ def run_integration_tests(
 
     return success
 
+
 def run_performance_analysis():
     """Run performance analysis on integration tests"""
     print("🚀 Running Performance Analysis...")
@@ -120,9 +125,7 @@ def run_performance_analysis():
 
     # Run performance tests with benchmarking
     success = run_integration_tests(
-        category="performance",
-        benchmark=True,
-        verbose=True
+        category="performance", benchmark=True, verbose=True
     )
 
     if success:
@@ -131,15 +134,14 @@ def run_performance_analysis():
 
     return success
 
+
 def run_load_test():
     """Run load testing"""
     print("🔥 Running Load Tests...")
     print("-" * 50)
 
     success = run_integration_tests(
-        category="load",
-        verbose=True,
-        fail_fast=False
+        category="load", verbose=True, fail_fast=False
     )
 
     if success:
@@ -147,6 +149,7 @@ def run_load_test():
         print("Check load test results above.")
 
     return success
+
 
 def run_full_suite():
     """Run the complete integration test suite"""
@@ -156,7 +159,13 @@ def run_full_suite():
     results = {}
 
     # Run each category
-    for category in ["workflow", "api", "performance", "error_recovery", "load"]:
+    for category in [
+        "workflow",
+        "api",
+        "performance",
+        "error_recovery",
+        "load",
+    ]:
         print(f"\n📋 Running {category} tests...")
         success = run_integration_tests(category=category, verbose=False)
         results[category] = success
@@ -171,13 +180,15 @@ def run_full_suite():
 
     for category, success in results.items():
         status = "✅ PASSED" if success else "❌ FAILED"
-        print("25")
+        print(f"- {category}: {status}")
         if success:
             total_passed += 1
 
     print("-" * 60)
-    print("20")
-    print(".1f"
+    pass_rate = (
+        (total_passed / total_categories) * 100 if total_categories else 0.0
+    )
+    print(f"Passed: {total_passed}/{total_categories} ({pass_rate:.1f}%)")
     overall_success = total_passed == total_categories
 
     if overall_success:
@@ -186,6 +197,7 @@ def run_full_suite():
         print("⚠️  Some integration tests failed. Check output above.")
 
     return overall_success
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -199,62 +211,46 @@ Examples:
   python run_integration_tests.py --load            # Run load tests
   python run_integration_tests.py --coverage        # Run with coverage
   python run_integration_tests.py --full-suite      # Run complete suite
-        """
+        """,
     )
 
     parser.add_argument(
         "--category",
         choices=list(TEST_CATEGORIES.keys()),
         default="all",
-        help="Test category to run"
+        help="Test category to run",
     )
 
     parser.add_argument(
-        "--coverage",
-        action="store_true",
-        help="Run with coverage analysis"
+        "--coverage", action="store_true", help="Run with coverage analysis"
     )
 
     parser.add_argument(
-        "--profile",
-        action="store_true",
-        help="Run with performance profiling"
+        "--profile", action="store_true", help="Run with performance profiling"
     )
 
     parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Verbose output"
+        "--verbose", "-v", action="store_true", help="Verbose output"
     )
 
     parser.add_argument(
-        "--fail-fast", "-x",
-        action="store_true",
-        help="Stop on first failure"
+        "--fail-fast", "-x", action="store_true", help="Stop on first failure"
     )
 
     parser.add_argument(
-        "--benchmark",
-        action="store_true",
-        help="Enable benchmarking"
+        "--benchmark", action="store_true", help="Enable benchmarking"
     )
 
     parser.add_argument(
-        "--performance",
-        action="store_true",
-        help="Run performance analysis"
+        "--performance", action="store_true", help="Run performance analysis"
     )
 
-    parser.add_argument(
-        "--load",
-        action="store_true",
-        help="Run load testing"
-    )
+    parser.add_argument("--load", action="store_true", help="Run load testing")
 
     parser.add_argument(
         "--full-suite",
         action="store_true",
-        help="Run complete integration test suite"
+        help="Run complete integration test suite",
     )
 
     args = parser.parse_args()
@@ -274,10 +270,11 @@ Examples:
             profile=args.profile,
             verbose=args.verbose,
             fail_fast=args.fail_fast,
-            benchmark=args.benchmark
+            benchmark=args.benchmark,
         )
 
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()
