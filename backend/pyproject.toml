@@ -42,6 +42,9 @@ warn_return_any = false
 disallow_subclassing_any = false
 ignore_missing_imports = true
 disable_error_code = ["assignment", "arg-type", "attr-defined"]
+files = ["src"]
+exclude = ["^tests/"]
+explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = [

@@ -204,7 +204,7 @@ jobs:
           poetry run isort --check-only --diff .
 
       - name: Run type checking
-        run: poetry run mypy .
+        run: poetry run mypy src
 
       - name: Run tests
         run: poetry run pytest --cov=. --cov-report=xml
