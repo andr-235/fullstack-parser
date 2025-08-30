@@ -66,7 +66,7 @@ version = "0.1.0"
 description = "FastAPI backend for fullstack-parser"
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
-packages = [{include = "app", from = "."}]
+packages = [{include = "src", from = "."}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
