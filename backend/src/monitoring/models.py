@@ -7,6 +7,20 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
+from sqlalchemy import (
+    Column,
+    String,
+    Boolean,
+    DateTime,
+    Integer,
+    Text,
+    ForeignKey,
+    JSON,
+    Float,
+    DECIMAL,
+)
+from sqlalchemy.orm import relationship, backref
+
 from ..database import get_db_session
 from ..models import BaseModel
 

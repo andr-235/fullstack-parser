@@ -270,10 +270,10 @@ async def get_users(
     page: PageParam = 1,
     size: SizeParam = 20,
     # Параметры фильтрации
+    search: SearchParam = None,
     is_active: Optional[bool] = Query(
         None, description="Показать только активных пользователей"
     ),
-    search: SearchParam = None,
     # Сервисы
     service: AuthService = Depends(get_auth_service),
 ) -> UserListResponse:

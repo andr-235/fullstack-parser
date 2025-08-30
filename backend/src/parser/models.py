@@ -1,4 +1,6 @@
 """
+from sqlalchemy import Column, String, Boolean, DateTime, Integer, Text, ForeignKey
+from sqlalchemy.orm import relationship, backref
 Модели для модуля Parser
 
 Определяет репозиторий и модели для работы с задачами парсинга

@@ -4,18 +4,17 @@
 
 from typing import Dict, Any
 from fastapi import APIRouter, Request, Depends
-from ..application.settings_service import SettingsApplicationService
-from ..handlers.common import create_success_response, create_error_response
-from ..dependencies import CommonDB
+from .service import SettingsService
+from ..handlers import create_success_response, create_error_response
 
 
 router = APIRouter(prefix="/settings", tags=["Settings"])
 
 
 # Dependency для Settings Service
-def get_settings_service() -> SettingsApplicationService:
+def get_settings_service() -> SettingsService:
     """Получить экземпляр Settings Service"""
-    return SettingsApplicationService()
+    return SettingsService()
 
 
 @router.get(
@@ -25,7 +24,7 @@ def get_settings_service() -> SettingsApplicationService:
 )
 async def get_settings(
     request: Request,
-    settings_service: SettingsApplicationService = Depends(
+    settings_service: SettingsService = Depends(
         get_settings_service
     ),
 ) -> Dict[str, Any]:
@@ -50,7 +49,7 @@ async def get_settings(
 async def update_settings(
     request: Request,
     updates: Dict[str, Any],
-    settings_service: SettingsApplicationService = Depends(
+    settings_service: SettingsService = Depends(
         get_settings_service
     ),
 ) -> Dict[str, Any]:
@@ -78,7 +77,7 @@ async def update_settings(
 )
 async def reset_settings(
     request: Request,
-    settings_service: SettingsApplicationService = Depends(
+    settings_service: SettingsService = Depends(
         get_settings_service
     ),
 ) -> Dict[str, Any]:
@@ -107,7 +106,7 @@ async def reset_settings(
 async def get_settings_section(
     request: Request,
     section_name: str,
-    settings_service: SettingsApplicationService = Depends(
+    settings_service: SettingsService = Depends(
         get_settings_service
     ),
 ) -> Dict[str, Any]:
@@ -148,7 +147,7 @@ async def update_settings_section(
     request: Request,
     section_name: str,
     values: Dict[str, Any],
-    settings_service: SettingsApplicationService = Depends(
+    settings_service: SettingsService = Depends(
         get_settings_service
     ),
 ) -> Dict[str, Any]:
@@ -180,7 +179,7 @@ async def get_setting_value(
     request: Request,
     section_name: str,
     key: str,
-    settings_service: SettingsApplicationService = Depends(
+    settings_service: SettingsService = Depends(
         get_settings_service
     ),
 ) -> Dict[str, Any]:
@@ -217,7 +216,7 @@ async def set_setting_value(
     section_name: str,
     key: str,
     value: Any,
-    settings_service: SettingsApplicationService = Depends(
+    settings_service: SettingsService = Depends(
         get_settings_service
     ),
 ) -> Dict[str, Any]:
@@ -249,7 +248,7 @@ async def set_setting_value(
 )
 async def get_settings_health(
     request: Request,
-    settings_service: SettingsApplicationService = Depends(
+    settings_service: SettingsService = Depends(
         get_settings_service
     ),
 ) -> Dict[str, Any]:
@@ -273,7 +272,7 @@ async def get_settings_health(
 )
 async def validate_settings(
     request: Request,
-    settings_service: SettingsApplicationService = Depends(
+    settings_service: SettingsService = Depends(
         get_settings_service
     ),
 ) -> Dict[str, Any]:

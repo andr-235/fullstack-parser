@@ -7,6 +7,17 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
+from sqlalchemy import (
+    Column,
+    String,
+    Boolean,
+    DateTime,
+    Integer,
+    Text,
+    ForeignKey,
+)
+from sqlalchemy.orm import relationship, backref
+
 from ..database import get_db_session
 from ..models import BaseModel
 
@@ -19,6 +30,7 @@ class UserModel(BaseModel):
     """
 
     __tablename__ = "users"
+    __table_args__ = {"extend_existing": True}
 
     # Основная информация
     email = Column(String(255), unique=True, index=True, nullable=False)

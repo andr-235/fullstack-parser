@@ -5,18 +5,18 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from fastapi import APIRouter, Request, Depends, Query, Path
-from ..application.error_report_service import ErrorReportApplicationService
-from ..handlers.common import create_success_response, create_error_response
-from ..dependencies import CommonDB, PageParam, SizeParam
+from .service import ErrorReportingService
+from ..handlers import create_success_response, create_error_response
+from ..pagination import PageParam, SizeParam
 
 
 router = APIRouter(prefix="/reports", tags=["Error Reports"])
 
 
 # Dependency для Error Report Service
-def get_error_report_service() -> ErrorReportApplicationService:
+def get_error_report_service() -> ErrorReportingService:
     """Получить экземпляр Error Report Service"""
-    return ErrorReportApplicationService()
+    return ErrorReportingService()
 
 
 @router.get(
@@ -41,7 +41,7 @@ async def get_error_reports(
     ),
     start_date: Optional[datetime] = Query(None, description="Начальная дата"),
     end_date: Optional[datetime] = Query(None, description="Конечная дата"),
-    error_service: ErrorReportApplicationService = Depends(
+    error_service: ErrorReportingService = Depends(
         get_error_report_service
     ),
 ) -> Dict[str, Any]:
@@ -87,7 +87,7 @@ async def get_error_reports(
 async def get_error_report(
     request: Request,
     report_id: str = Path(..., description="ID отчета об ошибках"),
-    error_service: ErrorReportApplicationService = Depends(
+    error_service: ErrorReportingService = Depends(
         get_error_report_service
     ),
 ) -> Dict[str, Any]:
@@ -120,7 +120,7 @@ async def get_error_report(
 async def create_error_report(
     request: Request,
     error_data: Dict[str, Any],
-    error_service: ErrorReportApplicationService = Depends(
+    error_service: ErrorReportingService = Depends(
         get_error_report_service
     ),
 ) -> Dict[str, Any]:
@@ -161,7 +161,7 @@ async def acknowledge_error_report(
     acknowledged_by: str = Query(
         ..., description="Имя пользователя, подтверждающего отчет"
     ),
-    error_service: ErrorReportApplicationService = Depends(
+    error_service: ErrorReportingService = Depends(
         get_error_report_service
     ),
 ) -> Dict[str, Any]:
@@ -200,7 +200,7 @@ async def acknowledge_error_report(
 async def delete_error_report(
     request: Request,
     report_id: str = Path(..., description="ID отчета об ошибках"),
-    error_service: ErrorReportApplicationService = Depends(
+    error_service: ErrorReportingService = Depends(
         get_error_report_service
     ),
 ) -> Dict[str, Any]:
@@ -237,7 +237,7 @@ async def delete_error_report(
 async def get_error_statistics(
     request: Request,
     days: int = Query(7, description="Количество дней для статистики"),
-    error_service: ErrorReportApplicationService = Depends(
+    error_service: ErrorReportingService = Depends(
         get_error_report_service
     ),
 ) -> Dict[str, Any]:
@@ -262,7 +262,7 @@ async def get_error_statistics(
 async def get_pending_reports(
     request: Request,
     limit: int = Query(50, description="Максимальное количество отчетов"),
-    error_service: ErrorReportApplicationService = Depends(
+    error_service: ErrorReportingService = Depends(
         get_error_report_service
     ),
 ) -> Dict[str, Any]:
@@ -289,7 +289,7 @@ async def get_pending_reports(
 async def get_critical_reports(
     request: Request,
     limit: int = Query(50, description="Максимальное количество отчетов"),
-    error_service: ErrorReportApplicationService = Depends(
+    error_service: ErrorReportingService = Depends(
         get_error_report_service
     ),
 ) -> Dict[str, Any]:
@@ -319,7 +319,7 @@ async def bulk_acknowledge_reports(
     acknowledged_by: str = Query(
         ..., description="Имя пользователя, подтверждающего отчеты"
     ),
-    error_service: ErrorReportApplicationService = Depends(
+    error_service: ErrorReportingService = Depends(
         get_error_report_service
     ),
 ) -> Dict[str, Any]:

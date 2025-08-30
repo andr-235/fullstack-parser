@@ -713,6 +713,27 @@ files = [
 ]
 
 [[package]]
+name = "dnspython"
+version = "2.7.0"
+description = "DNS toolkit"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "dnspython-2.7.0-py3-none-any.whl", hash = "sha256:b4c34b7d10b51bcc3a5071e7b8dee77939f1e878477eeecc965e9835f63c6c86"},
+    {file = "dnspython-2.7.0.tar.gz", hash = "sha256:ce9c432eda0dc91cf618a5cedf1a4e142651196bbcd2c80e89ed5a907e5cfaf1"},
+]
+
+[package.extras]
+dev = ["black (>=23.1.0)", "coverage (>=7.0)", "flake8 (>=7)", "hypercorn (>=0.16.0)", "mypy (>=1.8)", "pylint (>=3)", "pytest (>=7.4)", "pytest-cov (>=4.1.0)", "quart-trio (>=0.11.0)", "sphinx (>=7.2.0)", "sphinx-rtd-theme (>=2.0.0)", "twine (>=4.0.0)", "wheel (>=0.42.0)"]
+dnssec = ["cryptography (>=43)"]
+doh = ["h2 (>=4.1.0)", "httpcore (>=1.0.0)", "httpx (>=0.26.0)"]
+doq = ["aioquic (>=1.0.0)"]
+idna = ["idna (>=3.7)"]
+trio = ["trio (>=0.23)"]
+wmi = ["wmi (>=1.5.1)"]
+
+[[package]]
 name = "docopt"
 version = "0.6.2"
 description = "Pythonic argument parser, that will make you smile"
@@ -741,6 +762,22 @@ six = ">=1.9.0"
 [package.extras]
 gmpy = ["gmpy"]
 gmpy2 = ["gmpy2"]
+
+[[package]]
+name = "email-validator"
+version = "2.3.0"
+description = "A robust email address syntax and deliverability validation library."
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "email_validator-2.3.0-py3-none-any.whl", hash = "sha256:80f13f623413e6b197ae73bb10bf4eb0908faf509ad8362c5edeb0be7fd450b4"},
+    {file = "email_validator-2.3.0.tar.gz", hash = "sha256:9fc05c37f2f6cf439ff414f8fc46d917929974a82244c20eb10231ba60c54426"},
+]
+
+[package.dependencies]
+dnspython = ">=2.0.0"
+idna = ">=2.0.0"
 
 [[package]]
 name = "fastapi"
@@ -3414,4 +3451,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "10dea537e9fb6367166e9266c8fc4775f029244d2f097ada5ef91d62d4a57aa1"
+content-hash = "775db23620a47082b204cf9855641c7b9af5de508a45eb2ca1b9c42386bc1132"

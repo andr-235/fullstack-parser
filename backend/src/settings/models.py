@@ -1,4 +1,6 @@
 """
+from sqlalchemy import Column, String, Boolean, DateTime, Integer, Text, ForeignKey
+from sqlalchemy.orm import relationship, backref
 Модели для модуля Settings
 
 Определяет модели данных для управления настройками системы

@@ -9,7 +9,7 @@ from typing import List, Optional, Dict, Any
 import secrets
 import string
 
-from ..exceptions import ValidationError, UnauthorizedError, NotFoundError
+from ..exceptions import ValidationError, AuthenticationError, NotFoundError
 from .models import UserRepository, AuthToken
 from ..infrastructure import security_service
 
@@ -97,7 +97,7 @@ class AuthService:
             return None
 
         if not user.is_active:
-            raise UnauthorizedError("Аккаунт деактивирован")
+            raise AuthenticationError("Аккаунт деактивирован")
 
         if not security_service.verify_password(
             password, user.hashed_password
@@ -147,13 +147,13 @@ class AuthService:
             payload = security_service.decode_token(refresh_token)
 
             if payload.get("type") != "refresh":
-                raise UnauthorizedError("Неверный тип токена")
+                raise AuthenticationError("Неверный тип токена")
 
             user_id = int(payload.get("sub"))
             user = await self.get_user(user_id)
 
             if not user or not user["is_active"]:
-                raise UnauthorizedError(
+                raise AuthenticationError(
                     "Пользователь не найден или деактивирован"
                 )
 
@@ -176,7 +176,7 @@ class AuthService:
             }
 
         except Exception:
-            raise UnauthorizedError("Неверный refresh токен")
+            raise AuthenticationError("Неверный refresh токен")
 
     async def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
         """

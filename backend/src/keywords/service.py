@@ -170,7 +170,7 @@ class KeywordsService:
             return None
 
         # Валидация данных обновления
-        self._validate_update_data(update_data, existing)
+        await self._validate_update_data(update_data, existing)
 
         # Подготовка данных для обновления
         update_dict = {}
@@ -734,7 +734,7 @@ class KeywordsService:
                 field="priority",
             )
 
-    def _validate_update_data(
+    async def _validate_update_data(
         self, data: Dict[str, Any], existing: Dict[str, Any]
     ) -> None:
         """Валидация данных обновления"""

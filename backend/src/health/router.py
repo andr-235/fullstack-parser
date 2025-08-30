@@ -4,18 +4,17 @@
 
 from typing import Dict, Any
 from fastapi import APIRouter, Request, Depends
-from ..application.health_service import HealthApplicationService
-from ..handlers.common import create_success_response, create_error_response
-from ..dependencies import CommonDB
+from .service import HealthService
+from ..handlers import create_success_response, create_error_response
 
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
 
 # Dependency для Health Service
-def get_health_service() -> HealthApplicationService:
+def get_health_service() -> HealthService:
     """Получить экземпляр Health Service"""
-    return HealthApplicationService()
+    return HealthService()
 
 
 @router.get(
@@ -25,7 +24,7 @@ def get_health_service() -> HealthApplicationService:
 )
 async def basic_health_check(
     request: Request,
-    health_service: HealthApplicationService = Depends(get_health_service),
+    health_service: HealthService = Depends(get_health_service),
 ) -> Dict[str, Any]:
     """Базовая проверка здоровья системы"""
     try:
@@ -47,7 +46,7 @@ async def basic_health_check(
 )
 async def detailed_health_check(
     request: Request,
-    health_service: HealthApplicationService = Depends(get_health_service),
+    health_service: HealthService = Depends(get_health_service),
 ) -> Dict[str, Any]:
     """Детальная проверка здоровья системы"""
     try:
@@ -69,7 +68,7 @@ async def detailed_health_check(
 )
 async def readiness_check(
     request: Request,
-    health_service: HealthApplicationService = Depends(get_health_service),
+    health_service: HealthService = Depends(get_health_service),
 ) -> Dict[str, Any]:
     """Проверка готовности системы"""
     try:
@@ -91,7 +90,7 @@ async def readiness_check(
 )
 async def liveness_check(
     request: Request,
-    health_service: HealthApplicationService = Depends(get_health_service),
+    health_service: HealthService = Depends(get_health_service),
 ) -> Dict[str, Any]:
     """Проверка живости процесса"""
     try:
@@ -113,7 +112,7 @@ async def liveness_check(
 )
 async def system_status(
     request: Request,
-    health_service: HealthApplicationService = Depends(get_health_service),
+    health_service: HealthService = Depends(get_health_service),
 ) -> Dict[str, Any]:
     """Получить общую информацию о статусе системы"""
     try:

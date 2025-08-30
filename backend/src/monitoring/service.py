@@ -14,7 +14,7 @@ from ..exceptions import (
     NotFoundError,
     ServiceUnavailableError,
 )
-from .models import MonitoringRepository, MonitoringTask
+from .models import MonitoringRepository
 from ..parser.client import VKAPIClient
 
 

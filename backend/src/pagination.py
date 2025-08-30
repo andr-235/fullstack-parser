@@ -86,13 +86,12 @@ def create_paginated_response(
 # Типизированные аннотации для FastAPI зависимостей
 PageParam = Annotated[
     int,
-    Query(default=1, ge=1, description="Номер страницы", examples=[1, 2, 3]),
+    Query(ge=1, description="Номер страницы", examples=[1, 2, 3]),
 ]
 
 SizeParam = Annotated[
     int,
     Query(
-        default=20,
         ge=1,
         le=100,
         description="Размер страницы",
@@ -103,7 +102,6 @@ SizeParam = Annotated[
 SearchParam = Annotated[
     Optional[str],
     Query(
-        default=None,
         description="Поисковый запрос",
         examples=["поиск", "test"],
     ),

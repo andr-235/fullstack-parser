@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 import time
 from uuid import uuid4
 
-from app.api.v1.schemas.responses import (
+from .responses import (
     ErrorResponse,
     SuccessResponse,
     MetaInfo,

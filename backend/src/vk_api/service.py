@@ -14,10 +14,10 @@ from .models import VKAPIRepository
 from .client import VKAPIClient
 from .config import vk_api_config
 from .constants import (
-    MAX_POSTS_PER_REQUEST,
-    MAX_COMMENTS_PER_REQUEST,
-    MAX_GROUPS_PER_REQUEST,
-    MAX_USERS_PER_REQUEST,
+    VK_API_MAX_POSTS_PER_REQUEST,
+    VK_API_MAX_COMMENTS_PER_REQUEST,
+    VK_API_MAX_GROUPS_PER_REQUEST,
+    VK_API_MAX_USERS_PER_REQUEST,
     VK_OBJECT_TYPE_POST,
     VK_OBJECT_TYPE_COMMENT,
     VK_OBJECT_TYPE_GROUP,
@@ -60,7 +60,7 @@ class VKAPIService:
         if not isinstance(group_id, int) or group_id <= 0:
             raise ValidationError("Неверный ID группы", field="group_id")
 
-        count = min(count, MAX_POSTS_PER_REQUEST)
+        count = min(count, VK_API_MAX_POSTS_PER_REQUEST)
         if count <= 0:
             raise ValidationError(
                 "Количество постов должно быть положительным", field="count"
@@ -143,7 +143,7 @@ class VKAPIService:
         if sort not in [VK_SORT_ASC, VK_SORT_DESC]:
             raise ValidationError("Неверная сортировка", field="sort")
 
-        count = min(count, MAX_COMMENTS_PER_REQUEST)
+        count = min(count, VK_API_MAX_COMMENTS_PER_REQUEST)
 
         try:
             # Проверяем кеш
@@ -282,7 +282,7 @@ class VKAPIService:
                 "Поисковый запрос не может быть пустым", field="query"
             )
 
-        count = min(count, MAX_GROUPS_PER_REQUEST)
+        count = min(count, VK_API_MAX_GROUPS_PER_REQUEST)
 
         try:
             # Проверяем кеш
@@ -356,9 +356,9 @@ class VKAPIService:
                 field="user_ids",
             )
 
-        if len(user_ids) > MAX_USERS_PER_REQUEST:
+        if len(user_ids) > VK_API_MAX_USERS_PER_REQUEST:
             raise ValidationError(
-                f"Слишком много пользователей (макс {MAX_USERS_PER_REQUEST})",
+                f"Слишком много пользователей (макс {VK_API_MAX_USERS_PER_REQUEST})",
                 field="user_ids",
             )
 
@@ -504,10 +504,10 @@ class VKAPIService:
 
         return {
             "max_requests_per_second": vk_api_config.MAX_REQUESTS_PER_SECOND,
-            "max_posts_per_request": MAX_POSTS_PER_REQUEST,
-            "max_comments_per_request": MAX_COMMENTS_PER_REQUEST,
-            "max_groups_per_request": MAX_GROUPS_PER_REQUEST,
-            "max_users_per_request": MAX_USERS_PER_REQUEST,
+            "max_posts_per_request": VK_API_MAX_POSTS_PER_REQUEST,
+            "max_comments_per_request": VK_API_MAX_COMMENTS_PER_REQUEST,
+            "max_groups_per_request": VK_API_MAX_GROUPS_PER_REQUEST,
+            "max_users_per_request": VK_API_MAX_USERS_PER_REQUEST,
             "current_request_count": client_stats["current_request_count"],
             "last_request_time": client_stats["last_request_time"],
             "time_until_reset": client_stats["time_until_reset"],

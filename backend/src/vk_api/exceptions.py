@@ -4,10 +4,10 @@
 Содержит специфические исключения для модуля работы с VK API
 """
 
-from ..exceptions import APIException
+from ..exceptions import APIError
 
 
-class VKAPIError(APIException):
+class VKAPIError(APIError):
     """Общая ошибка VK API"""
 
     def __init__(
@@ -35,7 +35,7 @@ class VKAPIError(APIException):
         )
 
 
-class VKAPIRateLimitError(APIException):
+class VKAPIRateLimitError(APIError):
     """Ошибка превышения лимита запросов VK API"""
 
     def __init__(self, wait_time: float = None, method: str = None):
@@ -56,7 +56,7 @@ class VKAPIRateLimitError(APIException):
         )
 
 
-class VKAPIAuthError(APIException):
+class VKAPIAuthError(APIError):
     """Ошибка аутентификации VK API"""
 
     def __init__(self, message: str = "VK API authentication failed"):
@@ -68,7 +68,7 @@ class VKAPIAuthError(APIException):
         )
 
 
-class VKAPIAccessDeniedError(APIException):
+class VKAPIAccessDeniedError(APIError):
     """Ошибка доступа к ресурсу VK API"""
 
     def __init__(self, resource: str, reason: str = None):
@@ -87,7 +87,7 @@ class VKAPIAccessDeniedError(APIException):
         )
 
 
-class VKAPIInvalidTokenError(APIException):
+class VKAPIInvalidTokenError(APIError):
     """Неверный токен доступа VK API"""
 
     def __init__(self, message: str = "Invalid VK API access token"):
@@ -99,7 +99,7 @@ class VKAPIInvalidTokenError(APIException):
         )
 
 
-class VKAPIInvalidParamsError(APIException):
+class VKAPIInvalidParamsError(APIError):
     """Неверные параметры запроса VK API"""
 
     def __init__(
@@ -119,7 +119,7 @@ class VKAPIInvalidParamsError(APIException):
         )
 
 
-class VKAPITimeoutError(APIException):
+class VKAPITimeoutError(APIError):
     """Превышено время ожидания ответа VK API"""
 
     def __init__(self, timeout: float = None, method: str = None):
@@ -140,7 +140,7 @@ class VKAPITimeoutError(APIException):
         )
 
 
-class VKAPINetworkError(APIException):
+class VKAPINetworkError(APIError):
     """Ошибка сети при работе с VK API"""
 
     def __init__(
@@ -158,7 +158,7 @@ class VKAPINetworkError(APIException):
         )
 
 
-class VKAPIResourceNotFoundError(APIException):
+class VKAPIResourceNotFoundError(APIError):
     """Ресурс не найден в VK API"""
 
     def __init__(self, resource_type: str, resource_id: str):
@@ -176,7 +176,7 @@ class VKAPIResourceNotFoundError(APIException):
         )
 
 
-class VKAPIInvalidResponseError(APIException):
+class VKAPIInvalidResponseError(APIError):
     """Неверный формат ответа VK API"""
 
     def __init__(
@@ -199,7 +199,7 @@ class VKAPIInvalidResponseError(APIException):
         )
 
 
-class VKAPIGroupAccessError(APIException):
+class VKAPIGroupAccessError(APIError):
     """Ошибка доступа к группе VK"""
 
     def __init__(
@@ -216,7 +216,7 @@ class VKAPIGroupAccessError(APIException):
         )
 
 
-class VKAPIPostNotFoundError(APIException):
+class VKAPIPostNotFoundError(APIError):
     """Пост не найден в VK API"""
 
     def __init__(self, post_id: int, group_id: int = None):
@@ -235,7 +235,7 @@ class VKAPIPostNotFoundError(APIException):
         )
 
 
-class VKAPIUserNotFoundError(APIException):
+class VKAPIUserNotFoundError(APIError):
     """Пользователь не найден в VK API"""
 
     def __init__(self, user_id: int):
@@ -247,7 +247,7 @@ class VKAPIUserNotFoundError(APIException):
         )
 
 
-class VKAPIRetryExhaustedError(APIException):
+class VKAPIRetryExhaustedError(APIError):
     """Исчерпаны попытки повтора запроса к VK API"""
 
     def __init__(self, max_attempts: int, method: str = None):
@@ -266,7 +266,7 @@ class VKAPIRetryExhaustedError(APIException):
         )
 
 
-class VKAPIConfigurationError(APIException):
+class VKAPIConfigurationError(APIError):
     """Ошибка конфигурации VK API"""
 
     def __init__(
@@ -283,7 +283,7 @@ class VKAPIConfigurationError(APIException):
         )
 
 
-class VKAPICacheError(APIException):
+class VKAPICacheError(APIError):
     """Ошибка кеширования VK API"""
 
     def __init__(self, operation: str, message: str = "VK API cache error"):
@@ -297,7 +297,7 @@ class VKAPICacheError(APIException):
         )
 
 
-class VKAPIMetricsError(APIException):
+class VKAPIMetricsError(APIError):
     """Ошибка метрик VK API"""
 
     def __init__(self, metric: str, message: str = "VK API metrics error"):
@@ -311,7 +311,7 @@ class VKAPIMetricsError(APIException):
         )
 
 
-class VKAPIHealthCheckError(APIException):
+class VKAPIHealthCheckError(APIError):
     """Ошибка проверки здоровья VK API"""
 
     def __init__(

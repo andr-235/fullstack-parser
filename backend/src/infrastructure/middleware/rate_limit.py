@@ -12,7 +12,7 @@ from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-from app.api.v1.schemas.errors import create_rate_limit_error
+from ...exceptions import create_rate_limit_error
 
 
 class SimpleRateLimitMiddleware(BaseHTTPMiddleware):
@@ -121,7 +121,7 @@ class SimpleRateLimitMiddleware(BaseHTTPMiddleware):
         )
 
         # Создаем стандартизированный ответ
-        from app.api.v1.handlers.common import create_error_response
+        from ...handlers import create_error_response
 
         return await create_error_response(
             request,

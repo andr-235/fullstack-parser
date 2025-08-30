@@ -108,6 +108,69 @@ class NotFoundError(APIError):
         )
 
 
+# Специфические исключения для модулей
+class CommentNotFoundError(NotFoundError):
+    """Комментарий не найден"""
+
+    def __init__(self, comment_id: Optional[Any] = None):
+        super().__init__(
+            resource="Comment",
+            resource_id=comment_id,
+        )
+
+
+class GroupNotFoundError(NotFoundError):
+    """Группа не найдена"""
+
+    def __init__(self, group_id: Optional[Any] = None):
+        super().__init__(
+            resource="Group",
+            resource_id=group_id,
+        )
+
+
+class VKAPIError(APIError):
+    """Ошибка VK API с enterprise-grade информацией"""
+
+    def __init__(
+        self,
+        vk_error_code: Optional[int] = None,
+        vk_error_msg: Optional[str] = None,
+        request_params: Optional[Dict[str, Any]] = None,
+        retry_after: Optional[int] = None,
+    ):
+        message = "VK API Error"
+        details = {}
+        suggestions = []
+
+        if vk_error_msg:
+            message = f"VK API: {vk_error_msg}"
+            details["vk_error_message"] = vk_error_msg
+
+        if vk_error_code is not None:
+            details["vk_error_code"] = vk_error_code
+            suggestions.append(f"Проверьте код ошибки VK API: {vk_error_code}")
+
+        if request_params:
+            details["request_params"] = request_params
+            suggestions.append("Проверьте параметры запроса к VK API")
+
+        if retry_after:
+            details["retry_after"] = retry_after
+            suggestions.append(f"Повторите запрос через {retry_after} секунд")
+
+        suggestions.append("Проверьте токен доступа VK API")
+        suggestions.append("Проверьте лимиты запросов VK API")
+
+        super().__init__(
+            status_code=502,  # Bad Gateway for external API errors
+            error_code="VK_API_ERROR",
+            message=message,
+            details=details,
+            suggestions=suggestions,
+        )
+
+
 class RateLimitError(APIError):
     """Превышен лимит запросов с enterprise-grade информацией"""
 

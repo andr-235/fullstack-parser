@@ -1,4 +1,6 @@
 """
+from sqlalchemy import Column, String, Boolean, DateTime, Integer, Text, ForeignKey
+from sqlalchemy.orm import relationship, backref
 Модели для модуля VK API
 
 Определяет репозиторий для работы с VK API

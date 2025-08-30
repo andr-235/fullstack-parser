@@ -5,7 +5,7 @@ Pydantic схемы для модуля Groups
 """
 
 from datetime import datetime
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 from pydantic import BaseModel, Field, ConfigDict
 
 from ..pagination import PaginatedResponse
