@@ -8,7 +8,7 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -20,14 +20,7 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@/shared/*": ["./shared/*"],
-      "@/entities/*": ["./entities/*"],
-      "@/features/*": ["./features/*"],
-      "@/widgets/*": ["./widgets/*"],
-      "@/app/*": ["./app/*"],
-      "@/shared/lib": ["./shared/lib/index"],
-      "@/shared/lib/*": ["./shared/lib/*"]
+      "@/*": ["./*"]
     },
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,
