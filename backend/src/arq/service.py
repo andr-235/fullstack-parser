@@ -322,7 +322,8 @@ async def cleanup_old_data(
 
         data_types = data_types or ["comments", "logs", "temp_files"]
 
-        result = {
+        # Типизируем результирующий объект, чтобы избежать object при индексациях
+        result: Dict[str, Any] = {
             "days_old": days_old,
             "data_types": data_types,
             "cleanup_results": {},
@@ -374,7 +375,8 @@ async def process_batch_comments(
         # Здесь будет логика пакетной обработки
         # Пока возвращаем моковые данные
 
-        result = {
+        # Типизируем результирующий объект для корректной арифметики
+        result: Dict[str, Any] = {
             "operation": operation,
             "total_comments": len(comment_ids),
             "processed": 0,

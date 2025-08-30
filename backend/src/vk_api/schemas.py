@@ -5,7 +5,7 @@ Pydantic схемы для модуля VK API
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal, Annotated
 from pydantic import BaseModel, Field, ConfigDict
 
 from ..pagination import PaginatedResponse
@@ -191,14 +191,14 @@ class VKPostCommentsRequest(BaseModel):
         100, description="Количество комментариев", ge=1, le=100
     )
     offset: int = Field(0, description="Смещение", ge=0)
-    sort: str = Field("asc", description="Сортировка", enum=["asc", "desc"])
+    sort: Literal["asc", "desc"] = Field("asc", description="Сортировка")
 
 
 class VKPostCommentsResponse(BaseModel):
     """Ответ с комментариями к посту"""
 
     comments: List[Dict[str, Any]] = Field(
-        ..., description="Список комментариев"
+        default_factory=list, description="Список комментариев"
     )
     total_count: int = Field(..., description="Общее количество комментариев")
     group_id: int = Field(..., description="ID группы")
@@ -227,12 +227,12 @@ class VKGroupInfoResponse(BaseModel):
 class VKUsersInfoRequest(BaseModel):
     """Запрос на получение информации о пользователях"""
 
-    user_ids: List[int] = Field(
-        ...,
-        description="Список ID пользователей",
-        min_length=1,
-        max_length=1000,
-    )
+    user_ids: Annotated[
+        List[int],
+        Field(
+            min_items=1, max_items=1000, description="Список ID пользователей"
+        ),
+    ]
 
 
 class VKUsersInfoResponse(BaseModel):
@@ -349,9 +349,10 @@ class VKBulkPostsRequest(BaseModel):
     """Запрос на массовое получение постов"""
 
     group_id: int = Field(..., description="ID группы VK", gt=0)
-    post_ids: List[int] = Field(
-        ..., description="Список ID постов", min_length=1, max_length=100
-    )
+    post_ids: Annotated[
+        List[int],
+        Field(min_items=1, max_items=100, description="Список ID постов"),
+    ]
 
 
 class VKBulkPostsResponse(BaseModel):

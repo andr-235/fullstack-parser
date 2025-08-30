@@ -269,20 +269,23 @@ class ARQService:
         Returns:
             Dict с информацией о состоянии сервиса
         """
-        health_info = {
+        # Явно типизируем details, чтобы избежать проблем mypy с вложенной индексацией
+        details: Dict[str, Any] = {}
+        health_info: Dict[str, Any] = {
             "service": "ARQ",
             "healthy": False,
             "timestamp": datetime.now().isoformat(),
-            "details": {},
+            "details": details,
         }
 
         try:
             if not self._is_initialized:
-                health_info["details"]["error"] = "Service not initialized"
+                # Безопасно записываем ошибку в типизированный словарь details
+                details["error"] = "Service not initialized"
                 return health_info
 
             if not self._redis_pool:
-                health_info["details"]["error"] = "Redis pool not available"
+                details["error"] = "Redis pool not available"
                 return health_info
 
             # Проверяем соединение с Redis
@@ -299,7 +302,7 @@ class ARQService:
             }
 
         except Exception as e:
-            health_info["details"]["error"] = str(e)
+            details["error"] = str(e)
             logger.error(f"❌ ARQ health check failed: {e}")
 
         return health_info

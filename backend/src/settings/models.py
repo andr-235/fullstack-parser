@@ -167,7 +167,8 @@ class SettingsRepository:
         Returns:
             Dict[str, Any]: Результат валидации
         """
-        issues = {}
+        # Ключи секций -> словарь с проблемами
+        issues: Dict[str, Dict[str, str]] = {}
 
         # Проверяем размер настроек
         settings_size = len(str(settings).encode("utf-8"))

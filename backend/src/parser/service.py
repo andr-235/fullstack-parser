@@ -46,9 +46,8 @@ class ParserService:
             # Создаем экземпляр VK API сервиса для внутренних вызовов
             self.vk_api = create_vk_api_service()
 
-        self.tasks = (
-            {}
-        )  # В памяти для простоты, в продакшене использовать Redis/DB
+        # Храним состояния задач в памяти для простоты (task_id -> данные задачи)
+        self.tasks: Dict[str, Dict[str, Any]] = {}
 
     async def start_parsing(
         self,

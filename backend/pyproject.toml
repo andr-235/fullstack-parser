@@ -110,6 +110,7 @@ pytest-env = ">=1.1.5"
 pytest-aio = ">=1.9.0"
 pip-audit = "^2.9.0"
 pytest-xdist = "^3.8.0"
+types-croniter = "*"
 
 [build-system]
 requires = ["poetry-core"]

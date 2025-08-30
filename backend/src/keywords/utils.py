@@ -421,7 +421,7 @@ def group_keywords_by_category(
     Returns:
         Dict[str, List[Dict[str, Any]]]: Группированные ключевые слова
     """
-    grouped = {}
+    grouped: Dict[str, List[Dict[str, Any]]] = {}
 
     for keyword in keywords:
         category = keyword.get("category", {})

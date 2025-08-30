@@ -124,7 +124,7 @@ async def get_current_superuser(
         HTTPException: Если пользователь не суперпользователь
     """
     if not user.get("is_superuser"):
-        raise HTTPHTTPException(
+        raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Недостаточно прав доступа",
         )

@@ -91,7 +91,13 @@ async def login(
             )
 
         tokens = await service.create_tokens(user)
-        return TokenResponse(**tokens, user=user)
+        return TokenResponse(
+            access_token=tokens["access_token"],
+            refresh_token=tokens["refresh_token"],
+            token_type=tokens.get("token_type", "bearer"),
+            expires_in=int(tokens.get("expires_in", 3600)),
+            user=user,
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -115,7 +121,13 @@ async def refresh_token(
         user_id = int(tokens["user_id"]) if "user_id" in tokens else None
         if user_id:
             user = await service.get_user(user_id)
-            return TokenResponse(**tokens, user=user)
+            return TokenResponse(
+                access_token=tokens["access_token"],
+                refresh_token=tokens["refresh_token"],
+                token_type=tokens.get("token_type", "bearer"),
+                expires_in=int(tokens.get("expires_in", 3600)),
+                user=user,
+            )
         else:
             raise HTTPException(
                 status_code=400, detail="Не удалось определить пользователя"
@@ -138,11 +150,17 @@ async def validate_token(
     try:
         result = await service.validate_token(token)
         if result:
-            return TokenValidationResponse(**result)
+            return TokenValidationResponse(
+                valid=bool(result.get("valid", False)),
+                user=result.get("user"),
+                expires_at=result.get("expires_at"),
+            )
         else:
-            return TokenValidationResponse(valid=False)
+            return TokenValidationResponse(
+                valid=False, user=None, expires_at=None
+            )
     except Exception as e:
-        return TokenValidationResponse(valid=False)
+        return TokenValidationResponse(valid=False, user=None, expires_at=None)
 
 
 @router.get(
@@ -158,7 +176,8 @@ async def get_current_user(
 ) -> UserResponse:
     """Получить текущего пользователя"""
     try:
-        return await service.get_user(user_id)
+        user = await service.get_user(user_id)
+        return UserResponse(**user)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -176,9 +195,10 @@ async def update_profile(
 ) -> UserResponse:
     """Обновить профиль пользователя"""
     try:
-        return await service.update_user(
+        updated = await service.update_user(
             user_id, profile_data.model_dump(exclude_unset=True)
         )
+        return UserResponse(**updated)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -296,7 +316,17 @@ async def get_users(
     # В реальности нужно получить total из БД
     total = len(users)  # Заглушка
 
-    return create_paginated_response(users, total, pagination)
+    return UserListResponse(
+        items=[UserResponse(**u) for u in users],
+        total=total,
+        page=pagination.page,
+        size=pagination.size,
+        pages=(
+            (total + pagination.size - 1) // pagination.size
+            if pagination.size > 0
+            else 0
+        ),
+    )
 
 
 @router.get(
@@ -311,7 +341,8 @@ async def get_user(
 ) -> UserResponse:
     """Получить пользователя по ID"""
     try:
-        return await service.get_user(user_id)
+        user = await service.get_user(user_id)
+        return UserResponse(**user)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -329,9 +360,10 @@ async def update_user(
 ) -> UserResponse:
     """Обновить пользователя"""
     try:
-        return await service.update_user(
+        updated = await service.update_user(
             user_id, user_data.model_dump(exclude_unset=True)
         )
+        return UserResponse(**updated)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

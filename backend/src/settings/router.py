@@ -4,6 +4,7 @@
 
 from typing import Dict, Any
 from fastapi import APIRouter, Request, Depends
+from fastapi.responses import JSONResponse
 from .service import SettingsService
 from ..handlers import create_success_response, create_error_response
 
@@ -25,7 +26,7 @@ def get_settings_service() -> SettingsService:
 async def get_settings(
     request: Request,
     settings_service: SettingsService = Depends(get_settings_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Получить текущие настройки системы"""
     try:
         settings = await settings_service.get_current_settings()
@@ -48,7 +49,7 @@ async def update_settings(
     request: Request,
     updates: Dict[str, Any],
     settings_service: SettingsService = Depends(get_settings_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Обновить настройки системы"""
     try:
         updated_settings = await settings_service.update_settings(updates)
@@ -75,7 +76,7 @@ async def update_settings(
 async def reset_settings(
     request: Request,
     settings_service: SettingsService = Depends(get_settings_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Сбросить настройки к значениям по умолчанию"""
     try:
         default_settings = await settings_service.reset_to_defaults()
@@ -103,7 +104,7 @@ async def get_settings_section(
     request: Request,
     section_name: str,
     settings_service: SettingsService = Depends(get_settings_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Получить секцию настроек"""
     try:
         section = await settings_service.get_section(section_name)
@@ -142,7 +143,7 @@ async def update_settings_section(
     section_name: str,
     values: Dict[str, Any],
     settings_service: SettingsService = Depends(get_settings_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Обновить секцию настроек"""
     try:
         updated_settings = await settings_service.update_section(
@@ -173,7 +174,7 @@ async def get_setting_value(
     section_name: str,
     key: str,
     settings_service: SettingsService = Depends(get_settings_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Получить значение настройки"""
     try:
         value = await settings_service.get_setting_value(section_name, key)
@@ -208,7 +209,7 @@ async def set_setting_value(
     key: str,
     value: Any,
     settings_service: SettingsService = Depends(get_settings_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Установить значение настройки"""
     try:
         updated_settings = await settings_service.set_setting_value(
@@ -239,7 +240,7 @@ async def set_setting_value(
 async def get_settings_health(
     request: Request,
     settings_service: SettingsService = Depends(get_settings_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Проверить состояние настроек"""
     try:
         health_status = await settings_service.get_health_status()
@@ -261,7 +262,7 @@ async def get_settings_health(
 async def validate_settings(
     request: Request,
     settings_service: SettingsService = Depends(get_settings_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Валидировать настройки системы"""
     try:
         validation_result = await settings_service.validate_settings()

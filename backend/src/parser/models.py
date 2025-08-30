@@ -36,7 +36,8 @@ class ParsingTask:
         self.groups_total = len(group_ids)
         self.posts_found = 0
         self.comments_found = 0
-        self.errors = []
+        # Храним человеко-читаемые описания ошибок во время парсинга
+        self.errors: List[str] = []
         self.created_at = datetime.utcnow()
         self.started_at = None
         self.completed_at = None

@@ -7,7 +7,7 @@
 import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, Tuple
-from croniter import croniter
+from croniter import croniter  # type: ignore[import-untyped]
 
 
 def validate_cron_expression(cron_expr: str) -> bool:
@@ -152,7 +152,7 @@ def generate_task_summary(status_info: Dict[str, Any]) -> Dict[str, str]:
     if started_at and finished_at:
         try:
             duration = (finished_at - started_at).total_seconds()
-            summary["duration"] = ".2f"
+            summary["duration"] = f"{duration:.2f}"
         except:
             summary["duration"] = "unknown"
 

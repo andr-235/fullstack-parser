@@ -157,7 +157,17 @@ async def get_tasks_list(
     # В реальности нужно получить total из БД
     total = len(tasks)  # Заглушка
 
-    return create_paginated_response(tasks, total, pagination)
+    return ParseTaskListResponse(
+        items=tasks,
+        total=total,
+        page=pagination.page,
+        size=pagination.size,
+        pages=(
+            (total + pagination.size - 1) // pagination.size
+            if pagination.size > 0
+            else 0
+        ),
+    )
 
 
 @router.get(

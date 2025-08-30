@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI):
         raise
 
     # Инициализируем ARQ сервис (если включен)
-    if config_service.arq_enabled:
+    if getattr(settings, "arq_enabled", False):
         try:
             await arq_service.initialize()
             logger.info("⚡ ARQ сервис инициализирован")
@@ -91,7 +91,7 @@ async def lifespan(app: FastAPI):
     logger.info("🛑 Остановка VK Comments Parser...")
 
     # Закрываем ARQ сервис
-    if config_service.arq_enabled:
+    if getattr(settings, "arq_enabled", False):
         try:
             await arq_service.close()
             logger.info("⚡ ARQ сервис закрыт")

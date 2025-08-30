@@ -78,7 +78,17 @@ async def get_groups(
         is_active=is_active, search=pagination.search
     )
 
-    return create_paginated_response(groups, total, pagination)
+    return GroupListResponse(
+        items=[GroupResponse(**g) for g in groups],
+        total=total,
+        page=pagination.page,
+        size=pagination.size,
+        pages=(
+            (total + pagination.size - 1) // pagination.size
+            if pagination.size > 0
+            else 0
+        ),
+    )
 
 
 @router.get(
@@ -93,7 +103,8 @@ async def get_group(
 ) -> GroupResponse:
     """Получить группу по ID"""
     try:
-        return await service.get_group(group_id)
+        group = await service.get_group(group_id)
+        return GroupResponse(**group)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -114,7 +125,7 @@ async def get_group_by_vk_id(
         raise HTTPException(
             status_code=404, detail=f"Группа с VK ID {vk_id} не найдена"
         )
-    return group
+    return GroupResponse(**group)
 
 
 @router.get(
@@ -133,7 +144,7 @@ async def get_group_by_screen_name(
         raise HTTPException(
             status_code=404, detail=f"Группа @{screen_name} не найдена"
         )
-    return group
+    return GroupResponse(**group)
 
 
 @router.post(
@@ -149,7 +160,8 @@ async def create_group(
 ) -> GroupResponse:
     """Создать новую группу"""
     try:
-        return await service.create_group(group_data.model_dump())
+        created = await service.create_group(group_data.model_dump())
+        return GroupResponse(**created)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -167,9 +179,10 @@ async def update_group(
 ) -> GroupResponse:
     """Обновить группу"""
     try:
-        return await service.update_group(
+        updated = await service.update_group(
             group_id, group_data.model_dump(exclude_unset=True)
         )
+        return GroupResponse(**updated)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -205,7 +218,8 @@ async def activate_group(
 ) -> GroupResponse:
     """Активировать группу"""
     try:
-        return await service.activate_group(group_id)
+        activated = await service.activate_group(group_id)
+        return GroupResponse(**activated)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -222,7 +236,8 @@ async def deactivate_group(
 ) -> GroupResponse:
     """Деактивировать группу"""
     try:
-        return await service.deactivate_group(group_id)
+        deactivated = await service.deactivate_group(group_id)
+        return GroupResponse(**deactivated)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -349,7 +364,17 @@ async def search_groups(
 
         # В реальности нужно получить total из БД
         total = await service.count_groups(is_active=is_active, search=q)
-        return create_paginated_response(groups, total, pagination)
+        return GroupListResponse(
+            items=[GroupResponse(**g) for g in groups],
+            total=total,
+            page=pagination.page,
+            size=pagination.size,
+            pages=(
+                (total + pagination.size - 1) // pagination.size
+                if pagination.size > 0
+                else 0
+            ),
+        )
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

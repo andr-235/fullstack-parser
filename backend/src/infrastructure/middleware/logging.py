@@ -7,7 +7,7 @@ Enterprise-grade Request Logging Middleware для API v1 с DDD архитек�
 
 import time
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, cast
 from uuid import uuid4
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -36,7 +36,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         self.exclude_paths = exclude_paths or {"/health", "/favicon.ico"}
 
         # Статистика для мониторинга
-        self.stats = {
+        self.stats: Dict[str, Any] = {
             "total_requests": 0,
             "successful_requests": 0,
             "failed_requests": 0,
@@ -56,16 +56,18 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         start_time = time.time()
 
         # Обновляем статистику
-        self.stats["total_requests"] += 1
+        self.stats["total_requests"] = (
+            int(self.stats.get("total_requests", 0)) + 1
+        )
         method = request.method
         path = request.url.path
 
-        self.stats["requests_by_method"][method] = (
-            self.stats["requests_by_method"].get(method, 0) + 1
+        requests_by_method = cast(
+            Dict[str, int], self.stats["requests_by_method"]
         )
-        self.stats["requests_by_path"][path] = (
-            self.stats["requests_by_path"].get(path, 0) + 1
-        )
+        requests_by_path = cast(Dict[str, int], self.stats["requests_by_path"])
+        requests_by_method[method] = int(requests_by_method.get(method, 0)) + 1
+        requests_by_path[path] = int(requests_by_path.get(path, 0)) + 1
 
         # Сохраняем данные в request state для использования в обработчиках
         request.state.request_id = request_id
@@ -79,7 +81,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             processing_time = time.time() - start_time
 
             # Обновляем статистику успешных запросов
-            self.stats["successful_requests"] += 1
+            self.stats["successful_requests"] = (
+                int(self.stats.get("successful_requests", 0)) + 1
+            )
             self._update_processing_time_stats(processing_time)
 
             # Сохраняем время обработки в request state
@@ -99,10 +103,13 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             processing_time = time.time() - start_time
 
             # Обновляем статистику ошибок
-            self.stats["failed_requests"] += 1
+            self.stats["failed_requests"] = (
+                int(self.stats.get("failed_requests", 0)) + 1
+            )
             error_type = type(e).__name__
-            self.stats["errors_by_type"][error_type] = (
-                self.stats["errors_by_type"].get(error_type, 0) + 1
+            errors_by_type = cast(Dict[str, int], self.stats["errors_by_type"])
+            errors_by_type[error_type] = (
+                int(errors_by_type.get(error_type, 0)) + 1
             )
 
             # Логируем ошибку
@@ -230,8 +237,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
     def _update_processing_time_stats(self, processing_time: float) -> None:
         """Обновить статистику времени обработки"""
-        current_avg = self.stats["avg_processing_time"]
-        total_requests = self.stats["total_requests"]
+        current_avg = float(self.stats["avg_processing_time"])  # type: ignore[call-overload]
+        total_requests = int(self.stats["total_requests"])  # type: ignore[call-overload]
 
         # Вычисляем новое среднее
         self.stats["avg_processing_time"] = (
@@ -246,10 +253,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             "log_request_body": self.log_request_body,
             "log_response_body": self.log_response_body,
             "success_rate": (
-                self.stats["successful_requests"]
-                / self.stats["total_requests"]
-                if self.stats["total_requests"] > 0
-                else 0
+                (
+                    cast(int, self.stats.get("successful_requests", 0))
+                    / max(1, cast(int, self.stats.get("total_requests", 0)))
+                )
             ),
         }
 

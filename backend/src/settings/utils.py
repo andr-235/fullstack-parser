@@ -155,7 +155,7 @@ def diff_settings(
     Returns:
         Dict[str, Any]: Различия
     """
-    diff = {
+    diff: Dict[str, Dict[str, Any]] = {
         "added": {},
         "removed": {},
         "modified": {},
@@ -217,7 +217,7 @@ def unflatten_settings(flat_settings: Dict[str, str]) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Вложенные настройки
     """
-    nested_settings = {}
+    nested_settings: Dict[str, Any] = {}
 
     for flat_key, value in flat_settings.items():
         keys = flat_key.split(".")
@@ -355,7 +355,7 @@ def get_settings_summary(settings: Dict[str, Any]) -> Dict[str, Any]:
     total_size = len(json.dumps(settings).encode("utf-8"))
 
     # Анализ типов значений
-    value_types = {}
+    value_types: Dict[str, int] = {}
     for section in settings.values():
         if isinstance(section, dict):
             for value in section.values():

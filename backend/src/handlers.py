@@ -47,12 +47,17 @@ async def create_error_response(
     Returns:
         JSONResponse: Стандартизированный ответ с ошибкой
     """
+    # Параметр suggestions не поддерживается схемой ErrorDetail напрямую,
+    # передаем его в details, чтобы сохранить подсказки и удовлетворить mypy
+    extra_details = {**(details or {})}
+    if suggestions:
+        extra_details["suggestions"] = suggestions
+
     error_detail = ErrorDetail(
         code=error_code,
         message=message,
-        details=details or {},
+        details=extra_details,
         field=field,
-        suggestions=suggestions or [],
     )
 
     # Получаем время обработки из request state если есть

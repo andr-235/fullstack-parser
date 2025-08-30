@@ -227,7 +227,7 @@ def extract_vk_attachments(
     Returns:
         Dict[str, Any]: Информация о вложениях
     """
-    result = {
+    result: Dict[str, List[Dict[str, Any]]] = {
         "photos": [],
         "videos": [],
         "audios": [],

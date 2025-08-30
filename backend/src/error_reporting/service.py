@@ -565,7 +565,8 @@ class ErrorReportingService:
             if not include_resolved:
                 reports = [r for r in reports if not r.resolved]
 
-            stats = {}
+            # Ключ: тип ошибки, Значение: количество
+            stats: Dict[str, int] = {}
             for report in reports:
                 error_type = str(report.error_type)
                 stats[error_type] = stats.get(error_type, 0) + 1
@@ -587,7 +588,8 @@ class ErrorReportingService:
             if not include_resolved:
                 reports = [r for r in reports if not r.resolved]
 
-            stats = {}
+            # Ключ: уровень серьезности, Значение: количество
+            stats: Dict[str, int] = {}
             for report in reports:
                 severity = str(report.severity)
                 stats[severity] = stats.get(severity, 0) + 1
@@ -609,7 +611,7 @@ class ErrorReportingService:
             if not include_resolved:
                 reports = [r for r in reports if not r.resolved]
 
-            stats = {}
+            stats: Dict[str, int] = {}
             for report in reports:
                 operation = report.context.operation or "unknown"
                 stats[operation] = stats.get(operation, 0) + 1

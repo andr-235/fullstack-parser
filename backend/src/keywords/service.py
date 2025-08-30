@@ -480,7 +480,7 @@ class KeywordsService:
         """
         keywords = await self.repository.find_all()
 
-        category_stats = {}
+        category_stats: Dict[str, Dict[str, Any]] = {}
         for keyword in keywords:
             category = keyword.get("category")
             if category:
@@ -531,7 +531,7 @@ class KeywordsService:
             total_matches += keyword.get("match_count", 0)
 
         # Топ категорий
-        category_counts = {}
+        category_counts: Dict[str, int] = {}
         for keyword in keywords:
             category = keyword.get("category")
             if category:
@@ -540,13 +540,13 @@ class KeywordsService:
                     category_counts.get(cat_name, 0) + 1
                 )
 
+        # Формируем типизированный список для надежной сортировки по count (int)
+        category_items: List[Dict[str, Any]] = [
+            {"name": name, "count": count}
+            for name, count in category_counts.items()
+        ]
         top_categories = sorted(
-            [
-                {"name": name, "count": count}
-                for name, count in category_counts.items()
-            ],
-            key=lambda x: x["count"],
-            reverse=True,
+            category_items, key=lambda x: x["count"], reverse=True
         )[:5]
 
         return {

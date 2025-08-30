@@ -107,7 +107,17 @@ async def get_comments(
         )
         total = len(comments)  # В реальности нужно получить из БД
 
-    return create_paginated_response(comments, total, pagination)
+    return CommentListResponse(
+        items=[CommentResponse(**c) for c in comments],
+        total=total,
+        page=pagination.page,
+        size=pagination.size,
+        pages=(
+            (total + pagination.size - 1) // pagination.size
+            if pagination.size > 0
+            else 0
+        ),
+    )
 
 
 @router.get(
@@ -122,7 +132,8 @@ async def get_comment(
 ) -> CommentResponse:
     """Получить комментарий по ID"""
     try:
-        return await service.get_comment(comment_id)
+        comment = await service.get_comment(comment_id)
+        return CommentResponse(**comment)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -140,7 +151,8 @@ async def create_comment(
 ) -> CommentResponse:
     """Создать новый комментарий"""
     try:
-        return await service.create_comment(comment_data.model_dump())
+        created = await service.create_comment(comment_data.model_dump())
+        return CommentResponse(**created)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -158,9 +170,10 @@ async def update_comment(
 ) -> CommentResponse:
     """Обновить комментарий"""
     try:
-        return await service.update_comment(
+        updated = await service.update_comment(
             comment_id, comment_data.model_dump(exclude_unset=True)
         )
+        return CommentResponse(**updated)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -198,7 +211,8 @@ async def mark_comment_as_viewed(
 ) -> CommentResponse:
     """Отметить комментарий как просмотренный"""
     try:
-        return await service.mark_as_viewed(comment_id)
+        updated = await service.mark_as_viewed(comment_id)
+        return CommentResponse(**updated)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -275,7 +289,17 @@ async def search_comments(
 
         # В реальности нужно получить total из БД
         total = len(comments)
-        return create_paginated_response(comments, total, pagination)
+        return CommentListResponse(
+            items=[CommentResponse(**c) for c in comments],
+            total=total,
+            page=pagination.page,
+            size=pagination.size,
+            pages=(
+                (total + pagination.size - 1) // pagination.size
+                if pagination.size > 0
+                else 0
+            ),
+        )
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

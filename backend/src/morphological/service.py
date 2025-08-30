@@ -32,7 +32,8 @@ class MorphologicalService:
     def __init__(self, repository: MorphologicalRepository):
         self.repository = repository
         self._analyzer = None
-        self._cache = {}
+        # Кеш результатов анализа: ключ -> результат анализа слова
+        self._cache: Dict[str, Dict[str, Any]] = {}
 
     @property
     def analyzer(self):

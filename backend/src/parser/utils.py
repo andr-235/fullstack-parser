@@ -267,7 +267,7 @@ def extract_vk_entities(text: str) -> Dict[str, List[str]]:
     """
     import re
 
-    entities = {
+    entities: Dict[str, List[str]] = {
         "users": [],
         "groups": [],
         "urls": [],

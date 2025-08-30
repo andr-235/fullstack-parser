@@ -4,6 +4,7 @@
 Содержит специфические исключения для модуля групп
 """
 
+from typing import Dict, Any
 from ..exceptions import APIException
 
 
@@ -15,7 +16,7 @@ class GroupNotFoundException(APIException):
             status_code=404,
             detail=f"Группа с ID {group_id} не найдена",
             error_code="GROUP_NOT_FOUND",
-            extra_data={"group_id": group_id}
+            extra_data={"group_id": group_id},
         )
 
 
@@ -23,6 +24,8 @@ class GroupAlreadyExistsException(APIException):
     """Группа уже существует"""
 
     def __init__(self, vk_id: int = None, screen_name: str = None):
+        # Явно указываем тип словаря с данными, чтобы выровнять ветви
+        extra_data: Dict[str, Any]
         if vk_id:
             detail = f"Группа с VK ID {vk_id} уже существует"
             extra_data = {"vk_id": vk_id}
@@ -37,7 +40,7 @@ class GroupAlreadyExistsException(APIException):
             status_code=409,
             detail=detail,
             error_code="GROUP_ALREADY_EXISTS",
-            extra_data=extra_data
+            extra_data=extra_data,
         )
 
 
@@ -53,7 +56,7 @@ class InvalidGroupDataException(APIException):
             status_code=422,
             detail=detail,
             error_code="INVALID_GROUP_DATA",
-            extra_data={"field": field, "value": value}
+            extra_data={"field": field, "value": value},
         )
 
 
@@ -65,7 +68,7 @@ class GroupSearchException(APIException):
             status_code=400,
             detail=f"Ошибка поиска по запросу: {query}",
             error_code="GROUP_SEARCH_ERROR",
-            extra_data={"query": query}
+            extra_data={"query": query},
         )
 
 
@@ -77,10 +80,7 @@ class GroupBulkOperationException(APIException):
             status_code=400,
             detail=f"Ошибка массовой операции '{operation}'",
             error_code="GROUP_BULK_OPERATION_ERROR",
-            extra_data={
-                "operation": operation,
-                "failed_count": failed_count
-            }
+            extra_data={"operation": operation, "failed_count": failed_count},
         )
 
 
@@ -92,7 +92,7 @@ class GroupValidationException(APIException):
             status_code=422,
             detail=f"Ошибка валидации поля '{field}': {reason}",
             error_code="GROUP_VALIDATION_ERROR",
-            extra_data={"field": field, "reason": reason}
+            extra_data={"field": field, "reason": reason},
         )
 
 
@@ -104,7 +104,7 @@ class GroupPermissionException(APIException):
             status_code=403,
             detail=f"Доступ к группе {group_id} запрещен: {reason}",
             error_code="GROUP_PERMISSION_ERROR",
-            extra_data={"group_id": group_id, "reason": reason}
+            extra_data={"group_id": group_id, "reason": reason},
         )
 
 
@@ -116,7 +116,7 @@ class GroupServiceUnavailableException(APIException):
             status_code=503,
             detail=f"Сервис {service_name} временно недоступен",
             error_code="GROUP_SERVICE_UNAVAILABLE",
-            extra_data={"service": service_name}
+            extra_data={"service": service_name},
         )
 
 
@@ -143,7 +143,7 @@ class GroupMonitoringException(APIException):
             status_code=400,
             detail=f"Ошибка мониторинга группы {group_id}: {reason}",
             error_code="GROUP_MONITORING_ERROR",
-            extra_data={"group_id": group_id, "reason": reason}
+            extra_data={"group_id": group_id, "reason": reason},
         )
 
 

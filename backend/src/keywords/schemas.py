@@ -5,7 +5,7 @@ Pydantic схемы для модуля Keywords
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal, Annotated
 from pydantic import BaseModel, Field, ConfigDict
 
 from ..pagination import PaginatedResponse
@@ -160,22 +160,24 @@ class KeywordsFilterRequest(BaseModel):
 class KeywordBulkAction(BaseModel):
     """Схема для массовых операций с ключевыми словами"""
 
-    keyword_ids: List[int] = Field(
-        ..., description="ID ключевых слов", min_length=1, max_length=100
-    )
-    action: str = Field(
-        ...,
-        description="Действие",
-        enum=["activate", "deactivate", "archive", "delete"],
+    keyword_ids: Annotated[
+        List[int],
+        Field(min_length=1, max_length=100, description="ID ключевых слов"),
+    ]
+    action: Literal["activate", "deactivate", "archive", "delete"] = Field(
+        ..., description="Действие"
     )
 
 
 class KeywordBulkCreate(BaseModel):
     """Схема для массового создания ключевых слов"""
 
-    keywords: List[KeywordCreate] = Field(
-        ..., description="Список ключевых слов", min_length=1, max_length=100
-    )
+    keywords: Annotated[
+        List[KeywordCreate],
+        Field(
+            min_length=1, max_length=100, description="Список ключевых слов"
+        ),
+    ]
 
 
 class KeywordBulkResponse(BaseModel):
@@ -266,8 +268,8 @@ class KeywordImportRequest(BaseModel):
 class KeywordExportRequest(BaseModel):
     """Схема для экспорта ключевых слов"""
 
-    format: str = Field(
-        "json", description="Формат экспорта", enum=["json", "csv", "txt"]
+    format: Literal["json", "csv", "txt"] = Field(
+        "json", description="Формат экспорта"
     )
     active_only: bool = Field(
         True, description="Экспортировать только активные"
@@ -289,12 +291,14 @@ class KeywordExportResponse(BaseModel):
 class KeywordValidationRequest(BaseModel):
     """Схема для валидации ключевых слов"""
 
-    words: List[str] = Field(
-        ...,
-        description="Список слов для валидации",
-        min_length=1,
-        max_length=100,
-    )
+    words: Annotated[
+        List[str],
+        Field(
+            min_length=1,
+            max_length=100,
+            description="Список слов для валидации",
+        ),
+    ]
 
 
 class KeywordValidationResponse(BaseModel):

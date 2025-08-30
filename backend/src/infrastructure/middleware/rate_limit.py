@@ -7,7 +7,7 @@ Enterprise-grade Rate Limiting Middleware для API v1 с DDD архитект�
 
 import time
 from collections import defaultdict
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -34,7 +34,8 @@ class SimpleRateLimitMiddleware(BaseHTTPMiddleware):
         self.requests_per_minute = requests_per_minute
         self.window_seconds = window_seconds
         self.burst_limit = burst_limit or requests_per_minute * 2
-        self.requests = defaultdict(list)
+        # История запросов по IP: список меток времени запросов
+        self.requests: Dict[str, List[float]] = defaultdict(list)
 
         # Статистика для мониторинга
         self.stats = {
@@ -117,8 +118,12 @@ class SimpleRateLimitMiddleware(BaseHTTPMiddleware):
         rate_limit_error = create_rate_limit_error(
             retry_after=self.window_seconds,
             client_ip=client_ip,
-            request_count=request_count,
         )
+
+        # Обогащаем детали ошибки дополнительными полями
+        error_details = rate_limit_error.to_dict()
+        error_details["request_count"] = request_count
+        error_details["limit_type"] = limit_type
 
         # Создаем стандартизированный ответ
         from ...handlers import create_error_response
@@ -128,7 +133,7 @@ class SimpleRateLimitMiddleware(BaseHTTPMiddleware):
             rate_limit_error.status_code,
             rate_limit_error.error_code,
             rate_limit_error.detail,
-            rate_limit_error.to_dict(),
+            error_details,
         )
 
     async def _add_rate_limit_headers(self, response, client_ip: str) -> None:

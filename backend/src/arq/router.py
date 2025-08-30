@@ -64,11 +64,11 @@ async def enqueue_task(request: TaskEnqueueRequest) -> str:
                 defer_by = timedelta(seconds=request.defer_by)
 
         job_id = await arq_service.enqueue_job(
-            function_name=request.function_name,
+            request.function_name,
+            *request.args,
             job_id=request.job_id,
             defer_until=request.defer_until,
             defer_by=defer_by,
-            *request.args,
             **request.kwargs,
         )
 

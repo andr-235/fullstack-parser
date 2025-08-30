@@ -5,7 +5,7 @@ Pydantic схемы для модуля Error Reporting
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 from ..pagination import PaginatedResponse
@@ -16,15 +16,9 @@ class ErrorReportBase(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    error_type: str = Field(
-        ...,
-        description="Тип ошибки",
-        examples=["database", "api", "validation"],
-    )
-    severity: str = Field(
-        ...,
-        description="Уровень серьезности",
-        examples=["low", "medium", "high", "critical"],
+    error_type: str = Field(..., description="Тип ошибки")
+    severity: Literal["low", "medium", "high", "critical"] = Field(
+        ..., description="Уровень серьезности"
     )
     message: str = Field(
         ..., description="Сообщение об ошибке", min_length=1, max_length=10000
@@ -191,7 +185,10 @@ class ErrorReportBulkAcknowledgeRequest(BaseModel):
     """Схема запроса на массовое подтверждение отчетов"""
 
     report_ids: List[str] = Field(
-        ..., description="Список ID отчетов", min_items=1, max_items=100
+        default_factory=list,
+        description="Список ID отчетов",
+        min_length=1,
+        max_length=100,
     )
     acknowledged_by: str = Field(
         ..., description="Кто подтверждает отчеты", min_length=1
@@ -270,7 +267,9 @@ class ErrorReportSummaryResponse(BaseModel):
 class ErrorReportExportRequest(BaseModel):
     """Схема запроса на экспорт отчетов"""
 
-    format: str = Field("json", description="Формат экспорта")
+    format: Literal["json", "csv"] = Field(
+        "json", description="Формат экспорта"
+    )
     start_date: Optional[datetime] = Field(None, description="Начальная дата")
     end_date: Optional[datetime] = Field(None, description="Конечная дата")
     error_type: Optional[str] = Field(

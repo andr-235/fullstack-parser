@@ -254,7 +254,7 @@ def group_error_reports_by_type(
     Returns:
         Dict[str, List[Dict[str, Any]]]: Группированные отчеты
     """
-    grouped = {}
+    grouped: Dict[str, List[Dict[str, Any]]] = {}
 
     for report in reports:
         error_type = report.get("error_type", "unknown")
@@ -277,7 +277,7 @@ def group_error_reports_by_severity(
     Returns:
         Dict[str, List[Dict[str, Any]]]: Группированные отчеты
     """
-    grouped = {}
+    grouped: Dict[str, List[Dict[str, Any]]] = {}
 
     for report in reports:
         severity = report.get("severity", "medium")

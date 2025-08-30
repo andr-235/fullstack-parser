@@ -254,13 +254,17 @@ async def search_keywords(
             limit=request.limit,
             offset=request.offset,
         )
+        # Собираем поля согласно PaginatedResponse: items, total, page, size, pages
+        total = len(keywords)
+        size = request.limit
+        page = (request.offset // size) + 1 if size > 0 else 1
+        pages = (total + size - 1) // size if size > 0 else 0
         return KeywordsListResponse(
             items=keywords,
-            total=len(keywords),
-            limit=request.limit,
-            offset=request.offset,
-            has_next=False,
-            has_prev=False,
+            total=total,
+            page=page,
+            size=size,
+            pages=pages,
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -417,9 +421,8 @@ async def import_keywords(
     """Импорт ключевых слов"""
     try:
         result = await service.import_keywords(
-            request.keywords_data,
-            request.update_existing,
-            request.skip_duplicates,
+            import_data=request.keywords_data,
+            update_existing=request.update_existing,
         )
         return result
     except Exception as e:

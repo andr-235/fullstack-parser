@@ -125,12 +125,17 @@ class AuthService:
         access_token = security_service.create_access_token(token_data)
         refresh_token = security_service.create_refresh_token(token_data)
 
+        # Время жизни access токена задается в настройках SecurityService
+        expires_seconds = getattr(
+            security_service, "access_token_expires_seconds", None
+        )
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
             "token_type": "bearer",
-            "expires_in": config_service.jwt_expiration_hours
-            * 3600,  # в секундах
+            "expires_in": (
+                int(expires_seconds) if expires_seconds is not None else 3600
+            ),
         }
 
     async def refresh_access_token(self, refresh_token: str) -> Dict[str, Any]:
@@ -172,7 +177,11 @@ class AuthService:
                     token_data
                 ),
                 "token_type": "bearer",
-                "expires_in": config_service.jwt_expiration_hours * 3600,
+                "expires_in": int(
+                    getattr(
+                        security_service, "access_token_expires_seconds", 3600
+                    )
+                ),
             }
 
         except Exception:

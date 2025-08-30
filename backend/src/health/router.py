@@ -4,6 +4,7 @@
 
 from typing import Dict, Any
 from fastapi import APIRouter, Request, Depends
+from fastapi.responses import JSONResponse
 from .service import HealthService
 from ..handlers import create_success_response, create_error_response
 
@@ -25,7 +26,7 @@ def get_health_service() -> HealthService:
 async def basic_health_check(
     request: Request,
     health_service: HealthService = Depends(get_health_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Базовая проверка здоровья системы"""
     try:
         health_status = await health_service.perform_basic_health_check()
@@ -47,7 +48,7 @@ async def basic_health_check(
 async def detailed_health_check(
     request: Request,
     health_service: HealthService = Depends(get_health_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Детальная проверка здоровья системы"""
     try:
         health_status = await health_service.perform_detailed_health_check()
@@ -69,7 +70,7 @@ async def detailed_health_check(
 async def readiness_check(
     request: Request,
     health_service: HealthService = Depends(get_health_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Проверка готовности системы"""
     try:
         health_status = await health_service.perform_readiness_check()
@@ -91,7 +92,7 @@ async def readiness_check(
 async def liveness_check(
     request: Request,
     health_service: HealthService = Depends(get_health_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Проверка живости процесса"""
     try:
         health_status = await health_service.perform_liveness_check()
@@ -113,7 +114,7 @@ async def liveness_check(
 async def system_status(
     request: Request,
     health_service: HealthService = Depends(get_health_service),
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Получить общую информацию о статусе системы"""
     try:
         # Выполняем детальную проверку

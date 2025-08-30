@@ -9,10 +9,17 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from sqlalchemy import Column, DateTime, Integer, String, Text, func
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
-# Создаем базовый класс для всех моделей
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    """Типизированный базовый класс SQLAlchemy для моделей
+
+    Используем DeclarativeBase из SQLAlchemy 2.x, чтобы mypy корректно
+    воспринимал базовый класс как тип, без необходимости аннотации Any.
+    """
+
+    pass
 
 
 class BaseModel(Base):

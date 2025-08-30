@@ -7,9 +7,13 @@
 from datetime import datetime
 from typing import Any, Dict, Optional
 from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, Boolean
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    """Типизированный базовый класс SQLAlchemy для ARQ моделей"""
+
+    pass
 
 
 class TaskLog(Base):

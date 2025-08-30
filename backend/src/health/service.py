@@ -372,12 +372,13 @@ class HealthService:
         start_time = time.time()
 
         try:
-            # Импортируем сервис базы данных для проверки
-            from ..database import get_db_session
+            # Импортируем сервис базы данных и используем контекстную сессию
+            from ..database import database_service
+            from sqlalchemy import text
 
-            db = await get_db_session()
-            # Выполняем простой запрос для проверки соединения
-            result = await db.execute("SELECT 1")
+            async with database_service.get_session() as db:
+                # Выполняем простой запрос для проверки соединения
+                await db.execute(text("SELECT 1"))
             response_time = (time.time() - start_time) * 1000
 
             return HealthCheckResult(

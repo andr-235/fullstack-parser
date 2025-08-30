@@ -107,7 +107,7 @@ class ErrorReportingConfig:
     SLACK_ENABLED = False
     SLACK_WEBHOOK_URL = None
     EMAIL_ENABLED = False
-    EMAIL_RECIPIENTS = []
+    EMAIL_RECIPIENTS: List[str] = []
 
     # Настройки метрик
     METRICS_PREFIX = "error_reporting"

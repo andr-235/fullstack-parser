@@ -246,8 +246,9 @@ class VKAPIRepository:
         successful_requests = sum(1 for log in logs if log["success"])
         failed_requests = total_requests - successful_requests
 
+        # Явно приводим к float, чтобы устранить тип object в mypy
         response_times: List[float] = [
-            log["response_time"] for log in logs if log["success"]
+            float(log["response_time"]) for log in logs if log["success"]
         ]
         avg_response_time = (
             sum(response_times) / len(response_times) if response_times else 0
@@ -341,7 +342,9 @@ class VKAPIRepository:
         # Самая распространенная ошибка
         error_counts: dict[int, int] = {}
         for log in logs:
-            error_code = log["error_code"]
+            # Уточняем тип кода ошибки для словаря с int ключами
+            code_val = log["error_code"]
+            error_code = code_val if isinstance(code_val, int) else 0
             error_counts[error_code] = error_counts.get(error_code, 0) + 1
 
         most_common_error = (
