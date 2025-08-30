@@ -261,6 +261,10 @@ public
 .yarn/install-state.gz
 .pnp.*
 
+# Ensure frontend shared library is tracked (overrides broad 'lib/' ignore above)
+!frontend/shared/lib/
+!frontend/shared/lib/**
+
 # =============================================================================
 # DOCKER
 # =============================================================================
