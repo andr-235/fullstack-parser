@@ -12,7 +12,7 @@ import { Label } from '@/shared/ui'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { KEYWORD_CATEGORIES } from '@/entities/keywords'
+import { KEYWORD_CATEGORIES, KeywordCategory } from '@/entities/keywords'
 
 const keywordSchema = z.object({
  word: z.string().min(1, 'Keyword is required').max(200, 'Keyword is too long'),

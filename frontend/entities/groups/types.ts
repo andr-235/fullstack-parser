@@ -61,4 +61,9 @@ export interface UploadProgress {
   status?: string
   progress?: number
   current_group?: string
+  total_groups?: number
+  processed_groups?: number
+  created?: number
+  skipped?: number
+  errors?: string[]
 }

@@ -185,6 +185,9 @@ export const useUploadGroups = () => {
       // TODO: Implement upload progress tracking
       // const progress: UploadProgress = await apiClient.getGroupsUploadProgress(uploadId)
       const progress: UploadProgress = {
+        loaded: 1,
+        total: 1,
+        percentage: 100,
         status: 'completed',
         progress: 100,
         current_group: 'Upload completed',

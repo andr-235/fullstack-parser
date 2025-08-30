@@ -75,7 +75,7 @@ export function KeywordsFilters({ filters, onFiltersChange }: KeywordsFiltersPro
       </SelectTrigger>
       <SelectContent>
        <SelectItem value="all">Все категории</SelectItem>
-       {KEYWORD_CATEGORIES.map((category) => (
+       {KEYWORD_CATEGORIES.map((category: { key: string; label: string }) => (
         <SelectItem key={category.key} value={category.key}>
          {category.label}
         </SelectItem>
