@@ -6,14 +6,7 @@
     "import/order": [
       "error",
       {
-        "groups": [
-          "builtin",
-          "external",
-          "internal",
-          "parent",
-          "sibling",
-          "index"
-        ],
+        "groups": ["builtin", "external", "internal", "parent", "sibling", "index"],
         "pathGroups": [
           {
             "pattern": "react",
@@ -64,23 +57,11 @@
       {
         "zones": [
           {
-            "target": "./app",
-            "from": "./features"
-          },
-          {
-            "target": "./app",
-            "from": "./entities"
-          },
-          {
             "target": "./widgets",
             "from": "./features"
           },
           {
             "target": "./widgets",
-            "from": "./entities"
-          },
-          {
-            "target": "./features",
             "from": "./entities"
           }
         ]

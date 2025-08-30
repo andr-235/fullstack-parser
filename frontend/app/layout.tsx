@@ -1,15 +1,19 @@
 import { Inter } from 'next/font/google'
+
 import type { Metadata } from 'next'
 
 import './globals.css'
 
 import { APP_CONFIG } from '@/shared/config'
-import { QueryProvider } from '@/app/providers/QueryProvider'
-import { ThemeProvider } from '@/shared/ui/theme-provider'
-import { AppLayout } from '@/widgets/layout/AppLayout'
 import { NavigationProvider } from '@/shared/contexts/NavigationContext'
+import { ThemeProvider } from '@/shared/ui/theme-provider'
+
 import { AuthProvider } from '@/providers/AuthProvider'
 import { ToastProvider } from '@/providers/ToastProvider'
+
+import { AppLayout } from '@/widgets/layout/AppLayout'
+
+import { QueryProvider } from '@/app/providers/QueryProvider'
 
 // Force dynamic rendering to avoid prerendering issues
 export const dynamic = 'force-dynamic'
