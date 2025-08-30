@@ -192,6 +192,12 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
+      # Auto-format Python code before strict checks
+      - name: Auto-format Python (isort, black)
+        run: |
+          poetry run isort .
+          poetry run black .
+
       - name: Run linter and formatter
         run: |
           poetry run black --check --diff .
