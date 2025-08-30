@@ -21,7 +21,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@/shared/lib": ["./shared/lib/index.ts"],
+      "@/shared/*": ["./shared/*"],
+      "@/shared/lib": ["./shared/lib", "./shared/lib/index", "./shared/lib.ts"],
       "@/shared/lib/*": ["./shared/lib/*"]
     },
     "forceConsistentCasingInFileNames": true,

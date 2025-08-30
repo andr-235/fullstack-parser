@@ -79,6 +79,8 @@ jobs:
           cat tsconfig.json | grep -A 10 "paths"
           echo "Checking module resolution:"
           bun x tsc -p tsconfig.json --showConfig | grep -A 5 -B 5 "paths"
+          echo "Listing shared/lib contents:"
+          ls -la ./shared/lib || true
         # uses local tsc resolved from devDependencies
 
       - name: Verify module resolution
