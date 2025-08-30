@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { apiClient } from '@/shared/lib'
+import { apiClient } from '@/shared/lib/index'
 
 export function useNotificationCount() {
   const [count, setCount] = useState(0)

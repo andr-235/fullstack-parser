@@ -109,6 +109,7 @@ export interface StartBulkParserForm {
   start_date?: string
   end_date?: string
   forceReparse?: boolean
+  max_concurrent?: number
 }
 
 export interface BulkParseResponse {
