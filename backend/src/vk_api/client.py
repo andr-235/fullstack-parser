@@ -25,18 +25,13 @@ from .exceptions import (
     VKAPINetworkError,
     VKAPIInvalidResponseError,
 )
-from .constants import (
-    VK_API_BASE_URL,
-    VK_API_VERSION,
+from .config import (
     VK_ERROR_ACCESS_DENIED,
     VK_ERROR_INVALID_REQUEST,
     VK_ERROR_TOO_MANY_REQUESTS,
     VK_ERROR_AUTH_FAILED,
     VK_ERROR_PERMISSION_DENIED,
     USER_AGENTS,
-    RETRY_MAX_ATTEMPTS,
-    RETRY_BACKOFF_FACTOR,
-    RETRY_MAX_DELAY,
 )
 
 
@@ -50,9 +45,9 @@ class VKAPIClient:
 
     def __init__(
         self,
-        access_token: str = None,
-        session: aiohttp.ClientSession = None,
-        logger: logging.Logger = None,
+        access_token: Optional[str] = None,
+        session: Optional[aiohttp.ClientSession] = None,
+        logger: Optional[logging.Logger] = None,
     ):
         """
         Инициализация VK API клиента
@@ -62,7 +57,7 @@ class VKAPIClient:
             session: HTTP сессия (опционально)
             logger: Логгер для записи событий
         """
-        self.access_token = access_token or vk_api_config.ACCESS_TOKEN
+        self.access_token = access_token or vk_api_config.access_token
         self.session = session
         self.logger = logger or logging.getLogger(__name__)
 
@@ -90,7 +85,7 @@ class VKAPIClient:
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(
-                    total=vk_api_config.REQUEST_TIMEOUT
+                    total=vk_api_config.connection.timeout
                 ),
                 headers={
                     "User-Agent": USER_AGENTS[0],
@@ -106,7 +101,7 @@ class VKAPIClient:
     async def make_request(
         self,
         method: str,
-        params: Dict[str, Any] = None,
+        params: Optional[Dict[str, Any]] = None,
         http_method: str = "GET",
     ) -> Dict[str, Any]:
         """
@@ -130,7 +125,7 @@ class VKAPIClient:
         request_params = self._prepare_params(method, params or {})
 
         # Строим URL
-        url = f"{VK_API_BASE_URL}{method}"
+        url = f"{vk_api_config.base_url}{method}"
 
         # Выполняем запрос с повторами
         return await self._execute_with_retry(
@@ -178,11 +173,14 @@ class VKAPIClient:
             VKAPINetworkError,
         ) as e:
             # Эти ошибки можно повторять
-            if attempt < RETRY_MAX_ATTEMPTS:
-                wait_time = min(RETRY_BACKOFF_FACTOR**attempt, RETRY_MAX_DELAY)
+            if attempt < vk_api_config.retry.max_attempts:
+                wait_time = min(
+                    vk_api_config.retry.backoff_factor**attempt,
+                    vk_api_config.retry.max_delay,
+                )
 
                 self.logger.warning(
-                    f"VK API request failed (attempt {attempt}/{RETRY_MAX_ATTEMPTS}), "
+                    f"VK API request failed (attempt {attempt}/{vk_api_config.retry.max_attempts}), "
                     f"retrying in {wait_time:.2f}s: {e}"
                 )
 
@@ -229,6 +227,9 @@ class VKAPIClient:
         try:
             # Убеждаемся, что сессия существует
             await self.ensure_session()
+            assert (
+                self.session is not None
+            )  # Для mypy: сессия гарантированно существует
 
             # Логируем запрос
             self.logger.debug(f"VK API Request: {vk_method} - {params}")
@@ -292,7 +293,7 @@ class VKAPIClient:
 
         except asyncio.TimeoutError:
             raise VKAPITimeoutError(
-                timeout=vk_api_config.REQUEST_TIMEOUT, method=vk_method
+                timeout=vk_api_config.connection.timeout, method=vk_method
             )
         except aiohttp.ClientError as e:
             raise VKAPINetworkError(
@@ -315,7 +316,7 @@ class VKAPIClient:
         # Базовые параметры
         prepared_params = {
             "access_token": self.access_token,
-            "v": VK_API_VERSION,
+            "v": vk_api_config.api_version,
         }
 
         # Добавляем пользовательские параметры
@@ -383,7 +384,10 @@ class VKAPIClient:
             self.rate_limit_reset_time = current_time
 
         # Проверяем лимит
-        if self.request_count >= vk_api_config.MAX_REQUESTS_PER_SECOND:
+        if (
+            self.request_count
+            >= vk_api_config.rate_limit.max_requests_per_second
+        ):
             wait_time = 1.0 - (current_time - self.rate_limit_reset_time)
             if wait_time > 0:
                 self.logger.info(
@@ -433,7 +437,10 @@ class VKAPIClient:
                 }
 
             # Выполняем тестовый запрос
-            test_params = {"user_ids": "1", "fields": "id"}
+            test_params = {
+                "user_ids": "1",
+                "fields": vk_api_config.user_fields,
+            }
             response = await self.make_request("users.get", test_params)
 
             if "response" in response and len(response["response"]) > 0:

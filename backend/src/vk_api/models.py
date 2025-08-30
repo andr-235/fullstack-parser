@@ -246,7 +246,7 @@ class VKAPIRepository:
         successful_requests = sum(1 for log in logs if log["success"])
         failed_requests = total_requests - successful_requests
 
-        response_times = [
+        response_times: List[float] = [
             log["response_time"] for log in logs if log["success"]
         ]
         avg_response_time = (
@@ -339,7 +339,7 @@ class VKAPIRepository:
         error_codes.sort()
 
         # Самая распространенная ошибка
-        error_counts = {}
+        error_counts: dict[int, int] = {}
         for log in logs:
             error_code = log["error_code"]
             error_counts[error_code] = error_counts.get(error_code, 0) + 1

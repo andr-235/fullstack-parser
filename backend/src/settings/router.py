@@ -24,14 +24,12 @@ def get_settings_service() -> SettingsService:
 )
 async def get_settings(
     request: Request,
-    settings_service: SettingsService = Depends(
-        get_settings_service
-    ),
+    settings_service: SettingsService = Depends(get_settings_service),
 ) -> Dict[str, Any]:
     """Получить текущие настройки системы"""
     try:
         settings = await settings_service.get_current_settings()
-        return await create_success_response(request, settings.to_dict())
+        return await create_success_response(request, settings)
     except Exception as e:
         return await create_error_response(
             request,
@@ -49,17 +47,16 @@ async def get_settings(
 async def update_settings(
     request: Request,
     updates: Dict[str, Any],
-    settings_service: SettingsService = Depends(
-        get_settings_service
-    ),
+    settings_service: SettingsService = Depends(get_settings_service),
 ) -> Dict[str, Any]:
     """Обновить настройки системы"""
     try:
         updated_settings = await settings_service.update_settings(updates)
         return await create_success_response(
             request,
-            updated_settings.to_dict(),
-            {"message": "Настройки успешно обновлены"},
+            updated_settings,
+            None,  # pagination
+            {"message": "Настройки успешно обновлены"},  # meta
         )
     except Exception as e:
         return await create_error_response(
@@ -77,17 +74,16 @@ async def update_settings(
 )
 async def reset_settings(
     request: Request,
-    settings_service: SettingsService = Depends(
-        get_settings_service
-    ),
+    settings_service: SettingsService = Depends(get_settings_service),
 ) -> Dict[str, Any]:
     """Сбросить настройки к значениям по умолчанию"""
     try:
         default_settings = await settings_service.reset_to_defaults()
         return await create_success_response(
             request,
-            default_settings.to_dict(),
-            {"message": "Настройки сброшены к значениям по умолчанию"},
+            default_settings,
+            None,  # pagination
+            {"message": "Настройки сброшены к значениям по умолчанию"},  # meta
         )
     except Exception as e:
         return await create_error_response(
@@ -106,9 +102,7 @@ async def reset_settings(
 async def get_settings_section(
     request: Request,
     section_name: str,
-    settings_service: SettingsService = Depends(
-        get_settings_service
-    ),
+    settings_service: SettingsService = Depends(get_settings_service),
 ) -> Dict[str, Any]:
     """Получить секцию настроек"""
     try:
@@ -147,9 +141,7 @@ async def update_settings_section(
     request: Request,
     section_name: str,
     values: Dict[str, Any],
-    settings_service: SettingsService = Depends(
-        get_settings_service
-    ),
+    settings_service: SettingsService = Depends(get_settings_service),
 ) -> Dict[str, Any]:
     """Обновить секцию настроек"""
     try:
@@ -158,8 +150,9 @@ async def update_settings_section(
         )
         return await create_success_response(
             request,
-            updated_settings.to_dict(),
-            {"message": f"Секция '{section_name}' успешно обновлена"},
+            updated_settings,
+            None,  # pagination
+            {"message": f"Секция '{section_name}' успешно обновлена"},  # meta
         )
     except Exception as e:
         return await create_error_response(
@@ -179,9 +172,7 @@ async def get_setting_value(
     request: Request,
     section_name: str,
     key: str,
-    settings_service: SettingsService = Depends(
-        get_settings_service
-    ),
+    settings_service: SettingsService = Depends(get_settings_service),
 ) -> Dict[str, Any]:
     """Получить значение настройки"""
     try:
@@ -216,9 +207,7 @@ async def set_setting_value(
     section_name: str,
     key: str,
     value: Any,
-    settings_service: SettingsService = Depends(
-        get_settings_service
-    ),
+    settings_service: SettingsService = Depends(get_settings_service),
 ) -> Dict[str, Any]:
     """Установить значение настройки"""
     try:
@@ -227,10 +216,11 @@ async def set_setting_value(
         )
         return await create_success_response(
             request,
-            updated_settings.to_dict(),
+            updated_settings,
+            None,  # pagination
             {
                 "message": f"Настройка '{section_name}.{key}' успешно установлена"
-            },
+            },  # meta
         )
     except Exception as e:
         return await create_error_response(
@@ -248,9 +238,7 @@ async def set_setting_value(
 )
 async def get_settings_health(
     request: Request,
-    settings_service: SettingsService = Depends(
-        get_settings_service
-    ),
+    settings_service: SettingsService = Depends(get_settings_service),
 ) -> Dict[str, Any]:
     """Проверить состояние настроек"""
     try:
@@ -272,9 +260,7 @@ async def get_settings_health(
 )
 async def validate_settings(
     request: Request,
-    settings_service: SettingsService = Depends(
-        get_settings_service
-    ),
+    settings_service: SettingsService = Depends(get_settings_service),
 ) -> Dict[str, Any]:
     """Валидировать настройки системы"""
     try:

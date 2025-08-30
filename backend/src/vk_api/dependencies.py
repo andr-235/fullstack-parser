@@ -1,32 +1,34 @@
 """
-Зависимости для модуля VK API
+Фабрика для создания VK API сервиса
 
-Определяет FastAPI зависимости для работы с VK API
+Простая фабрика для создания экземпляров VKAPIService для внутреннего использования
 """
 
 from typing import Optional
-from fastapi import Depends
 
 from .service import VKAPIService
 from .models import VKAPIRepository, get_vk_api_repository
 
 
-async def get_vk_api_service(
-    repository: VKAPIRepository = Depends(get_vk_api_repository),
+def create_vk_api_service(
+    repository: Optional[VKAPIRepository] = None,
 ) -> VKAPIService:
     """
-    Получить сервис VK API
+    Создать экземпляр VK API сервиса
 
     Args:
-        repository: Репозиторий VK API
+        repository: Репозиторий VK API (опционально)
 
     Returns:
-        VKAPIService: Сервис VK API
+        VKAPIService: Экземпляр сервиса
     """
+    if repository is None:
+        repository = get_vk_api_repository()
+
     return VKAPIService(repository)
 
 
-# Экспорт зависимостей
+# Экспорт функций
 __all__ = [
-    "get_vk_api_service",
+    "create_vk_api_service",
 ]

@@ -357,11 +357,28 @@ class VKBulkPostsRequest(BaseModel):
 class VKBulkPostsResponse(BaseModel):
     """Ответ с массовым получением постов"""
 
+    model_config = ConfigDict(from_attributes=True)
+
     posts: List[Dict[str, Any]] = Field(..., description="Список постов")
-    total_requested: int = Field(..., description="Общее запрошено")
-    total_found: int = Field(..., description="Общее найдено")
-    group_id: int = Field(..., description="ID группы")
-    fetched_at: str = Field(..., description="Время получения данных")
+    total_requested: int = Field(
+        ..., description="Общее количество запрошенных постов"
+    )
+    total_found: int = Field(
+        ..., description="Общее количество найденных постов"
+    )
+    group_id: int = Field(..., description="ID группы VK")
+    fetched_at: str = Field(
+        ..., description="Время получения данных в формате ISO 8601"
+    )
+    errors: Optional[List[str]] = Field(
+        None, description="Список ошибок при получении постов (если есть)"
+    )
+    success_rate: Optional[float] = Field(
+        None, description="Процент успешного получения постов"
+    )
+    processing_time_seconds: Optional[float] = Field(
+        None, description="Время обработки запроса в секундах"
+    )
 
 
 class VKGroupMembersRequest(BaseModel):

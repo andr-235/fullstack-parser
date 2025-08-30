@@ -25,11 +25,9 @@ from .groups.router import router as groups_router
 
 from .parser.router import router as parser_router
 
-from .monitoring.router import router as monitoring_router
-
 from .morphological.router import router as morphological_router
 from .keywords.router import router as keywords_router
-from .vk_api.router import router as vk_api_router
+
 from .settings.router import router as settings_router
 from .health.router import router as health_router
 from .error_reporting.router import router as error_reporting_router
@@ -48,6 +46,10 @@ from .handlers import (
     validation_exception_handler,
     vk_api_exception_handler,
 )
+
+# Импорт ARQ модуля
+from .arq.router import router as arq_router
+from .infrastructure.arq_service import arq_service
 
 # Простое логирование
 logging.basicConfig(level=logging.INFO)
@@ -69,6 +71,17 @@ async def lifespan(app: FastAPI):
         logger.error(f"❌ Ошибка инициализации БД: {e}")
         raise
 
+    # Инициализируем ARQ сервис (если включен)
+    if config_service.arq_enabled:
+        try:
+            await arq_service.initialize()
+            logger.info("⚡ ARQ сервис инициализирован")
+        except Exception as e:
+            logger.error(f"❌ Ошибка инициализации ARQ: {e}")
+            raise
+    else:
+        logger.info("⚡ ARQ сервис отключен в конфигурации")
+
     logger.info("✅ Система готова к работе!")
     logger.info("📋 API v1.7.0 доступен: /api/v1")
     logger.info("📚 Документация: /docs")
@@ -76,6 +89,14 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("🛑 Остановка VK Comments Parser...")
+
+    # Закрываем ARQ сервис
+    if config_service.arq_enabled:
+        try:
+            await arq_service.close()
+            logger.info("⚡ ARQ сервис закрыт")
+        except Exception as e:
+            logger.error(f"❌ Ошибка закрытия ARQ: {e}")
 
 
 # Создание FastAPI приложения
@@ -104,7 +125,7 @@ app = FastAPI(
     - **Health**: `/api/v1/health` - расширенные проверки здоровья (в разработке)
     - **Settings**: `/api/v1/settings` - управление настройками (в разработке)
     - **Errors**: `/api/v1/reports` - отчеты об ошибках (в разработке)
-    - **Monitoring**: `/api/v1/monitoring` - мониторинг групп (в разработке)
+
     - **Morphological**: `/api/v1/morphological` - морфологический анализ (в разработке)
 
     ## 🔧 Enterprise-grade Улучшения:
@@ -217,7 +238,6 @@ async def api_info(request: Request):
             "comments": "✅ Готов к работе",
             "groups": "✅ Готов к работе",
             "parser": "✅ Готов к работе",
-            "monitoring": "✅ Готов к работе",
             "morphological": "✅ Готов к работе",
             "keywords": "✅ Готов к работе",
             "vk_api": "✅ Готов к работе",
@@ -238,7 +258,6 @@ async def api_info(request: Request):
                 "comments",
                 "groups",
                 "parser",
-                "monitoring",
                 "morphological",
             ],
             "global_components": [
@@ -264,14 +283,13 @@ app.include_router(auth_router, prefix="/api/v1", tags=["Authentication"])
 app.include_router(comments_router, prefix="/api/v1", tags=["Comments"])
 app.include_router(groups_router, prefix="/api/v1", tags=["Groups"])
 app.include_router(parser_router, prefix="/api/v1", tags=["Parser"])
-app.include_router(monitoring_router, prefix="/api/v1", tags=["Monitoring"])
 app.include_router(
     morphological_router, prefix="/api/v1", tags=["Morphological Analysis"]
 )
 app.include_router(
     keywords_router, prefix="/api/v1", tags=["Keywords Management"]
 )
-app.include_router(vk_api_router, prefix="/api/v1", tags=["VK API"])
+
 app.include_router(
     settings_router, prefix="/api/v1", tags=["Settings Management"]
 )
@@ -279,6 +297,7 @@ app.include_router(health_router, prefix="/api/v1", tags=["Health Monitoring"])
 app.include_router(
     error_reporting_router, prefix="/api/v1", tags=["Error Reports"]
 )
+app.include_router(arq_router, prefix="/api/v1", tags=["ARQ Tasks"])
 
 
 # Запуск сервера

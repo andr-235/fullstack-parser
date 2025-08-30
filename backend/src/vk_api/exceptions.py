@@ -4,6 +4,8 @@
 Содержит специфические исключения для модуля работы с VK API
 """
 
+from typing import Optional, Dict, Any
+
 from ..exceptions import APIError
 
 
@@ -13,46 +15,48 @@ class VKAPIError(APIError):
     def __init__(
         self,
         message: str,
-        error_code: int = None,
-        method: str = None,
-        details: dict = None,
+        error_code: Optional[int] = None,
+        method: Optional[str] = None,
+        details: Optional[dict] = None,
     ):
         detail = f"VK API Error: {message}"
-        extra_data = {"message": message}
+        details_dict: Dict[str, Any] = {"message": message}
 
         if error_code is not None:
-            extra_data["vk_error_code"] = error_code
+            details_dict["vk_error_code"] = error_code
         if method:
-            extra_data["method"] = method
+            details_dict["method"] = method
         if details:
-            extra_data["details"] = details
+            details_dict["details"] = details
 
         super().__init__(
             status_code=502,
-            detail=detail,
             error_code="VK_API_ERROR",
-            extra_data=extra_data,
+            message=detail,
+            details=details_dict,
         )
 
 
 class VKAPIRateLimitError(APIError):
     """Ошибка превышения лимита запросов VK API"""
 
-    def __init__(self, wait_time: float = None, method: str = None):
+    def __init__(
+        self, wait_time: Optional[float] = None, method: Optional[str] = None
+    ):
         detail = "VK API rate limit exceeded"
-        extra_data = {}
+        details_dict: Dict[str, Any] = {"error_type": "rate_limit"}
 
         if wait_time is not None:
             detail += f". Wait {wait_time:.2f} seconds"
-            extra_data["wait_time"] = wait_time
+            details_dict["wait_time_seconds"] = wait_time
         if method:
-            extra_data["method"] = method
+            details_dict["method"] = method
 
         super().__init__(
             status_code=429,
-            detail=detail,
             error_code="VK_API_RATE_LIMIT",
-            extra_data=extra_data,
+            message=detail,
+            details=details_dict,
         )
 
 
@@ -62,28 +66,28 @@ class VKAPIAuthError(APIError):
     def __init__(self, message: str = "VK API authentication failed"):
         super().__init__(
             status_code=401,
-            detail=message,
             error_code="VK_API_AUTH_ERROR",
-            extra_data={"message": message},
+            message=message,
+            details={"message": message},
         )
 
 
 class VKAPIAccessDeniedError(APIError):
     """Ошибка доступа к ресурсу VK API"""
 
-    def __init__(self, resource: str, reason: str = None):
+    def __init__(self, resource: str, reason: Optional[str] = None):
         detail = f"VK API access denied to resource: {resource}"
-        extra_data = {"resource": resource}
+        details_dict = {"resource": resource}
 
         if reason:
             detail += f" ({reason})"
-            extra_data["reason"] = reason
+            details_dict["reason"] = reason
 
         super().__init__(
             status_code=403,
-            detail=detail,
             error_code="VK_API_ACCESS_DENIED",
-            extra_data=extra_data,
+            message=detail,
+            details=details_dict,
         )
 
 
@@ -93,9 +97,9 @@ class VKAPIInvalidTokenError(APIError):
     def __init__(self, message: str = "Invalid VK API access token"):
         super().__init__(
             status_code=401,
-            detail=message,
             error_code="VK_API_INVALID_TOKEN",
-            extra_data={"message": message},
+            message=message,
+            details={"message": message},
         )
 
 
@@ -103,40 +107,44 @@ class VKAPIInvalidParamsError(APIError):
     """Неверные параметры запроса VK API"""
 
     def __init__(
-        self, params: dict = None, message: str = "Invalid VK API parameters"
+        self,
+        params: Optional[dict] = None,
+        message: str = "Invalid VK API parameters",
     ):
         detail = message
-        extra_data = {"message": message}
+        details_dict: Dict[str, Any] = {"message": message}
 
         if params:
-            extra_data["params"] = params
+            details_dict["params"] = params
 
         super().__init__(
             status_code=400,
-            detail=detail,
             error_code="VK_API_INVALID_PARAMS",
-            extra_data=extra_data,
+            message=detail,
+            details=details_dict,
         )
 
 
 class VKAPITimeoutError(APIError):
     """Превышено время ожидания ответа VK API"""
 
-    def __init__(self, timeout: float = None, method: str = None):
+    def __init__(
+        self, timeout: Optional[float] = None, method: Optional[str] = None
+    ):
         detail = "VK API request timeout"
-        extra_data = {}
+        details_dict: Dict[str, Any] = {}
 
         if timeout is not None:
             detail += f" ({timeout:.2f}s)"
-            extra_data["timeout"] = timeout
+            details_dict["timeout"] = timeout
         if method:
-            extra_data["method"] = method
+            details_dict["method"] = method
 
         super().__init__(
             status_code=408,
-            detail=detail,
             error_code="VK_API_TIMEOUT",
-            extra_data=extra_data,
+            message=detail,
+            details=details_dict,
         )
 
 
@@ -144,17 +152,19 @@ class VKAPINetworkError(APIError):
     """Ошибка сети при работе с VK API"""
 
     def __init__(
-        self, message: str = "VK API network error", details: dict = None
+        self,
+        message: str = "VK API network error",
+        details: Optional[dict] = None,
     ):
-        extra_data = {"message": message}
+        details_dict: Dict[str, Any] = {"message": message}
         if details:
-            extra_data["details"] = details
+            details_dict["details"] = details
 
         super().__init__(
             status_code=502,
-            detail=message,
             error_code="VK_API_NETWORK_ERROR",
-            extra_data=extra_data,
+            message=message,
+            details=details_dict,
         )
 
 
@@ -170,9 +180,9 @@ class VKAPIResourceNotFoundError(APIError):
 
         super().__init__(
             status_code=404,
-            detail=detail,
             error_code="VK_API_RESOURCE_NOT_FOUND",
-            extra_data=extra_data,
+            message=detail,
+            details=extra_data,
         )
 
 
@@ -181,7 +191,7 @@ class VKAPIInvalidResponseError(APIError):
 
     def __init__(
         self,
-        response: str = None,
+        response: Optional[str] = None,
         message: str = "Invalid VK API response format",
     ):
         extra_data = {"message": message}
@@ -193,9 +203,9 @@ class VKAPIInvalidResponseError(APIError):
 
         super().__init__(
             status_code=502,
-            detail=message,
             error_code="VK_API_INVALID_RESPONSE",
-            extra_data=extra_data,
+            message=message,
+            details=extra_data,
         )
 
 
@@ -210,16 +220,16 @@ class VKAPIGroupAccessError(APIError):
 
         super().__init__(
             status_code=403,
-            detail=detail,
             error_code="VK_API_GROUP_ACCESS_ERROR",
-            extra_data=extra_data,
+            message=detail,
+            details=extra_data,
         )
 
 
 class VKAPIPostNotFoundError(APIError):
     """Пост не найден в VK API"""
 
-    def __init__(self, post_id: int, group_id: int = None):
+    def __init__(self, post_id: int, group_id: Optional[int] = None):
         detail = f"VK post not found: {post_id}"
         extra_data = {"post_id": post_id}
 
@@ -229,9 +239,9 @@ class VKAPIPostNotFoundError(APIError):
 
         super().__init__(
             status_code=404,
-            detail=detail,
             error_code="VK_API_POST_NOT_FOUND",
-            extra_data=extra_data,
+            message=detail,
+            details=extra_data,
         )
 
 
@@ -241,18 +251,18 @@ class VKAPIUserNotFoundError(APIError):
     def __init__(self, user_id: int):
         super().__init__(
             status_code=404,
-            detail=f"VK user not found: {user_id}",
             error_code="VK_API_USER_NOT_FOUND",
-            extra_data={"user_id": user_id},
+            message=f"VK user not found: {user_id}",
+            details={"user_id": user_id},
         )
 
 
 class VKAPIRetryExhaustedError(APIError):
     """Исчерпаны попытки повтора запроса к VK API"""
 
-    def __init__(self, max_attempts: int, method: str = None):
+    def __init__(self, max_attempts: int, method: Optional[str] = None):
         detail = f"VK API retry exhausted after {max_attempts} attempts"
-        extra_data = {"max_attempts": max_attempts}
+        extra_data: Dict[str, Any] = {"max_attempts": max_attempts}
 
         if method:
             detail += f" for method {method}"
@@ -260,9 +270,9 @@ class VKAPIRetryExhaustedError(APIError):
 
         super().__init__(
             status_code=502,
-            detail=detail,
             error_code="VK_API_RETRY_EXHAUSTED",
-            extra_data=extra_data,
+            message=detail,
+            details=extra_data,
         )
 
 
@@ -277,9 +287,9 @@ class VKAPIConfigurationError(APIError):
 
         super().__init__(
             status_code=500,
-            detail=detail,
             error_code="VK_API_CONFIGURATION_ERROR",
-            extra_data=extra_data,
+            message=detail,
+            details=extra_data,
         )
 
 
@@ -291,9 +301,9 @@ class VKAPICacheError(APIError):
 
         super().__init__(
             status_code=500,
-            detail=f"{message}: {operation}",
             error_code="VK_API_CACHE_ERROR",
-            extra_data=extra_data,
+            message=f"{message}: {operation}",
+            details=extra_data,
         )
 
 
@@ -305,9 +315,9 @@ class VKAPIMetricsError(APIError):
 
         super().__init__(
             status_code=500,
-            detail=f"{message}: {metric}",
             error_code="VK_API_METRICS_ERROR",
-            extra_data=extra_data,
+            message=f"{message}: {metric}",
+            details=extra_data,
         )
 
 
@@ -321,9 +331,91 @@ class VKAPIHealthCheckError(APIError):
 
         super().__init__(
             status_code=503,
-            detail=f"{message}: {component}",
             error_code="VK_API_HEALTH_CHECK_ERROR",
-            extra_data=extra_data,
+            message=f"{message}: {component}",
+            details=extra_data,
+        )
+
+
+class VKAPIBulkOperationError(APIError):
+    """Ошибка массовой операции"""
+
+    def __init__(
+        self,
+        message: str,
+        total_requested: int,
+        total_succeeded: int,
+        failed_items: Optional[list] = None,
+        operation: Optional[str] = None,
+    ):
+        detail = f"Bulk operation failed: {message}"
+        extra_data = {
+            "error_type": "bulk_operation_error",
+            "total_requested": total_requested,
+            "total_succeeded": total_succeeded,
+            "total_failed": total_requested - total_succeeded,
+            "success_rate": (
+                round(total_succeeded / total_requested * 100, 2)
+                if total_requested > 0
+                else 0
+            ),
+        }
+
+        if failed_items:
+            extra_data["failed_items"] = failed_items[
+                :10
+            ]  # Ограничим до 10 элементов для читаемости
+        if operation:
+            extra_data["operation"] = operation
+
+        super().__init__(
+            status_code=502,
+            error_code="VK_API_BULK_OPERATION_ERROR",
+            message=detail,
+            details=extra_data,
+        )
+
+
+class VKAPIConcurrentRequestError(APIError):
+    """Ошибка одновременных запросов"""
+
+    def __init__(self, concurrent_requests: int, max_allowed: int):
+        detail = f"Too many concurrent requests: {concurrent_requests}/{max_allowed}"
+        extra_data = {
+            "error_type": "concurrent_request_error",
+            "concurrent_requests": concurrent_requests,
+            "max_allowed": max_allowed,
+            "suggestion": "Reduce concurrency or increase limits",
+        }
+
+        super().__init__(
+            status_code=429,
+            error_code="VK_API_CONCURRENT_REQUEST_ERROR",
+            message=detail,
+            details=extra_data,
+        )
+
+
+class VKAPICircuitBreakerOpenError(APIError):
+    """Ошибка открытого circuit breaker"""
+
+    def __init__(
+        self, service: str, failure_count: int, recovery_timeout: float
+    ):
+        detail = f"Circuit breaker is open for {service}"
+        extra_data: Dict[str, Any] = {
+            "error_type": "circuit_breaker_open",
+            "service": service,
+            "failure_count": failure_count,
+            "recovery_timeout_seconds": recovery_timeout,
+            "retry_after": int(recovery_timeout),
+        }
+
+        super().__init__(
+            status_code=503,
+            error_code="VK_API_CIRCUIT_BREAKER_OPEN",
+            message=detail,
+            details=extra_data,
         )
 
 
@@ -347,4 +439,7 @@ __all__ = [
     "VKAPICacheError",
     "VKAPIMetricsError",
     "VKAPIHealthCheckError",
+    "VKAPIBulkOperationError",
+    "VKAPIConcurrentRequestError",
+    "VKAPICircuitBreakerOpenError",
 ]

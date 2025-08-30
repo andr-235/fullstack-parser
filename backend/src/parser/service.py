@@ -2,6 +2,15 @@
 Сервис для работы с парсингом VK данных
 
 Содержит бизнес-логику для операций парсинга комментариев из VK
+
+Использование VK API сервиса:
+    # Создание сервиса с VK API
+    vk_repo = get_vk_api_repository()
+    vk_service = VKAPIService(vk_repo)
+    parser = ParserService(vk_api_service=vk_service)
+
+    # Или через dependency injection (в FastAPI)
+    parser = get_parser_service(vk_api_service=get_vk_api_service())
 """
 
 from typing import List, Optional, Dict, Any
@@ -10,6 +19,8 @@ from uuid import uuid4
 
 from .client import VKAPIClient
 from ..exceptions import ValidationError, ServiceUnavailableError
+from ..vk_api.service import VKAPIService
+from ..vk_api.dependencies import create_vk_api_service
 
 
 class ParserService:
@@ -19,9 +30,22 @@ class ParserService:
     Реализует бизнес-логику для операций парсинга комментариев из групп VK
     """
 
-    def __init__(self, repository=None, client: VKAPIClient = None):
+    def __init__(
+        self,
+        repository=None,
+        client: VKAPIClient = None,
+        vk_api_service: VKAPIService = None,
+    ):
         self.repository = repository
         self.client = client or VKAPIClient()
+
+        # Используем VK API сервис если передан, иначе создаем свой
+        if vk_api_service:
+            self.vk_api = vk_api_service
+        else:
+            # Создаем экземпляр VK API сервиса для внутренних вызовов
+            self.vk_api = create_vk_api_service()
+
         self.tasks = (
             {}
         )  # В памяти для простоты, в продакшене использовать Redis/DB
@@ -347,25 +371,28 @@ class ParserService:
             comments_saved = 0
             errors = []
 
-            # Получаем информацию о группе
-            group_info = await self.client.get_group_info(str(group_id))
-            if not group_info:
+            # Получаем информацию о группе через VK API сервис
+            group_info_result = await self.vk_api.get_group_info(group_id)
+            if not group_info_result.get("group"):
                 raise ServiceUnavailableError(f"Группа {group_id} не найдена")
+            group_info = group_info_result["group"]
 
-            # Получаем посты группы
-            posts = await self.client.get_wall_posts(
-                owner_id=str(group_id), count=max_posts
+            # Получаем посты группы через VK API сервис
+            posts_result = await self.vk_api.get_group_posts(
+                group_id=group_id, count=max_posts
             )
+            posts = posts_result.get("posts", [])
             posts_found = len(posts)
 
-            # Для каждого поста получаем комментарии
+            # Для каждого поста получаем комментарии через VK API сервис
             for post in posts[:max_posts]:  # Ограничиваем количество
                 try:
-                    post_comments = await self.client.get_comments(
-                        owner_id=str(group_id),
+                    post_comments_result = await self.vk_api.get_post_comments(
+                        group_id=group_id,
                         post_id=post["id"],
                         count=max_comments_per_post,
                     )
+                    post_comments = post_comments_result.get("comments", [])
                     comments_found += len(post_comments)
 
                     # В реальном приложении здесь сохранение в БД

@@ -1,96 +1,81 @@
 # =============================================================================
-# Optimized Multi-stage Dockerfile for FastAPI Backend Application
+# Optimized Production Dockerfile for FastAPI Backend with Poetry and ARQ Worker
 # =============================================================================
 
-# ----------- Stage 1: Dependencies (with enhanced caching) -----------
-# Пиннинг версии для воспроизводимости
-FROM python:3.13-slim AS deps
-WORKDIR /app
+# Build stage
+FROM python:3.11-slim AS builder
 
-# Установка системных зависимостей для компиляции
+# Install system dependencies for building
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
-    libpq-dev \
-    libffi-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+ build-essential \
+ curl \
+ && rm -rf /var/lib/apt/lists/*
 
-# Копирование только файлов зависимостей для лучшего кеширования
-COPY pyproject.toml poetry.lock* ./
+# Install Poetry
+ENV POETRY_HOME=/opt/poetry \
+ POETRY_VIRTUALENVS_IN_PROJECT=true \
+ POETRY_NO_INTERACTION=1
 
-# Установка poetry с оптимизацией
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir poetry==1.8.3 && \
-    poetry config virtualenvs.create false && \
-    poetry config installer.max-workers 10 && \
-    poetry config installer.parallel true && \
-    poetry install --no-root --only=main --no-interaction
+RUN pip install --no-cache-dir poetry==1.8.3
 
-# ----------- Stage 2: Builder (application build) -----------
-FROM python:3.13-slim AS builder
+# Set working directory
 WORKDIR /app
 
-# Копирование установленных пакетов
-COPY --from=deps /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
-COPY --from=deps /usr/local/bin /usr/local/bin
+# Copy Poetry configuration files
+COPY pyproject.toml poetry.lock ./
 
-# Копирование исходного кода
-COPY app/ ./app/
-COPY alembic/ ./alembic/
-COPY alembic.ini ./
-COPY entrypoint.sh ./
+# Configure Poetry to create virtual environment in project
+RUN poetry config virtualenvs.create true
+RUN poetry config virtualenvs.in-project true
 
-# ----------- Stage 3: Production (minimal runtime) -----------
-FROM python:3.13-slim AS production
-WORKDIR /app
+# Install dependencies and create virtual environment
+RUN poetry install --only=main --no-dev
 
-# Установка только runtime зависимостей
+# Production stage
+FROM python:3.11-slim AS runtime
+
+# Install runtime system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
-    curl \
-    tzdata \
-    dumb-init \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean \
-    && groupadd -r appuser && useradd --no-log-init -r -g appuser appuser
+ curl \
+ && rm -rf /var/lib/apt/lists/*
 
-# Настройка часового пояса для Владивостока
-ENV TZ=Asia/Vladivostok
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+# Create non-privileged user
+ARG UID=10001
+RUN groupadd --gid $UID appuser \
+ && useradd --uid $UID --gid $UID --create-home --shell /bin/bash appuser
 
-# Копирование Python пакетов и кода
-COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /app /app
-COPY entrypoint.sh /entrypoint.sh
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+ PYTHONDONTWRITEBYTECODE=1 \
+ PYTHONPATH=/app/src \
+ PATH="/app/.venv/bin:$PATH"
 
-# Настройка прав доступа
-RUN chmod +x /entrypoint.sh && \
-    chown -R appuser:appuser /app
+# Set working directory
+WORKDIR /app
 
-# Метаданные образа
-LABEL maintainer="team@company.com" \
-      version="1.0" \
-      description="Production FastAPI application"
+# Copy virtual environment from builder stage
+COPY --from=builder /app/.venv /app/.venv
 
-# Настройка безопасности
+# Copy application source code
+COPY src/ ./src/
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app/logs
+
+# Switch to non-privileged user
 USER appuser
 
-# Проверка здоровья
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/api/v1/health/ || exit 1
+# Health check for the FastAPI application
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+ CMD curl -f http://localhost:8000/health || exit 1
 
-# Экспорт порта
+# Expose port
 EXPOSE 8000
 
-# Переменные окружения
-ENV PYTHONPATH=/app \
-    PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
-
-# Точка входа с dumb-init для правильной обработки сигналов
-ENTRYPOINT ["dumb-init", "--"]
-
-# Команда запуска
-CMD ["/entrypoint.sh"]
+# Set entrypoint and default command
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["fastapi"]

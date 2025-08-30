@@ -9,12 +9,11 @@ import hashlib
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 
-from .constants import (
+from .config import (
     REGEX_VK_GROUP_ID,
     REGEX_VK_USER_ID,
     REGEX_VK_POST_ID,
-    VK_API_BASE_URL,
-    VK_API_VERSION,
+    vk_api_config,
 )
 
 
@@ -145,7 +144,7 @@ def generate_vk_api_url(method: str, params: Dict[str, Any] = None) -> str:
     Returns:
         str: Полный URL запроса
     """
-    url = f"{VK_API_BASE_URL}{method}"
+    url = f"{vk_api_config.base_url}{method}"
 
     if params:
         # Преобразуем параметры в строку запроса

@@ -1,229 +1,234 @@
 """
-Конфигурация модуля VK API
+Конфигурация и константы модуля VK API
 
-Содержит настройки специфичные для модуля работы с VK API
+Объединенный файл конфигурации по паттернам FastAPI лучших практик
 """
 
 from typing import Optional, List
+from pydantic import BaseModel, Field
 
 from ..config import settings
 
 
-class VKAPIConfig:
-    """Конфигурация для модуля VK API"""
+class VKAPIConnectionConfig(BaseModel):
+    """Конфигурация подключения к VK API"""
 
-    # Основные настройки VK API
-    API_VERSION = "5.199"
-    BASE_URL = "https://api.vk.com/method/"
-    ACCESS_TOKEN = (
-        settings.vk_access_token
-        if hasattr(settings, "vk_access_token")
-        else None
+    timeout: float = Field(default=30.0, description="Таймаут запросов")
+    connection_timeout: float = Field(
+        default=10.0, description="Таймаут подключения"
+    )
+    max_connections: int = Field(
+        default=100, description="Максимум соединений"
+    )
+    max_keepalive: int = Field(
+        default=10, description="Максимум keep-alive соединений"
     )
 
-    # Настройки подключения
-    REQUEST_TIMEOUT = 30.0
-    CONNECTION_TIMEOUT = 10.0
-    MAX_CONNECTIONS = 100
-    MAX_KEEPALIVE = 10
 
-    # Rate limiting
-    MAX_REQUESTS_PER_SECOND = 3
-    RATE_LIMIT_WINDOW = 1.0
+class VKAPIRateLimitConfig(BaseModel):
+    """Конфигурация rate limiting"""
 
-    # Лимиты запросов
-    MAX_POSTS_PER_REQUEST = 100
-    MAX_COMMENTS_PER_REQUEST = 100
-    MAX_GROUPS_PER_REQUEST = 1000
-    MAX_USERS_PER_REQUEST = 1000
+    max_requests_per_second: int = Field(
+        default=3, description="Максимум запросов в секунду"
+    )
+    window_seconds: float = Field(
+        default=1.0, description="Окно времени в секундах"
+    )
 
-    # Настройки кеширования
-    CACHE_ENABLED = True
-    CACHE_TTL_GROUP_POSTS = 300  # 5 минут
-    CACHE_TTL_POST_COMMENTS = 600  # 10 минут
-    CACHE_TTL_GROUP_INFO = 3600  # 1 час
-    CACHE_TTL_USER_INFO = 1800  # 30 минут
-    CACHE_TTL_SEARCH = 1800  # 30 минут
 
-    # Настройки повторов
-    RETRY_ENABLED = True
-    RETRY_MAX_ATTEMPTS = 3
-    RETRY_BACKOFF_FACTOR = 2.0
-    RETRY_MAX_DELAY = 60.0
+class VKAPIRequestLimits(BaseModel):
+    """Лимиты запросов VK API"""
 
-    # Настройки прокси
-    PROXY_ENABLED = False
-    PROXY_LIST: List[str] = []
-    PROXY_ROTATION_ENABLED = False
+    max_posts_per_request: int = Field(
+        default=100, description="Максимум постов за запрос"
+    )
+    max_comments_per_request: int = Field(
+        default=100, description="Максимум комментариев за запрос"
+    )
+    max_groups_per_request: int = Field(
+        default=1000, description="Максимум групп за запрос"
+    )
+    max_users_per_request: int = Field(
+        default=1000, description="Максимум пользователей за запрос"
+    )
+    max_group_members_per_request: int = Field(
+        default=1000, description="Максимум участников группы за запрос"
+    )
 
-    # Настройки логирования
-    LOG_REQUESTS = True
-    LOG_ERRORS = True
-    LOG_RATE_LIMITS = True
 
-    # Настройки мониторинга
-    METRICS_ENABLED = True
-    HEALTH_CHECKS_ENABLED = True
-    HEALTH_CHECK_INTERVAL = 60
+class VKAPICacheConfig(BaseModel):
+    """Конфигурация кеширования"""
+
+    enabled: bool = Field(default=True, description="Включено ли кеширование")
+    group_posts_ttl: int = Field(
+        default=300, description="TTL кеша постов группы (сек)"
+    )
+    post_comments_ttl: int = Field(
+        default=600, description="TTL кеша комментариев (сек)"
+    )
+    group_info_ttl: int = Field(
+        default=3600, description="TTL кеша информации о группе (сек)"
+    )
+    user_info_ttl: int = Field(
+        default=1800, description="TTL кеша информации о пользователе (сек)"
+    )
+    search_ttl: int = Field(default=1800, description="TTL кеша поиска (сек)")
+    group_members_ttl: int = Field(
+        default=1800, description="TTL кеша участников группы (сек)"
+    )
+
+
+class VKAPIRetryConfig(BaseModel):
+    """Конфигурация повторов"""
+
+    enabled: bool = Field(default=True, description="Включены ли повторы")
+    max_attempts: int = Field(default=3, description="Максимум попыток")
+    backoff_factor: float = Field(
+        default=2.0, description="Коэффициент отката"
+    )
+    max_delay: float = Field(default=60.0, description="Максимальная задержка")
+
+
+class VKAPIProxyConfig(BaseModel):
+    """Конфигурация прокси"""
+
+    enabled: bool = Field(default=False, description="Включены ли прокси")
+    proxy_list: List[str] = Field(
+        default_factory=list, description="Список прокси"
+    )
+    rotation_enabled: bool = Field(
+        default=False, description="Включена ли ротация прокси"
+    )
+
+
+class VKAPILoggingConfig(BaseModel):
+    """Конфигурация логирования"""
+
+    log_requests: bool = Field(default=True, description="Логировать запросы")
+    log_errors: bool = Field(default=True, description="Логировать ошибки")
+    log_rate_limits: bool = Field(
+        default=True, description="Логировать rate limits"
+    )
+
+
+class VKAPIMonitoringConfig(BaseModel):
+    """Конфигурация мониторинга"""
+
+    metrics_enabled: bool = Field(
+        default=True, description="Включены ли метрики"
+    )
+    health_checks_enabled: bool = Field(
+        default=True, description="Включены ли проверки здоровья"
+    )
+    health_check_interval: int = Field(
+        default=60, description="Интервал проверок здоровья"
+    )
+
+
+class VKAPICleanupConfig(BaseModel):
+    """Конфигурация очистки кеша"""
+
+    enabled: bool = Field(default=True, description="Включена ли очистка")
+    interval: int = Field(default=3600, description="Интервал очистки (сек)")
+    max_entries: int = Field(default=10000, description="Максимум записей")
+    cleanup_ratio: float = Field(
+        default=0.8, description="Коэффициент очистки"
+    )
+
+
+class VKAPIConfig(BaseModel):
+    """Основная конфигурация VK API"""
+
+    # Основные настройки
+    api_version: str = Field(default="5.199", description="Версия VK API")
+    base_url: str = Field(
+        default="https://api.vk.com/method/", description="Базовый URL API"
+    )
+    access_token: Optional[str] = Field(
+        default_factory=lambda: getattr(settings, "vk_access_token", None),
+        description="Токен доступа",
+    )
+
+    # Поля запросов
+    group_fields: str = Field(
+        default="id,name,screen_name,description,members_count,photo_200,is_closed,type",
+        description="Поля для запросов групп",
+    )
+    user_fields: str = Field(
+        default="id,first_name,last_name,photo_100,sex,city,country",
+        description="Поля для запросов пользователей",
+    )
+    group_members_fields: str = Field(
+        default="id,first_name,last_name,photo_100,sex,city,country,deactivated",
+        description="Поля для запросов участников группы",
+    )
 
     # Настройки для тестирования
-    TEST_MODE_ENABLED = False
-    MOCK_RESPONSES_ENABLED = False
-
-    # Поля для запросов
-    GROUP_FIELDS = "id,name,screen_name,description,members_count,photo_200,is_closed,type"
-    USER_FIELDS = "id,first_name,last_name,photo_100,sex,city,country"
+    test_mode_enabled: bool = Field(
+        default=False, description="Тестовый режим"
+    )
+    mock_responses_enabled: bool = Field(
+        default=False, description="Мок-ответы"
+    )
 
     # Настройки для обработки больших объемов данных
-    BATCH_SIZE_GROUP_POSTS = 50
-    BATCH_SIZE_GROUP_COMMENTS = 25
-    BATCH_SIZE_USER_INFO = 100
+    batch_size_group_posts: int = Field(
+        default=50, description="Размер батча постов групп"
+    )
+    batch_size_group_comments: int = Field(
+        default=25, description="Размер батча комментариев"
+    )
+    batch_size_user_info: int = Field(
+        default=100, description="Размер батча информации о пользователях"
+    )
 
-    # Настройки очистки кеша
-    CACHE_CLEANUP_ENABLED = True
-    CACHE_CLEANUP_INTERVAL = 3600  # 1 час
-    CACHE_MAX_ENTRIES = 10000
-    CACHE_CLEANUP_RATIO = 0.8
+    # Вложенные конфигурации
+    connection: VKAPIConnectionConfig = Field(
+        default_factory=VKAPIConnectionConfig
+    )
+    rate_limit: VKAPIRateLimitConfig = Field(
+        default_factory=VKAPIRateLimitConfig
+    )
+    limits: VKAPIRequestLimits = Field(default_factory=VKAPIRequestLimits)
+    cache: VKAPICacheConfig = Field(default_factory=VKAPICacheConfig)
+    retry: VKAPIRetryConfig = Field(default_factory=VKAPIRetryConfig)
+    proxy: VKAPIProxyConfig = Field(default_factory=VKAPIProxyConfig)
+    logging: VKAPILoggingConfig = Field(default_factory=VKAPILoggingConfig)
+    monitoring: VKAPIMonitoringConfig = Field(
+        default_factory=VKAPIMonitoringConfig
+    )
+    cleanup: VKAPICleanupConfig = Field(default_factory=VKAPICleanupConfig)
 
-    @classmethod
-    def get_api_config(cls) -> dict:
-        """Получить конфигурацию API"""
-        return {
-            "version": cls.API_VERSION,
-            "base_url": cls.BASE_URL,
-            "access_token": cls.ACCESS_TOKEN,
-            "timeout": cls.REQUEST_TIMEOUT,
-        }
-
-    @classmethod
-    def get_connection_config(cls) -> dict:
-        """Получить конфигурацию подключения"""
-        return {
-            "max_connections": cls.MAX_CONNECTIONS,
-            "max_keepalive": cls.MAX_KEEPALIVE,
-            "connection_timeout": cls.CONNECTION_TIMEOUT,
-        }
-
-    @classmethod
-    def get_rate_limit_config(cls) -> dict:
-        """Получить конфигурацию rate limiting"""
-        return {
-            "max_requests_per_second": cls.MAX_REQUESTS_PER_SECOND,
-            "window_seconds": cls.RATE_LIMIT_WINDOW,
-        }
-
-    @classmethod
-    def get_limits_config(cls) -> dict:
-        """Получить конфигурацию лимитов"""
-        return {
-            "max_posts_per_request": cls.MAX_POSTS_PER_REQUEST,
-            "max_comments_per_request": cls.MAX_COMMENTS_PER_REQUEST,
-            "max_groups_per_request": cls.MAX_GROUPS_PER_REQUEST,
-            "max_users_per_request": cls.MAX_USERS_PER_REQUEST,
-        }
-
-    @classmethod
-    def get_cache_config(cls) -> dict:
-        """Получить конфигурацию кеширования"""
-        return {
-            "enabled": cls.CACHE_ENABLED,
-            "group_posts_ttl": cls.CACHE_TTL_GROUP_POSTS,
-            "post_comments_ttl": cls.CACHE_TTL_POST_COMMENTS,
-            "group_info_ttl": cls.CACHE_TTL_GROUP_INFO,
-            "user_info_ttl": cls.CACHE_TTL_USER_INFO,
-            "search_ttl": cls.CACHE_TTL_SEARCH,
-        }
-
-    @classmethod
-    def get_retry_config(cls) -> dict:
-        """Получить конфигурацию повторов"""
-        return {
-            "enabled": cls.RETRY_ENABLED,
-            "max_attempts": cls.RETRY_MAX_ATTEMPTS,
-            "backoff_factor": cls.RETRY_BACKOFF_FACTOR,
-            "max_delay": cls.RETRY_MAX_DELAY,
-        }
-
-    @classmethod
-    def get_proxy_config(cls) -> dict:
-        """Получить конфигурацию прокси"""
-        return {
-            "enabled": cls.PROXY_ENABLED,
-            "proxy_list": cls.PROXY_LIST,
-            "rotation_enabled": cls.PROXY_ROTATION_ENABLED,
-        }
-
-    @classmethod
-    def get_logging_config(cls) -> dict:
-        """Получить конфигурацию логирования"""
-        return {
-            "log_requests": cls.LOG_REQUESTS,
-            "log_errors": cls.LOG_ERRORS,
-            "log_rate_limits": cls.LOG_RATE_LIMITS,
-        }
-
-    @classmethod
-    def get_monitoring_config(cls) -> dict:
-        """Получить конфигурацию мониторинга"""
-        return {
-            "metrics_enabled": cls.METRICS_ENABLED,
-            "health_checks_enabled": cls.HEALTH_CHECKS_ENABLED,
-            "health_check_interval": cls.HEALTH_CHECK_INTERVAL,
-        }
-
-    @classmethod
-    def get_batch_config(cls) -> dict:
-        """Получить конфигурацию пакетной обработки"""
-        return {
-            "group_posts_batch_size": cls.BATCH_SIZE_GROUP_POSTS,
-            "group_comments_batch_size": cls.BATCH_SIZE_GROUP_COMMENTS,
-            "user_info_batch_size": cls.BATCH_SIZE_USER_INFO,
-        }
-
-    @classmethod
-    def get_cleanup_config(cls) -> dict:
-        """Получить конфигурацию очистки"""
-        return {
-            "enabled": cls.CACHE_CLEANUP_ENABLED,
-            "interval": cls.CACHE_CLEANUP_INTERVAL,
-            "max_entries": cls.CACHE_MAX_ENTRIES,
-            "cleanup_ratio": cls.CACHE_CLEANUP_RATIO,
-        }
-
-    @classmethod
-    def is_token_configured(cls) -> bool:
+    @property
+    def is_token_configured(self) -> bool:
         """Проверить, настроен ли токен доступа"""
-        return cls.ACCESS_TOKEN is not None and cls.ACCESS_TOKEN.strip() != ""
+        return (
+            self.access_token is not None and self.access_token.strip() != ""
+        )
 
-    @classmethod
-    def validate_token(cls, token: str) -> bool:
+    def validate_token(self, token: str) -> bool:
         """Проверить валидность токена"""
         if not token or not isinstance(token, str):
             return False
         return len(token.strip()) > 10  # Минимальная длина токена
 
-    @classmethod
-    def get_request_fields(cls, object_type: str) -> str:
+    def get_request_fields(self, object_type: str) -> str:
         """Получить поля для запроса в зависимости от типа объекта"""
         if object_type == "group":
-            return cls.GROUP_FIELDS
+            return self.group_fields
         elif object_type == "user":
-            return cls.USER_FIELDS
+            return self.user_fields
         return ""
 
-    @classmethod
-    def should_log_request(cls, method: str) -> bool:
+    def should_log_request(self, method: str) -> bool:
         """Определить, нужно ли логировать запрос"""
-        if not cls.LOG_REQUESTS:
+        if not self.logging.log_requests:
             return False
-
-        # Можно добавить логику для определенных методов
         return True
 
-    @classmethod
-    def should_log_error(cls, error_code: int) -> bool:
+    def should_log_error(self, error_code: int) -> bool:
         """Определить, нужно ли логировать ошибку"""
-        if not cls.LOG_ERRORS:
+        if not self.logging.log_errors:
             return False
 
         # Важные ошибки всегда логируем
@@ -236,6 +241,43 @@ class VKAPIConfig:
         return error_code in critical_errors
 
 
+# Дополнительные константы (временно, пока не перенесены в конфигурацию)
+VK_OBJECT_TYPE_POST = "post"
+VK_OBJECT_TYPE_COMMENT = "comment"
+VK_OBJECT_TYPE_GROUP = "group"
+VK_OBJECT_TYPE_USER = "user"
+VK_OBJECT_TYPE_WALL = "wall"
+VK_SORT_ASC = "asc"
+VK_SORT_DESC = "desc"
+VK_GROUP_TYPE_GROUP = "group"
+VK_GROUP_TYPE_PAGE = "page"
+VK_GROUP_TYPE_EVENT = "event"
+VK_GROUP_STATUS_OPEN = "open"
+VK_GROUP_STATUS_CLOSED = "closed"
+VK_GROUP_STATUS_PRIVATE = "private"
+VK_METHOD_WALL_GET = "wall.get"
+VK_METHOD_WALL_GET_COMMENTS = "wall.getComments"
+VK_METHOD_GROUPS_GET_BY_ID = "groups.getById"
+VK_METHOD_GROUPS_SEARCH = "groups.search"
+VK_METHOD_USERS_GET = "users.get"
+VK_METHOD_GROUPS_GET_MEMBERS = "groups.getMembers"
+VK_ERROR_ACCESS_DENIED = 5
+VK_ERROR_INVALID_REQUEST = 6
+VK_ERROR_TOO_MANY_REQUESTS = 6
+VK_ERROR_AUTH_FAILED = 5
+VK_ERROR_PERMISSION_DENIED = 7
+VK_ERROR_GROUP_ACCESS_DENIED = 203
+VK_ERROR_POST_NOT_FOUND = 100
+VK_ERROR_USER_NOT_FOUND = 113
+REGEX_VK_GROUP_ID = r"^(-?\d+)$"
+REGEX_VK_USER_ID = r"^(\d+)$"
+REGEX_VK_POST_ID = r"^(\d+)$"
+USER_AGENTS = [
+    "VK Comments Parser/1.0",
+    "VK Data Collector/1.0",
+    "VK API Client/1.0",
+]
+
 # Экземпляр конфигурации
 vk_api_config = VKAPIConfig()
 
@@ -243,5 +285,14 @@ vk_api_config = VKAPIConfig()
 # Экспорт
 __all__ = [
     "VKAPIConfig",
+    "VKAPIConnectionConfig",
+    "VKAPIRateLimitConfig",
+    "VKAPIRequestLimits",
+    "VKAPICacheConfig",
+    "VKAPIRetryConfig",
+    "VKAPIProxyConfig",
+    "VKAPILoggingConfig",
+    "VKAPIMonitoringConfig",
+    "VKAPICleanupConfig",
     "vk_api_config",
 ]

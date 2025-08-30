@@ -1,22 +1,7 @@
+---
 version: 2
 updates:
-  # Python dependencies
-  - package-ecosystem: "pip"
-    directory: "/backend"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-    open-pull-requests-limit: 10
-    reviewers:
-      - "andr-235"
-    assignees:
-      - "andr-235"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
-
-  # Node.js dependencies
+  # Frontend dependencies
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
@@ -24,13 +9,118 @@ updates:
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 10
-    reviewers:
-      - "andr-235"
-    assignees:
-      - "andr-235"
     commit-message:
-      prefix: "chore"
+      prefix: "deps"
+      prefix-development: "deps-dev"
       include: "scope"
+    labels:
+      - "dependencies"
+      - "frontend"
+    groups:
+      # Group minor and patch updates for React ecosystem
+      react-ecosystem:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react*"
+          - "next"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group testing libraries
+      testing:
+        patterns:
+          - "jest*"
+          - "@testing-library/*"
+          - "cypress*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Backend dependencies (Python)
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "backend"
+      - "python"
+    groups:
+      # Group FastAPI ecosystem updates
+      fastapi-ecosystem:
+        patterns:
+          - "fastapi"
+          - "uvicorn"
+          - "pydantic*"
+          - "sqlalchemy"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group testing dependencies
+      testing:
+        patterns:
+          - "pytest*"
+          - "coverage*"
+          - "black"
+          - "isort"
+          - "mypy"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "frontend"
+
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "backend"
+
+  - package-ecosystem: "docker"
+    directory: "/nginx"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "nginx"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -40,26 +130,10 @@ updates:
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 5
-    reviewers:
-      - "andr-235"
-    assignees:
-      - "andr-235"
     commit-message:
       prefix: "ci"
       include: "scope"
-
-  # Docker dependencies
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-    open-pull-requests-limit: 5
-    reviewers:
-      - "andr-235"
-    assignees:
-      - "andr-235"
-    commit-message:
-      prefix: "ci"
-      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci/cd"

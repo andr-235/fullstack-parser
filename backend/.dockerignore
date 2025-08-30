@@ -1,50 +1,88 @@
-# Исключаем директории IDE
-.idea/
-.vscode/
-
-# Исключаем системные файлы
-.DS_Store
-*.swo
-*.swp
-
-# Исключаем директории Python
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
-.venv/
-venv/
-env/
 build/
+develop-eggs/
 dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 *.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Исключаем файлы зависимостей
-requirements*.txt
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# Исключаем файлы тестов и кеша
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Testing
 .pytest_cache/
 .coverage
 htmlcov/
-.mypy_cache/
-.ruff_cache/
-tests/
-test_*.py
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
 
-# Исключаем git
-.git/
-.gitignore
-
-# Исключаем логи
+# Logs
 *.log
 logs/
 
-# Исключаем большие файлы
-bandit-report.json
-coverage.xml
+# Documentation
+docs/_build/
 
-# Не включаем .env файлы, кроме примера
-.env
-.env.*
-!.env.example
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Node modules (if any)
+node_modules/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Test directories
+test_env/
+tests/
+
+# Alembic
+alembic/versions/*.py

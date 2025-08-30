@@ -32,6 +32,9 @@ class MetaInfo(BaseModel):
     architecture: str = Field(
         default="DDD + Middleware", description="Архитектурный стиль"
     )
+    message: Optional[str] = Field(
+        default=None, description="Сообщение ответа"
+    )
 
 
 class PaginationInfo(BaseModel):

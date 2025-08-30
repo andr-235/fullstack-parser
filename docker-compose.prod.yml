@@ -27,6 +27,95 @@ x-security: &default-security
     - /var/tmp:noexec,nosuid,size=50m
 
 services:
+  # Backend FastAPI приложение
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: fullstack_prod_backend
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/vk_parser
+      - CORS_ORIGINS=["http://localhost:3000", "http://nginx:80"]
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - prod-app-network
+      - prod-db-network
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # ARQ Worker сервис (для фоновых задач)
+  arq_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: fullstack_prod_arq_worker
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://postgres:5432/vk_parser
+    command: ["worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - prod-app-network
+      - prod-db-network
+    logging: *default-logging
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "pgrep", "-f", "arq"]
+      interval: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
   # База данных PostgreSQL
   postgres:
     image: postgres:15-alpine
@@ -104,185 +193,6 @@ services:
         max_attempts: 3
         window: 120s
 
-  # Backend приложение
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: production
-      args:
-        BUILDKIT_INLINE_CACHE: 1
-    container_name: fullstack_prod_backend
-    restart: unless-stopped
-    env_file:
-      - .env.prod
-    environment:
-      - ENV=production
-      - TZ=Asia/Vladivostok
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
-      - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY}
-      - CORS_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:3000,http://127.0.0.1:3000
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
-      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
-      - SERVER_IP=${SERVER_IP}
-      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN}
-    ports:
-      - "8000:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - prod-app-network
-      - prod-db-network
-    logging: *default-logging
-    healthcheck:
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 120s
-      test: ["CMD", "curl", "-fsSL", "http://localhost:8000/api/v1/"]
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 1G
-        reservations:
-          cpus: "0.5"
-          memory: 512M
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
-
-  # ARQ Worker для фоновых задач
-  arq_worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.arq
-      target: production
-      args:
-        BUILDKIT_INLINE_CACHE: 1
-    container_name: fullstack_prod_arq_worker
-    restart: unless-stopped
-    command: ["arq", "app.workers.arq_worker.WorkerSettings"]
-    env_file:
-      - .env.prod
-    environment:
-      - ENV=production
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
-      - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY}
-      - CORS_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:3000,http://127.0.0.1:3000
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
-      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
-      - SERVER_IP=${SERVER_IP}
-      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN}
-      - ARQ_MAX_JOBS=10
-      - ARQ_POLL_DELAY=1.0
-      - ARQ_MAX_TRIES=3
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "8002:8000" # Внутренний порт 8000, внешний 8002
-    networks:
-      - prod-app-network
-      - prod-db-network
-    logging: *default-logging
-    healthcheck:
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 90s
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import redis; redis.Redis.from_url('redis://redis:6379/0').ping()",
-        ]
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
-
-  # Планировщик мониторинга
-  monitoring_scheduler:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: production
-      args:
-        BUILDKIT_INLINE_CACHE: 1
-    container_name: fullstack_prod_monitoring_scheduler
-    restart: unless-stopped
-    command: ["python", "-m", "app.workers.monitoring_scheduler"]
-    env_file:
-      - .env.prod
-    environment:
-      - ENV=production
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
-      - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY}
-      - VK_ACCESS_TOKEN=${VK_ACCESS_TOKEN}
-      - MONITORING_SCHEDULER_INTERVAL_SECONDS=${MONITORING_SCHEDULER_INTERVAL_SECONDS:-300}
-      - MONITORING_AUTO_START_SCHEDULER=true
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      arq_worker:
-        condition: service_healthy
-    ports:
-      - "8001:8000" # Внутренний порт 8000, внешний 8001
-    networks:
-      - prod-app-network
-      - prod-db-network
-    logging: *default-logging
-    healthcheck:
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 90s
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import redis; redis.Redis.from_url('redis://redis:6379/0').ping()",
-        ]
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 256M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
-
   # Frontend приложение
   frontend:
     build:
@@ -298,7 +208,7 @@ services:
     environment:
       - NODE_ENV=production
       - SERVER_IP=${SERVER_IP}
-      - NEXT_PUBLIC_API_URL=http://localhost/api/v1
+      - NEXT_PUBLIC_API_URL=http://backend:8000/api/v1
       - TMPDIR=/tmp/uploads
     expose:
       - "3000"
@@ -340,6 +250,8 @@ services:
       frontend:
         condition: service_healthy
       backend:
+        condition: service_healthy
+      arq_worker:
         condition: service_healthy
     networks:
       - prod-app-network

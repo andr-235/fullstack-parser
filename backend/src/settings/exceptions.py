@@ -4,7 +4,7 @@
 Содержит специфические исключения для модуля управления настройками
 """
 
-from ..exceptions import APIException
+from ..exceptions import APIError as APIException
 
 
 class SettingsError(APIException):
@@ -18,9 +18,9 @@ class SettingsError(APIException):
     ):
         super().__init__(
             status_code=500,
-            detail=message,
             error_code=error_code,
-            extra_data=details or {},
+            message=message,
+            details=details or {},
         )
 
 
@@ -30,9 +30,9 @@ class SettingsSectionNotFoundError(APIException):
     def __init__(self, section_name: str):
         super().__init__(
             status_code=404,
-            detail=f"Settings section '{section_name}' not found",
             error_code="SETTINGS_SECTION_NOT_FOUND",
-            extra_data={"section_name": section_name},
+            message=f"Settings section '{section_name}' not found",
+            details={"section_name": section_name},
         )
 
 
@@ -42,9 +42,9 @@ class SettingsKeyNotFoundError(APIException):
     def __init__(self, section_name: str, key: str):
         super().__init__(
             status_code=404,
-            detail=f"Settings key '{section_name}.{key}' not found",
             error_code="SETTINGS_KEY_NOT_FOUND",
-            extra_data={"section_name": section_name, "key": key},
+            message=f"Settings key '{section_name}.{key}' not found",
+            details={"section_name": section_name, "key": key},
         )
 
 
@@ -52,15 +52,15 @@ class SettingsValidationError(APIException):
     """Ошибка валидации настроек"""
 
     def __init__(self, message: str, validation_errors: dict = None):
-        extra_data = {"message": message}
+        details = {"message": message}
         if validation_errors:
-            extra_data["validation_errors"] = validation_errors
+            details["validation_errors"] = validation_errors
 
         super().__init__(
             status_code=400,
-            detail=message,
             error_code="SETTINGS_VALIDATION_ERROR",
-            extra_data=extra_data,
+            message=message,
+            details=details,
         )
 
 
@@ -70,9 +70,9 @@ class SettingsUpdateError(APIException):
     def __init__(self, message: str, details: dict = None):
         super().__init__(
             status_code=500,
-            detail=message,
             error_code="SETTINGS_UPDATE_ERROR",
-            extra_data=details or {},
+            message=message,
+            details=details or {},
         )
 
 
@@ -84,9 +84,9 @@ class SettingsAccessDeniedError(APIException):
     ):
         super().__init__(
             status_code=403,
-            detail=message,
             error_code="SETTINGS_ACCESS_DENIED",
-            extra_data=details or {},
+            message=message,
+            details=details or {},
         )
 
 
@@ -98,15 +98,15 @@ class SettingsReadonlyError(APIException):
         if key:
             message = f"Settings key '{section_name}.{key}' is read-only"
 
-        extra_data = {"section_name": section_name}
+        details = {"section_name": section_name}
         if key:
-            extra_data["key"] = key
+            details["key"] = key
 
         super().__init__(
             status_code=403,
-            detail=message,
             error_code="SETTINGS_READONLY_ERROR",
-            extra_data=extra_data,
+            message=message,
+            details=details,
         )
 
 
@@ -116,9 +116,9 @@ class SettingsCriticalSectionError(APIException):
     def __init__(self, section_name: str):
         super().__init__(
             status_code=403,
-            detail=f"Settings section '{section_name}' is critical and requires admin privileges",
             error_code="SETTINGS_CRITICAL_SECTION_ERROR",
-            extra_data={"section_name": section_name},
+            message=f"Settings section '{section_name}' is critical and requires admin privileges",
+            details={"section_name": section_name},
         )
 
 
@@ -128,9 +128,9 @@ class SettingsImportError(APIException):
     def __init__(self, message: str, details: dict = None):
         super().__init__(
             status_code=400,
-            detail=message,
+            message=message,
             error_code="SETTINGS_IMPORT_ERROR",
-            extra_data=details or {},
+            details=details or {},
         )
 
 
@@ -140,9 +140,9 @@ class SettingsExportError(APIException):
     def __init__(self, message: str, details: dict = None):
         super().__init__(
             status_code=500,
-            detail=message,
+            message=message,
             error_code="SETTINGS_EXPORT_ERROR",
-            extra_data=details or {},
+            details=details or {},
         )
 
 
@@ -150,15 +150,15 @@ class SettingsCacheError(APIException):
     """Ошибка кеширования настроек"""
 
     def __init__(self, message: str, operation: str = None):
-        extra_data = {"message": message}
+        details = {"message": message}
         if operation:
-            extra_data["operation"] = operation
+            details["operation"] = operation
 
         super().__init__(
             status_code=500,
-            detail=f"Settings cache error: {message}",
+            message=f"Settings cache error: {message}",
             error_code="SETTINGS_CACHE_ERROR",
-            extra_data=extra_data,
+            details=details,
         )
 
 
@@ -168,9 +168,9 @@ class SettingsSizeLimitError(APIException):
     def __init__(self, current_size: int, max_size: int):
         super().__init__(
             status_code=413,
-            detail=f"Settings size limit exceeded: {current_size} > {max_size}",
+            message=f"Settings size limit exceeded: {current_size} > {max_size}",
             error_code="SETTINGS_SIZE_LIMIT_ERROR",
-            extra_data={"current_size": current_size, "max_size": max_size},
+            details={"current_size": current_size, "max_size": max_size},
         )
 
 
@@ -180,9 +180,9 @@ class SettingsSectionLimitError(APIException):
     def __init__(self, current_count: int, max_count: int):
         super().__init__(
             status_code=413,
-            detail=f"Settings sections limit exceeded: {current_count} > {max_count}",
+            message=f"Settings sections limit exceeded: {current_count} > {max_count}",
             error_code="SETTINGS_SECTION_LIMIT_ERROR",
-            extra_data={
+            details={
                 "current_count": current_count,
                 "max_count": max_count,
             },
@@ -195,9 +195,9 @@ class SettingsValueLimitError(APIException):
     def __init__(self, section_name: str, current_count: int, max_count: int):
         super().__init__(
             status_code=413,
-            detail=f"Settings values limit exceeded in section '{section_name}': {current_count} > {max_count}",
+            message=f"Settings values limit exceeded in section '{section_name}': {current_count} > {max_count}",
             error_code="SETTINGS_VALUE_LIMIT_ERROR",
-            extra_data={
+            details={
                 "section_name": section_name,
                 "current_count": current_count,
                 "max_count": max_count,
@@ -209,15 +209,15 @@ class SettingsAuditError(APIException):
     """Ошибка аудита настроек"""
 
     def __init__(self, message: str, operation: str = None):
-        extra_data = {"message": message}
+        details = {"message": message}
         if operation:
-            extra_data["operation"] = operation
+            details["operation"] = operation
 
         super().__init__(
             status_code=500,
-            detail=f"Settings audit error: {message}",
+            message=f"Settings audit error: {message}",
             error_code="SETTINGS_AUDIT_ERROR",
-            extra_data=extra_data,
+            details=details,
         )
 
 
@@ -225,15 +225,15 @@ class SettingsMetricsError(APIException):
     """Ошибка метрик настроек"""
 
     def __init__(self, message: str, metric: str = None):
-        extra_data = {"message": message}
+        details = {"message": message}
         if metric:
-            extra_data["metric"] = metric
+            details["metric"] = metric
 
         super().__init__(
             status_code=500,
-            detail=f"Settings metrics error: {message}",
+            message=f"Settings metrics error: {message}",
             error_code="SETTINGS_METRICS_ERROR",
-            extra_data=extra_data,
+            details=details,
         )
 
 
@@ -241,15 +241,15 @@ class SettingsBackupError(APIException):
     """Ошибка резервного копирования настроек"""
 
     def __init__(self, message: str, operation: str = None):
-        extra_data = {"message": message}
+        details = {"message": message}
         if operation:
-            extra_data["operation"] = operation
+            details["operation"] = operation
 
         super().__init__(
             status_code=500,
-            detail=f"Settings backup error: {message}",
+            message=f"Settings backup error: {message}",
             error_code="SETTINGS_BACKUP_ERROR",
-            extra_data=extra_data,
+            details=details,
         )
 
 
@@ -257,15 +257,15 @@ class SettingsRestoreError(APIException):
     """Ошибка восстановления настроек"""
 
     def __init__(self, message: str, backup_id: str = None):
-        extra_data = {"message": message}
+        details = {"message": message}
         if backup_id:
-            extra_data["backup_id"] = backup_id
+            details["backup_id"] = backup_id
 
         super().__init__(
             status_code=500,
-            detail=f"Settings restore error: {message}",
+            message=f"Settings restore error: {message}",
             error_code="SETTINGS_RESTORE_ERROR",
-            extra_data=extra_data,
+            details=details,
         )
 
 

@@ -111,6 +111,44 @@ class Settings(BaseSettings):
         description="Время жизни кеша в секундах",
     )
 
+    # Настройки ARQ (асинхронные задачи)
+    arq_enabled: bool = Field(
+        default=True,
+        description="Включены ли асинхронные задачи ARQ",
+    )
+    arq_max_jobs: int = Field(
+        default=10,
+        description="Максимальное количество одновременно выполняемых задач",
+    )
+    arq_job_timeout: int = Field(
+        default=300,
+        description="Таймаут выполнения задачи в секундах (5 минут)",
+    )
+    arq_keep_result: int = Field(
+        default=3600,
+        description="Время хранения результатов задач в секундах (1 час)",
+    )
+    arq_max_tries: int = Field(
+        default=3,
+        description="Максимальное количество попыток выполнения задачи",
+    )
+    arq_poll_delay: float = Field(
+        default=0.5,
+        description="Задержка между опросами очереди в секундах",
+    )
+    arq_health_check_interval: int = Field(
+        default=60,
+        description="Интервал проверки здоровья в секундах",
+    )
+    arq_queue_name: str = Field(
+        default="arq:queue",
+        description="Имя очереди ARQ",
+    )
+    arq_burst_mode: bool = Field(
+        default=False,
+        description="Режим burst - остановка после обработки всех задач",
+    )
+
     class Config:
         """Конфигурация Pydantic"""
 
@@ -292,6 +330,66 @@ class ConfigService:
         return {
             "enabled": self.cache_enabled,
             "ttl_seconds": self.cache_ttl,
+        }
+
+    # ARQ свойства
+    @property
+    def arq_enabled(self) -> bool:
+        """ARQ включен"""
+        return self._settings.arq_enabled
+
+    @property
+    def arq_max_jobs(self) -> int:
+        """Максимальное количество одновременно выполняемых задач"""
+        return self._settings.arq_max_jobs
+
+    @property
+    def arq_job_timeout(self) -> int:
+        """Таймаут выполнения задачи"""
+        return self._settings.arq_job_timeout
+
+    @property
+    def arq_keep_result(self) -> int:
+        """Время хранения результатов задач"""
+        return self._settings.arq_keep_result
+
+    @property
+    def arq_max_tries(self) -> int:
+        """Максимальное количество попыток выполнения задачи"""
+        return self._settings.arq_max_tries
+
+    @property
+    def arq_poll_delay(self) -> float:
+        """Задержка между опросами очереди"""
+        return self._settings.arq_poll_delay
+
+    @property
+    def arq_health_check_interval(self) -> int:
+        """Интервал проверки здоровья"""
+        return self._settings.arq_health_check_interval
+
+    @property
+    def arq_queue_name(self) -> str:
+        """Имя очереди ARQ"""
+        return self._settings.arq_queue_name
+
+    @property
+    def arq_burst_mode(self) -> bool:
+        """Режим burst"""
+        return self._settings.arq_burst_mode
+
+    def get_arq_config(self) -> Dict[str, Any]:
+        """Получить конфигурацию ARQ"""
+        return {
+            "enabled": self.arq_enabled,
+            "max_jobs": self.arq_max_jobs,
+            "job_timeout": self.arq_job_timeout,
+            "keep_result": self.arq_keep_result,
+            "max_tries": self.arq_max_tries,
+            "poll_delay": self.arq_poll_delay,
+            "health_check_interval": self.arq_health_check_interval,
+            "queue_name": self.arq_queue_name,
+            "burst_mode": self.arq_burst_mode,
         }
 
 

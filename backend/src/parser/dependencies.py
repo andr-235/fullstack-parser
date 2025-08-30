@@ -4,11 +4,13 @@
 Определяет FastAPI зависимости для работы с комментариями
 """
 
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db_session
+from ..vk_api.dependencies import create_vk_api_service
+from ..vk_api.service import VKAPIService
 
 
 async def get_parser_repository(db: AsyncSession = Depends(get_db_session)):
@@ -43,6 +45,7 @@ async def get_parser_client():
 async def get_parser_service(
     repository=Depends(get_parser_repository),
     client=Depends(get_parser_client),
+    vk_api_service=None,
 ):
     """
     Получить сервис парсера
@@ -50,6 +53,7 @@ async def get_parser_service(
     Args:
         repository: Репозиторий парсера
         client: Клиент VK API
+        vk_api_service: VK API сервис (опционально)
 
     Returns:
         ParserService: Сервис для бизнес-логики парсинга
@@ -57,7 +61,11 @@ async def get_parser_service(
     # Импорт здесь для избежания циклических зависимостей
     from .service import ParserService
 
-    return ParserService(repository, client)
+    # Если VK API сервис не передан, создаем его
+    if vk_api_service is None:
+        vk_api_service = create_vk_api_service()
+
+    return ParserService(repository, client, vk_api_service)
 
 
 # Экспорт зависимостей

@@ -159,8 +159,8 @@ const nextConfig = {
 
   // Настройки ESLint
   eslint: {
-    // Игнорируем ошибки ESLint при сборке
-    ignoreDuringBuilds: true,
+    // Проверяем ESLint при сборке (только для production)
+    ignoreDuringBuilds: process.env.NODE_ENV === 'production',
   },
 
   // Отключаем статическую генерацию для страниц с ошибками

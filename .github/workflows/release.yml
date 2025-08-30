@@ -1,79 +1,321 @@
-name: 🏷️ Create Release
+name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  build:
-    name: 🏗️ Build Release
-    runs-on: self-hosted
-    permissions:
-      contents: write
-      packages: write
+  # Check if we should create a release
+  should-release:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
 
     steps:
-      - name: ⬇️ Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: 🔐 Логин в GitHub Container Registry
+      - name: Check if release is needed
+        id: check
+        run: |
+          # Check if there are new commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "First release needed"
+          else
+            NEW_COMMITS=$(git rev-list $LAST_TAG..HEAD --count)
+            if [ "$NEW_COMMITS" -gt 0 ]; then
+              echo "should_release=true" >> $GITHUB_OUTPUT
+              echo "New commits found since $LAST_TAG"
+            else
+              echo "should_release=false" >> $GITHUB_OUTPUT
+              echo "No new commits since $LAST_TAG"
+            fi
+          fi
+
+      - name: Determine version
+        id: version
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          # Get current version from package.json (assuming frontend drives version)
+          CURRENT_VERSION=$(jq -r '.version' frontend/package.json)
+          echo "Current version: $CURRENT_VERSION"
+
+          # Use patch version for production releases
+          VERSION_TYPE="patch"
+
+          # Calculate new version
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR=${VERSION_PARTS[0]}
+          MINOR=${VERSION_PARTS[1]}
+          PATCH=${VERSION_PARTS[2]}
+
+          case $VERSION_TYPE in
+            major)
+              NEW_VERSION="$((MAJOR + 1)).0.0"
+              ;;
+            minor)
+              NEW_VERSION="$MAJOR.$((MINOR + 1)).0"
+              ;;
+            patch)
+              NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+              ;;
+          esac
+
+          TAG="v$NEW_VERSION"
+          echo "New version: $NEW_VERSION"
+          echo "New tag: $TAG"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+  # Create release
+  create-release:
+    runs-on: ubuntu-latest
+    needs: should-release
+    if: needs.should-release.outputs.should_release == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Update version in package.json
+        run: |
+          NEW_VERSION="${{ needs.should-release.outputs.version }}"
+          echo "Updating version to $NEW_VERSION"
+
+          # Update frontend version
+          jq ".version = \"$NEW_VERSION\"" frontend/package.json > frontend/package.json.tmp
+          mv frontend/package.json.tmp frontend/package.json
+
+          # Update backend version (if applicable)
+          if [ -f "backend/pyproject.toml" ]; then
+            sed -i "s/version = \".*\"/version = \"$NEW_VERSION\"/" backend/pyproject.toml
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          NEW_TAG="${{ needs.should-release.outputs.tag }}"
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          echo "Generating changelog from $PREVIOUS_TAG to $NEW_TAG"
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            # First release
+            CHANGES=$(git log --pretty=format:"* %s (%h)" --no-merges)
+          else
+            # Subsequent releases
+            CHANGES=$(git log --pretty=format:"* %s (%h)" --no-merges $PREVIOUS_TAG..HEAD)
+          fi
+
+          # Categorize changes
+          FEATURES=$(echo "$CHANGES" | grep "^\* feat:" || echo "")
+          FIXES=$(echo "$CHANGES" | grep "^\* fix:" || echo "")
+          DOCS=$(echo "$CHANGES" | grep "^\* docs:" || echo "")
+          STYLE=$(echo "$CHANGES" | grep "^\* style:" || echo "")
+          REFACTOR=$(echo "$CHANGES" | grep "^\* refactor:" || echo "")
+          TEST=$(echo "$CHANGES" | grep "^\* test:" || echo "")
+          CHORE=$(echo "$CHANGES" | grep "^\* chore:" || echo "")
+          OTHER=$(echo "$CHANGES" | grep -v "^\* feat:\|^fix:\|^docs:\|^style:\|^refactor:\|^test:\|^chore:" || echo "")
+
+          # Build changelog
+          CHANGELOG="## $NEW_TAG\\n\\n"
+
+          if [ -n "$FEATURES" ]; then
+            CHANGELOG="$CHANGELOG### ✨ Features\\n$FEATURES\\n\\n"
+          fi
+
+          if [ -n "$FIXES" ]; then
+            CHANGELOG="$CHANGELOG### 🐛 Fixes\\n$FIXES\\n\\n"
+          fi
+
+          if [ -n "$DOCS" ]; then
+            CHANGELOG="$CHANGELOG### 📚 Documentation\\n$DOCS\\n\\n"
+          fi
+
+          if [ -n "$STYLE" ]; then
+            CHANGELOG="$CHANGELOG### 💅 Styles\\n$STYLE\\n\\n"
+          fi
+
+          if [ -n "$REFACTOR" ]; then
+            CHANGELOG="$CHANGELOG### 🔄 Refactoring\\n$REFACTOR\\n\\n"
+          fi
+
+          if [ -n "$TEST" ]; then
+            CHANGELOG="$CHANGELOG### 🧪 Tests\\n$TEST\\n\\n"
+          fi
+
+          if [ -n "$CHORE" ]; then
+            CHANGELOG="$CHANGELOG### 🔧 Chores\\n$CHORE\\n\\n"
+          fi
+
+          if [ -n "$OTHER" ]; then
+            CHANGELOG="$CHANGELOG### 📝 Other\\n$OTHER\\n\\n"
+          fi
+
+          # Save changelog
+          echo "$CHANGELOG" > RELEASE_CHANGELOG.md
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Commit version updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add frontend/package.json
+          if [ -f "backend/pyproject.toml" ]; then
+            git add backend/pyproject.toml
+          fi
+          git commit -m "chore: bump version to ${{ needs.should-release.outputs.version }}" || echo "No changes to commit"
+
+      - name: Create git tag
+        run: |
+          git tag ${{ needs.should-release.outputs.tag }}
+          git push origin ${{ needs.should-release.outputs.tag }}
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.should-release.outputs.tag }}
+          release_name: Release ${{ needs.should-release.outputs.tag }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease: false
+
+      - name: Build and push Docker images with release tags
+        run: |
+          echo "Building release Docker images..."
+          NEW_TAG="${{ needs.should-release.outputs.tag }}"
+
+          # Build and tag images
+          docker build -t ${{ github.repository }}/frontend:$NEW_TAG ./frontend
+          docker build -t ${{ github.repository }}/backend:$NEW_TAG ./backend
+          docker build -t ${{ github.repository }}/nginx:$NEW_TAG ./nginx
+
+          # Also tag as latest
+          docker tag ${{ github.repository }}/frontend:$NEW_TAG ${{ github.repository }}/frontend:latest
+          docker tag ${{ github.repository }}/backend:$NEW_TAG ${{ github.repository }}/backend:latest
+          docker tag ${{ github.repository }}/nginx:$NEW_TAG ${{ github.repository }}/nginx:latest
+
+      - name: Login to Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🏗️ Сборка и пуш образов
+      - name: Push release images
         run: |
-          # Backend
-          docker build -t ghcr.io/${{ github.repository }}/backend:${{ github.ref_name }} ./backend
-          docker push ghcr.io/${{ github.repository }}/backend:${{ github.ref_name }}
+          NEW_TAG="${{ needs.should-release.outputs.tag }}"
+          echo "Pushing release images..."
 
-          # Frontend
-          docker build -t ghcr.io/${{ github.repository }}/frontend:${{ github.ref_name }} ./frontend
-          docker push ghcr.io/${{ github.repository }}/frontend:${{ github.ref_name }}
+          # Push versioned tags
+          docker push ${{ github.repository }}/frontend:$NEW_TAG
+          docker push ${{ github.repository }}/backend:$NEW_TAG
+          docker push ${{ github.repository }}/nginx:$NEW_TAG
 
-      - name: 📝 Generate changelog
-        id: changelog
-        uses: actions/github-script@v7
+          # Push latest tags
+          docker push ${{ github.repository }}/frontend:latest
+          docker push ${{ github.repository }}/backend:latest
+          docker push ${{ github.repository }}/nginx:latest
+
+  # Deploy to production after release
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [should-release, create-release]
+    if: needs.should-release.outputs.should_release == 'true' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          script: |
-            const { data: commits } = await github.rest.repos.compareCommits({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              base: 'main',
-              head: context.sha
-            });
+          # yamllint disable-line
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-            const changelog = commits.commits
-              .map(commit => `- ${commit.commit.message}`)
-              .join('\n');
+      - name: Deploy release to production
+        run: |
+          # yamllint disable-line rule:truthy
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            cd /opt/app
+            echo "Deploying release ${{ needs.should-release.outputs.tag }} to production..."
 
-            return changelog;
+            # Pull latest changes
+            git pull origin main
 
-      - name: 🏷️ Create Release
-        uses: actions/create-release@v1
+            # Update to latest images
+            docker-compose -f docker-compose.prod.yml pull
+
+            # Deploy with zero-downtime
+            docker-compose -f docker-compose.prod.yml up -d
+
+            # Run health checks
+            echo "Running post-deployment health checks..."
+            sleep 30
+
+            if curl -f http://localhost:8000/health; then
+              echo "✅ Backend is healthy"
+            else
+              echo "❌ Backend health check failed"
+              exit 1
+            fi
+
+            if curl -f http://localhost:3000/api/health; then
+              echo "✅ Frontend is healthy"
+            else
+              echo "❌ Frontend health check failed"
+              exit 1
+            fi
+
+            if curl -f http://localhost/health; then
+              echo "✅ Nginx is healthy"
+            else
+              echo "❌ Nginx health check failed"
+              exit 1
+            fi
+
+            # Clean up old images
+            docker image prune -f
+
+            echo "🎉 Release ${{ needs.should-release.outputs.tag }} deployed successfully!"
+          EOF
+
+      - name: Notify release success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: "🚀 Release Deployed Successfully"
+          fields: repo,message,commit,author,action,eventName,ref,workflow
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # yamllint disable-line rule:truthy
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify deployment failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            ## 🚀 What's New
-
-            ${{ steps.changelog.outputs.result }}
-
-            ## 📦 Docker Images
-
-            - Backend: `ghcr.io/${{ github.repository }}/backend:${{ github.ref_name }}`
-            - Frontend: `ghcr.io/${{ github.repository }}/frontend:${{ github.ref_name }}`
-
-            ## 🔧 Installation
-
-            ```bash
-            docker pull ghcr.io/${{ github.repository }}/backend:${{ github.ref_name }}
-            docker pull ghcr.io/${{ github.repository }}/frontend:${{ github.ref_name }}
-            ```
-          draft: false
-          prerelease: false
+          status: failure
+          text: "❌ Release Deployment Failed"
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          # yamllint disable-line rule:truthy
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

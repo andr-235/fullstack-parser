@@ -4,22 +4,22 @@
 Содержит специфические исключения для модуля парсера
 """
 
-from ..exceptions import APIException
+from ..exceptions import APIError
 
 
-class TaskNotFoundException(APIException):
+class TaskNotFoundException(APIError):
     """Задача не найдена"""
 
     def __init__(self, task_id: str):
         super().__init__(
             status_code=404,
-            detail=f"Задача с ID {task_id} не найдена",
             error_code="TASK_NOT_FOUND",
-            extra_data={"task_id": task_id},
+            message=f"Задача с ID {task_id} не найдена",
+            details={"task_id": task_id},
         )
 
 
-class InvalidTaskDataException(APIException):
+class InvalidTaskDataException(APIError):
     """Неверные данные задачи"""
 
     def __init__(self, field: str, value: str = None):
@@ -29,13 +29,14 @@ class InvalidTaskDataException(APIException):
 
         super().__init__(
             status_code=422,
-            detail=detail,
             error_code="INVALID_TASK_DATA",
-            extra_data={"field": field, "value": value},
+            message=detail,
+            details={"field": field, "value": value},
+            field=field,
         )
 
 
-class ParsingException(APIException):
+class ParsingException(APIError):
     """Ошибка парсинга"""
 
     def __init__(self, message: str, group_id: int = None):
@@ -46,13 +47,13 @@ class ParsingException(APIException):
 
         super().__init__(
             status_code=500,
-            detail=detail,
             error_code="PARSING_ERROR",
-            extra_data=extra_data,
+            message=detail,
+            details=extra_data,
         )
 
 
-class VKAPILimitExceededException(APIException):
+class VKAPILimitExceededException(APIError):
     """Превышен лимит VK API"""
 
     def __init__(self, retry_after: int = None):
@@ -62,13 +63,13 @@ class VKAPILimitExceededException(APIException):
 
         super().__init__(
             status_code=429,
-            detail="Превышен лимит запросов к VK API",
             error_code="VK_API_LIMIT_EXCEEDED",
-            extra_data=extra_data,
+            message="Превышен лимит запросов к VK API",
+            details=extra_data,
         )
 
 
-class VKAPITimeoutException(APIException):
+class VKAPITimeoutException(APIError):
     """Таймаут VK API"""
 
     def __init__(self, timeout: int = None):
@@ -78,97 +79,97 @@ class VKAPITimeoutException(APIException):
 
         super().__init__(
             status_code=504,
-            detail="Превышено время ожидания ответа от VK API",
             error_code="VK_API_TIMEOUT",
-            extra_data=extra_data,
+            message="Превышено время ожидания ответа от VK API",
+            details=extra_data,
         )
 
 
-class ParserServiceUnavailableException(APIException):
+class ParserServiceUnavailableException(APIError):
     """Сервис парсера недоступен"""
 
     def __init__(self, service_name: str = "parser"):
         super().__init__(
             status_code=503,
-            detail=f"Сервис {service_name} временно недоступен",
             error_code="PARSER_SERVICE_UNAVAILABLE",
-            extra_data={"service": service_name},
+            message=f"Сервис {service_name} временно недоступен",
+            details={"service": service_name},
         )
 
 
-class TaskAlreadyRunningException(APIException):
+class TaskAlreadyRunningException(APIError):
     """Задача уже выполняется"""
 
     def __init__(self, task_id: str):
         super().__init__(
             status_code=409,
-            detail=f"Задача {task_id} уже выполняется",
             error_code="TASK_ALREADY_RUNNING",
-            extra_data={"task_id": task_id},
+            message=f"Задача {task_id} уже выполняется",
+            details={"task_id": task_id},
         )
 
 
-class TaskQueueFullException(APIException):
+class TaskQueueFullException(APIError):
     """Очередь задач переполнена"""
 
     def __init__(self, queue_size: int):
         super().__init__(
             status_code=503,
-            detail="Очередь задач переполнена",
             error_code="TASK_QUEUE_FULL",
-            extra_data={"queue_size": queue_size},
+            message="Очередь задач переполнена",
+            details={"queue_size": queue_size},
         )
 
 
-class InvalidGroupIdException(APIException):
+class InvalidGroupIdException(APIError):
     """Неверный ID группы VK"""
 
     def __init__(self, group_id: int):
         super().__init__(
             status_code=422,
-            detail=f"Неверный ID группы VK: {group_id}",
             error_code="INVALID_GROUP_ID",
-            extra_data={"group_id": group_id},
+            message=f"Неверный ID группы VK: {group_id}",
+            details={"group_id": group_id},
         )
 
 
-class GroupNotFoundException(APIException):
+class GroupNotFoundException(APIError):
     """Группа VK не найдена"""
 
     def __init__(self, group_id: int):
         super().__init__(
             status_code=404,
-            detail=f"Группа VK с ID {group_id} не найдена",
             error_code="GROUP_NOT_FOUND",
-            extra_data={"group_id": group_id},
+            message=f"Группа VK с ID {group_id} не найдена",
+            details={"group_id": group_id},
         )
 
 
-class PostNotFoundException(APIException):
+class PostNotFoundException(APIError):
     """Пост VK не найден"""
 
     def __init__(self, post_id: str):
         super().__init__(
             status_code=404,
-            detail=f"Пост VK с ID {post_id} не найден",
             error_code="POST_NOT_FOUND",
-            extra_data={"post_id": post_id},
+            message=f"Пост VK с ID {post_id} не найден",
+            details={"post_id": post_id},
         )
 
 
-class ParserConfigurationException(APIException):
+class ParserConfigurationException(APIError):
     """Ошибка конфигурации парсера"""
 
     def __init__(self, config_key: str, message: str):
         super().__init__(
             status_code=500,
-            detail=f"Ошибка конфигурации парсера: {message}",
             error_code="PARSER_CONFIGURATION_ERROR",
-            extra_data={"config_key": config_key, "message": message},
+            message=f"Ошибка конфигурации парсера: {message}",
+            details={"config_key": config_key, "message": message},
         )
 
 
-class ParserTimeoutException(APIException):
+class ParserTimeoutException(APIError):
     """Превышено время выполнения парсера"""
 
     def __init__(self, timeout: int, task_id: str = None):
@@ -178,21 +179,21 @@ class ParserTimeoutException(APIException):
 
         super().__init__(
             status_code=504,
-            detail="Превышено время выполнения задачи парсинга",
             error_code="PARSER_TIMEOUT",
-            extra_data=extra_data,
+            message="Превышено время выполнения задачи парсинга",
+            details=extra_data,
         )
 
 
-class ParserResourceLimitException(APIException):
+class ParserResourceLimitException(APIError):
     """Превышен лимит ресурсов парсера"""
 
     def __init__(self, resource: str, limit: int, current: int):
         super().__init__(
             status_code=507,
-            detail=f"Превышен лимит ресурса '{resource}': {current}/{limit}",
             error_code="PARSER_RESOURCE_LIMIT",
-            extra_data={
+            message=f"Превышен лимит ресурса '{resource}': {current}/{limit}",
+            details={
                 "resource": resource,
                 "limit": limit,
                 "current": current,
@@ -200,27 +201,27 @@ class ParserResourceLimitException(APIException):
         )
 
 
-class ParserDataValidationException(APIException):
+class ParserDataValidationException(APIError):
     """Ошибка валидации данных парсера"""
 
     def __init__(self, data_type: str, errors: list):
         super().__init__(
             status_code=422,
-            detail=f"Ошибка валидации данных типа '{data_type}'",
             error_code="PARSER_DATA_VALIDATION_ERROR",
-            extra_data={"data_type": data_type, "validation_errors": errors},
+            message=f"Ошибка валидации данных типа '{data_type}'",
+            details={"data_type": data_type, "validation_errors": errors},
         )
 
 
-class ParserExternalServiceException(APIException):
+class ParserExternalServiceException(APIError):
     """Ошибка внешнего сервиса"""
 
     def __init__(self, service_name: str, error_message: str):
         super().__init__(
             status_code=502,
-            detail=f"Ошибка внешнего сервиса '{service_name}': {error_message}",
             error_code="PARSER_EXTERNAL_SERVICE_ERROR",
-            extra_data={
+            message=f"Ошибка внешнего сервиса '{service_name}': {error_message}",
+            details={
                 "service": service_name,
                 "error_message": error_message,
             },

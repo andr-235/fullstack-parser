@@ -1,0 +1,19 @@
+# This file defines who owns which parts of the codebase
+# When Dependabot creates PRs, these users will be automatically requested as reviewers
+
+# Global owners - review all changes
+* @your-username
+
+# Frontend specific
+/frontend/ @your-username
+
+# Backend specific
+/backend/ @your-username
+
+# Infrastructure/Docker
+/docker-compose*.yml @your-username
+/Dockerfile* @your-username
+/nginx/ @your-username
+
+# CI/CD and GitHub configuration
+/.github/ @your-username
