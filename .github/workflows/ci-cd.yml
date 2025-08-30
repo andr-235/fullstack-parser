@@ -189,8 +189,17 @@ jobs:
           poetry config virtualenvs.create true
           poetry config virtualenvs.in-project true
 
+      - name: Validate and sync Poetry lock
+        run: |
+          echo "Poetry version: $(poetry --version)"
+          # If the lock file is incompatible with current Poetry, regenerate it deterministically
+          if ! poetry check --lock; then
+            echo "Lock file incompatible. Regenerating with --no-update..."
+            poetry lock --no-update
+          fi
+
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --no-interaction --no-ansi
 
       # Auto-format Python code before strict checks
       - name: Auto-format Python (isort, black)
