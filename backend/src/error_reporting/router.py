@@ -41,9 +41,7 @@ async def get_error_reports(
     ),
     start_date: Optional[datetime] = Query(None, description="Начальная дата"),
     end_date: Optional[datetime] = Query(None, description="Конечная дата"),
-    error_service: ErrorReportingService = Depends(
-        get_error_report_service
-    ),
+    error_service: ErrorReportingService = Depends(get_error_report_service),
 ) -> Dict[str, Any]:
     """Получить список отчетов об ошибках с фильтрами"""
     try:
@@ -87,9 +85,7 @@ async def get_error_reports(
 async def get_error_report(
     request: Request,
     report_id: str = Path(..., description="ID отчета об ошибках"),
-    error_service: ErrorReportingService = Depends(
-        get_error_report_service
-    ),
+    error_service: ErrorReportingService = Depends(get_error_report_service),
 ) -> Dict[str, Any]:
     """Получить конкретный отчет об ошибках"""
     try:
@@ -120,9 +116,7 @@ async def get_error_report(
 async def create_error_report(
     request: Request,
     error_data: Dict[str, Any],
-    error_service: ErrorReportingService = Depends(
-        get_error_report_service
-    ),
+    error_service: ErrorReportingService = Depends(get_error_report_service),
 ) -> Dict[str, Any]:
     """Создать новый отчет об ошибке"""
     try:
@@ -161,9 +155,7 @@ async def acknowledge_error_report(
     acknowledged_by: str = Query(
         ..., description="Имя пользователя, подтверждающего отчет"
     ),
-    error_service: ErrorReportingService = Depends(
-        get_error_report_service
-    ),
+    error_service: ErrorReportingService = Depends(get_error_report_service),
 ) -> Dict[str, Any]:
     """Подтвердить обработку отчета об ошибках"""
     try:
@@ -200,9 +192,7 @@ async def acknowledge_error_report(
 async def delete_error_report(
     request: Request,
     report_id: str = Path(..., description="ID отчета об ошибках"),
-    error_service: ErrorReportingService = Depends(
-        get_error_report_service
-    ),
+    error_service: ErrorReportingService = Depends(get_error_report_service),
 ) -> Dict[str, Any]:
     """Удалить отчет об ошибках"""
     try:
@@ -237,9 +227,7 @@ async def delete_error_report(
 async def get_error_statistics(
     request: Request,
     days: int = Query(7, description="Количество дней для статистики"),
-    error_service: ErrorReportingService = Depends(
-        get_error_report_service
-    ),
+    error_service: ErrorReportingService = Depends(get_error_report_service),
 ) -> Dict[str, Any]:
     """Получить статистику по ошибкам"""
     try:
@@ -262,9 +250,7 @@ async def get_error_statistics(
 async def get_pending_reports(
     request: Request,
     limit: int = Query(50, description="Максимальное количество отчетов"),
-    error_service: ErrorReportingService = Depends(
-        get_error_report_service
-    ),
+    error_service: ErrorReportingService = Depends(get_error_report_service),
 ) -> Dict[str, Any]:
     """Получить список неподтвержденных отчетов об ошибках"""
     try:
@@ -289,9 +275,7 @@ async def get_pending_reports(
 async def get_critical_reports(
     request: Request,
     limit: int = Query(50, description="Максимальное количество отчетов"),
-    error_service: ErrorReportingService = Depends(
-        get_error_report_service
-    ),
+    error_service: ErrorReportingService = Depends(get_error_report_service),
 ) -> Dict[str, Any]:
     """Получить список критических отчетов об ошибках"""
     try:
@@ -319,9 +303,7 @@ async def bulk_acknowledge_reports(
     acknowledged_by: str = Query(
         ..., description="Имя пользователя, подтверждающего отчеты"
     ),
-    error_service: ErrorReportingService = Depends(
-        get_error_report_service
-    ),
+    error_service: ErrorReportingService = Depends(get_error_report_service),
 ) -> Dict[str, Any]:
     """Массовое подтверждение отчетов об ошибках"""
     try:
