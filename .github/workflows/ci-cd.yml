@@ -104,8 +104,15 @@ jobs:
       - name: Run TypeScript check
         run: bun x tsc -p tsconfig.json --noEmit
 
-      - name: Run tests
-        run: bun test --coverage
+      - name: Run tests (skip if none)
+        run: |
+          echo "Searching for test files..."
+          if git ls-files | grep -E '\\.(test|spec)\\.(ts|tsx|js|jsx)$' > /dev/null; then
+            echo "Tests found. Running Bun tests with coverage..."
+            bun test --coverage
+          else
+            echo "No tests found. Skipping Bun test step."
+          fi
         env:
           CI: true
 
