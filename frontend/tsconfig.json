@@ -24,7 +24,8 @@
       "@/entities/*": ["./entities/*"],
       "@/features/*": ["./features/*"],
       "@/widgets/*": ["./widgets/*"],
-      "@/app/*": ["./app/*"]
+      "@/app/*": ["./app/*"],
+      "@/shared/lib/*": ["./shared/lib/*"]
     },
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,

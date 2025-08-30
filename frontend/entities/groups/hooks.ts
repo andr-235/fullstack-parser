@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { apiClient } from '@/shared/lib/index'
+import { apiClient } from '@/shared/lib'
 import {
   VKGroup,
   GroupsResponse,

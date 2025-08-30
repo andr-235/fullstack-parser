@@ -108,6 +108,8 @@ export function ParserPage() {
                 console.log('Available groups:', groups?.length || 0)
 
                 const result = await startBulkParser({
+                    groups: groups?.map(g => g.id) || [],
+                    keywords: [], // TODO: Добавить выбор ключевых слов
                     max_posts: config.maxPosts,
                     forceReparse: config.forceReparse,
                     max_concurrent: 3, // Максимум 3 одновременных задачи
