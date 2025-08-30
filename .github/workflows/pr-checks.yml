@@ -1,0 +1,294 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # Quality Gate - Must pass before other jobs
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check PR title format
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: ]]; then
+            echo "❌ PR title must follow conventional commit format:"
+            echo "   feat: add new feature"
+            echo "   fix: fix a bug"
+            echo "   docs: update documentation"
+            echo "   style: code style changes"
+            echo "   refactor: code refactoring"
+            echo "   test: add or update tests"
+            echo "   chore: maintenance tasks"
+            exit 1
+          fi
+          echo "✅ PR title format is correct"
+
+      - name: Check PR description
+        run: |
+          PR_BODY="${{ github.event.pull_request.body }}"
+          if [[ -z "$PR_BODY" ]] || [[ ${#PR_BODY} -lt 10 ]]; then
+            echo "❌ PR description must be at least 10 characters long"
+            exit 1
+          fi
+          echo "✅ PR description is adequate"
+
+  # Frontend Quality Checks
+  frontend-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Bun
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.2.19"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Check code formatting
+        run: bun run format:check
+
+      - name: Run linter
+        run: bun run lint
+
+      - name: Run type check
+        run: bun run type-check
+
+      - name: Run tests with coverage
+        run: bun run test -- --coverage --watchAll=false --passWithNoTests
+        env:
+          CI: true
+
+      - name: Check test coverage threshold
+        run: |
+          COVERAGE=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "❌ Test coverage is too low: $COVERAGE% (required: 80%)"
+            exit 1
+          fi
+          echo "✅ Test coverage is good: $COVERAGE%"
+
+  # Backend Quality Checks
+  backend-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Cache Poetry virtual environment
+        uses: actions/cache@v3
+        with:
+          path: ./backend/.venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
+      - name: Install Poetry
+        run: pip install poetry==1.8.3
+
+      - name: Configure Poetry
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Run code formatting checks
+        run: |
+          poetry run black --check --diff .
+          poetry run isort --check-only --diff .
+
+      - name: Run linting
+        run: poetry run ruff check .
+
+      - name: Run type checking
+        run: poetry run mypy .
+
+      - name: Run tests with coverage
+        run: poetry run pytest --cov=. --cov-report=xml --cov-report=term-missing
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+
+      - name: Check test coverage threshold
+        run: |
+          COVERAGE=$(python -c "
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('coverage.xml')
+          root = tree.getroot()
+          coverage = float(root.get('line-rate')) * 100
+          print(f'{coverage:.1f}')
+          ")
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "❌ Test coverage is too low: $COVERAGE% (required: 80%)"
+            exit 1
+          fi
+          echo "✅ Test coverage is good: $COVERAGE%"
+
+  # Security Scan
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js for frontend security
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Frontend security audit
+        run: |
+          cd frontend
+          npm audit --audit-level high --json | jq '.vulnerabilities | to_entries[] | select(.value.severity == "high" or .value.severity == "critical")' || true
+
+      - name: Setup Python for backend security
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry and security tools
+        run: |
+          pip install poetry==1.8.3
+          cd backend && poetry install
+
+      - name: Backend security scan
+        run: |
+          cd backend
+          poetry run bandit -r src/ -f json -o security-report.json || true
+          # Check for high/critical vulnerabilities
+          if [ -f security-report.json ]; then
+            HIGH_CRITICAL=$(jq '.results | map(select(.issue_confidence == "HIGH" and (.issue_severity == "HIGH" or .issue_severity == "CRITICAL"))) | length' security-report.json)
+            if [ "$HIGH_CRITICAL" -gt 0 ]; then
+              echo "❌ Found $HIGH_CRITICAL high/critical security issues"
+              exit 1
+            fi
+          fi
+          echo "✅ No high/critical security issues found"
+
+  # Docker Build Test
+  docker-test:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.changed_files, 'Dockerfile') || contains(github.event.pull_request.changed_files, 'docker-compose')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build frontend image (dry run)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          tags: frontend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build backend image (dry run)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: backend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build nginx image (dry run)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./nginx
+          file: ./nginx/Dockerfile
+          push: false
+          tags: nginx:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Validate docker-compose
+        run: docker-compose -f docker-compose.prod.yml config
+
+  # Size Check
+  size-check:
+    runs-on: ubuntu-latest
+    needs: [frontend-quality]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ./frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build and check bundle size
+        run: |
+          cd frontend
+          npm run build
+          # Check bundle size (adjust thresholds as needed)
+          BUNDLE_SIZE=$(du -sh .next | cut -f1)
+          echo "Bundle size: $BUNDLE_SIZE"
+
+          # You can add size thresholds here
+          # if [ $(stat -f%z .next/static/chunks/main-*.js 2>/dev/null || echo "0") -gt 1000000 ]; then
+          #   echo "❌ Main bundle is too large (>1MB)"
+          #   exit 1
+          # fi

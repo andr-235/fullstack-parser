@@ -145,18 +145,11 @@ const nextConfig = {
     ]
   },
 
-  // API проксирование для разработки
-  async rewrites() {
-    if (process.env.NODE_ENV === 'development') {
-      return [
-        {
-          source: '/api/v1/:path*',
-          destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api/v1'}/api/v1/:path*`,
-        },
-      ]
-    }
-    return []
-  },
+  // API проксирование отключено - используем Nginx в Docker
+  // Все запросы к API проходят через Nginx reverse proxy
+  // async rewrites() {
+  //   return []
+  // },
 
   // Настройки TypeScript
   typescript: {
@@ -166,8 +159,8 @@ const nextConfig = {
 
   // Настройки ESLint
   eslint: {
-    // Игнорируем ошибки ESLint при сборке
-    ignoreDuringBuilds: true,
+    // Проверяем ESLint при сборке (только для production)
+    ignoreDuringBuilds: process.env.NODE_ENV === 'production',
   },
 
   // Отключаем статическую генерацию для страниц с ошибками

@@ -1,13 +1,13 @@
-// Application configuration
+// Конфигурация приложения
 export const config = {
   api: {
     baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
     timeout: 10000,
   },
   app: {
-    name: 'My App',
+    name: 'Парсер комментариев VK',
     description:
-      'A modern web application built with Next.js and FSD architecture',
+      'Современное веб-приложение для парсинга и анализа комментариев VK',
     version: '1.0.0',
   },
 } as const

@@ -1,0 +1,389 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  FRONTEND_IMAGE: ${{ github.repository }}/frontend
+  BACKEND_IMAGE: ${{ github.repository }}/backend
+  NGINX_IMAGE: ${{ github.repository }}/nginx
+
+jobs:
+  # Frontend Testing and Building
+  frontend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Bun
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.2.19"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run linter
+        run: bun run lint
+
+      - name: Run type check
+        run: bun run type-check
+
+      - name: Run tests
+        run: bun run test -- --coverage --watchAll=false
+        env:
+          CI: true
+
+      - name: Build application
+        run: bun run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: ./frontend/.next/
+          retention-days: 7
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+
+  # Backend Testing and Building
+  backend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Cache Poetry virtual environment
+        uses: actions/cache@v3
+        with:
+          path: ./backend/.venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry==1.8.3
+
+      - name: Configure Poetry
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Run linter and formatter
+        run: |
+          poetry run black --check --diff .
+          poetry run isort --check-only --diff .
+          poetry run flake8 .
+
+      - name: Run type checking
+        run: poetry run mypy .
+
+      - name: Run tests
+        run: poetry run pytest --cov=. --cov-report=xml
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+
+  # Docker Build and Push
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [frontend-test, backend-test]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract metadata for backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract metadata for nginx
+        id: meta-nginx
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.NGINX_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push nginx image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./nginx
+          file: ./nginx/Dockerfile
+          push: true
+          tags: ${{ steps.meta-nginx.outputs.tags }}
+          labels: ${{ steps.meta-nginx.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Security Scanning
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
+
+  # Deployment
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [docker-build, security-scan]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to production server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            cd /opt/app
+            echo "Pulling latest changes..."
+            git pull origin main
+
+            echo "Updating environment variables..."
+            # Update .env.prod if needed
+            cp .env.prod .env.prod.backup
+
+            echo "Building and deploying services..."
+            docker-compose -f docker-compose.prod.yml down
+            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml up -d --build
+
+            echo "Running database migrations..."
+            docker-compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
+
+            echo "Waiting for services to be healthy..."
+            docker-compose -f docker-compose.prod.yml exec -T backend python -c "
+            import time
+            import requests
+            for i in range(30):
+                try:
+                    response = requests.get('http://localhost:8000/health')
+                    if response.status_code == 200:
+                        print('Backend is healthy!')
+                        break
+                except:
+                    pass
+                time.sleep(10)
+            else:
+                print('Backend health check failed!')
+                exit(1)
+            "
+
+            echo "Cleaning up old images..."
+            docker image prune -f
+
+            echo "Deployment completed successfully!"
+          EOF
+
+      - name: Run post-deployment tests
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            echo "Running health checks..."
+
+            # Check backend health
+            if curl -f http://localhost:8000/health; then
+              echo "✅ Backend is healthy"
+            else
+              echo "❌ Backend health check failed"
+              exit 1
+            fi
+
+            # Check frontend health
+            if curl -f http://localhost:3000/api/health; then
+              echo "✅ Frontend is healthy"
+            else
+              echo "❌ Frontend health check failed"
+              exit 1
+            fi
+
+            # Check nginx
+            if curl -f http://localhost/health; then
+              echo "✅ Nginx is healthy"
+            else
+              echo "❌ Nginx health check failed"
+              exit 1
+            fi
+
+            echo "All services are running correctly!"
+          EOF
+
+      - name: Notify deployment status
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Rollback job (manual trigger)
+  rollback:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'rollback'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Rollback deployment
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            cd /opt/app
+
+            echo "Rolling back to previous deployment..."
+            docker-compose -f docker-compose.prod.yml down
+
+            # Get previous image tags from git
+            PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
+            docker tag ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:$PREVIOUS_COMMIT ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:latest
+            docker tag ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:$PREVIOUS_COMMIT ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest
+            docker tag ${{ env.REGISTRY }}/${{ env.NGINX_IMAGE }}:$PREVIOUS_COMMIT ${{ env.REGISTRY }}/${{ env.NGINX_IMAGE }}:latest
+
+            docker-compose -f docker-compose.prod.yml up -d
+
+            echo "Rollback completed!"
+          EOF

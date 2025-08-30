@@ -14,17 +14,38 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
-# Копирование файлов зависимостей для кеширования
-COPY package.json ./
+# Копирование оптимизированного package.json для быстрой сборки
+COPY package.json.production.json ./package.json
+COPY bun.lock.build ./bun.lock
 
-# Установка зависимостей с кешированием
-RUN bun install
+# Настройка bun для production и кеширования
+ENV BUN_INSTALL_CACHE_DIR=/tmp/bun-cache
 
-# ----------- Stage 2: Builder (optimized build) -----------
-FROM oven/bun:1.2.19-alpine AS builder
+# Установка оптимизированных зависимостей для сборки
+RUN --mount=type=cache,target=/tmp/bun-cache \
+    bun install
+
+# ----------- Stage 2: Production Dependencies -----------
+FROM oven/bun:1.2.19-alpine AS production-deps
+
 WORKDIR /app
 
-# Копирование зависимостей
+# Копирование оптимизированного package.json для production
+COPY package.json.production.json ./package.json
+
+# Настройка bun для кеширования
+ENV BUN_INSTALL_CACHE_DIR=/tmp/bun-cache
+
+# Установка только production зависимостей
+RUN --mount=type=cache,target=/tmp/bun-cache \
+    bun install --production
+
+# ----------- Stage 3: Builder (optimized build) -----------
+FROM oven/bun:1.2.19-alpine AS builder
+
+WORKDIR /app
+
+# Копирование всех зависимостей для сборки
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/bun.lock ./bun.lock
 
@@ -35,13 +56,15 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
     DOCKER=true \
-    CI=true
+    CI=true \
+    BUN_INSTALL_CACHE_DIR=/tmp/bun-cache
 
 # Сборка приложения с кешированием
 RUN --mount=type=cache,target=/app/.next/cache \
+    --mount=type=cache,target=/tmp/bun-cache \
     bun run build
 
-# ----------- Stage 3: Production (minimal runtime) -----------
+# ----------- Stage 4: Production (minimal runtime) -----------
 FROM node:20-alpine AS runner
 WORKDIR /app
 
@@ -52,11 +75,14 @@ RUN addgroup -g 1001 -S nodejs && \
 # Установка только необходимых пакетов
 RUN apk add --no-cache dumb-init curl
 
+# Копирование production зависимостей
+COPY --from=production-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+
 # Копирование только необходимых файлов
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static/
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=production-deps --chown=nextjs:nodejs /app/package.json ./package.json
 
 # Настройка безопасности
 USER nextjs

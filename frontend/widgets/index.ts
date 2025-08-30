@@ -1,5 +1,4 @@
 // Widget components
-export * from './comments-page'
-export * from './dashboard-page'
-export * from './layout'
-export * from './comments-table'
+export * from './sidebar/AppSidebar'
+export * from './navbar/AppNavbar'
+export * from './layout/AppLayout'
