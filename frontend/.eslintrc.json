@@ -57,23 +57,27 @@
       {
         "zones": [
           {
-            "target": "./app",
-            "from": "./features"
-          },
-          {
-            "target": "./app",
-            "from": "./entities"
-          },
-          {
             "target": "./widgets",
-            "from": "./features"
-          },
-          {
-            "target": "./widgets",
-            "from": "./entities"
+            "from": "./widgets"
           },
           {
             "target": "./features",
+            "from": "./features"
+          },
+          {
+            "target": "./entities",
+            "from": "./entities"
+          },
+          {
+            "target": "./widgets",
+            "from": "./features"
+          },
+          {
+            "target": "./features",
+            "from": "./entities"
+          },
+          {
+            "target": "./widgets",
             "from": "./entities"
           }
         ]
