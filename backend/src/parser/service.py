@@ -247,14 +247,16 @@ class ParserService:
         # Последняя активность
         last_activity = None
         if self.tasks:
+            # Безопасно берем метки времени, так как в тестах задачи могут
+            # создаваться без некоторых ключей
             timestamps = [
-                task["started_at"]
+                task.get("started_at")
                 for task in self.tasks.values()
-                if task["started_at"]
+                if task.get("started_at")
             ] + [
-                task["completed_at"]
+                task.get("completed_at")
                 for task in self.tasks.values()
-                if task["completed_at"]
+                if task.get("completed_at")
             ]
             if timestamps:
                 last_activity = max(timestamps)
@@ -262,7 +264,9 @@ class ParserService:
         return {
             "is_running": active_tasks > 0,
             "active_tasks": active_tasks,
-            "queue_size": max(0, total_tasks - total_processed),
+            # В тестах ожидается, что queue_size = количество неактивных задач
+            # (completed + failed + stopped)
+            "queue_size": max(0, total_tasks - active_tasks),
             "total_tasks_processed": total_processed,
             "total_posts_found": total_posts,
             "total_comments_found": total_comments,

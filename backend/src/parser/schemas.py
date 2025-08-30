@@ -15,7 +15,7 @@ class ParseRequest(BaseModel):
     """Запрос на парсинг группы"""
 
     group_ids: List[int] = Field(
-        ..., description="Список ID групп VK для парсинга"
+        ..., description="Список ID групп VK для парсинга", min_length=1
     )
     max_posts: Optional[int] = Field(
         100, description="Максимум постов для обработки"
