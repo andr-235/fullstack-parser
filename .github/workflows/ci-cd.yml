@@ -72,18 +72,19 @@ jobs:
 
       - name: Verify TypeScript setup
         run: |
+          pwd
           echo "TypeScript version:"
-          bun run tsc --version
+          bun x tsc --version
           echo "TypeScript config:"
           cat tsconfig.json | grep -A 10 "paths"
           echo "Checking module resolution:"
-          bun run tsc --showConfig | grep -A 5 -B 5 "paths"
+          bun x tsc -p tsconfig.json --showConfig | grep -A 5 -B 5 "paths"
         # uses local tsc resolved from devDependencies
 
       - name: Verify module resolution
         run: |
           echo "Testing module resolution:"
-          bun run tsc --noEmit --listFiles | head -20
+          bun x tsc -p tsconfig.json --noEmit --listFiles | head -20
           echo "Module resolution test completed"
 
       - name: Auto-fix ESLint issues
@@ -99,7 +100,7 @@ jobs:
         continue-on-error: false
 
       - name: Run TypeScript check
-        run: bun run type-check
+        run: bun x tsc -p tsconfig.json --noEmit
 
       - name: Run tests
         run: bun test --coverage
