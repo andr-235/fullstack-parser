@@ -215,8 +215,17 @@ jobs:
       - name: Run type checking
         run: poetry run mypy src
 
-      - name: Run tests
-        run: poetry run pytest --cov=. --cov-report=xml
+      - name: Run unit tests (parallel)
+        run: |
+          poetry run pytest -n auto --maxfail=1 \
+            --cov=. --cov-report=xml:coverage.xml \
+            tests/unit -q
+      - name: Run integration tests (parallel, append coverage)
+        run: |
+          poetry run pytest -n auto --maxfail=1 \
+            --cov=. --cov-append --cov-report=xml:coverage.xml \
+            --durations=20 --durations-min=1.0 \
+            tests/integration -q
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379/0
