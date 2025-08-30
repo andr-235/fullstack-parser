@@ -6,8 +6,9 @@
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "module": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -25,6 +26,7 @@
       "@/features/*": ["./features/*"],
       "@/widgets/*": ["./widgets/*"],
       "@/app/*": ["./app/*"],
+      "@/shared/lib": ["./shared/lib/index"],
       "@/shared/lib/*": ["./shared/lib/*"]
     },
     "forceConsistentCasingInFileNames": true,
