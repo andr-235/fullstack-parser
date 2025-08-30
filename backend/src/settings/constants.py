@@ -1,0 +1,326 @@
+"""
+Константы модуля Settings
+
+Содержит все константы используемые в модуле настроек системы
+"""
+
+# Секции настроек
+SETTINGS_SECTION_VK_API = "vk_api"
+SETTINGS_SECTION_MONITORING = "monitoring"
+SETTINGS_SECTION_DATABASE = "database"
+SETTINGS_SECTION_LOGGING = "logging"
+SETTINGS_SECTION_UI = "ui"
+SETTINGS_SECTION_CACHE = "cache"
+SETTINGS_SECTION_SECURITY = "security"
+
+# Ключи настроек VK API
+VK_API_ACCESS_TOKEN = "access_token"
+VK_API_API_VERSION = "api_version"
+VK_API_REQUESTS_PER_SECOND = "requests_per_second"
+VK_API_MAX_POSTS_PER_REQUEST = "max_posts_per_request"
+VK_API_MAX_COMMENTS_PER_REQUEST = "max_comments_per_request"
+VK_API_MAX_GROUPS_PER_REQUEST = "max_groups_per_request"
+VK_API_MAX_USERS_PER_REQUEST = "max_users_per_request"
+
+# Ключи настроек мониторинга
+MONITORING_SCHEDULER_INTERVAL = "scheduler_interval_seconds"
+MONITORING_MAX_CONCURRENT_GROUPS = "max_concurrent_groups"
+MONITORING_GROUP_DELAY = "group_delay_seconds"
+MONITORING_AUTO_START = "auto_start_scheduler"
+MONITORING_ENABLED = "enabled"
+MONITORING_HEALTH_CHECK_INTERVAL = "health_check_interval"
+
+# Ключи настроек базы данных
+DATABASE_POOL_SIZE = "pool_size"
+DATABASE_MAX_OVERFLOW = "max_overflow"
+DATABASE_POOL_RECYCLE = "pool_recycle"
+DATABASE_ECHO = "echo"
+DATABASE_URL = "url"
+
+# Ключи настроек логирования
+LOGGING_LEVEL = "level"
+LOGGING_FORMAT = "format"
+LOGGING_INCLUDE_TIMESTAMP = "include_timestamp"
+LOGGING_FILE_PATH = "file_path"
+LOGGING_MAX_FILE_SIZE = "max_file_size"
+LOGGING_BACKUP_COUNT = "backup_count"
+
+# Ключи настроек UI
+UI_THEME = "theme"
+UI_AUTO_REFRESH = "auto_refresh"
+UI_REFRESH_INTERVAL = "refresh_interval"
+UI_ITEMS_PER_PAGE = "items_per_page"
+UI_SHOW_NOTIFICATIONS = "show_notifications"
+UI_LANGUAGE = "language"
+UI_TIMEZONE = "timezone"
+
+# Ключи настроек кеширования
+CACHE_ENABLED = "enabled"
+CACHE_TTL = "ttl"
+CACHE_MAX_SIZE = "max_size"
+CACHE_BACKEND = "backend"
+
+# Ключи настроек безопасности
+SECURITY_SECRET_KEY = "secret_key"
+SECURITY_ALGORITHM = "algorithm"
+SECURITY_ACCESS_TOKEN_EXPIRE = "access_token_expire_minutes"
+SECURITY_REFRESH_TOKEN_EXPIRE = "refresh_token_expire_days"
+SECURITY_PASSWORD_MIN_LENGTH = "password_min_length"
+SECURITY_REQUIRE_SPECIAL_CHARS = "require_special_chars"
+
+# Значения по умолчанию
+DEFAULT_VK_API_VERSION = "5.199"
+DEFAULT_REQUESTS_PER_SECOND = 3
+DEFAULT_SCHEDULER_INTERVAL = 300
+DEFAULT_MAX_CONCURRENT_GROUPS = 5
+DEFAULT_GROUP_DELAY = 1.0
+DEFAULT_DATABASE_POOL_SIZE = 10
+DEFAULT_DATABASE_MAX_OVERFLOW = 20
+DEFAULT_DATABASE_POOL_RECYCLE = 3600
+DEFAULT_LOG_LEVEL = "INFO"
+DEFAULT_LOG_FORMAT = "json"
+DEFAULT_UI_THEME = "system"
+DEFAULT_UI_REFRESH_INTERVAL = 30
+DEFAULT_UI_ITEMS_PER_PAGE = 20
+DEFAULT_CACHE_TTL = 300
+DEFAULT_SECURITY_ACCESS_TOKEN_EXPIRE = 30
+DEFAULT_SECURITY_REFRESH_TOKEN_EXPIRE = 7
+DEFAULT_SECURITY_PASSWORD_MIN_LENGTH = 8
+
+# Темы UI
+UI_THEME_SYSTEM = "system"
+UI_THEME_LIGHT = "light"
+UI_THEME_DARK = "dark"
+
+# Форматы логирования
+LOG_FORMAT_JSON = "json"
+LOG_FORMAT_TEXT = "text"
+LOG_FORMAT_DETAILED = "detailed"
+
+# Уровни логирования
+LOG_LEVEL_DEBUG = "DEBUG"
+LOG_LEVEL_INFO = "INFO"
+LOG_LEVEL_WARNING = "WARNING"
+LOG_LEVEL_ERROR = "ERROR"
+LOG_LEVEL_CRITICAL = "CRITICAL"
+
+# Backend'ы кеширования
+CACHE_BACKEND_MEMORY = "memory"
+CACHE_BACKEND_REDIS = "redis"
+CACHE_BACKEND_FILE = "file"
+
+# Алгоритмы шифрования
+SECURITY_ALGORITHM_HS256 = "HS256"
+SECURITY_ALGORITHM_HS512 = "HS512"
+
+# Сообщения об ошибках
+ERROR_INVALID_SETTINGS_SECTION = "Неверная секция настроек"
+ERROR_SETTING_NOT_FOUND = "Настройка не найдена"
+ERROR_INVALID_SETTING_VALUE = "Неверное значение настройки"
+ERROR_SETTINGS_VALIDATION_FAILED = "Валидация настроек не пройдена"
+ERROR_SETTINGS_UPDATE_FAILED = "Не удалось обновить настройки"
+ERROR_SETTINGS_LOAD_FAILED = "Не удалось загрузить настройки"
+
+# Сообщения об успехе
+SUCCESS_SETTINGS_UPDATED = "Настройки успешно обновлены"
+SUCCESS_SETTINGS_RESET = "Настройки сброшены к значениям по умолчанию"
+SUCCESS_SETTINGS_EXPORTED = "Настройки успешно экспортированы"
+SUCCESS_SETTINGS_IMPORTED = "Настройки успешно импортированы"
+
+# Регулярные выражения
+REGEX_EMAIL = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+REGEX_URL = r"^https?://[^\s/$.?#].[^\s]*$"
+REGEX_PASSWORD = (
+    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
+)
+
+# Ограничения
+MIN_PASSWORD_LENGTH = 8
+MAX_PASSWORD_LENGTH = 128
+MIN_POOL_SIZE = 1
+MAX_POOL_SIZE = 100
+MIN_REQUESTS_PER_SECOND = 1
+MAX_REQUESTS_PER_SECOND = 10
+MIN_SCHEDULER_INTERVAL = 30
+MAX_SCHEDULER_INTERVAL = 3600
+MIN_REFRESH_INTERVAL = 5
+MAX_REFRESH_INTERVAL = 300
+MIN_ITEMS_PER_PAGE = 5
+MAX_ITEMS_PER_PAGE = 1000
+
+# Ключи кеша
+CACHE_KEY_SETTINGS = "settings"
+CACHE_KEY_SETTINGS_SECTION = "settings:section:{section}"
+CACHE_KEY_SETTINGS_VALUE = "settings:value:{section}:{key}"
+CACHE_KEY_SETTINGS_VALIDATION = "settings:validation"
+
+# TTL кеша (в секундах)
+CACHE_SETTINGS_TTL = 300  # 5 минут
+CACHE_SETTINGS_VALIDATION_TTL = 60  # 1 минута
+
+# Метрики
+METRIC_SETTINGS_LOAD_TIME = "settings.load_time"
+METRIC_SETTINGS_UPDATE_TIME = "settings.update_time"
+METRIC_SETTINGS_VALIDATION_TIME = "settings.validation_time"
+METRIC_SETTINGS_CACHE_HITS = "settings.cache.hits"
+METRIC_SETTINGS_CACHE_MISSES = "settings.cache.misses"
+
+# События
+EVENT_SETTINGS_UPDATED = "settings.updated"
+EVENT_SETTINGS_RESET = "settings.reset"
+EVENT_SETTINGS_VALIDATION_FAILED = "settings.validation_failed"
+
+# Права доступа
+PERMISSION_SETTINGS_READ = "settings:read"
+PERMISSION_SETTINGS_WRITE = "settings:write"
+PERMISSION_SETTINGS_ADMIN = "settings:admin"
+
+# Экспорт всех констант
+__all__ = [
+    # Секции настроек
+    "SETTINGS_SECTION_VK_API",
+    "SETTINGS_SECTION_MONITORING",
+    "SETTINGS_SECTION_DATABASE",
+    "SETTINGS_SECTION_LOGGING",
+    "SETTINGS_SECTION_UI",
+    "SETTINGS_SECTION_CACHE",
+    "SETTINGS_SECTION_SECURITY",
+    # Ключи настроек VK API
+    "VK_API_ACCESS_TOKEN",
+    "VK_API_API_VERSION",
+    "VK_API_REQUESTS_PER_SECOND",
+    "VK_API_MAX_POSTS_PER_REQUEST",
+    "VK_API_MAX_COMMENTS_PER_REQUEST",
+    "VK_API_MAX_GROUPS_PER_REQUEST",
+    "VK_API_MAX_USERS_PER_REQUEST",
+    # Ключи настроек мониторинга
+    "MONITORING_SCHEDULER_INTERVAL",
+    "MONITORING_MAX_CONCURRENT_GROUPS",
+    "MONITORING_GROUP_DELAY",
+    "MONITORING_AUTO_START",
+    "MONITORING_ENABLED",
+    "MONITORING_HEALTH_CHECK_INTERVAL",
+    # Ключи настроек базы данных
+    "DATABASE_POOL_SIZE",
+    "DATABASE_MAX_OVERFLOW",
+    "DATABASE_POOL_RECYCLE",
+    "DATABASE_ECHO",
+    "DATABASE_URL",
+    # Ключи настроек логирования
+    "LOGGING_LEVEL",
+    "LOGGING_FORMAT",
+    "LOGGING_INCLUDE_TIMESTAMP",
+    "LOGGING_FILE_PATH",
+    "LOGGING_MAX_FILE_SIZE",
+    "LOGGING_BACKUP_COUNT",
+    # Ключи настроек UI
+    "UI_THEME",
+    "UI_AUTO_REFRESH",
+    "UI_REFRESH_INTERVAL",
+    "UI_ITEMS_PER_PAGE",
+    "UI_SHOW_NOTIFICATIONS",
+    "UI_LANGUAGE",
+    "UI_TIMEZONE",
+    # Ключи настроек кеширования
+    "CACHE_ENABLED",
+    "CACHE_TTL",
+    "CACHE_MAX_SIZE",
+    "CACHE_BACKEND",
+    # Ключи настроек безопасности
+    "SECURITY_SECRET_KEY",
+    "SECURITY_ALGORITHM",
+    "SECURITY_ACCESS_TOKEN_EXPIRE",
+    "SECURITY_REFRESH_TOKEN_EXPIRE",
+    "SECURITY_PASSWORD_MIN_LENGTH",
+    "SECURITY_REQUIRE_SPECIAL_CHARS",
+    # Значения по умолчанию
+    "DEFAULT_VK_API_VERSION",
+    "DEFAULT_REQUESTS_PER_SECOND",
+    "DEFAULT_SCHEDULER_INTERVAL",
+    "DEFAULT_MAX_CONCURRENT_GROUPS",
+    "DEFAULT_GROUP_DELAY",
+    "DEFAULT_DATABASE_POOL_SIZE",
+    "DEFAULT_DATABASE_MAX_OVERFLOW",
+    "DEFAULT_DATABASE_POOL_RECYCLE",
+    "DEFAULT_LOG_LEVEL",
+    "DEFAULT_LOG_FORMAT",
+    "DEFAULT_UI_THEME",
+    "DEFAULT_UI_REFRESH_INTERVAL",
+    "DEFAULT_UI_ITEMS_PER_PAGE",
+    "DEFAULT_CACHE_TTL",
+    "DEFAULT_SECURITY_ACCESS_TOKEN_EXPIRE",
+    "DEFAULT_SECURITY_REFRESH_TOKEN_EXPIRE",
+    "DEFAULT_SECURITY_PASSWORD_MIN_LENGTH",
+    # Темы UI
+    "UI_THEME_SYSTEM",
+    "UI_THEME_LIGHT",
+    "UI_THEME_DARK",
+    # Форматы логирования
+    "LOG_FORMAT_JSON",
+    "LOG_FORMAT_TEXT",
+    "LOG_FORMAT_DETAILED",
+    # Уровни логирования
+    "LOG_LEVEL_DEBUG",
+    "LOG_LEVEL_INFO",
+    "LOG_LEVEL_WARNING",
+    "LOG_LEVEL_ERROR",
+    "LOG_LEVEL_CRITICAL",
+    # Backend'ы кеширования
+    "CACHE_BACKEND_MEMORY",
+    "CACHE_BACKEND_REDIS",
+    "CACHE_BACKEND_FILE",
+    # Алгоритмы шифрования
+    "SECURITY_ALGORITHM_HS256",
+    "SECURITY_ALGORITHM_HS512",
+    # Сообщения об ошибках
+    "ERROR_INVALID_SETTINGS_SECTION",
+    "ERROR_SETTING_NOT_FOUND",
+    "ERROR_INVALID_SETTING_VALUE",
+    "ERROR_SETTINGS_VALIDATION_FAILED",
+    "ERROR_SETTINGS_UPDATE_FAILED",
+    "ERROR_SETTINGS_LOAD_FAILED",
+    # Сообщения об успехе
+    "SUCCESS_SETTINGS_UPDATED",
+    "SUCCESS_SETTINGS_RESET",
+    "SUCCESS_SETTINGS_EXPORTED",
+    "SUCCESS_SETTINGS_IMPORTED",
+    # Регулярные выражения
+    "REGEX_EMAIL",
+    "REGEX_URL",
+    "REGEX_PASSWORD",
+    # Ограничения
+    "MIN_PASSWORD_LENGTH",
+    "MAX_PASSWORD_LENGTH",
+    "MIN_POOL_SIZE",
+    "MAX_POOL_SIZE",
+    "MIN_REQUESTS_PER_SECOND",
+    "MAX_REQUESTS_PER_SECOND",
+    "MIN_SCHEDULER_INTERVAL",
+    "MAX_SCHEDULER_INTERVAL",
+    "MIN_REFRESH_INTERVAL",
+    "MAX_REFRESH_INTERVAL",
+    "MIN_ITEMS_PER_PAGE",
+    "MAX_ITEMS_PER_PAGE",
+    # Ключи кеша
+    "CACHE_KEY_SETTINGS",
+    "CACHE_KEY_SETTINGS_SECTION",
+    "CACHE_KEY_SETTINGS_VALUE",
+    "CACHE_KEY_SETTINGS_VALIDATION",
+    # TTL кеша
+    "CACHE_SETTINGS_TTL",
+    "CACHE_SETTINGS_VALIDATION_TTL",
+    # Метрики
+    "METRIC_SETTINGS_LOAD_TIME",
+    "METRIC_SETTINGS_UPDATE_TIME",
+    "METRIC_SETTINGS_VALIDATION_TIME",
+    "METRIC_SETTINGS_CACHE_HITS",
+    "METRIC_SETTINGS_CACHE_MISSES",
+    # События
+    "EVENT_SETTINGS_UPDATED",
+    "EVENT_SETTINGS_RESET",
+    "EVENT_SETTINGS_VALIDATION_FAILED",
+    # Права доступа
+    "PERMISSION_SETTINGS_READ",
+    "PERMISSION_SETTINGS_WRITE",
+    "PERMISSION_SETTINGS_ADMIN",
+]

@@ -85,6 +85,8 @@ vkbottle = "^4.6.0"
 structlog = "^25.4.0"
 pymorphy2 = "^0.9.1"
 python-multipart = "^0.0.20"
+passlib = "^1.7.4"
+python-jose = "^3.5.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.4.1"

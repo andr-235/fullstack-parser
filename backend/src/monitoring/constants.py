@@ -1,0 +1,382 @@
+"""
+Константы модуля Monitoring
+
+Содержит все константы используемые в модуле мониторинга групп
+"""
+
+# Статусы мониторинга
+MONITORING_STATUS_ACTIVE = "active"
+MONITORING_STATUS_PAUSED = "paused"
+MONITORING_STATUS_STOPPED = "stopped"
+MONITORING_STATUS_ERROR = "error"
+
+# Допустимые статусы мониторинга
+ALLOWED_MONITORING_STATUSES = [
+    MONITORING_STATUS_ACTIVE,
+    MONITORING_STATUS_PAUSED,
+    MONITORING_STATUS_STOPPED,
+    MONITORING_STATUS_ERROR,
+]
+
+# Действия массовых операций
+BULK_ACTION_START = "start"
+BULK_ACTION_STOP = "stop"
+BULK_ACTION_PAUSE = "pause"
+BULK_ACTION_RESUME = "resume"
+
+# Допустимые действия массовых операций
+ALLOWED_BULK_ACTIONS = [
+    BULK_ACTION_START,
+    BULK_ACTION_STOP,
+    BULK_ACTION_PAUSE,
+    BULK_ACTION_RESUME,
+]
+
+# Типы результатов мониторинга
+RESULT_TYPE_SUCCESS = "success"
+RESULT_TYPE_ERROR = "error"
+RESULT_TYPE_TIMEOUT = "timeout"
+RESULT_TYPE_CANCELLED = "cancelled"
+
+# Допустимые типы результатов
+ALLOWED_RESULT_TYPES = [
+    RESULT_TYPE_SUCCESS,
+    RESULT_TYPE_ERROR,
+    RESULT_TYPE_TIMEOUT,
+    RESULT_TYPE_CANCELLED,
+]
+
+# Каналы уведомлений
+NOTIFICATION_CHANNEL_EMAIL = "email"
+NOTIFICATION_CHANNEL_WEBHOOK = "webhook"
+NOTIFICATION_CHANNEL_TELEGRAM = "telegram"
+NOTIFICATION_CHANNEL_SLACK = "slack"
+
+# Допустимые каналы уведомлений
+ALLOWED_NOTIFICATION_CHANNELS = [
+    NOTIFICATION_CHANNEL_EMAIL,
+    NOTIFICATION_CHANNEL_WEBHOOK,
+    NOTIFICATION_CHANNEL_TELEGRAM,
+    NOTIFICATION_CHANNEL_SLACK,
+]
+
+# Типы уведомлений
+NOTIFICATION_TYPE_START = "monitoring_started"
+NOTIFICATION_TYPE_STOP = "monitoring_stopped"
+NOTIFICATION_TYPE_ERROR = "monitoring_error"
+NOTIFICATION_TYPE_SUCCESS = "monitoring_success"
+NOTIFICATION_TYPE_THRESHOLD = "threshold_exceeded"
+
+# Допустимые типы уведомлений
+ALLOWED_NOTIFICATION_TYPES = [
+    NOTIFICATION_TYPE_START,
+    NOTIFICATION_TYPE_STOP,
+    NOTIFICATION_TYPE_ERROR,
+    NOTIFICATION_TYPE_SUCCESS,
+    NOTIFICATION_TYPE_THRESHOLD,
+]
+
+# Сообщения об ошибках
+ERROR_MONITORING_NOT_FOUND = "Мониторинг не найден"
+ERROR_INVALID_MONITORING_ID = "Неверный ID мониторинга"
+ERROR_INVALID_GROUP_ID = "Неверный ID группы VK"
+ERROR_INVALID_OWNER_ID = "Неверный ID владельца"
+ERROR_INVALID_STATUS = "Неверный статус мониторинга"
+ERROR_INVALID_CONFIG = "Неверная конфигурация мониторинга"
+ERROR_MONITORING_ALREADY_EXISTS = "Мониторинг для этой группы уже существует"
+ERROR_TOO_MANY_MONITORINGS = "Превышено максимальное количество мониторингов"
+ERROR_QUEUE_FULL = "Очередь задач переполнена"
+ERROR_TASK_TIMEOUT = "Превышено время выполнения задачи"
+ERROR_PARSING_FAILED = "Ошибка парсинга группы"
+ERROR_NOTIFICATION_FAILED = "Ошибка отправки уведомления"
+
+# Сообщения об успехе
+SUCCESS_MONITORING_CREATED = "Мониторинг успешно создан"
+SUCCESS_MONITORING_UPDATED = "Мониторинг успешно обновлен"
+SUCCESS_MONITORING_DELETED = "Мониторинг успешно удален"
+SUCCESS_MONITORING_STARTED = "Мониторинг успешно запущен"
+SUCCESS_MONITORING_STOPPED = "Мониторинг успешно остановлен"
+SUCCESS_MONITORING_PAUSED = "Мониторинг успешно приостановлен"
+SUCCESS_CYCLE_COMPLETED = "Цикл мониторинга успешно завершен"
+SUCCESS_BULK_OPERATION_COMPLETED = "Массовое действие выполнено"
+
+# Названия полей для API
+API_FIELD_ID = "id"
+API_FIELD_GROUP_ID = "group_id"
+API_FIELD_GROUP_NAME = "group_name"
+API_FIELD_OWNER_ID = "owner_id"
+API_FIELD_STATUS = "status"
+API_FIELD_CONFIG = "config"
+API_FIELD_CREATED_AT = "created_at"
+API_FIELD_UPDATED_AT = "updated_at"
+API_FIELD_LAST_RUN_AT = "last_run_at"
+API_FIELD_NEXT_RUN_AT = "next_run_at"
+API_FIELD_TOTAL_RUNS = "total_runs"
+API_FIELD_SUCCESSFUL_RUNS = "successful_runs"
+API_FIELD_FAILED_RUNS = "failed_runs"
+API_FIELD_AVERAGE_PROCESSING_TIME = "average_processing_time"
+API_FIELD_POSTS_FOUND = "posts_found"
+API_FIELD_COMMENTS_FOUND = "comments_found"
+API_FIELD_KEYWORDS_FOUND = "keywords_found"
+API_FIELD_PROCESSING_TIME = "processing_time"
+API_FIELD_ERRORS = "errors"
+API_FIELD_STARTED_AT = "started_at"
+API_FIELD_COMPLETED_AT = "completed_at"
+
+# Максимальные значения
+MAX_GROUP_NAME_LENGTH = 255
+MAX_OWNER_ID_LENGTH = 255
+MAX_NOTIFICATION_MESSAGE_LENGTH = 1000
+MAX_ERROR_MESSAGE_LENGTH = 500
+MAX_KEYWORDS_PER_RESULT = 100
+
+# Настройки кеширования
+CACHE_KEY_MONITORING = "monitoring:{monitoring_id}"
+CACHE_KEY_USER_MONITORINGS = (
+    "monitoring:user:{owner_id}:{page}:{size}:{status}"
+)
+CACHE_KEY_MONITORING_STATS = "monitoring:stats"
+CACHE_KEY_MONITORING_HEALTH = "monitoring:health"
+
+# Таймауты кеша
+CACHE_MONITORING_TTL = 300  # 5 минут
+CACHE_USER_MONITORINGS_TTL = 180  # 3 минуты
+CACHE_STATS_TTL = 60  # 1 минута
+CACHE_HEALTH_TTL = 30  # 30 секунд
+
+# Настройки очередей
+QUEUE_MAX_SIZE = 1000
+QUEUE_PRIORITY_HIGH = 3
+QUEUE_PRIORITY_NORMAL = 2
+QUEUE_PRIORITY_LOW = 1
+
+# Настройки повторных попыток
+MAX_RETRY_ATTEMPTS = 3
+RETRY_DELAY_SECONDS = 5
+RETRY_BACKOFF_FACTOR = 2
+
+# Настройки планировщика
+SCHEDULER_CHECK_INTERVAL = 30
+SCHEDULER_MAX_DELAY = 3600
+SCHEDULER_BATCH_SIZE = 50
+
+# Настройки результатов
+RESULTS_RETENTION_DAYS = 30
+RESULTS_CLEANUP_BATCH_SIZE = 100
+RESULTS_MAX_PER_MONITORING = 1000
+
+# Настройки уведомлений
+NOTIFICATION_RETRY_ATTEMPTS = 3
+NOTIFICATION_TIMEOUT = 10
+NOTIFICATION_RATE_LIMIT = 100  # в минуту
+
+# Настройки здоровья системы
+HEALTH_CHECK_INTERVAL = 60
+HEALTH_RESPONSE_TIME_THRESHOLD = 5.0  # секунды
+HEALTH_ERROR_RATE_THRESHOLD = 0.1  # 10%
+HEALTH_QUEUE_SIZE_THRESHOLD = 100
+
+# Настройки статистики
+STATS_UPDATE_INTERVAL = 300  # 5 минут
+STATS_RETENTION_DAYS = 90
+
+# Настройки метрик
+METRIC_MONITORINGS_CREATED = "monitoring.monitorings.created"
+METRIC_MONITORINGS_DELETED = "monitoring.monitorings.deleted"
+METRIC_CYCLES_COMPLETED = "monitoring.cycles.completed"
+METRIC_CYCLES_FAILED = "monitoring.cycles.failed"
+METRIC_POSTS_FOUND = "monitoring.posts.found"
+METRIC_COMMENTS_FOUND = "monitoring.comments.found"
+METRIC_PROCESSING_TIME = "monitoring.processing.time"
+METRIC_QUEUE_SIZE = "monitoring.queue.size"
+METRIC_ACTIVE_TASKS = "monitoring.active.tasks"
+
+# Настройки логирования
+LOG_LEVEL_INFO = "INFO"
+LOG_LEVEL_WARNING = "WARNING"
+LOG_LEVEL_ERROR = "ERROR"
+
+# Сообщения логов
+LOG_MONITORING_CREATED = (
+    "Создан мониторинг {monitoring_id} для группы {group_id}"
+)
+LOG_MONITORING_UPDATED = "Обновлен мониторинг {monitoring_id}"
+LOG_MONITORING_DELETED = "Удален мониторинг {monitoring_id}"
+LOG_CYCLE_STARTED = "Запущен цикл мониторинга {monitoring_id}"
+LOG_CYCLE_COMPLETED = (
+    "Завершен цикл мониторинга {monitoring_id} за {duration:.2f} сек"
+)
+LOG_CYCLE_FAILED = "Ошибка цикла мониторинга {monitoring_id}: {error}"
+LOG_NOTIFICATION_SENT = (
+    "Отправлено уведомление {type} для мониторинга {monitoring_id}"
+)
+LOG_NOTIFICATION_FAILED = "Ошибка отправки уведомления {type}: {error}"
+
+# Настройки отчетов
+REPORT_PERIOD_DAYS_DEFAULT = 7
+REPORT_PERIOD_DAYS_MAX = 90
+REPORT_INCLUDE_CHARTS = True
+REPORT_FORMAT_PDF = "pdf"
+REPORT_FORMAT_JSON = "json"
+REPORT_FORMAT_HTML = "html"
+
+# Допустимые форматы отчетов
+ALLOWED_REPORT_FORMATS = [
+    REPORT_FORMAT_PDF,
+    REPORT_FORMAT_JSON,
+    REPORT_FORMAT_HTML,
+]
+
+
+# Экспорт всех констант
+__all__ = [
+    # Статусы мониторинга
+    "MONITORING_STATUS_ACTIVE",
+    "MONITORING_STATUS_PAUSED",
+    "MONITORING_STATUS_STOPPED",
+    "MONITORING_STATUS_ERROR",
+    "ALLOWED_MONITORING_STATUSES",
+    # Действия массовых операций
+    "BULK_ACTION_START",
+    "BULK_ACTION_STOP",
+    "BULK_ACTION_PAUSE",
+    "BULK_ACTION_RESUME",
+    "ALLOWED_BULK_ACTIONS",
+    # Типы результатов
+    "RESULT_TYPE_SUCCESS",
+    "RESULT_TYPE_ERROR",
+    "RESULT_TYPE_TIMEOUT",
+    "RESULT_TYPE_CANCELLED",
+    "ALLOWED_RESULT_TYPES",
+    # Каналы уведомлений
+    "NOTIFICATION_CHANNEL_EMAIL",
+    "NOTIFICATION_CHANNEL_WEBHOOK",
+    "NOTIFICATION_CHANNEL_TELEGRAM",
+    "NOTIFICATION_CHANNEL_SLACK",
+    "ALLOWED_NOTIFICATION_CHANNELS",
+    # Типы уведомлений
+    "NOTIFICATION_TYPE_START",
+    "NOTIFICATION_TYPE_STOP",
+    "NOTIFICATION_TYPE_ERROR",
+    "NOTIFICATION_TYPE_SUCCESS",
+    "NOTIFICATION_TYPE_THRESHOLD",
+    "ALLOWED_NOTIFICATION_TYPES",
+    # Сообщения об ошибках
+    "ERROR_MONITORING_NOT_FOUND",
+    "ERROR_INVALID_MONITORING_ID",
+    "ERROR_INVALID_GROUP_ID",
+    "ERROR_INVALID_OWNER_ID",
+    "ERROR_INVALID_STATUS",
+    "ERROR_INVALID_CONFIG",
+    "ERROR_MONITORING_ALREADY_EXISTS",
+    "ERROR_TOO_MANY_MONITORINGS",
+    "ERROR_QUEUE_FULL",
+    "ERROR_TASK_TIMEOUT",
+    "ERROR_PARSING_FAILED",
+    "ERROR_NOTIFICATION_FAILED",
+    # Сообщения об успехе
+    "SUCCESS_MONITORING_CREATED",
+    "SUCCESS_MONITORING_UPDATED",
+    "SUCCESS_MONITORING_DELETED",
+    "SUCCESS_MONITORING_STARTED",
+    "SUCCESS_MONITORING_STOPPED",
+    "SUCCESS_MONITORING_PAUSED",
+    "SUCCESS_CYCLE_COMPLETED",
+    "SUCCESS_BULK_OPERATION_COMPLETED",
+    # API поля
+    "API_FIELD_ID",
+    "API_FIELD_GROUP_ID",
+    "API_FIELD_GROUP_NAME",
+    "API_FIELD_OWNER_ID",
+    "API_FIELD_STATUS",
+    "API_FIELD_CONFIG",
+    "API_FIELD_CREATED_AT",
+    "API_FIELD_UPDATED_AT",
+    "API_FIELD_LAST_RUN_AT",
+    "API_FIELD_NEXT_RUN_AT",
+    "API_FIELD_TOTAL_RUNS",
+    "API_FIELD_SUCCESSFUL_RUNS",
+    "API_FIELD_FAILED_RUNS",
+    "API_FIELD_AVERAGE_PROCESSING_TIME",
+    "API_FIELD_POSTS_FOUND",
+    "API_FIELD_COMMENTS_FOUND",
+    "API_FIELD_KEYWORDS_FOUND",
+    "API_FIELD_PROCESSING_TIME",
+    "API_FIELD_ERRORS",
+    "API_FIELD_STARTED_AT",
+    "API_FIELD_COMPLETED_AT",
+    # Максимальные значения
+    "MAX_GROUP_NAME_LENGTH",
+    "MAX_OWNER_ID_LENGTH",
+    "MAX_NOTIFICATION_MESSAGE_LENGTH",
+    "MAX_ERROR_MESSAGE_LENGTH",
+    "MAX_KEYWORDS_PER_RESULT",
+    # Кеширование
+    "CACHE_KEY_MONITORING",
+    "CACHE_KEY_USER_MONITORINGS",
+    "CACHE_KEY_MONITORING_STATS",
+    "CACHE_KEY_MONITORING_HEALTH",
+    "CACHE_MONITORING_TTL",
+    "CACHE_USER_MONITORINGS_TTL",
+    "CACHE_STATS_TTL",
+    "CACHE_HEALTH_TTL",
+    # Очереди
+    "QUEUE_MAX_SIZE",
+    "QUEUE_PRIORITY_HIGH",
+    "QUEUE_PRIORITY_NORMAL",
+    "QUEUE_PRIORITY_LOW",
+    # Повторные попытки
+    "MAX_RETRY_ATTEMPTS",
+    "RETRY_DELAY_SECONDS",
+    "RETRY_BACKOFF_FACTOR",
+    # Планировщик
+    "SCHEDULER_CHECK_INTERVAL",
+    "SCHEDULER_MAX_DELAY",
+    "SCHEDULER_BATCH_SIZE",
+    # Результаты
+    "RESULTS_RETENTION_DAYS",
+    "RESULTS_CLEANUP_BATCH_SIZE",
+    "RESULTS_MAX_PER_MONITORING",
+    # Уведомления
+    "NOTIFICATION_RETRY_ATTEMPTS",
+    "NOTIFICATION_TIMEOUT",
+    "NOTIFICATION_RATE_LIMIT",
+    # Здоровье системы
+    "HEALTH_CHECK_INTERVAL",
+    "HEALTH_RESPONSE_TIME_THRESHOLD",
+    "HEALTH_ERROR_RATE_THRESHOLD",
+    "HEALTH_QUEUE_SIZE_THRESHOLD",
+    # Статистика
+    "STATS_UPDATE_INTERVAL",
+    "STATS_RETENTION_DAYS",
+    # Метрики
+    "METRIC_MONITORINGS_CREATED",
+    "METRIC_MONITORINGS_DELETED",
+    "METRIC_CYCLES_COMPLETED",
+    "METRIC_CYCLES_FAILED",
+    "METRIC_POSTS_FOUND",
+    "METRIC_COMMENTS_FOUND",
+    "METRIC_PROCESSING_TIME",
+    "METRIC_QUEUE_SIZE",
+    "METRIC_ACTIVE_TASKS",
+    # Логирование
+    "LOG_LEVEL_INFO",
+    "LOG_LEVEL_WARNING",
+    "LOG_LEVEL_ERROR",
+    "LOG_MONITORING_CREATED",
+    "LOG_MONITORING_UPDATED",
+    "LOG_MONITORING_DELETED",
+    "LOG_CYCLE_STARTED",
+    "LOG_CYCLE_COMPLETED",
+    "LOG_CYCLE_FAILED",
+    "LOG_NOTIFICATION_SENT",
+    "LOG_NOTIFICATION_FAILED",
+    # Отчеты
+    "REPORT_PERIOD_DAYS_DEFAULT",
+    "REPORT_PERIOD_DAYS_MAX",
+    "REPORT_INCLUDE_CHARTS",
+    "REPORT_FORMAT_PDF",
+    "REPORT_FORMAT_JSON",
+    "REPORT_FORMAT_HTML",
+    "ALLOWED_REPORT_FORMATS",
+]

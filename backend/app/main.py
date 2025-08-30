@@ -11,13 +11,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1.api import api_router
-from app.core.config import settings
-from app.core.database import init_db
+from app.api.v1.infrastructure.services.config_service import settings
+from app.api.v1.infrastructure.services.database_service import (
+    get_database_service,
+)
 
 # Импорт нового middleware
 from app.api.v1.middleware.rate_limit import SimpleRateLimitMiddleware
 from app.api.v1.middleware.logging import RequestLoggingMiddleware
-from app.core.error_handlers import (
+from app.api.v1.exceptions import (
     base_exception_handler,
     cache_exception_handler,
     database_exception_handler,
@@ -47,7 +49,8 @@ async def lifespan(app: FastAPI):
 
     # Инициализируем базу данных
     try:
-        await init_db()
+        db_service = get_database_service()
+        await db_service.init_database()
         logger.info("📊 База данных инициализирована")
     except Exception as e:
         logger.error(f"❌ Ошибка инициализации БД: {e}")
