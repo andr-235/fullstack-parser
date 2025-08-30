@@ -35,8 +35,64 @@ jobs:
         with:
           bun-version: "1.2.19"
 
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ./frontend/node_modules
+            ./frontend/.bun
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: Install dependencies
         run: bun install
+
+      - name: Verify ESLint plugins
+        run: |
+          echo "Checking installed ESLint plugins..."
+          bun list | grep eslint
+          echo "Checking eslint-plugin-boundaries..."
+          bun list eslint-plugin-boundaries
+          echo "Checking eslint-plugin-import..."
+          bun list eslint-plugin-import
+
+      - name: Verify dependencies
+        id: verify-deps
+        run: |
+          echo "Checking package.json dependencies..."
+          cat package.json | grep -A 20 '"devDependencies"'
+          echo "Checking node_modules structure..."
+          ls -la node_modules/ | grep eslint
+          if bun list eslint-plugin-boundaries > /dev/null 2>&1; then
+            echo "::set-output name=boundaries-found::true"
+          else
+            echo "::set-output name=boundaries-found::false"
+          fi
+
+      - name: Reinstall if plugin missing
+        if: steps.verify-deps.outputs.boundaries-found != 'true'
+        run: |
+          echo "eslint-plugin-boundaries not found, reinstalling dependencies..."
+          rm -rf node_modules bun.lock
+          bun install
+
+      - name: Final verification
+        run: |
+          echo "Final check for eslint-plugin-boundaries..."
+          if bun list eslint-plugin-boundaries > /dev/null 2>&1; then
+            echo "✅ eslint-plugin-boundaries is now available"
+          else
+            echo "❌ eslint-plugin-boundaries still not available"
+            echo "Debugging information:"
+            echo "Package.json devDependencies:"
+            cat package.json | grep -A 30 '"devDependencies"'
+            echo "Installed packages:"
+            bun list | grep eslint
+            echo "Node modules:"
+            ls -la node_modules/ | grep eslint
+            exit 1
+          fi
 
       - name: Run linter
         run: bun run lint
