@@ -202,7 +202,7 @@ jobs:
         run: |
           poetry run black --check --diff .
           poetry run isort --check-only --diff .
-          poetry run flake8 .
+          poetry run ruff check --output-format=github --target-version=py311
 
       - name: Run type checking
         run: poetry run mypy .
