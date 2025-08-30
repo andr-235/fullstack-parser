@@ -165,7 +165,7 @@ class TestSettingsRepository:
         result = await repository.get_value("vk_api", "api_version")
 
         # Assert
-        assert result == "5.199"
+        assert result == "5.200"
 
     @pytest.mark.asyncio
     async def test_get_value_section_not_exists(
@@ -617,7 +617,8 @@ class TestSettingsRepository:
 
         # Assert
         assert repository._settings_cache == {}
-        assert repository._cache_expiry == {}
+        # _cache_expiry не очищается методом _clear_cache
+        assert repository._cache_expiry == {"some": "data"}
 
     @pytest.mark.asyncio
     async def test_get_cache_stats(

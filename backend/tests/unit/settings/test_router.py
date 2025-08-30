@@ -155,7 +155,7 @@ class TestSettingsRouter:
         assert response.status_code == 200
         data = response.json()
         assert "data" in data
-        assert "message" in data
+        assert "meta" in data
         assert (
             "Настройки сброшены к значениям по умолчанию"
             in data["meta"]["message"]
@@ -183,12 +183,14 @@ class TestSettingsRouter:
         # Arrange
         section_name = "vk_api"
         section_data = sample_settings[section_name]
+        # Создаем мок объект с нужными атрибутами
+        mock_section = Mock()
+        mock_section.name = section_name
+        mock_section.values = section_data
+        mock_section.description = f"Settings for {section_name}"
+
         mock_settings_service.get_section = AsyncMock(
-            return_value={
-                "name": section_name,
-                "values": section_data,
-                "description": f"Settings for {section_name}",
-            }
+            return_value=mock_section
         )
 
         # Act
@@ -255,7 +257,7 @@ class TestSettingsRouter:
         assert response.status_code == 200
         data = response.json()
         assert "data" in data
-        assert "message" in data
+        assert "meta" in data
         assert (
             f"Секция '{section_name}' успешно обновлена"
             in data["meta"]["message"]
@@ -354,7 +356,7 @@ class TestSettingsRouter:
         assert response.status_code == 200
         data = response.json()
         assert "data" in data
-        assert "message" in data
+        assert "meta" in data
         assert (
             f"Настройка '{section_name}.{key}' успешно установлена"
             in data["meta"]["message"]
@@ -498,7 +500,7 @@ class TestSettingsRouter:
 
         assert route is not None
         assert route.summary == "Get Current Settings"
-        assert "current settings" in route.description.lower()
+        assert "настройки" in route.description.lower()
 
     def test_put_settings_route_config(self):
         """Test PUT /settings route configuration"""
@@ -514,23 +516,25 @@ class TestSettingsRouter:
 
         assert route is not None
         assert route.summary == "Update Settings"
-        assert "update" in route.description.lower()
+        assert "обновить" in route.description.lower()
 
-    def test_reset_route_config(self):
+    def test_reset_route_config(self, client):
         """Test POST /settings/reset route configuration"""
+        # Получаем роуты из приложения, где роутер уже включен с префиксом
+        app = client.app
         route = None
-        for r in router.routes:
+        for r in app.routes:
             if (
                 hasattr(r, "methods")
                 and "POST" in r.methods
-                and r.path == "/reset"
+                and r.path == "/settings/reset"
             ):
                 route = r
                 break
 
         assert route is not None
         assert route.summary == "Reset Settings to Defaults"
-        assert "default" in route.description.lower()
+        assert "по умолчанию" in route.description.lower()
 
     def test_section_routes_config(self):
         """Test section-related routes configuration"""

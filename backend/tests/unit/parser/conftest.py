@@ -128,7 +128,7 @@ def sample_parse_result():
 
 
 @pytest.fixture
-def sample_parse_task():
+def sample_parse_task(sample_parse_result):
     """Sample parse task"""
     return ParseTask(
         id=str(uuid4()),
@@ -144,7 +144,7 @@ def sample_parse_task():
         started_at=datetime.utcnow(),
         completed_at=datetime.utcnow(),
         progress=100.0,
-        result=sample_parse_result(),
+        result=sample_parse_result,
     )
 
 

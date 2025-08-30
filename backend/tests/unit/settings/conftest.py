@@ -31,7 +31,7 @@ def sample_settings_data():
     return {
         "vk_api": {
             "access_token": "test_token_12345",
-            "api_version": "5.199",
+            "api_version": "5.200",
             "requests_per_second": 3,
             "max_posts_per_request": 100,
         },
@@ -76,7 +76,7 @@ def sample_export_data():
     return {
         "settings": {
             "vk_api": {
-                "api_version": "5.199",
+                "api_version": "5.200",
                 "requests_per_second": 3,
             }
         },

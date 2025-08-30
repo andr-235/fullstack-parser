@@ -327,7 +327,7 @@ class TestSettingsService:
         value = "5.200"
         expected_section = {"api_version": "5.200", "requests_per_second": 3}
         mock_settings_repository.get_section.return_value = {
-            "api_version": "5.199",
+            "api_version": "5.200",
             "requests_per_second": 3,
         }
 
@@ -557,6 +557,8 @@ class TestSettingsService:
             "status": "healthy",
             "cache_entries": 5,
             "total_requests": 100,
+            "settings_loaded": True,
+            "sections_count": 4,
         }
         mock_settings_repository.get_cache_stats.return_value = {
             "cache_valid": True,
