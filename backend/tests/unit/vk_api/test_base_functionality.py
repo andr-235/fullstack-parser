@@ -42,6 +42,7 @@ from src.vk_api.base import (
     CircuitBreakerState,
     CircuitBreakerConfig,
     RateLimiterConfig,
+    RateLimitStrategy,
 )
 from src.vk_api.models import VKAPIRepository
 from src.vk_api.client import VKAPIClient
@@ -570,7 +571,7 @@ class TestRateLimiterConfig:
 
         assert config.max_calls == 10
         assert config.time_window == 60.0
-        assert config.strategy == "fixed_window"
+        assert config.strategy == RateLimitStrategy.FIXED_WINDOW
 
     def test_rate_limiter_config_custom(self):
         """Test rate limiter config with custom values"""

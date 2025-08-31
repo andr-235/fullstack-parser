@@ -376,3 +376,71 @@ def validate_response_structure():
             assert isinstance(response["data_type"], str)
 
     return _validate
+
+
+# VK API Client specific fixtures
+@pytest.fixture
+def mock_aiohttp_session():
+    """Create properly mocked aiohttp.ClientSession for VK API client tests"""
+    from unittest.mock import AsyncMock, Mock
+
+    # Создаем мок сессии
+    session = Mock()
+
+    # Мокаем методы HTTP запросов
+    mock_get_response = Mock()
+    mock_get_response.status = 200
+    mock_get_response.text = AsyncMock(
+        return_value='{"response": {"items": []}}'
+    )
+
+    mock_post_response = Mock()
+    mock_post_response.status = 200
+    mock_post_response.text = AsyncMock(
+        return_value='{"response": {"items": []}}'
+    )
+
+    # Мокаем GET и POST методы с поддержкой асинхронного контекстного менеджера
+    session.get = Mock()
+    session.get.return_value.__aenter__ = AsyncMock(
+        return_value=mock_get_response
+    )
+    session.get.return_value.__aexit__ = AsyncMock(return_value=None)
+
+    session.post = Mock()
+    session.post.return_value.__aenter__ = AsyncMock(
+        return_value=mock_post_response
+    )
+    session.post.return_value.__aexit__ = AsyncMock(return_value=None)
+
+    # Мокаем свойства сессии
+    session.closed = False
+    session.close = AsyncMock()
+
+    return session
+
+
+@pytest.fixture
+def vk_client_fixture():
+    """Create VKAPIClient instance for testing with proper mocking"""
+    from src.vk_api.client import VKAPIClient
+
+    # Создаем клиент с тестовым токеном
+    client = VKAPIClient(access_token="test_token")
+
+    return client
+
+
+@pytest.fixture
+def mock_vk_config():
+    """Mock VK API configuration for testing"""
+    from unittest.mock import Mock
+
+    config = Mock()
+    config.access_token = "config_token"
+    config.api_version = "5.199"
+    config.base_url = "https://api.vk.com/method/"
+    config.connection = Mock()
+    config.connection.timeout = 30
+
+    return config
