@@ -537,8 +537,10 @@ class TestVKAPIClientStatistics:
         health = await vk_client.health_check()
 
         assert health["status"] == "healthy"
-        assert health["total_requests"] == 5
-        assert health["successful_requests"] == 5
+        assert (
+            health["total_requests"] == 6
+        )  # 5 from test + 1 from health check
+        assert health["successful_requests"] == 6
 
     @pytest.mark.asyncio
     async def test_health_check_with_failures(self, vk_client, mock_session):
@@ -580,7 +582,9 @@ class TestVKAPIClientStatistics:
         assert (
             health["status"] == "healthy"
         )  # Still healthy with some failures
-        assert health["total_requests"] == 4
+        assert (
+            health["total_requests"] == 5
+        )  # 4 from test + 1 from health check
 
 
 class TestVKAPIClientEdgeCases:

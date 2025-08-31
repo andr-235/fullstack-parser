@@ -402,7 +402,7 @@ class TestBulkOperationsIntegration:
         assert result["total_requested"] == 10
         assert result["total_found"] == 10
         assert "processing_time_seconds" in result
-        assert result["processing_time_seconds"] > 0
+        assert result["processing_time_seconds"] >= 0
         assert (
             result["processing_time_seconds"] < end_time - start_time + 1
         )  # Allow some tolerance

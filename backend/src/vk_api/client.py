@@ -444,10 +444,12 @@ class VKAPIClient:
             response = await self.make_request("users.get", test_params)
 
             if "response" in response and len(response["response"]) > 0:
+                stats = self.get_stats()
                 return {
                     "status": "healthy",
                     "response_time": time.time(),
                     "timestamp": time.time(),
+                    **stats,
                 }
             else:
                 return {
