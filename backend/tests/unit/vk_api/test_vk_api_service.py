@@ -405,9 +405,9 @@ class TestVKAPIServiceBulkOperations:
 
         assert result["total_requested"] == 3
         assert result["total_found"] == 2
-        # Ошибки не добавляются в список, так как исключения перехватываются
-        # и возвращается None для неудачных постов
-        assert result["errors"] is None
+        # Errors are now properly collected
+        assert len(result["errors"]) == 1
+        assert "Пост 2:" in result["errors"][0]
         assert result["success_rate"] == pytest.approx(66.7, abs=0.1)
 
     @pytest.mark.asyncio

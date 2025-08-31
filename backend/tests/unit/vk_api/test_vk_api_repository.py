@@ -320,8 +320,10 @@ class TestVKAPIRepositoryRequestLogging:
 
         # Should only keep last 1000
         assert len(repository._request_logs) == 1000
-        assert repository._request_logs[0]["method"] == "method1009"
-        assert repository._request_logs[-1]["method"] == "method9"
+        assert (
+            repository._request_logs[0]["method"] == "method10"
+        )  # oldest remaining
+        assert repository._request_logs[-1]["method"] == "method1009"  # newest
 
 
 class TestVKAPIRepositoryErrorLogging:
