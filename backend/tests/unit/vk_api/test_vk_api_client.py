@@ -644,10 +644,14 @@ class TestVKAPIClientEdgeCases:
             return_value=json.dumps(unicode_data, ensure_ascii=False)
         )
 
-        mock_session.post.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_session.post.return_value.__aexit__ = AsyncMock(return_value=None)
+        # Override the fixture's side_effect
+        def create_unicode_mock(*args, **kwargs):
+            unicode_mock = Mock()
+            unicode_mock.__aenter__ = AsyncMock(return_value=mock_response)
+            unicode_mock.__aexit__ = AsyncMock(return_value=None)
+            return unicode_mock
+
+        mock_session.get.side_effect = create_unicode_mock
 
         result = await vk_client.make_request("wall.get", {})
 

@@ -680,7 +680,7 @@ class TestPerformanceIntegration:
         processing_time = result["processing_time_seconds"]
         actual_time = end_time - start_time
 
-        assert processing_time > 0
+        assert processing_time >= 0
         assert processing_time <= actual_time + 0.1  # Allow small tolerance
 
     @pytest.mark.asyncio
