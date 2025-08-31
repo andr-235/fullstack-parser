@@ -219,10 +219,14 @@ class TestVKAPIClientRequestHandling:
         mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"response": {}}')
 
-        mock_session.get.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
+        # Override the fixture's mock to return our error response
+        def create_error_mock(*args, **kwargs):
+            error_mock = Mock()
+            error_mock.__aenter__ = AsyncMock(return_value=mock_response)
+            error_mock.__aexit__ = AsyncMock(return_value=None)
+            return error_mock
+
+        mock_session.get.side_effect = create_error_mock
 
         await vk_client.make_request("wall.get", {"param": "value"})
 
@@ -240,10 +244,14 @@ class TestVKAPIClientRequestHandling:
         mock_response.status = 200
         mock_response.text = AsyncMock(return_value='{"response": {}}')
 
-        mock_session.get.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
+        # Override the fixture's mock to return our error response
+        def create_error_mock(*args, **kwargs):
+            error_mock = Mock()
+            error_mock.__aenter__ = AsyncMock(return_value=mock_response)
+            error_mock.__aexit__ = AsyncMock(return_value=None)
+            return error_mock
+
+        mock_session.get.side_effect = create_error_mock
 
         await vk_client.make_request("wall.get", {})
 
@@ -343,10 +351,14 @@ class TestVKAPIClientErrorHandling:
             )
         )
 
-        mock_session.get.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
+        # Override the fixture's mock to return our error response
+        def create_error_mock(*args, **kwargs):
+            error_mock = Mock()
+            error_mock.__aenter__ = AsyncMock(return_value=mock_response)
+            error_mock.__aexit__ = AsyncMock(return_value=None)
+            return error_mock
+
+        mock_session.get.side_effect = create_error_mock
 
         with pytest.raises(VKAPIInvalidTokenError):
             await vk_client.make_request("wall.get", {})
@@ -369,10 +381,14 @@ class TestVKAPIClientErrorHandling:
             )
         )
 
-        mock_session.get.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
+        # Override the fixture's mock to return our error response
+        def create_error_mock(*args, **kwargs):
+            error_mock = Mock()
+            error_mock.__aenter__ = AsyncMock(return_value=mock_response)
+            error_mock.__aexit__ = AsyncMock(return_value=None)
+            return error_mock
+
+        mock_session.get.side_effect = create_error_mock
 
         with pytest.raises(VKAPIInvalidParamsError):
             await vk_client.make_request("wall.get", {})
@@ -406,10 +422,14 @@ class TestVKAPIClientErrorHandling:
         mock_response.status = 200
         mock_response.text = AsyncMock(return_value="invalid json")
 
-        mock_session.get.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
+        # Override the fixture's mock to return our error response
+        def create_error_mock(*args, **kwargs):
+            error_mock = Mock()
+            error_mock.__aenter__ = AsyncMock(return_value=mock_response)
+            error_mock.__aexit__ = AsyncMock(return_value=None)
+            return error_mock
+
+        mock_session.get.side_effect = create_error_mock
 
         with pytest.raises(VKAPIInvalidResponseError):
             await vk_client.make_request("wall.get", {})

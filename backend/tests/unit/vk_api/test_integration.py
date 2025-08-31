@@ -206,10 +206,8 @@ class TestServiceRepositoryIntegration:
             VKAPIRateLimitError()
         )
 
-        try:
+        with pytest.raises(VKAPIRateLimitError):
             await integration_service.get_group_posts(group_id=12345)
-        except ServiceUnavailableError:
-            pass  # Expected - VKAPIRateLimitError is wrapped in ServiceUnavailableError
 
         # Verify error was logged through the log_request decorator
         # The decorator should call save_error_log for the wrapped error
