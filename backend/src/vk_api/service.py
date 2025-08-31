@@ -196,6 +196,9 @@ class VKAPIService(BaseVKAPIService):
             result["group_id"] = group_id
             return result
 
+        except VKAPIAuthError:
+            # Re-raise authentication errors without wrapping them
+            raise
         except Exception as e:
             self.logger.error(
                 "Failed to get group posts",

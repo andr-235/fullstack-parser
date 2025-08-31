@@ -275,10 +275,14 @@ class TestVKAPIClientErrorHandling:
             )
         )
 
-        mock_session.get.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
+        # Override the fixture's side_effect with our custom response
+        def create_error_mock(*args, **kwargs):
+            error_mock = Mock()
+            error_mock.__aenter__ = AsyncMock(return_value=mock_response)
+            error_mock.__aexit__ = AsyncMock(return_value=None)
+            return error_mock
+
+        mock_session.get.side_effect = create_error_mock
 
         with pytest.raises(VKAPIAuthError):
             await vk_client.make_request("wall.get", {})
