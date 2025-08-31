@@ -208,9 +208,9 @@ class VKAPIService(BaseVKAPIService):
             VKAPINetworkError,
             VKAPIInvalidResponseError,
             VKAPIError,
-        ):
-            # Re-raise VK API errors without wrapping them
-            raise
+        ) as e:
+            # Wrap VK API errors in service-level errors for better abstraction
+            raise ServiceUnavailableError(f"VK API Error: {str(e)}") from e
         except Exception as e:
             self.logger.error(
                 "Failed to get group posts",

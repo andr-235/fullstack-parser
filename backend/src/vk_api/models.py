@@ -247,8 +247,9 @@ class VKAPIRepository:
         failed_requests = total_requests - successful_requests
 
         # Явно приводим к float, чтобы устранить тип object в mypy
+        # Include response times from all requests (successful and failed)
         response_times: List[float] = [
-            float(log["response_time"]) for log in logs if log["success"]
+            float(log["response_time"]) for log in logs
         ]
         avg_response_time = (
             sum(response_times) / len(response_times) if response_times else 0
