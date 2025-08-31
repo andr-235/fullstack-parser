@@ -641,7 +641,9 @@ class VKAPIService(BaseVKAPIService):
         concurrency_limit = 10
         semaphore = asyncio.Semaphore(concurrency_limit)
 
-        async def fetch_single_post(post_id: int) -> Optional[Dict[str, Any]]:
+        async def fetch_single_post(
+            post_id: int,
+        ) -> tuple[Optional[Dict[str, Any]], Optional[str]]:
             """
             Получить один пост с контролем параллелизма
 
@@ -649,18 +651,19 @@ class VKAPIService(BaseVKAPIService):
                 post_id: ID поста для получения
 
             Returns:
-                Optional[Dict[str, Any]]: Данные поста или None при ошибке
+                tuple[Optional[Dict[str, Any]], Optional[str]]: (post_data, error_message)
             """
             async with semaphore:
                 try:
                     post_data = await self.get_post_by_id(group_id, post_id)
-                    return post_data
+                    return post_data, None
                 except Exception as e:
                     # Логируем ошибку, но не прерываем весь процесс
+                    error_msg = f"Пост {post_id}: {str(e)}"
                     self.logger.warning(
                         f"Не удалось получить пост {post_id} группы {group_id}: {e}"
                     )
-                    return None
+                    return None, error_msg
 
         # Создаем задачи для параллельного выполнения
         tasks = [fetch_single_post(post_id) for post_id in post_ids]
@@ -679,9 +682,12 @@ class VKAPIService(BaseVKAPIService):
                 self.logger.error(
                     f"Критическая ошибка при получении поста {post_id}: {result}"
                 )
-            elif result is not None:
-                posts.append(result)
-            # Если result is None, значит пост пропущен (уже залогировано выше)
+            else:
+                post_data, error_msg = result
+                if error_msg is not None:
+                    errors.append(error_msg)
+                elif post_data is not None:
+                    posts.append(post_data)
 
         # Записываем метрики выполнения
         duration = time.time() - start_time

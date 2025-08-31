@@ -470,7 +470,7 @@ class TestVKAPIClientRateLimiting:
         """Test that failed requests are counted"""
         vk_client.session = mock_session
 
-        mock_session.post.side_effect = aiohttp.ClientError("Failed")
+        mock_session.get.side_effect = aiohttp.ClientError("Failed")
 
         try:
             await vk_client.make_request("wall.get", {})
