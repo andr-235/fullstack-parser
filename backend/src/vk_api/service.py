@@ -680,10 +680,11 @@ class VKAPIService(BaseVKAPIService):
             if isinstance(result, Exception):
                 errors.append(f"Пост {post_id}: {str(result)}")
                 self.logger.error(
-                    f"Критическая ошибка при получении поста {post_id}: {result}"
+                    f"Критическая ошибка при получении поста {post_id}: {str(result)}"
                 )
             else:
-                post_data, error_msg = result
+                # At this point, result is guaranteed to be a tuple from fetch_single_post
+                post_data, error_msg = result  # type: ignore
                 if error_msg is not None:
                     errors.append(error_msg)
                 elif post_data is not None:
