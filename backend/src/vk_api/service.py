@@ -199,6 +199,18 @@ class VKAPIService(BaseVKAPIService):
         except VKAPIAuthError:
             # Re-raise authentication errors without wrapping them
             raise
+        except (
+            VKAPIRateLimitError,
+            VKAPIAccessDeniedError,
+            VKAPIInvalidTokenError,
+            VKAPIInvalidParamsError,
+            VKAPITimeoutError,
+            VKAPINetworkError,
+            VKAPIInvalidResponseError,
+            VKAPIError,
+        ):
+            # Re-raise VK API errors without wrapping them
+            raise
         except Exception as e:
             self.logger.error(
                 "Failed to get group posts",

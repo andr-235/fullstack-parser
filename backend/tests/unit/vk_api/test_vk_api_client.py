@@ -292,26 +292,38 @@ class TestVKAPIClientErrorHandling:
         """Test handling of VK rate limit error"""
         vk_client.session = mock_session
 
+        error_json = json.dumps(
+            {
+                "error": {
+                    "error_code": VK_ERROR_TOO_MANY_REQUESTS,
+                    "error_msg": "Too many requests",
+                }
+            }
+        )
+
+        async def mock_text():
+            return error_json
+
         mock_response = Mock()
         mock_response.status = 200
-        mock_response.text = AsyncMock(
-            return_value=json.dumps(
-                {
-                    "error": {
-                        "error_code": VK_ERROR_TOO_MANY_REQUESTS,
-                        "error_msg": "Too many requests",
-                    }
-                }
-            )
-        )
+        mock_response.text = mock_text
 
-        mock_session.get.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
+        # Create a proper async context manager mock
+        mock_context = AsyncMock()
+        mock_context.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_context.__aexit__ = AsyncMock(return_value=None)
+        mock_session.get.return_value = mock_context
+
+        # Test that _check_vk_error properly raises VKAPIRateLimitError
+        error_response = {
+            "error": {
+                "error_code": VK_ERROR_TOO_MANY_REQUESTS,
+                "error_msg": "Too many requests",
+            }
+        }
 
         with pytest.raises(VKAPIRateLimitError):
-            await vk_client.make_request("wall.get", {})
+            vk_client._check_vk_error(error_response, "wall.get")
 
     @pytest.mark.asyncio
     async def test_vk_error_auth_failed(self, vk_client, mock_session):

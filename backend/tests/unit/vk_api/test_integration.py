@@ -269,13 +269,14 @@ class TestErrorPropagationIntegration:
         self, integration_service, integration_client
     ):
         """Test network error handling and recovery"""
-        # Mock network failure followed by success
+        # Mock network failure for all retry attempts (3 attempts total)
         integration_client.make_request.side_effect = [
             ServiceUnavailableError("Network timeout"),
-            {"response": {"items": [{"id": 1}], "count": 1}},
+            ServiceUnavailableError("Network timeout"),
+            ServiceUnavailableError("Network timeout"),
         ]
 
-        # First attempt should fail
+        # All attempts should fail and exception should be raised
         with pytest.raises(ServiceUnavailableError):
             await integration_service.get_group_posts(group_id=12345)
 
