@@ -206,11 +206,11 @@ class TestServiceRepositoryIntegration:
             VKAPIRateLimitError()
         )
 
-        with pytest.raises(VKAPIRateLimitError):
+        with pytest.raises(ServiceUnavailableError):
             await integration_service.get_group_posts(group_id=12345)
 
         # Verify error was logged through the log_request decorator
-        # The decorator should call save_error_log for the wrapped error
+        # The decorator should call save_error_log for the ServiceUnavailableError (wrapped VK API error)
         integration_repository.save_error_log.assert_called_once()
         call_args = integration_repository.save_error_log.call_args
 
