@@ -420,11 +420,13 @@ class TestRealWorldScenariosIntegration:
         call_sequence = [
             # Group info
             {
-                "response": {
-                    "id": 12345,
-                    "name": "Test Group",
-                    "members_count": 1000,
-                }
+                "response": [
+                    {
+                        "id": 12345,
+                        "name": "Test Group",
+                        "members_count": 1000,
+                    }
+                ]
             },
             # Posts
             {
@@ -468,7 +470,7 @@ class TestRealWorldScenariosIntegration:
         )
 
         # Verify workflow results
-        assert group_info["id"] == 12345
+        assert group_info["group"]["id"] == 12345
         assert len(posts["posts"]) == 2
         assert len(comments_1["comments"]) == 2
         assert len(comments_2["comments"]) == 1

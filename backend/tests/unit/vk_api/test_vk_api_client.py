@@ -619,10 +619,14 @@ class TestVKAPIClientEdgeCases:
         mock_response.status = 200
         mock_response.text = AsyncMock(return_value=json.dumps(large_data))
 
-        mock_session.post.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_session.post.return_value.__aexit__ = AsyncMock(return_value=None)
+        # Override the fixture's side_effect
+        def create_large_mock(*args, **kwargs):
+            large_mock = Mock()
+            large_mock.__aenter__ = AsyncMock(return_value=mock_response)
+            large_mock.__aexit__ = AsyncMock(return_value=None)
+            return large_mock
+
+        mock_session.get.side_effect = create_large_mock
 
         result = await vk_client.make_request("wall.get", {})
 
