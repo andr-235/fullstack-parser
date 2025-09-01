@@ -31,7 +31,7 @@ from ..vk_api.exceptions import (
     VKAPIInvalidResponseError,
     VKAPIError,
 )
-from .exceptions import VKAPITimeoutException
+from .exceptions import VKAPITimeoutException, VKAPILimitExceededException
 
 
 class ParserService:
@@ -443,6 +443,7 @@ class ParserService:
             VKAPIInvalidResponseError,
             VKAPIError,
             VKAPITimeoutException,
+            VKAPILimitExceededException,
         ):
             # Re-raise VK API errors without wrapping for higher-level handling
             raise

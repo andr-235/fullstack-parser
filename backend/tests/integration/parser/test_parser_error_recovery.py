@@ -55,6 +55,39 @@ class TestParserErrorRecoveryIntegration:
 
         mock_vk_api_service.get_group_info.side_effect = failing_api_call
 
+        # Mock get_group_posts and get_post_comments for successful calls
+        async def mock_get_posts(*args, **kwargs):
+            return {
+                "posts": [
+                    {
+                        "id": 1001,
+                        "text": "Test post",
+                        "date": 1234567890,
+                        "likes": {"count": 10},
+                        "comments": {"count": 5},
+                        "from_id": 987654321,
+                    }
+                ]
+            }
+
+        async def mock_get_comments(*args, **kwargs):
+            return {
+                "comments": [
+                    {
+                        "id": 2001,
+                        "post_id": 1001,
+                        "text": "Test comment",
+                        "date": 1234567890,
+                        "likes": {"count": 2},
+                        "from_id": 111111111,
+                        "author_name": "Test User",
+                    }
+                ]
+            }
+
+        mock_vk_api_service.get_group_posts.side_effect = mock_get_posts
+        mock_vk_api_service.get_post_comments.side_effect = mock_get_comments
+
         # Attempt parsing - should eventually succeed
         result = await error_prone_service.parse_group(
             group_id=123456789, max_posts=5, max_comments_per_post=10
@@ -93,6 +126,23 @@ class TestParserErrorRecoveryIntegration:
                 }
 
         mock_vk_api_service.get_group_posts.side_effect = rate_limited_api_call
+
+        # Mock get_group_info to succeed immediately
+        async def mock_get_group_info(*args, **kwargs):
+            return {
+                "group": {
+                    "id": 123456789,
+                    "name": "Test Group",
+                    "is_closed": False,
+                }
+            }
+
+        # Mock get_post_comments for successful calls
+        async def mock_get_comments(*args, **kwargs):
+            return {"comments": []}
+
+        mock_vk_api_service.get_group_info.side_effect = mock_get_group_info
+        mock_vk_api_service.get_post_comments.side_effect = mock_get_comments
 
         # Start parsing
         result = await error_prone_service.parse_group(
