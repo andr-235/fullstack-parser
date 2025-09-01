@@ -118,7 +118,7 @@ class TestParserErrorRecoveryIntegration:
         async def partial_failure_posts(*args, **kwargs):
             nonlocal post_call_count
             post_call_count += 1
-            group_id = kwargs.get('group_id', args[0] if args else None)
+            group_id = kwargs.get("group_id", args[0] if args else None)
 
             if group_id == 123456789:
                 # First group succeeds
@@ -132,7 +132,9 @@ class TestParserErrorRecoveryIntegration:
 
         mock_vk_api_service.get_group_posts.side_effect = partial_failure_posts
         mock_vk_api_service.get_post_comments.return_value = {"comments": []}
-        mock_vk_api_service.get_group_info.return_value = {"group": {"id": 987654321, "name": "Test Group"}}
+        mock_vk_api_service.get_group_info.return_value = {
+            "group": {"id": 987654321, "name": "Test Group"}
+        }
 
         # Start parsing with multiple groups
         result1 = await error_prone_service.parse_group(
@@ -147,7 +149,9 @@ class TestParserErrorRecoveryIntegration:
 
         # Verify partial success is handled correctly
         assert result1["posts_found"] == 1  # First group succeeded
-        assert post_call_count == 2  # 2 API calls made (one failed, one succeeded)
+        assert (
+            post_call_count == 2
+        )  # 2 API calls made (one failed, one succeeded)
 
         # Check that errors are recorded
         assert (
@@ -172,6 +176,43 @@ class TestParserErrorRecoveryIntegration:
             }
 
         mock_vk_api_service.get_group_info.side_effect = degraded_api_call
+
+        # Mock get_group_posts to return sample posts
+        async def mock_get_posts(*args, **kwargs):
+            await asyncio.sleep(2)  # 2 second delay (degraded)
+            return {
+                "posts": [
+                    {
+                        "id": 1001,
+                        "text": "Test post",
+                        "date": 1234567890,
+                        "likes": {"count": 10},
+                        "comments": {"count": 5},
+                        "from_id": 987654321,
+                    }
+                ]
+            }
+
+        mock_vk_api_service.get_group_posts.side_effect = mock_get_posts
+
+        # Mock get_post_comments to return sample comments
+        async def mock_get_comments(*args, **kwargs):
+            await asyncio.sleep(2)  # 2 second delay (degraded)
+            return {
+                "comments": [
+                    {
+                        "id": 2001,
+                        "post_id": 1001,
+                        "text": "Test comment",
+                        "date": 1234567890,
+                        "likes": {"count": 2},
+                        "from_id": 111111111,
+                        "author_name": "Test User",
+                    }
+                ]
+            }
+
+        mock_vk_api_service.get_post_comments.side_effect = mock_get_comments
 
         start_time = time.time()
 

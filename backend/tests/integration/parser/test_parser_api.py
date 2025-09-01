@@ -24,82 +24,97 @@ class TestParserAPIIntegration:
     """Integration tests for Parser API endpoints"""
 
     @pytest.fixture
-    def mock_parser_service(self):
+    def api_mock_parser_service(self):
         """Mock parser service for API tests"""
-        service = AsyncMock(spec=ParserService)
 
-        # Configure default responses
-        service.start_parsing.return_value = {
-            "task_id": "test-task-123",
-            "status": "started",
-            "group_ids": [123456789],
-            "estimated_time": 30,
-            "created_at": "2024-01-01T00:00:00Z",
-        }
+        class MockParserService:
+            def __init__(self):
+                self.created_tasks = {}
 
-        service.stop_parsing.return_value = {
-            "stopped_tasks": ["test-task-123"],
-            "message": "Task stopped successfully",
-        }
+            async def start_parsing(self, *args, **kwargs):
+                from uuid import uuid4
 
-        service.get_task_status.return_value = {
-            "task_id": "test-task-123",
-            "status": "running",
-            "progress": 45.5,
-            "current_group": 123456789,
-            "groups_completed": 1,
-            "groups_total": 1,
-            "posts_found": 10,
-            "comments_found": 50,
-            "errors": [],
-            "started_at": "2024-01-01T00:00:00Z",
-            "completed_at": None,
-            "duration": 30,
-        }
+                task_id = str(uuid4())
+                task_data = {
+                    "task_id": task_id,
+                    "status": "started",
+                    "group_ids": kwargs.get("group_ids", [123456789]),
+                    "estimated_time": 30,
+                    "created_at": "2024-01-01T00:00:00Z",
+                }
+                self.created_tasks[task_id] = task_data
+                return task_data
 
-        service.get_parser_state.return_value = {
-            "is_running": True,
-            "active_tasks": 2,
-            "queue_size": 1,
-            "total_tasks_processed": 5,
-            "total_posts_found": 100,
-            "total_comments_found": 500,
-            "last_activity": "2024-01-01T00:00:00Z",
-            "uptime_seconds": 3600,
-        }
+            async def get_task_status(self, task_id):
+                if task_id in self.created_tasks:
+                    task_data = self.created_tasks[task_id].copy()
+                    task_data.update(
+                        {
+                            "status": "running",
+                            "progress": 45.5,
+                            "current_group": 123456789,
+                            "groups_completed": 1,
+                            "groups_total": len(task_data["group_ids"]),
+                            "posts_found": 10,
+                            "comments_found": 50,
+                            "errors": [],
+                            "started_at": "2024-01-01T00:00:00Z",
+                            "completed_at": None,
+                            "duration": 30,
+                        }
+                    )
+                    return task_data
+                return None
 
-        service.get_tasks_list.return_value = [
-            {
-                "id": "task-1",
-                "group_ids": [123456789],
-                "status": "completed",
-                "created_at": "2024-01-01T00:00:00Z",
-                "progress": 100.0,
-            }
-        ]
+            async def stop_parsing(self, task_id=None):
+                if task_id and task_id in self.created_tasks:
+                    return {
+                        "stopped_tasks": [task_id],
+                        "message": "Task stopped successfully",
+                    }
+                return {
+                    "stopped_tasks": [],
+                    "message": "No tasks to stop",
+                }
 
-        service.get_parsing_stats.return_value = {
-            "total_tasks": 10,
-            "completed_tasks": 7,
-            "failed_tasks": 2,
-            "running_tasks": 1,
-            "total_posts_found": 350,
-            "total_comments_found": 2450,
-            "total_processing_time": 450,
-            "average_task_duration": 45.0,
-        }
+            async def get_parser_state(self):
+                return {
+                    "is_running": True,
+                    "active_tasks": len(self.created_tasks),
+                    "queue_size": 1,
+                    "total_tasks_processed": 5,
+                    "total_posts_found": 100,
+                    "total_comments_found": 500,
+                    "last_activity": "2024-01-01T00:00:00Z",
+                    "uptime_seconds": 3600,
+                }
 
-        return service
+            async def get_tasks_list(self, *args, **kwargs):
+                return list(self.created_tasks.values())
+
+            async def get_parsing_stats(self):
+                return {
+                    "total_tasks": 10,
+                    "completed_tasks": 7,
+                    "failed_tasks": 2,
+                    "running_tasks": 1,
+                    "total_posts_found": 350,
+                    "total_comments_found": 2450,
+                    "total_processing_time": 450,
+                    "average_task_duration": 45.0,
+                }
+
+        return MockParserService()
 
     @pytest.fixture
-    def api_client(self, mock_parser_service):
+    def api_client(self, api_mock_parser_service):
         """Test client with mocked parser service"""
         app = FastAPI()
         app.include_router(router)
 
-        # Override dependency
+        # Override dependency to use our mock
         app.dependency_overrides[get_parser_service] = (
-            lambda: mock_parser_service
+            lambda: api_mock_parser_service
         )
 
         return TestClient(app)
@@ -428,7 +443,7 @@ class TestParserAPIIntegration:
 
         assert start_response.status_code == 201
         start_data = start_response.json()
-        task_id = start_data["data"]["task_id"]
+        task_id = start_data["task_id"]
 
         # 2. Check status
         status_response = api_client.get(f"/api/v1/parser/tasks/{task_id}")
@@ -444,10 +459,12 @@ class TestParserAPIIntegration:
 
         assert stop_response.status_code == 200
         stop_data = stop_response.json()
-        assert task_id in stop_data["data"]["stopped_tasks"]
+        assert task_id in stop_data["stopped_tasks"]
 
         # 4. Verify final status
-        final_status_response = api_client.get(f"/api/v1/parser/tasks/{task_id}")
+        final_status_response = api_client.get(
+            f"/api/v1/parser/tasks/{task_id}"
+        )
         assert final_status_response.status_code == 200
 
         # Verify service calls
