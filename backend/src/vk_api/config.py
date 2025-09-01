@@ -153,6 +153,7 @@ class VKAPIConfig(BaseModel):
     access_token: Optional[str] = Field(
         default_factory=lambda: getattr(settings, "vk_access_token", None),
         description="Токен доступа",
+        repr=False,  # Don't include token in string representation
     )
 
     # Поля запросов

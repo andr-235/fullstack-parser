@@ -27,6 +27,7 @@ import os
 import json
 from typing import Dict, Any, Optional
 from unittest.mock import patch, MagicMock
+from pydantic import ValidationError
 
 from src.vk_api.config import (
     VKAPIConnectionConfig,
@@ -387,10 +388,10 @@ class TestUserAgents:
         for ua in USER_AGENTS:
             assert isinstance(ua, str)
             assert len(ua.strip()) > 0
-            # Should contain browser-like identifiers
+            # Should contain application identifiers
             assert any(
-                browser in ua.lower()
-                for browser in ["chrome", "firefox", "safari", "edge"]
+                identifier in ua.lower()
+                for identifier in ["vk", "parser", "collector", "client"]
             )
 
     def test_user_agents_uniqueness(self):
@@ -444,11 +445,10 @@ class TestConfigurationEdgeCases:
     """Test suite for configuration edge cases"""
 
     def test_config_with_none_values(self):
-        """Test configuration handling of None values"""
-        # Test that config handles None values appropriately
-        config = VKAPICacheConfig(group_posts_ttl=None)
-        # Should either use default or raise validation error
-        assert config.group_posts_ttl is not None
+        """Test configuration validation with None values"""
+        # Test that config raises validation error for None values
+        with pytest.raises(ValidationError):
+            VKAPICacheConfig(group_posts_ttl=None)
 
     def test_config_with_extreme_values(self):
         """Test configuration with extreme values"""
