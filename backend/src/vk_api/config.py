@@ -29,10 +29,10 @@ class VKAPIRateLimitConfig(BaseModel):
     """Конфигурация rate limiting"""
 
     max_requests_per_second: int = Field(
-        default=3, description="Максимум запросов в секунду"
+        default=3, gt=0, description="Максимум запросов в секунду"
     )
     window_seconds: float = Field(
-        default=1.0, description="Окно времени в секундах"
+        default=1.0, gt=0, description="Окно времени в секундах"
     )
 
 
@@ -40,19 +40,19 @@ class VKAPIRequestLimits(BaseModel):
     """Лимиты запросов VK API"""
 
     max_posts_per_request: int = Field(
-        default=100, description="Максимум постов за запрос"
+        default=100, gt=0, description="Максимум постов за запрос"
     )
     max_comments_per_request: int = Field(
-        default=100, description="Максимум комментариев за запрос"
+        default=100, gt=0, description="Максимум комментариев за запрос"
     )
     max_groups_per_request: int = Field(
-        default=1000, description="Максимум групп за запрос"
+        default=1000, gt=0, description="Максимум групп за запрос"
     )
     max_users_per_request: int = Field(
-        default=1000, description="Максимум пользователей за запрос"
+        default=1000, gt=0, description="Максимум пользователей за запрос"
     )
     max_group_members_per_request: int = Field(
-        default=1000, description="Максимум участников группы за запрос"
+        default=1000, gt=0, description="Максимум участников группы за запрос"
     )
 
 
@@ -61,20 +61,24 @@ class VKAPICacheConfig(BaseModel):
 
     enabled: bool = Field(default=True, description="Включено ли кеширование")
     group_posts_ttl: int = Field(
-        default=300, description="TTL кеша постов группы (сек)"
+        default=300, gt=0, description="TTL кеша постов группы (сек)"
     )
     post_comments_ttl: int = Field(
-        default=600, description="TTL кеша комментариев (сек)"
+        default=600, gt=0, description="TTL кеша комментариев (сек)"
     )
     group_info_ttl: int = Field(
-        default=3600, description="TTL кеша информации о группе (сек)"
+        default=3600, gt=0, description="TTL кеша информации о группе (сек)"
     )
     user_info_ttl: int = Field(
-        default=1800, description="TTL кеша информации о пользователе (сек)"
+        default=1800,
+        gt=0,
+        description="TTL кеша информации о пользователе (сек)",
     )
-    search_ttl: int = Field(default=1800, description="TTL кеша поиска (сек)")
+    search_ttl: int = Field(
+        default=1800, gt=0, description="TTL кеша поиска (сек)"
+    )
     group_members_ttl: int = Field(
-        default=1800, description="TTL кеша участников группы (сек)"
+        default=1800, gt=0, description="TTL кеша участников группы (сек)"
     )
 
 
@@ -82,11 +86,13 @@ class VKAPIRetryConfig(BaseModel):
     """Конфигурация повторов"""
 
     enabled: bool = Field(default=True, description="Включены ли повторы")
-    max_attempts: int = Field(default=3, description="Максимум попыток")
+    max_attempts: int = Field(default=3, gt=0, description="Максимум попыток")
     backoff_factor: float = Field(
-        default=2.0, description="Коэффициент отката"
+        default=2.0, gt=0, description="Коэффициент отката"
     )
-    max_delay: float = Field(default=60.0, description="Максимальная задержка")
+    max_delay: float = Field(
+        default=60.0, gt=0, description="Максимальная задержка"
+    )
 
 
 class VKAPIProxyConfig(BaseModel):
