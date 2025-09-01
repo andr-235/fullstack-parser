@@ -138,7 +138,7 @@ class TestValidateParsingRequest:
 
         errors = validate_parsing_request(data)
 
-        assert len(errors) == 5
+        assert len(errors) == 6
 
 
 class TestCalculateTaskProgress:

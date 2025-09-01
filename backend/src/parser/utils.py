@@ -342,6 +342,11 @@ def validate_vk_post_id(post_id: str) -> bool:
         bool: True если валиден
     """
     try:
+        # Handle both formats: owner_id_post_id and wall{owner_id}_{post_id}
+        if post_id.startswith("wall"):
+            # Remove "wall" prefix
+            post_id = post_id[4:]
+
         # Формат: owner_id_post_id
         parts = post_id.split("_")
         if len(parts) != 2:
