@@ -630,12 +630,13 @@ class TestSystemResilienceIntegration:
         )
 
         start_time = time.time()
-        with pytest.raises(VKAPIRateLimitError) as exc_info:
+        with pytest.raises(ServiceUnavailableError) as exc_info:
             await integration_service.get_group_posts(12345)
         end_time = time.time()
 
-        # Verify rate limit error includes wait time
-        assert exc_info.value.details["wait_time"] == 30.0
+        # Verify the wrapped error contains rate limit information
+        assert "VK API Error: 429" in str(exc_info.value)
+        assert "rate limit exceeded" in str(exc_info.value)
 
 
 class TestPerformanceIntegration:

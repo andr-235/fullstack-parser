@@ -198,7 +198,9 @@ class TestEstimateParsingTime:
         """Test time estimation for multiple groups"""
         result = estimate_parsing_time([123, 456, 789])
 
-        assert result == 90  # 30 seconds * 3 groups
+        assert (
+            result == 76
+        )  # 153 API calls * 0.5 seconds per call, max with 30
 
     def test_estimate_for_empty_groups(self):
         """Test time estimation for empty group list"""
