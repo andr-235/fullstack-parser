@@ -161,11 +161,18 @@ class StatisticsResponse(BaseModel):
 
 class APIResponse(BaseModel):
     """Base API response model"""
-    success: bool = Field(..., description="Success status")
-    data: Optional[Any] = Field(None, description="Response data")
-    message: Optional[str] = Field(None, description="Response message")
-    errors: Optional[List[str]] = Field(None, description="Error messages")
-    meta: MetaInfo = Field(default_factory=MetaInfo, description="Response metadata")
+
+    success: bool = Field(default=True, description="Success status")
+    data: Optional[Any] = Field(default=None, description="Response data")
+    message: Optional[str] = Field(
+        default=None, description="Response message"
+    )
+    errors: Optional[List[str]] = Field(
+        default=None, description="Error messages"
+    )
+    meta: MetaInfo = Field(
+        default_factory=MetaInfo, description="Response metadata"
+    )
 
 
 class BaseAPIException(HTTPException):
@@ -177,4 +184,6 @@ class BaseAPIException(HTTPException):
         detail: str = None,
         headers: Dict[str, str] = None,
     ):
-        super().__init__(status_code=status_code, detail=detail, headers=headers)
+        super().__init__(
+            status_code=status_code, detail=detail, headers=headers
+        )
