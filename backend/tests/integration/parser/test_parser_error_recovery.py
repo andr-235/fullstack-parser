@@ -285,6 +285,40 @@ class TestParserErrorRecoveryIntegration:
             circuit_breaker_api_call
         )
 
+        # Mock get_group_posts for successful attempts
+        async def mock_get_posts(*args, **kwargs):
+            return {
+                "posts": [
+                    {
+                        "id": 1001,
+                        "text": "Test post",
+                        "date": 1234567890,
+                        "likes": {"count": 10},
+                        "comments": {"count": 5},
+                        "from_id": 987654321,
+                    }
+                ]
+            }
+
+        # Mock get_post_comments for successful attempts
+        async def mock_get_comments(*args, **kwargs):
+            return {
+                "comments": [
+                    {
+                        "id": 2001,
+                        "post_id": 1001,
+                        "text": "Test comment",
+                        "date": 1234567890,
+                        "likes": {"count": 2},
+                        "from_id": 111111111,
+                        "author_name": "Test User",
+                    }
+                ]
+            }
+
+        mock_vk_api_service.get_group_posts.side_effect = mock_get_posts
+        mock_vk_api_service.get_post_comments.side_effect = mock_get_comments
+
         # First 5 attempts should fail
         for i in range(5):
             with pytest.raises(VKAPITimeoutException):
