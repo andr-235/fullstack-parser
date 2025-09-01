@@ -13,15 +13,15 @@ from ..config import settings
 class VKAPIConnectionConfig(BaseModel):
     """Конфигурация подключения к VK API"""
 
-    timeout: float = Field(default=30.0, description="Таймаут запросов")
+    timeout: float = Field(default=30.0, gt=0, description="Таймаут запросов")
     connection_timeout: float = Field(
-        default=10.0, description="Таймаут подключения"
+        default=10.0, gt=0, description="Таймаут подключения"
     )
     max_connections: int = Field(
-        default=100, description="Максимум соединений"
+        default=100, gt=0, description="Максимум соединений"
     )
     max_keepalive: int = Field(
-        default=10, description="Максимум keep-alive соединений"
+        default=10, gt=0, description="Максимум keep-alive соединений"
     )
 
 
