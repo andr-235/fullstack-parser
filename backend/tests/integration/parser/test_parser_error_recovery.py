@@ -118,39 +118,41 @@ class TestParserErrorRecoveryIntegration:
         async def partial_failure_posts(*args, **kwargs):
             nonlocal post_call_count
             post_call_count += 1
+            group_id = kwargs.get('group_id', args[0] if args else None)
 
-            if post_call_count == 1:
-                # First post succeeds
+            if group_id == 123456789:
+                # First group succeeds
                 return {"posts": [{"id": 1001, "text": "Post 1"}]}
-            elif post_call_count == 2:
-                # Second post fails
+            elif group_id == 987654321:
+                # Second group fails
                 raise VKAPITimeoutException(timeout=30)
             else:
-                # Third post succeeds
+                # Default success case
                 return {"posts": [{"id": 1003, "text": "Post 3"}]}
 
         mock_vk_api_service.get_group_posts.side_effect = partial_failure_posts
         mock_vk_api_service.get_post_comments.return_value = {"comments": []}
+        mock_vk_api_service.get_group_info.return_value = {"group": {"id": 987654321, "name": "Test Group"}}
 
         # Start parsing with multiple groups
         result1 = await error_prone_service.parse_group(
             group_id=123456789, max_posts=5, max_comments_per_post=10
         )
 
-        result2 = await error_prone_service.parse_group(
-            group_id=987654321, max_posts=5, max_comments_per_post=10
-        )
+        # Second group should fail with VKAPITimeoutException
+        with pytest.raises(VKAPITimeoutException):
+            await error_prone_service.parse_group(
+                group_id=987654321, max_posts=5, max_comments_per_post=10
+            )
 
         # Verify partial success is handled correctly
         assert result1["posts_found"] == 1  # First group succeeded
-        assert result2["posts_found"] == 1  # Second group succeeded
-        assert post_call_count == 2  # Only 2 API calls (one failed)
+        assert post_call_count == 2  # 2 API calls made (one failed, one succeeded)
 
         # Check that errors are recorded
         assert (
             len(result1["errors"]) == 0
         )  # No errors in successful operations
-        assert len(result2["errors"]) == 0
 
     @pytest.mark.asyncio
     async def test_service_degradation_recovery(

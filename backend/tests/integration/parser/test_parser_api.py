@@ -418,7 +418,7 @@ class TestParserAPIIntegration:
         """Test complete parsing workflow through API endpoints"""
         # 1. Start parsing
         start_response = api_client.post(
-            "/parser/start",
+            "/api/v1/parser/parse",
             json={
                 "group_ids": [123456789],
                 "max_posts": 10,
@@ -426,20 +426,20 @@ class TestParserAPIIntegration:
             },
         )
 
-        assert start_response.status_code == 200
+        assert start_response.status_code == 201
         start_data = start_response.json()
         task_id = start_data["data"]["task_id"]
 
         # 2. Check status
-        status_response = api_client.get(f"/parser/status/{task_id}")
+        status_response = api_client.get(f"/api/v1/parser/tasks/{task_id}")
 
         assert status_response.status_code == 200
         status_data = status_response.json()
-        assert status_data["data"]["task_id"] == task_id
+        assert status_data["task_id"] == task_id
 
         # 3. Stop parsing
         stop_response = api_client.post(
-            "/parser/stop", json={"task_id": task_id}
+            "/api/v1/parser/stop", json={"task_id": task_id}
         )
 
         assert stop_response.status_code == 200
@@ -447,7 +447,7 @@ class TestParserAPIIntegration:
         assert task_id in stop_data["data"]["stopped_tasks"]
 
         # 4. Verify final status
-        final_status_response = api_client.get(f"/parser/status/{task_id}")
+        final_status_response = api_client.get(f"/api/v1/parser/tasks/{task_id}")
         assert final_status_response.status_code == 200
 
         # Verify service calls

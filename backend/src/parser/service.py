@@ -21,6 +21,17 @@ from .client import VKAPIClient
 from ..exceptions import ValidationError, ServiceUnavailableError
 from ..vk_api.service import VKAPIService
 from ..vk_api.dependencies import create_vk_api_service
+from ..vk_api.exceptions import (
+    VKAPIRateLimitError,
+    VKAPIAccessDeniedError,
+    VKAPIInvalidTokenError,
+    VKAPIInvalidParamsError,
+    VKAPITimeoutError,
+    VKAPINetworkError,
+    VKAPIInvalidResponseError,
+    VKAPIError,
+)
+from .exceptions import VKAPITimeoutException
 
 
 class ParserService:
@@ -422,6 +433,22 @@ class ParserService:
                 "duration_seconds": 10.5,  # Заглушка
             }
 
+        except (
+            VKAPIRateLimitError,
+            VKAPIAccessDeniedError,
+            VKAPIInvalidTokenError,
+            VKAPIInvalidParamsError,
+            VKAPITimeoutError,
+            VKAPINetworkError,
+            VKAPIInvalidResponseError,
+            VKAPIError,
+            VKAPITimeoutException,
+        ):
+            # Re-raise VK API errors without wrapping for higher-level handling
+            raise
+        except ServiceUnavailableError:
+            # Re-raise service-level errors as-is
+            raise
         except Exception as e:
             raise ServiceUnavailableError(
                 f"Ошибка парсинга группы {group_id}: {str(e)}"

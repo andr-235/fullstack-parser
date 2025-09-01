@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 
 from .config import settings
 from .database import database_service
-from .exceptions import APIException
+from .exceptions import APIError
 from .responses import BaseAPIException
 
 # Импорт роутеров (будут добавлены по мере миграции модулей)
@@ -163,8 +163,8 @@ app.add_middleware(SimpleRateLimitMiddleware)
 
 
 # Обработчики исключений
-@app.exception_handler(APIException)
-async def handle_api_exception(request: Request, exc: APIException):
+@app.exception_handler(APIError)
+async def handle_api_exception(request: Request, exc: APIError):
     """Обработчик кастомных API исключений"""
     return JSONResponse(
         status_code=exc.status_code,

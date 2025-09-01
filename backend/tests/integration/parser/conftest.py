@@ -10,7 +10,9 @@ from unittest.mock import AsyncMock, Mock, MagicMock
 from datetime import datetime, timedelta
 from uuid import uuid4
 from typing import Dict, Any, List
+from fastapi.testclient import TestClient
 
+from src.main import app
 from src.parser.service import ParserService
 from src.parser.schemas import (
     ParseRequest,
@@ -55,6 +57,12 @@ def integration_parser_service(mock_vk_api_service):
     """ParserService instance for integration tests"""
     service = ParserService(vk_api_service=mock_vk_api_service)
     return service
+
+
+@pytest.fixture
+def mock_parser_service(integration_parser_service):
+    """Mock parser service for integration tests"""
+    return integration_parser_service
 
 
 @pytest.fixture
@@ -338,6 +346,12 @@ def mock_external_dependencies():
         "monitoring": AsyncMock(),
         "logging": AsyncMock(),
     }
+
+
+@pytest.fixture
+def api_client():
+    """FastAPI test client for integration tests"""
+    return TestClient(app)
 
 
 # Test utilities
