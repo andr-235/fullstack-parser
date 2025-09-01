@@ -342,18 +342,25 @@ def validate_vk_post_id(post_id: str) -> bool:
         bool: True если валиден
     """
     try:
-        # Handle both formats: owner_id_post_id and wall{owner_id}_{post_id}
+        # Handle different formats:
+        # 1. wall{owner_id}_{post_id}
+        # 2. owner_id_post_id
+        # 3. Pure numeric post_id (assumes positive owner_id)
         if post_id.startswith("wall"):
             # Remove "wall" prefix
             post_id = post_id[4:]
 
-        # Формат: owner_id_post_id
         parts = post_id.split("_")
-        if len(parts) != 2:
+        if len(parts) == 2:
+            # Format: owner_id_post_id
+            owner_id, post_id_num = int(parts[0]), int(parts[1])
+            return validate_vk_group_id(owner_id) and post_id_num > 0
+        elif len(parts) == 1 and parts[0].isdigit():
+            # Format: pure numeric post_id (assume positive owner_id)
+            post_id_num = int(parts[0])
+            return post_id_num > 0
+        else:
             return False
-
-        owner_id, post_id_num = int(parts[0]), int(parts[1])
-        return validate_vk_group_id(owner_id) and post_id_num > 0
 
     except (ValueError, IndexError):
         return False
@@ -375,6 +382,9 @@ def generate_task_summary(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
             "completed_tasks": 0,
             "running_tasks": 0,
             "failed_tasks": 0,
+            "total_posts": 0,
+            "total_comments": 0,
+            "total_errors": 0,
             "avg_completion_time": 0,
         }
 
@@ -382,6 +392,11 @@ def generate_task_summary(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
     completed_tasks = sum(1 for task in tasks if task["status"] == "completed")
     running_tasks = sum(1 for task in tasks if task["status"] == "running")
     failed_tasks = sum(1 for task in tasks if task["status"] == "failed")
+
+    # Дополнительная статистика по постам и комментариям
+    total_posts = sum(task.get("posts_found", 0) for task in tasks)
+    total_comments = sum(task.get("comments_found", 0) for task in tasks)
+    total_errors = sum(len(task.get("errors", [])) for task in tasks)
 
     # Среднее время выполнения
     completion_times = [
@@ -400,72 +415,52 @@ def generate_task_summary(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
         "completed_tasks": completed_tasks,
         "running_tasks": running_tasks,
         "failed_tasks": failed_tasks,
+        "total_posts": total_posts,
+        "total_comments": total_comments,
+        "total_errors": total_errors,
         "avg_completion_time": round(avg_completion_time, 2),
     }
 
 
 def create_parsing_report(
-    task_id: str,
-    group_results: List[Dict[str, Any]],
-    start_time: datetime,
-    end_time: datetime,
+    parsing_data: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Создать отчет о парсинге
 
     Args:
-        task_id: ID задачи
-        group_results: Результаты по группам
-        start_time: Время начала
-        end_time: Время окончания
+        parsing_data: Данные парсинга
 
     Returns:
         Dict[str, Any]: Отчет о парсинге
     """
-    total_groups = len(group_results)
-    successful_groups = sum(
-        1 for result in group_results if result.get("errors", [])
-    )
-    failed_groups = total_groups - successful_groups
+    # Extract data from parsing_data dictionary
+    group_id = parsing_data.get("group_id")
+    posts_found = parsing_data.get("posts_found", 0)
+    comments_found = parsing_data.get("comments_found", 0)
+    posts_saved = parsing_data.get("posts_saved", 0)
+    comments_saved = parsing_data.get("comments_saved", 0)
+    errors = parsing_data.get("errors", [])
+    duration_seconds = parsing_data.get("duration_seconds", 0)
 
-    total_posts = sum(result.get("posts_found", 0) for result in group_results)
-    total_comments = sum(
-        result.get("comments_found", 0) for result in group_results
+    # Calculate metrics
+    success_rate = (
+        round((posts_saved / posts_found) * 100, 1) if posts_found > 0 else 0
     )
-    total_errors = sum(
-        len(result.get("errors", [])) for result in group_results
+    average_comments_per_post = (
+        round(comments_found / posts_found, 1) if posts_found > 0 else 0
     )
-
-    duration = (end_time - start_time).total_seconds()
 
     return {
-        "task_id": task_id,
-        "summary": {
-            "total_groups": total_groups,
-            "successful_groups": successful_groups,
-            "failed_groups": failed_groups,
-            "total_posts": total_posts,
-            "total_comments": total_comments,
-            "total_errors": total_errors,
-        },
-        "performance": {
-            "duration_seconds": round(duration, 2),
-            "avg_posts_per_group": (
-                round(total_posts / total_groups, 2) if total_groups > 0 else 0
-            ),
-            "avg_comments_per_post": (
-                round(total_comments / total_posts, 2)
-                if total_posts > 0
-                else 0
-            ),
-            "success_rate": (
-                round(successful_groups / total_groups * 100, 2)
-                if total_groups > 0
-                else 0
-            ),
-        },
-        "group_results": group_results,
-        "generated_at": end_time.isoformat(),
+        "group_id": group_id,
+        "posts_found": posts_found,
+        "comments_found": comments_found,
+        "posts_saved": posts_saved,
+        "comments_saved": comments_saved,
+        "success_rate": success_rate,
+        "average_comments_per_post": average_comments_per_post,
+        "duration_seconds": duration_seconds,
+        "errors": errors,
     }
 
 
