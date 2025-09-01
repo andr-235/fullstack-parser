@@ -346,14 +346,59 @@ class TestParserErrorRecoveryIntegration:
         async def mixed_error_api_call(*args, **kwargs):
             nonlocal error_call_count, success_call_count
 
-            if "error_group" in str(args) or "error_group" in str(kwargs):
+            # Check if the group_id is the error group (999999999)
+            group_id = None
+            if args:
+                group_id = args[0]
+            elif "group_id" in kwargs:
+                group_id = kwargs["group_id"]
+
+            if group_id == 999999999:
                 error_call_count += 1
                 raise VKAPITimeoutException(timeout=30)
             else:
                 success_call_count += 1
-                return {"group": {"id": 123456789, "name": "Success Group"}}
+                return {
+                    "group": {
+                        "id": group_id or 123456789,
+                        "name": "Success Group",
+                    }
+                }
 
         mock_vk_api_service.get_group_info.side_effect = mixed_error_api_call
+
+        # Mock get_group_posts and get_post_comments for successful calls
+        async def mock_get_posts(*args, **kwargs):
+            return {
+                "posts": [
+                    {
+                        "id": 1001,
+                        "text": "Test post",
+                        "date": 1234567890,
+                        "likes": {"count": 10},
+                        "comments": {"count": 5},
+                        "from_id": 987654321,
+                    }
+                ]
+            }
+
+        async def mock_get_comments(*args, **kwargs):
+            return {
+                "comments": [
+                    {
+                        "id": 2001,
+                        "post_id": 1001,
+                        "text": "Test comment",
+                        "date": 1234567890,
+                        "likes": {"count": 2},
+                        "from_id": 111111111,
+                        "author_name": "Test User",
+                    }
+                ]
+            }
+
+        mock_vk_api_service.get_group_posts.side_effect = mock_get_posts
+        mock_vk_api_service.get_post_comments.side_effect = mock_get_comments
 
         # Start concurrent operations - some will succeed, some will fail
         async def run_with_error():
