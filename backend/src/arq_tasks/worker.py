@@ -8,27 +8,77 @@ import logging
 from arq import Worker
 from arq.connections import RedisSettings
 
-from .service import ALL_TASKS
+from .service import (
+    parse_vk_comments,
+    analyze_text_morphology,
+    extract_keywords,
+    send_notification,
+    generate_report,
+    cleanup_old_data,
+    process_batch_comments,
+    update_statistics,
+    backup_database,
+)
 from .config import arq_config
 from ..config import settings
 
 logger = logging.getLogger(__name__)
 
 
-class ArqWorkerSettings:
+# Настройки ARQ воркера согласно документации Context7
+
+# Настройки Redis подключения для WorkerSettings
+redis_settings = RedisSettings.from_dsn(settings.redis_url)
+
+
+def create_worker_settings(**overrides):
+    """
+    Создание настроек воркера с переопределениями
+
+    Args:
+        **overrides: Параметры для переопределения
+
+    Returns:
+        WorkerSettings с переопределенными параметрами
+    """
+    # Создаем копию настроек
+    settings_obj = WorkerSettings()
+
+    # Применяем переопределения
+    for key, value in overrides.items():
+        if hasattr(settings_obj, key):
+            setattr(settings_obj, key, value)
+            logger.info(f"Переопределен параметр {key} = {value}")
+
+    return settings_obj
+
+
+# Экземпляр настроек для использования ARQ CLI
+# Согласно документации Context7, WorkerSettings должен быть классом с атрибутами
+class WorkerSettings:
     """
     Настройки для ARQ воркера
 
-    Используется CLI командой arq для запуска воркера.
+    Functions должен быть списком функций, а не словарем!
     """
 
-    # Список функций, которые может выполнять воркер
-    functions = ALL_TASKS
+    # Список функций, которые может выполнять воркер (список, не словарь!)
+    functions = [
+        parse_vk_comments,
+        analyze_text_morphology,
+        extract_keywords,
+        send_notification,
+        generate_report,
+        cleanup_old_data,
+        process_batch_comments,
+        update_statistics,
+        backup_database,
+    ]
 
     # Настройки Redis подключения
-    redis_settings = RedisSettings.from_dsn(settings.redis_url)
+    redis_settings = redis_settings
 
-    # Настройки воркера
+    # Основные настройки воркера
     max_jobs = arq_config.max_jobs
     job_timeout = arq_config.job_timeout
     keep_result = arq_config.keep_result
@@ -52,43 +102,6 @@ class ArqWorkerSettings:
     job_serializer = None  # Используем pickle по умолчанию
     job_deserializer = None  # Используем pickle по умолчанию
 
-    # Настройки логирования
-    @classmethod
-    def logging_config(cls, verbose: bool) -> dict:
-        """
-        Конфигурация логирования для воркера
 
-        Args:
-            verbose: Включить verbose режим
-
-        Returns:
-            Конфигурация логирования
-        """
-        from arq.logs import default_log_config
-
-        return default_log_config(verbose)
-
-
-# Экземпляр настроек для использования в CLI
-worker_settings = ArqWorkerSettings()
-
-
-def create_worker_settings(**overrides) -> ArqWorkerSettings:
-    """
-    Создание настроек воркера с переопределениями
-
-    Args:
-        **overrides: Параметры для переопределения
-
-    Returns:
-        ArqWorkerSettings с переопределенными параметрами
-    """
-    settings = ArqWorkerSettings()
-
-    # Применяем переопределения
-    for key, value in overrides.items():
-        if hasattr(settings, key):
-            setattr(settings, key, value)
-            logger.info(f"Переопределен параметр {key} = {value}")
-
-    return settings
+# ARQ ищет эту переменную в модуле
+worker_settings = WorkerSettings()
