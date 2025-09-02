@@ -25,6 +25,8 @@ case "$1" in
         ;;
     *)
         # Default to FastAPI if no specific command
-        run_fastapi "$@"
+        echo "Unknown command: $1"
+        echo "Available commands: uvicorn, fastapi, arq, worker"
+        exit 1
         ;;
 esac

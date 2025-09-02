@@ -42,7 +42,7 @@ services:
       - DEBUG=false
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/vk_parser
-      - CORS_ORIGINS=["http://localhost:3000", "http://nginx:80"]
+      - CORS_ORIGINS=http://localhost:3000,http://nginx:80
     expose:
       - "8000"
     depends_on:
