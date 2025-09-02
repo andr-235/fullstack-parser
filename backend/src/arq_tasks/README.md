@@ -56,10 +56,10 @@ src/arq/
 docker-compose -f docker-compose.prod.yml up arq_worker
 
 # Или напрямую через arq CLI
-arq src.arq.worker.worker_settings
+arq src.arq_tasks.worker.worker_settings
 
 # С дополнительными опциями
-arq src.arq.worker.worker_settings --watch /app/src --verbose
+arq src.arq_tasks.worker.worker_settings --watch /app/src --verbose
 ```
 
 ### 2. Добавление Задачи
@@ -218,10 +218,10 @@ GET /api/v1/arq/health
 
 ```bash
 # Запуск воркера в verbose режиме
-arq src.arq.worker.worker_settings --verbose
+arq src.arq_tasks.worker.worker_settings --verbose
 
 # Использование --watch для авто-перезапуска при изменениях
-arq src.arq.worker.worker_settings --watch /app/src
+arq src.arq_tasks.worker.worker_settings --watch /app/src
 ```
 
 ## Производительность
@@ -295,7 +295,7 @@ async def run_my_task(param1: str, param2: int):
 
 ```bash
 # Запуск воркера для разработки
-arq src.arq.worker.worker_settings --watch /app/src
+arq src.arq_tasks.worker.worker_settings --watch /app/src
 
 # Тестирование через API
 curl -X POST "http://localhost:8000/api/v1/arq/enqueue" \

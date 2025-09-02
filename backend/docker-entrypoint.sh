@@ -10,7 +10,7 @@ run_fastapi() {
 # Function to run ARQ worker
 run_arq_worker() {
     echo "⚡ Starting ARQ worker..."
-    exec arq src.arq.worker.worker_settings "$@"
+    exec arq src.arq_tasks.worker.worker_settings "$@"
 }
 
 # Main entrypoint logic
