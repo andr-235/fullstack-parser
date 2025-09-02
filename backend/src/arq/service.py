@@ -10,7 +10,7 @@ import logging
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
 
-from ..infrastructure.arq_service import arq_service
+# Removed circular import - arq_service will be imported where needed
 from ..config import config_service
 from ..database import database_service
 
