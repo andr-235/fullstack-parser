@@ -7,7 +7,7 @@
 
 from typing import Any, Dict, List, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -40,11 +40,36 @@ class Settings(BaseSettings):
         description="Версия VK API",
     )
 
-    # CORS
-    cors_origins: List[str] = Field(
-        default=["http://localhost:3000", "http://127.0.0.1:3000"],
-        description="Разрешенные origins для CORS",
+    # CORS (читаем как строку, чтобы избежать JSON-декодинга pydantic-settings)
+    cors_origins_raw: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000",
+        alias="CORS_ORIGINS",
+        description="Разрешенные origins для CORS (через запятую или JSON-массив)",
     )
+
+    @property
+    def cors_origins(self) -> List[str]:
+        """Нормализует CORS_ORIGINS из env: поддерживает CSV и JSON-массив.
+
+        - Если значение похоже на JSON-массив, пытаемся распарсить его
+        - Иначе разбиваем по запятой
+        """
+        raw = (self.cors_origins_raw or "").strip()
+        if not raw:
+            return []
+        # JSON-массив
+        if raw.startswith("[") and raw.endswith("]"):
+            try:
+                import json
+
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return [str(x).strip() for x in parsed if str(x).strip()]
+            except Exception:
+                # Падает на невалидном JSON – fallback на CSV
+                pass
+        # CSV
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
     # Основные настройки
     debug: bool = Field(
