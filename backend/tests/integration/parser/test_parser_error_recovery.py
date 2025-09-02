@@ -196,9 +196,12 @@ class TestParserErrorRecoveryIntegration:
 
         mock_vk_api_service.get_group_posts.side_effect = partial_failure_posts
         mock_vk_api_service.get_post_comments.return_value = {"comments": []}
-        mock_vk_api_service.get_group_info.return_value = {
-            "group": {"id": 987654321, "name": "Test Group"}
-        }
+
+        async def mock_get_group_info(*args, **kwargs):
+            group_id = kwargs.get("group_id", args[0] if args else None)
+            return {"group": {"id": group_id, "name": "Test Group"}}
+
+        mock_vk_api_service.get_group_info.side_effect = mock_get_group_info
 
         # Start parsing with multiple groups
         result1 = await error_prone_service.parse_group(
@@ -214,8 +217,8 @@ class TestParserErrorRecoveryIntegration:
         # Verify partial success is handled correctly
         assert result1["posts_found"] == 1  # First group succeeded
         assert (
-            post_call_count == 2
-        )  # 2 API calls made (one failed, one succeeded)
+            post_call_count == 4
+        )  # 4 API calls: 1 successful + 3 retries for failed group (retry mechanism)
 
         # Check that errors are recorded
         assert (

@@ -28,6 +28,58 @@ class TestParserPerformanceIntegration:
     @pytest.fixture
     def performance_service(self, mock_vk_api_service):
         """ParserService configured for performance testing"""
+
+        # Configure mock to return proper async responses
+        async def mock_get_group_info(*args, **kwargs):
+            group_id = kwargs.get("group_id", args[0] if args else 100)
+            return {
+                "group": {
+                    "id": group_id,
+                    "name": f"Performance Test Group {group_id}",
+                    "is_closed": False,
+                    "members_count": 1000,
+                }
+            }
+
+        async def mock_get_group_posts(*args, **kwargs):
+            count = kwargs.get("count", 50)
+            return {
+                "posts": [
+                    {
+                        "id": 1000 + i,
+                        "text": f"Performance test post {i}",
+                        "date": 1234567890,
+                        "likes": {"count": 10},
+                        "comments": {"count": 5},
+                        "from_id": 987654321,
+                    }
+                    for i in range(count)
+                ]
+            }
+
+        async def mock_get_post_comments(*args, **kwargs):
+            count = kwargs.get("count", 100)
+            return {
+                "comments": [
+                    {
+                        "id": 2000 + i,
+                        "post_id": kwargs.get("post_id", 1000),
+                        "text": f"Performance test comment {i}",
+                        "date": 1234567890,
+                        "likes": {"count": 2},
+                        "from_id": 111111111 + i,
+                        "author_name": f"User {i}",
+                    }
+                    for i in range(count)
+                ]
+            }
+
+        mock_vk_api_service.get_group_info.side_effect = mock_get_group_info
+        mock_vk_api_service.get_group_posts.side_effect = mock_get_group_posts
+        mock_vk_api_service.get_post_comments.side_effect = (
+            mock_get_post_comments
+        )
+
         service = ParserService(vk_api_service=mock_vk_api_service)
         return service
 
