@@ -375,14 +375,14 @@ class TestParserAPIErrorHandling:
     def error_client(self):
         """Test client configured to raise errors"""
         app = FastAPI()
-        app.include_router(router)
+        app.include_router(router, prefix="/api/v1")
 
         # Mock service that always raises errors
         error_service = AsyncMock()
-        error_service.start_parsing.side_effect = Exception(
+        error_service.start_parsing.side_effect = RuntimeError(
             "Database connection failed"
         )
-        error_service.get_task_status.side_effect = Exception(
+        error_service.get_task_status.side_effect = RuntimeError(
             "Cache unavailable"
         )
 
@@ -393,7 +393,8 @@ class TestParserAPIErrorHandling:
     def test_service_unavailable_error_handling(self, error_client):
         """Test handling of service unavailable errors"""
         response = error_client.post(
-            "/parser/start", json={"group_ids": [123456789], "max_posts": 10}
+            "/api/v1/parser/parse",
+            json={"group_ids": [123456789], "max_posts": 10},
         )
 
         assert response.status_code == 500
@@ -405,7 +406,7 @@ class TestParserAPIErrorHandling:
 
     def test_network_timeout_error_handling(self, error_client):
         """Test handling of network timeout errors"""
-        response = error_client.get("/parser/status/test-task-123")
+        response = error_client.get("/api/v1/parser/tasks/test-task-123")
 
         assert response.status_code == 500
         data = response.json()
