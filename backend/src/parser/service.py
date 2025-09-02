@@ -13,6 +13,7 @@
     parser = get_parser_service(vk_api_service=get_vk_api_service())
 """
 
+import asyncio
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from uuid import uuid4
@@ -390,15 +391,17 @@ class ParserService:
             comments_saved = 0
             errors = []
 
-            # Получаем информацию о группе через VK API сервис
-            group_info_result = await self.vk_api.get_group_info(group_id)
+            # Получаем информацию о группе через VK API сервис с retry
+            group_info_result = await self._retry_vk_call(
+                self.vk_api.get_group_info, group_id
+            )
             if not group_info_result.get("group"):
                 raise ServiceUnavailableError(f"Группа {group_id} не найдена")
             group_info = group_info_result["group"]
 
-            # Получаем посты группы через VK API сервис
-            posts_result = await self.vk_api.get_group_posts(
-                group_id=group_id, count=max_posts
+            # Получаем посты группы через VK API сервис с retry
+            posts_result = await self._retry_vk_call(
+                self.vk_api.get_group_posts, group_id=group_id, count=max_posts
             )
             posts = posts_result.get("posts", [])
             posts_found = len(posts)
@@ -406,7 +409,8 @@ class ParserService:
             # Для каждого поста получаем комментарии через VK API сервис
             for post in posts[:max_posts]:  # Ограничиваем количество
                 try:
-                    post_comments_result = await self.vk_api.get_post_comments(
+                    post_comments_result = await self._retry_vk_call(
+                        self.vk_api.get_post_comments,
                         group_id=group_id,
                         post_id=post["id"],
                         count=max_comments_per_post,
@@ -454,6 +458,46 @@ class ParserService:
             raise ServiceUnavailableError(
                 f"Ошибка парсинга группы {group_id}: {str(e)}"
             )
+
+    async def _retry_vk_call(
+        self, func, *args, max_retries: int = 3, delay: float = 1.0, **kwargs
+    ):
+        """
+        Retry VK API call with exponential backoff
+
+        Args:
+            func: Async function to call
+            *args: Positional arguments for the function
+            max_retries: Maximum number of retry attempts
+            delay: Initial delay between retries
+            **kwargs: Keyword arguments for the function
+
+        Returns:
+            Result of the successful function call
+
+        Raises:
+            Last exception if all retries fail
+        """
+        last_exception = None
+
+        for attempt in range(max_retries):
+            try:
+                return await func(*args, **kwargs)
+            except VKAPITimeoutException as e:
+                last_exception = e
+                if attempt < max_retries - 1:  # Don't delay on last attempt
+                    await asyncio.sleep(
+                        delay * (2**attempt)
+                    )  # Exponential backoff
+            except VKAPINetworkError as e:
+                last_exception = e
+                if attempt < max_retries - 1:  # Don't delay on last attempt
+                    await asyncio.sleep(
+                        delay * (2**attempt)
+                    )  # Exponential backoff
+
+        # If we get here, all retries failed
+        raise last_exception
 
 
 # Экспорт
