@@ -28,7 +28,7 @@ from ..pagination import (
     SearchParam,
 )
 from ..infrastructure.arq_service import arq_service
-from ..arq.schemas import TaskEnqueueRequest, TaskStatusResponse
+from ..arq_tasks.schemas import TaskEnqueueRequest, TaskStatusResponse
 from ..responses import APIResponse
 
 router = APIRouter(

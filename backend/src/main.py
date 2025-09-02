@@ -48,7 +48,7 @@ from .handlers import (
 )
 
 # Импорт ARQ модуля
-from .arq.router import router as arq_router
+from .arq_tasks.router import router as arq_router
 from .infrastructure.arq_service import arq_service
 
 # Простое логирование

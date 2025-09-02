@@ -9,6 +9,7 @@ import logging
 from typing import Any, Dict, Optional, Union
 from datetime import datetime, timedelta
 
+# Import ARQ components directly to avoid circular imports
 from arq import create_pool
 from arq.connections import ArqRedis, RedisSettings
 from arq.jobs import Job
