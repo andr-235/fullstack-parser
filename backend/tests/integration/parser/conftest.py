@@ -219,19 +219,24 @@ def setup_integration_environment(
     mock_task_storage,
 ):
     """Setup complete integration environment"""
-    # Configure VK API service mocks
-    mock_vk_api_service.get_group_info.return_value = sample_vk_api_responses[
-        "group_info"
-    ]
-    mock_vk_api_service.get_group_posts.return_value = sample_vk_api_responses[
-        "group_posts"
-    ]
-    mock_vk_api_service.get_post_comments.return_value = (
-        sample_vk_api_responses["post_comments"]
-    )
-    mock_vk_api_service.get_user_info.return_value = sample_vk_api_responses[
-        "user_info"
-    ]
+
+    # Configure VK API service mocks with async functions
+    async def mock_get_group_info(*args, **kwargs):
+        return sample_vk_api_responses["group_info"]
+
+    async def mock_get_group_posts(*args, **kwargs):
+        return sample_vk_api_responses["group_posts"]
+
+    async def mock_get_post_comments(*args, **kwargs):
+        return sample_vk_api_responses["post_comments"]
+
+    async def mock_get_user_info(*args, **kwargs):
+        return sample_vk_api_responses["user_info"]
+
+    mock_vk_api_service.get_group_info.side_effect = mock_get_group_info
+    mock_vk_api_service.get_group_posts.side_effect = mock_get_group_posts
+    mock_vk_api_service.get_post_comments.side_effect = mock_get_post_comments
+    mock_vk_api_service.get_user_info.side_effect = mock_get_user_info
 
     # Task storage is handled by service mocking
 
