@@ -247,7 +247,7 @@ jobs:
 
       - name: Setup SSH
         if: env.PRODUCTION_SSH_KEY != ''
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.9.1
         with:
           # yamllint disable-line
           ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
