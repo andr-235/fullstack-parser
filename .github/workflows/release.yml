@@ -237,7 +237,7 @@ jobs:
 
   # Deploy to production after release
   deploy-production:
-    runs-on: ubuntu-latest
+    runs-on: debian
     needs: [should-release, create-release]
     if: needs.should-release.outputs.should_release == 'true' && github.ref == 'refs/heads/main'
 
@@ -247,50 +247,46 @@ jobs:
 
       - name: Deploy release to production
         run: |
-          # yamllint disable-line rule:truthy
-          ssh -o StrictHostKeyChecking=no -p ${{ secrets.PRODUCTION_PORT }} ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
-            cd ${{ secrets.PRODUCTION_APP_DIR }}
-            echo "Deploying release ${{ needs.should-release.outputs.tag }} to production..."
+          echo "Deploying release ${{ needs.should-release.outputs.tag }} to production..."
 
-            # Pull latest changes
-            git pull origin main
+          # Pull latest changes
+          git pull origin main
 
-            # Update to latest images
-            docker-compose -f docker-compose.prod.yml pull
+          # Update to latest images
+          docker-compose -f docker-compose.prod.yml pull
 
-            # Deploy with zero-downtime
-            docker-compose -f docker-compose.prod.yml up -d
+          # Deploy with zero-downtime
+          docker-compose -f docker-compose.prod.yml up -d
 
-            # Run health checks
-            echo "Running post-deployment health checks..."
-            sleep 30
+          # Run health checks
+          echo "Running post-deployment health checks..."
+          sleep 30
 
-            if curl -f http://localhost:8000/health; then
-              echo "✅ Backend is healthy"
-            else
-              echo "❌ Backend health check failed"
-              exit 1
-            fi
+          if curl -f http://localhost:8000/health; then
+            echo "✅ Backend is healthy"
+          else
+            echo "❌ Backend health check failed"
+            exit 1
+          fi
 
-            if curl -f http://localhost:3000/api/health; then
-              echo "✅ Frontend is healthy"
-            else
-              echo "❌ Frontend health check failed"
-              exit 1
-            fi
+          if curl -f http://localhost:3000/api/health; then
+            echo "✅ Frontend is healthy"
+          else
+            echo "❌ Frontend health check failed"
+            exit 1
+          fi
 
-            if curl -f http://localhost/health; then
-              echo "✅ Nginx is healthy"
-            else
-              echo "❌ Nginx health check failed"
-              exit 1
-            fi
+          if curl -f http://localhost/health; then
+            echo "✅ Nginx is healthy"
+          else
+            echo "❌ Nginx health check failed"
+            exit 1
+          fi
 
-            # Clean up old images
-            docker image prune -f
+          # Clean up old images
+          docker image prune -f
 
-            echo "🎉 Release ${{ needs.should-release.outputs.tag }} deployed successfully!"
-          EOF
+          echo "🎉 Release ${{ needs.should-release.outputs.tag }} deployed successfully!"
 
       - name: Notify release success
         if: success() && env.SLACK_WEBHOOK_URL != ''

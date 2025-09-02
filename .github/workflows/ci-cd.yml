@@ -354,7 +354,7 @@ jobs:
 
   # Deployment
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: debian
     needs: [docker-build, security-scan]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     environment:
@@ -369,78 +369,73 @@ jobs:
 
       - name: Deploy to production server
         run: |
-          ssh -o StrictHostKeyChecking=no -p ${{ secrets.PRODUCTION_PORT }} ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
-            cd ${{ secrets.PRODUCTION_APP_DIR }}
-            echo "Pulling latest changes..."
-            git pull origin main
+          echo "Pulling latest changes..."
+          git pull origin main
 
-            echo "Updating environment variables..."
-            # Update .env.prod if needed
-            cp .env.prod .env.prod.backup
+          echo "Updating environment variables..."
+          # Update .env.prod if needed
+          cp .env.prod .env.prod.backup
 
-            echo "Building and deploying services..."
-            docker-compose -f docker-compose.prod.yml down
-            docker-compose -f docker-compose.prod.yml pull
-            docker-compose -f docker-compose.prod.yml up -d --build
+          echo "Building and deploying services..."
+          docker-compose -f docker-compose.prod.yml down
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d --build
 
-            echo "Running database migrations..."
-            docker-compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
+          echo "Running database migrations..."
+          docker-compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
 
-            echo "Waiting for services to be healthy..."
-            docker-compose -f docker-compose.prod.yml exec -T backend python -c "
-            import time
-            import requests
-            for i in range(30):
-                try:
-                    response = requests.get('http://localhost:8000/health')
-                    if response.status_code == 200:
-                        print('Backend is healthy!')
-                        break
-                except:
-                    pass
-                time.sleep(10)
-            else:
-                print('Backend health check failed!')
-                exit(1)
-            "
+          echo "Waiting for services to be healthy..."
+          docker-compose -f docker-compose.prod.yml exec -T backend python -c "
+          import time
+          import requests
+          for i in range(30):
+              try:
+                  response = requests.get('http://localhost:8000/health')
+                  if response.status_code == 200:
+                      print('Backend is healthy!')
+                      break
+              except:
+                  pass
+              time.sleep(10)
+          else:
+              print('Backend health check failed!')
+              exit(1)
+          "
 
-            echo "Cleaning up old images..."
-            docker image prune -f
+          echo "Cleaning up old images..."
+          docker image prune -f
 
-            echo "Deployment completed successfully!"
-          EOF
+          echo "Deployment completed successfully!"
 
       - name: Run post-deployment tests
         run: |
-          ssh -o StrictHostKeyChecking=no -p ${{ secrets.PRODUCTION_PORT }} ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
-            echo "Running health checks..."
+          echo "Running health checks..."
 
-            # Check backend health
-            if curl -f http://localhost:8000/health; then
-              echo "✅ Backend is healthy"
-            else
-              echo "❌ Backend health check failed"
-              exit 1
-            fi
+          # Check backend health
+          if curl -f http://localhost:8000/health; then
+            echo "✅ Backend is healthy"
+          else
+            echo "❌ Backend health check failed"
+            exit 1
+          fi
 
-            # Check frontend health
-            if curl -f http://localhost:3000/api/health; then
-              echo "✅ Frontend is healthy"
-            else
-              echo "❌ Frontend health check failed"
-              exit 1
-            fi
+          # Check frontend health
+          if curl -f http://localhost:3000/api/health; then
+            echo "✅ Frontend is healthy"
+          else
+            echo "❌ Frontend health check failed"
+            exit 1
+          fi
 
-            # Check nginx
-            if curl -f http://localhost/health; then
-              echo "✅ Nginx is healthy"
-            else
-              echo "❌ Nginx health check failed"
-              exit 1
-            fi
+          # Check nginx
+          if curl -f http://localhost/health; then
+            echo "✅ Nginx is healthy"
+          else
+            echo "❌ Nginx health check failed"
+            exit 1
+          fi
 
-            echo "All services are running correctly!"
-          EOF
+          echo "All services are running correctly!"
 
       - name: Notify deployment status
         if: always() && env.SLACK_WEBHOOK_URL != ''
@@ -453,7 +448,7 @@ jobs:
 
   # Rollback job (manual trigger)
   rollback:
-    runs-on: ubuntu-latest
+    runs-on: debian
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'rollback'
 
     steps:
@@ -462,19 +457,15 @@ jobs:
 
       - name: Rollback deployment
         run: |
-          ssh -o StrictHostKeyChecking=no -p ${{ secrets.PRODUCTION_PORT }} ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
-            cd ${{ secrets.PRODUCTION_APP_DIR }}
+          echo "Rolling back to previous deployment..."
+          docker-compose -f docker-compose.prod.yml down
 
-            echo "Rolling back to previous deployment..."
-            docker-compose -f docker-compose.prod.yml down
+          # Get previous image tags from git
+          PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
+          docker tag ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:$PREVIOUS_COMMIT ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:latest
+          docker tag ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:$PREVIOUS_COMMIT ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest
+          docker tag ${{ env.REGISTRY }}/${{ env.NGINX_IMAGE }}:$PREVIOUS_COMMIT ${{ env.REGISTRY }}/${{ env.NGINX_IMAGE }}:latest
 
-            # Get previous image tags from git
-            PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
-            docker tag ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:$PREVIOUS_COMMIT ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:latest
-            docker tag ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:$PREVIOUS_COMMIT ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest
-            docker tag ${{ env.REGISTRY }}/${{ env.NGINX_IMAGE }}:$PREVIOUS_COMMIT ${{ env.REGISTRY }}/${{ env.NGINX_IMAGE }}:latest
+          docker-compose -f docker-compose.prod.yml up -d
 
-            docker-compose -f docker-compose.prod.yml up -d
-
-            echo "Rollback completed!"
-          EOF
+          echo "Rollback completed!"
