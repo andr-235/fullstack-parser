@@ -73,6 +73,12 @@ const nextConfig = {
       use: ['@svgr/webpack'],
     })
 
+    // Настройки для алиасов путей
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': require('path').resolve(__dirname),
+    }
+
     // Оптимизации для production
     if (!dev && !isServer) {
       config.optimization.splitChunks = {

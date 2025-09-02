@@ -3,7 +3,16 @@
 import { useState, type ReactNode } from 'react'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+
+// Conditionally import devtools only in development
+let ReactQueryDevtools: any = null
+if (process.env.NODE_ENV === 'development') {
+  try {
+    ReactQueryDevtools = require('@tanstack/react-query-devtools').ReactQueryDevtools
+  } catch {
+    // Devtools not available, skip silently
+  }
+}
 
 // Импортируем конфигурацию кеширования напрямую
 const CACHE_CONFIG = {
@@ -41,7 +50,7 @@ export function QueryProvider({ children }: QueryProviderProps) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      {process.env.NODE_ENV === 'development' && (
+      {ReactQueryDevtools && (
         <ReactQueryDevtools initialIsOpen={false} />
       )}
     </QueryClientProvider>
