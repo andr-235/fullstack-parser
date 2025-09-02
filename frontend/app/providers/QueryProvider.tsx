@@ -1,14 +1,20 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useState, type ReactNode, type ComponentType } from 'react'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
+// Type-only import for devtools component
+type ReactQueryDevtoolsType = ComponentType<{ initialIsOpen?: boolean }>
+
 // Conditionally import devtools only in development
-let ReactQueryDevtools: any = null
+let ReactQueryDevtools: ReactQueryDevtoolsType | null = null
 if (process.env.NODE_ENV === 'development') {
   try {
-    ReactQueryDevtools = require('@tanstack/react-query-devtools').ReactQueryDevtools
+    // Use require for synchronous loading in development
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const devtoolsModule = require('@tanstack/react-query-devtools')
+    ReactQueryDevtools = devtoolsModule.ReactQueryDevtools as ReactQueryDevtoolsType
   } catch {
     // Devtools not available, skip silently
   }
