@@ -1,5 +1,9 @@
 name: Security Audit
 
+# Recommended: restrict permissions by default (principle of least privilege)
+permissions:
+  contents: read
+
 on:
   schedule:
     # Run weekly on Monday at 9 AM UTC
@@ -182,6 +186,9 @@ jobs:
     runs-on: ubuntu-latest
     # yamllint disable-line rule:truthy
     if: ${{ github.event.inputs.audit_type == 'full' || github.event_name == 'schedule' }}
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
       - name: Checkout code
@@ -223,6 +230,12 @@ jobs:
         with:
           name: container-security-report
           path: trivy-results.sarif
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
 
   # Infrastructure Security Scan
   infrastructure-security:

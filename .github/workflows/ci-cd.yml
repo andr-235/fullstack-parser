@@ -332,6 +332,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
+      security-events: write
 
     steps:
       - name: Checkout code
