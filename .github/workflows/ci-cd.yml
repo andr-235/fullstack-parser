@@ -354,7 +354,7 @@ jobs:
 
   # Deployment
   deploy:
-    runs-on: debian
+    runs-on: [self-hosted, linux, x64]
     needs: [docker-build, security-scan]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     environment:
@@ -448,7 +448,7 @@ jobs:
 
   # Rollback job (manual trigger)
   rollback:
-    runs-on: debian
+    runs-on: [self-hosted, linux, x64]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'rollback'
 
     steps:
