@@ -3,7 +3,7 @@
 # =============================================================================
 
 # ----------- Stage 1: Dependencies (with enhanced caching) -----------
-FROM oven/bun:1.2.19-alpine AS deps
+FROM oven/bun:1.2.21-alpine AS deps
 
 # Установка системных зависимостей
 RUN apk add --no-cache libc6-compat
@@ -26,7 +26,7 @@ RUN --mount=type=cache,target=/tmp/bun-cache \
     bun install
 
 # ----------- Stage 2: Production Dependencies -----------
-FROM oven/bun:1.2.19-alpine AS production-deps
+FROM oven/bun:1.2.21-alpine AS production-deps
 
 WORKDIR /app
 
@@ -41,7 +41,7 @@ RUN --mount=type=cache,target=/tmp/bun-cache \
     bun install --production
 
 # ----------- Stage 3: Builder (optimized build) -----------
-FROM oven/bun:1.2.19-alpine AS builder
+FROM oven/bun:1.2.21-alpine AS builder
 
 WORKDIR /app
 
