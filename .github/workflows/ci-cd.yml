@@ -367,15 +367,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH
-        if: env.PRODUCTION_SSH_KEY != ''
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
-
       - name: Deploy to production server
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.PRODUCTION_PORT }} ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
             cd ${{ secrets.PRODUCTION_APP_DIR }}
             echo "Pulling latest changes..."
             git pull origin main
@@ -418,7 +412,7 @@ jobs:
 
       - name: Run post-deployment tests
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.PRODUCTION_PORT }} ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
             echo "Running health checks..."
 
             # Check backend health
@@ -466,15 +460,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH
-        if: env.PRODUCTION_SSH_KEY != ''
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
-
       - name: Rollback deployment
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.PRODUCTION_PORT }} ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
             cd ${{ secrets.PRODUCTION_APP_DIR }}
 
             echo "Rolling back to previous deployment..."
