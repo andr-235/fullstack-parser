@@ -28,6 +28,12 @@ def mock_settings_service():
     service.export_settings = AsyncMock()
     service.import_settings = AsyncMock()
 
+    # Repository-like methods for when service is used as repository
+    service.get_settings = AsyncMock()
+    service.save_settings = AsyncMock()
+    service.get_settings_history = AsyncMock()
+    service.reset_to_defaults = AsyncMock()
+
     return service
 
 
@@ -70,6 +76,22 @@ def sample_settings_data():
             "level": "INFO",
             "format": "json",
             "file_path": "/var/log/app.log",
+            "include_timestamp": True,
+        },
+        "cache": {
+            "backend": "memory",
+            "ttl": 3600,
+            "max_size": 1000,
+        },
+        "security": {
+            "secret_key": "test_secret_key",
+            "algorithm": "HS256",
+            "access_token_expire_minutes": 30,
+        },
+        "database": {
+            "pool_size": 10,
+            "max_overflow": 20,
+            "pool_recycle": 3600,
         },
     }
 
