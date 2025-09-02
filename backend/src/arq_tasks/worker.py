@@ -5,7 +5,7 @@
 """
 
 import logging
-from arq import Worker
+from arq import Worker, func
 from arq.connections import RedisSettings
 
 from .service import (
@@ -29,6 +29,19 @@ logger = logging.getLogger(__name__)
 
 # Настройки Redis подключения для WorkerSettings
 redis_settings = RedisSettings.from_dsn(settings.redis_url)
+
+# Создаем объекты Function для ARQ согласно документации
+arq_functions = [
+    func(parse_vk_comments),
+    func(analyze_text_morphology),
+    func(extract_keywords),
+    func(send_notification),
+    func(generate_report),
+    func(cleanup_old_data),
+    func(process_batch_comments),
+    func(update_statistics),
+    func(backup_database),
+]
 
 
 def create_worker_settings(**overrides):
@@ -62,18 +75,8 @@ class WorkerSettings:
     Functions должен быть списком функций, а не словарем!
     """
 
-    # Список функций, которые может выполнять воркер (список, не словарь!)
-    functions = [
-        parse_vk_comments,
-        analyze_text_morphology,
-        extract_keywords,
-        send_notification,
-        generate_report,
-        cleanup_old_data,
-        process_batch_comments,
-        update_statistics,
-        backup_database,
-    ]
+    # Список функций, которые может выполнять воркер (список объектов Function!)
+    functions = arq_functions
 
     # Настройки Redis подключения
     redis_settings = redis_settings
