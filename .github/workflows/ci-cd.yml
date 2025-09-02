@@ -374,7 +374,11 @@ jobs:
 
           echo "Updating environment variables..."
           # Update .env.prod if needed
-          cp .env.prod .env.prod.backup
+          if [ -f .env.prod ]; then
+            cp .env.prod .env.prod.backup
+          else
+            echo "Warning: .env.prod not found, skipping backup"
+          fi
 
           echo "Building and deploying services..."
           docker-compose -f docker-compose.prod.yml down
