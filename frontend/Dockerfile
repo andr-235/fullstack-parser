@@ -52,6 +52,9 @@ COPY --from=deps /app/bun.lock ./bun.lock
 # Копирование исходного кода
 COPY . .
 
+# Убеждаемся что public директория существует
+RUN ls -la /app/public || echo "Public directory not found, creating..." && mkdir -p /app/public
+
 # Настройка переменных окружения для сборки
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
@@ -77,6 +80,9 @@ RUN apk add --no-cache dumb-init curl
 
 # Копирование production зависимостей
 COPY --from=production-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# Создание директории public если она не существует
+RUN mkdir -p ./public
 
 # Копирование только необходимых файлов
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
