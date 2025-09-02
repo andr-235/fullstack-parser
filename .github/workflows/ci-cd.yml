@@ -369,6 +369,13 @@ jobs:
 
       - name: Deploy to production server
         run: |
+          echo "Current directory: $(pwd)"
+          echo "Changing to /opt/app directory..."
+          cd /opt/app
+          echo "New directory: $(pwd)"
+          echo "Files in /opt/app:"
+          ls -la | head -10
+
           echo "Pulling latest changes..."
           git pull origin main
 
@@ -413,6 +420,8 @@ jobs:
 
       - name: Run post-deployment tests
         run: |
+          echo "Current directory: $(pwd)"
+          cd /opt/app
           echo "Running health checks..."
 
           # Check backend health
@@ -461,6 +470,8 @@ jobs:
 
       - name: Rollback deployment
         run: |
+          echo "Current directory: $(pwd)"
+          cd /opt/app
           echo "Rolling back to previous deployment..."
           docker-compose -f docker-compose.prod.yml down
 
