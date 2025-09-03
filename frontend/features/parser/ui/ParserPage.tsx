@@ -59,9 +59,9 @@ export function ParserPage() {
             }
 
             await startParser({
-                group_id: groupId,
+                group_ids: [groupId],
                 max_posts: 100,
-                forceReparse: false,
+                force_reparse: false,
             })
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Не удалось запустить парсер'
@@ -108,22 +108,18 @@ export function ParserPage() {
                 console.log('Available groups:', groups?.length || 0)
 
                 const result = await startBulkParser({
-                    groups: groups?.map(g => g.id) || [],
-                    keywords: [], // TODO: Добавить выбор ключевых слов
+                    group_ids: groups?.map(g => g.id) || [],
                     max_posts: config.maxPosts,
-                    forceReparse: config.forceReparse,
-                    max_concurrent: 3, // Максимум 3 одновременных задачи
+                    force_reparse: config.forceReparse,
                 })
 
                 console.log('Bulk parser result:', result)
 
                 // Показываем результат массового парсинга
-                if (result.failed_groups.length > 0) {
-                    setError(`Запущено ${result.started_tasks} задач из ${result.total_groups}. Ошибки: ${result.failed_groups.length}`)
-                } else if (result.started_tasks === 0) {
-                    setError(`Нет задач для запуска. Проверьте наличие активных групп.`)
+                if (result.task_id) {
+                    setError(`Успешно запущена задача парсинга с ID: ${result.task_id}`)
                 } else {
-                    setError(`Успешно запущено ${result.started_tasks} задач парсинга из ${result.total_groups} групп`)
+                    setError('Задача парсинга запущена, но не удалось получить ID задачи')
                 }
 
                 // Обновляем состояние через некоторое время
@@ -131,9 +127,9 @@ export function ParserPage() {
             } else if (config.groupId) {
                 // Запуск парсинга одной группы
                 await startParser({
-                    group_id: config.groupId,
+                    group_ids: [config.groupId],
                     max_posts: config.maxPosts,
-                    forceReparse: config.forceReparse,
+                    force_reparse: config.forceReparse,
                 })
             }
         } catch (err) {
@@ -248,7 +244,7 @@ export function ParserPage() {
                 <div className="lg:col-span-2">
                     <ParserProgress
                         state={state}
-                        isRunning={isRunning}
+                        isRunning={!!isRunning}
                     />
                 </div>
 
@@ -257,8 +253,9 @@ export function ParserPage() {
                     <LiveStats
                         stats={stats}
                         globalStats={globalStats}
+                        state={state}
                         loading={loading}
-                        isRunning={isRunning}
+                        isRunning={!!isRunning}
                     />
                 </div>
             </div>
@@ -267,7 +264,7 @@ export function ParserPage() {
             <ParserQueue
                 tasks={tasks}
                 loading={loading}
-                currentTaskId={state?.task?.task_id || ''}
+                currentTaskId=""
             />
 
             {/* Настройки и управление */}

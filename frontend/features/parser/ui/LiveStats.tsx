@@ -32,16 +32,17 @@ import {
  Area,
  AreaChart
 } from 'recharts'
-import type { ParserStats, ParserGlobalStats } from '@/entities/parser'
+import type { ParserStats, ParserGlobalStats, ParserState } from '@/entities/parser'
 
 interface LiveStatsProps {
  stats?: ParserStats | null
  globalStats?: ParserGlobalStats | null
+ state?: ParserState | null
  loading?: boolean
  isRunning?: boolean
 }
 
-export function LiveStats({ stats, globalStats, loading, isRunning }: LiveStatsProps) {
+export function LiveStats({ stats, globalStats, state, loading, isRunning }: LiveStatsProps) {
  const [animatedValues, setAnimatedValues] = useState({
   totalComments: 0,
   totalPosts: 0,
@@ -54,12 +55,12 @@ export function LiveStats({ stats, globalStats, loading, isRunning }: LiveStatsP
   if (!stats) return
 
   const targetValues = {
-   totalComments: globalStats?.total_comments || 0,
-   totalPosts: stats.total_posts_processed || 0,
-   successRate: stats.total_runs > 0
-    ? Math.round((stats.successful_runs / stats.total_runs) * 100)
+   totalComments: globalStats?.total_comments_found || 0,
+   totalPosts: stats.total_posts_found || 0,
+   successRate: stats.total_tasks > 0
+    ? Math.round((stats.completed_tasks / stats.total_tasks) * 100)
     : 0,
-   avgDuration: Math.round(stats.average_duration || 0)
+   avgDuration: Math.round(stats.average_task_duration || 0)
   }
 
   const animateValue = (key: keyof typeof animatedValues, start: number, end: number, duration: number = 1500) => {
@@ -107,33 +108,33 @@ export function LiveStats({ stats, globalStats, loading, isRunning }: LiveStatsP
  const chartData = [
   {
    name: 'Комментарии',
-   value: globalStats?.total_comments || 0,
+   value: globalStats?.total_comments_found || 0,
    color: '#3b82f6'
   },
   {
    name: 'Посты',
-   value: stats?.total_posts_processed || 0,
+   value: stats?.total_posts_found || 0,
    color: '#10b981'
   },
   {
    name: 'Ключевые слова',
-   value: globalStats?.comments_with_keywords || 0,
+   value: globalStats?.total_comments_found || 0, // В новом API нет comments_with_keywords
    color: '#f59e0b'
   }
  ]
 
  const pieData = [
-  { name: 'Успешные', value: stats?.successful_runs || 0, color: '#10b981' },
-  { name: 'Ошибки', value: (stats?.total_runs || 0) - (stats?.successful_runs || 0), color: '#ef4444' }
+  { name: 'Успешные', value: stats?.completed_tasks || 0, color: '#10b981' },
+  { name: 'Ошибки', value: stats?.failed_tasks || 0, color: '#ef4444' }
  ]
 
  const trendData = [
-  { time: '00:00', posts: Math.floor((stats?.total_posts_processed || 0) * 0.1) },
-  { time: '04:00', posts: Math.floor((stats?.total_posts_processed || 0) * 0.25) },
-  { time: '08:00', posts: Math.floor((stats?.total_posts_processed || 0) * 0.5) },
-  { time: '12:00', posts: Math.floor((stats?.total_posts_processed || 0) * 0.75) },
-  { time: '16:00', posts: Math.floor((stats?.total_posts_processed || 0) * 0.9) },
-  { time: '20:00', posts: stats?.total_posts_processed || 0 }
+  { time: '00:00', posts: Math.floor((stats?.total_posts_found || 0) * 0.1) },
+  { time: '04:00', posts: Math.floor((stats?.total_posts_found || 0) * 0.25) },
+  { time: '08:00', posts: Math.floor((stats?.total_posts_found || 0) * 0.5) },
+  { time: '12:00', posts: Math.floor((stats?.total_posts_found || 0) * 0.75) },
+  { time: '16:00', posts: Math.floor((stats?.total_posts_found || 0) * 0.9) },
+  { time: '20:00', posts: stats?.total_posts_found || 0 }
  ]
 
  if (loading) {
@@ -185,7 +186,7 @@ export function LiveStats({ stats, globalStats, loading, isRunning }: LiveStatsP
         <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
        </div>
       </div>
-      {globalStats?.total_comments && globalStats.total_comments > 0 && (
+      {globalStats?.total_comments_found && globalStats.total_comments_found > 0 && (
        <Badge variant="secondary" className="mt-2 text-xs">
         <TrendingUp className="h-3 w-3 mr-1" />
         Активно
@@ -205,7 +206,7 @@ export function LiveStats({ stats, globalStats, loading, isRunning }: LiveStatsP
         <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
        </div>
       </div>
-      {stats?.total_posts_processed && stats.total_posts_processed > 0 && (
+      {stats?.total_posts_found && stats.total_posts_found > 0 && (
        <Badge variant="secondary" className="mt-2 text-xs">
         <TrendingUp className="h-3 w-3 mr-1" />
         Растет
@@ -252,7 +253,7 @@ export function LiveStats({ stats, globalStats, loading, isRunning }: LiveStatsP
         <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
        </div>
       </div>
-      {stats?.average_duration && (
+      {stats?.average_task_duration && (
        <Badge variant="outline" className="mt-2 text-xs">
         <RefreshCw className="h-3 w-3 mr-1" />
         Обновлено
@@ -419,9 +420,9 @@ export function LiveStats({ stats, globalStats, loading, isRunning }: LiveStatsP
        <div>
         <p className="text-sm font-medium text-muted-foreground">Активные группы</p>
         <p className="text-xl font-bold">
-         {globalStats?.active_groups || 0}
+         0
          <span className="text-sm text-muted-foreground ml-1">
-          / {globalStats?.total_groups || 0}
+          / 0
          </span>
         </p>
        </div>
@@ -438,9 +439,9 @@ export function LiveStats({ stats, globalStats, loading, isRunning }: LiveStatsP
        <div>
         <p className="text-sm font-medium text-muted-foreground">Ключевые слова</p>
         <p className="text-xl font-bold">
-         {globalStats?.active_keywords || 0}
+         0
          <span className="text-sm text-muted-foreground ml-1">
-          / {globalStats?.total_keywords || 0}
+          / 0
          </span>
         </p>
        </div>
@@ -457,7 +458,7 @@ export function LiveStats({ stats, globalStats, loading, isRunning }: LiveStatsP
        <div>
         <p className="text-sm font-medium text-muted-foreground">Найдено совпадений</p>
         <p className="text-xl font-bold">
-         {formatNumber(globalStats?.comments_with_keywords || 0)}
+         {formatNumber(globalStats?.total_comments_found || 0)}
         </p>
        </div>
       </div>
@@ -466,7 +467,7 @@ export function LiveStats({ stats, globalStats, loading, isRunning }: LiveStatsP
    </div>
 
    {/* Время последнего парсинга */}
-   {globalStats?.last_parse_time && (
+   {state?.last_activity && (
     <Card>
      <CardContent className="p-4">
       <div className="flex items-center gap-3">
@@ -474,9 +475,9 @@ export function LiveStats({ stats, globalStats, loading, isRunning }: LiveStatsP
         <Activity className="h-5 w-5 text-green-600 dark:text-green-400" />
        </div>
        <div>
-        <p className="text-sm font-medium text-muted-foreground">Последний парсинг</p>
+        <p className="text-sm font-medium text-muted-foreground">Последняя активность</p>
         <p className="text-lg font-semibold">
-         {new Date(globalStats.last_parse_time).toLocaleString('ru-RU')}
+         {new Date(state.last_activity).toLocaleString('ru-RU')}
         </p>
         {isRunning && (
          <Badge variant="default" className="mt-2">

@@ -49,13 +49,16 @@ export interface GroupsResponse {
   total: number
   page: number
   size: number
-  total_pages: number
+  pages: number
 }
 
 export interface Keyword {
   id: number
-  keyword: string
-  is_active: boolean
+  word: string
+  status: {
+    is_active: boolean
+    is_archived: boolean
+  }
   created_at: string
   updated_at: string
 }
@@ -65,7 +68,7 @@ export interface KeywordsResponse {
   total: number
   page: number
   size: number
-  total_pages: number
+  pages: number
 }
 
 export interface RecentActivityItem {

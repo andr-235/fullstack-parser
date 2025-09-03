@@ -28,19 +28,19 @@ export function ParserProgress({ state, isRunning }: ParserProgressProps) {
 
  // Обновляем время выполнения каждую секунду
  useEffect(() => {
-  if (!isRunning || !state?.task?.started_at) {
+  if (!isRunning || !state?.last_activity) {
    setElapsedTime(0)
    return
   }
 
   const interval = setInterval(() => {
-   const startTime = new Date(state.task!.started_at)
+   const startTime = new Date(state?.last_activity || Date.now())
    const now = new Date()
    setElapsedTime(differenceInSeconds(now, startTime))
   }, 1000)
 
   return () => clearInterval(interval)
- }, [isRunning, state?.task?.started_at])
+ }, [isRunning, state?.last_activity])
 
  const formatElapsedTime = (seconds: number) => {
   const hours = Math.floor(seconds / 3600)
@@ -54,26 +54,16 @@ export function ParserProgress({ state, isRunning }: ParserProgressProps) {
  }
 
  const calculateSpeed = () => {
-  if (!state?.task?.posts_processed || elapsedTime === 0) return 0
-  return Math.round((state.task.posts_processed / elapsedTime) * 60) // постов в минуту
+  if (!state?.total_posts_found || elapsedTime === 0) return 0
+  return Math.round((state.total_posts_found / elapsedTime) * 60) // постов в минуту
  }
 
  const getEstimatedTimeRemaining = () => {
-  if (!state?.task?.progress || state.task.progress === 0 || !elapsedTime) return null
-
-  const remainingProgress = 1 - state.task.progress
-  const remainingTime = (elapsedTime / state.task.progress) * remainingProgress
-
-  if (remainingTime < 60) {
-   return `~${Math.round(remainingTime)} сек`
-  } else if (remainingTime < 3600) {
-   return `~${Math.round(remainingTime / 60)} мин`
-  } else {
-   return `~${Math.round(remainingTime / 3600)} ч`
-  }
+  // В новом API нет информации о прогрессе, возвращаем null
+  return null
  }
 
- if (!isRunning || !state?.task) {
+ if (!isRunning) {
   return (
    <Card>
     <CardHeader>
@@ -95,7 +85,7 @@ export function ParserProgress({ state, isRunning }: ParserProgressProps) {
   )
  }
 
- const progress = state.task.progress ? state.task.progress * 100 : 0
+ const progress = 0 // В новом API нет информации о прогрессе
  const speed = calculateSpeed()
  const estimatedTime = getEstimatedTimeRemaining()
 
@@ -152,7 +142,7 @@ export function ParserProgress({ state, isRunning }: ParserProgressProps) {
       <div>
        <p className="text-sm font-medium text-muted-foreground">Обработано постов</p>
        <p className="text-lg font-bold">
-        {state.task.posts_processed || 0}
+        {state?.total_posts_found || 0}
        </p>
       </div>
      </div>
@@ -175,17 +165,13 @@ export function ParserProgress({ state, isRunning }: ParserProgressProps) {
       <span className="text-sm font-medium">Текущая группа</span>
      </div>
      <p className="text-sm">
-      {state.task.group_name ? (
-       <span className="font-medium">{state.task.group_name}</span>
-      ) : (
-       <span className="text-muted-foreground">ID: {state.task.group_id}</span>
-      )}
+      <span className="text-muted-foreground">Парсер запущен</span>
      </p>
      <p className="text-xs text-muted-foreground mt-1">
-      Начало: {formatDistanceToNow(new Date(state.task.started_at), {
+      Начало: {state?.last_activity ? formatDistanceToNow(new Date(state.last_activity), {
        addSuffix: true,
        locale: ru
-      })}
+      }) : 'Неизвестно'}
      </p>
     </div>
 

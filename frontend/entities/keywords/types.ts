@@ -16,6 +16,7 @@ export interface Keyword {
   description?: string
   priority: number
   match_count: number
+  total_matches?: number // Для обратной совместимости
   created_at: string
   updated_at: string
 }
@@ -43,11 +44,12 @@ export const KEYWORD_CATEGORIES_MAP = {
   education: 'Образование',
 } as const
 
-export type KeywordCategory = (typeof KEYWORD_CATEGORIES)[number]['key']
+export type KeywordCategoryKey = (typeof KEYWORD_CATEGORIES)[number]['key']
 
 export interface KeywordsFilters {
   active_only?: boolean
   category?: string
+  search?: string
   priority_min?: number
   priority_max?: number
   match_count_min?: number
@@ -86,6 +88,7 @@ export interface UpdateKeywordRequest {
   category_description?: string
   description?: string
   priority?: number
+  is_active?: boolean
 }
 
 export interface KeywordBulkAction {

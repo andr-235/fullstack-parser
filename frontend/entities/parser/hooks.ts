@@ -12,6 +12,8 @@ import {
   ParserTaskFilters,
   StartBulkParserForm,
   BulkParseResponse,
+  ParseStatus,
+  StopParseRequest,
 } from './types'
 
 // Хук для управления состоянием парсера
@@ -302,9 +304,9 @@ export const useParser = (autoRefreshInterval: number = 3000) => {
   const { stopParser, stopping } = useStopParser()
   const { tasks, loading: tasksLoading, refetch: refetchTasks } = useParserTasks({ size: 10 })
 
-  const isRunning = state?.status === 'running'
-  const isStopped = state?.status === 'stopped'
-  const hasError = state?.status === 'failed'
+  const isRunning = state?.is_running && state.active_tasks > 0
+  const isStopped = !state?.is_running && state?.active_tasks === 0
+  const hasError = false // В новом API статус ошибки не определен в ParserState
 
   const loading = stateLoading || statsLoading || globalStatsLoading
   const processing = starting || stopping

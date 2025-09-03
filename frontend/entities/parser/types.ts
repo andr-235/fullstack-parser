@@ -121,3 +121,5 @@ export interface StartBulkParserForm {
 export interface BulkParseResponse extends ParseTaskResponse {
   // Наследует все поля из ParseTaskResponse
 }
+
+// Типы уже экспортированы выше как интерфейсы

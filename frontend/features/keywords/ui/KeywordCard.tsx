@@ -62,7 +62,7 @@ export function KeywordCard({ keyword, onUpdate, onDelete, onToggleStatus }: Key
  const handleToggleStatus = async () => {
   if (onToggleStatus) {
    try {
-    await onToggleStatus(keyword.id, !keyword.is_active)
+    await onToggleStatus(keyword.id, !keyword.status.is_active)
    } catch (err) {
     console.error('Failed to toggle keyword status:', err)
    }
@@ -82,7 +82,7 @@ export function KeywordCard({ keyword, onUpdate, onDelete, onToggleStatus }: Key
         "{keyword.word}"
        </CardTitle>
        <p className="text-xs text-muted-foreground">
-        {keyword.category || 'Без категории'}
+        {keyword.category?.name || 'Без категории'}
        </p>
       </div>
      </div>
@@ -90,23 +90,12 @@ export function KeywordCard({ keyword, onUpdate, onDelete, onToggleStatus }: Key
      <div className="flex items-center gap-2">
       <div className="flex gap-1">
        <Badge
-        variant={keyword.is_active ? 'default' : 'secondary'}
+        variant={keyword.status.is_active ? 'default' : 'secondary'}
         className="text-xs"
        >
-        {keyword.is_active ? 'Активное' : 'Неактивное'}
+        {keyword.status.is_active ? 'Активное' : 'Неактивное'}
        </Badge>
-       {keyword.is_case_sensitive && (
-        <Badge variant="outline" className="text-xs">
-         <Type className="h-3 w-3 mr-1" />
-         Регистр
-        </Badge>
-       )}
-       {keyword.is_whole_word && (
-        <Badge variant="outline" className="text-xs">
-         <WholeWord className="h-3 w-3 mr-1" />
-         Целое слово
-        </Badge>
-       )}
+
       </div>
 
       <DropdownMenu>
@@ -128,7 +117,7 @@ export function KeywordCard({ keyword, onUpdate, onDelete, onToggleStatus }: Key
         )}
         {onToggleStatus && (
          <DropdownMenuItem onClick={handleToggleStatus}>
-          {keyword.is_active ? (
+          {keyword.status.is_active ? (
            <>
             <PowerOff className="mr-2 h-4 w-4" />
             Деактивировать
@@ -162,7 +151,7 @@ export function KeywordCard({ keyword, onUpdate, onDelete, onToggleStatus }: Key
      <div className="flex items-center gap-2">
       <MessageSquare className="h-4 w-4 text-muted-foreground" />
       <span className="text-sm">
-       {keyword.total_matches.toLocaleString()} совпадений
+       {(keyword.total_matches || keyword.match_count || 0).toLocaleString()} совпадений
       </span>
      </div>
 
@@ -212,11 +201,9 @@ export function KeywordCard({ keyword, onUpdate, onDelete, onToggleStatus }: Key
       <KeywordForm
        initialData={{
         word: keyword.word || '',
-        category: keyword.category,
+        category: keyword.category?.name || '',
         description: keyword.description,
-        is_active: keyword.is_active,
-        is_case_sensitive: keyword.is_case_sensitive,
-        is_whole_word: keyword.is_whole_word,
+        is_active: keyword.status.is_active,
        }}
        onSubmit={handleUpdate}
        onCancel={() => setShowEditForm(false)}

@@ -84,7 +84,7 @@ export function KeywordsList({
      </CardHeader>
      <CardContent>
       <div className="text-2xl font-bold">
-       {keywords.filter(k => k.is_active).length}
+       {keywords.filter(k => k.status.is_active).length}
       </div>
      </CardContent>
     </Card>
@@ -96,7 +96,7 @@ export function KeywordsList({
      </CardHeader>
      <CardContent>
       <div className="text-2xl font-bold">
-       {keywords.reduce((sum, keyword) => sum + keyword.total_matches, 0).toLocaleString()}
+       {keywords.reduce((sum, keyword) => sum + keyword.match_count, 0).toLocaleString()}
       </div>
      </CardContent>
     </Card>
