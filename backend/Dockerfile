@@ -3,7 +3,7 @@
 # =============================================================================
 
 # Build stage
-FROM python:3.11-slim AS builder
+FROM python:3.13-slim AS builder
 
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -32,7 +32,7 @@ RUN poetry config virtualenvs.in-project true
 RUN poetry install --only=main --no-dev
 
 # Production stage
-FROM python:3.11-slim AS runtime
+FROM python:3.13-slim AS runtime
 
 # Install runtime system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
