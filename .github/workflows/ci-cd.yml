@@ -388,15 +388,15 @@ jobs:
           fi
 
           echo "Building and deploying services..."
-          docker-compose -f docker-compose.prod.yml down
-          docker-compose -f docker-compose.prod.yml pull
-          docker-compose -f docker-compose.prod.yml up -d --build
+          docker compose -f docker-compose.prod.yml down
+          docker compose -f docker-compose.prod.yml pull
+          docker compose -f docker-compose.prod.yml up -d --build
 
           echo "Running database migrations..."
-          docker-compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
+          docker compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
 
           echo "Waiting for services to be healthy..."
-          docker-compose -f docker-compose.prod.yml exec -T backend python -c "
+          docker compose -f docker-compose.prod.yml exec -T backend python -c "
           import time
           import requests
           for i in range(30):
