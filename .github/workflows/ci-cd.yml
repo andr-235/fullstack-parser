@@ -473,7 +473,7 @@ jobs:
           echo "Current directory: $(pwd)"
           cd /opt/app
           echo "Rolling back to previous deployment..."
-          docker-compose -f docker-compose.prod.yml down
+          docker compose -f docker-compose.prod.yml down
 
           # Get previous image tags from git
           PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
@@ -481,6 +481,6 @@ jobs:
           docker tag ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:$PREVIOUS_COMMIT ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest
           docker tag ${{ env.REGISTRY }}/${{ env.NGINX_IMAGE }}:$PREVIOUS_COMMIT ${{ env.REGISTRY }}/${{ env.NGINX_IMAGE }}:latest
 
-          docker-compose -f docker-compose.prod.yml up -d
+          docker compose -f docker-compose.prod.yml up -d
 
           echo "Rollback completed!"
