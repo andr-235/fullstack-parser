@@ -138,8 +138,41 @@ export const useParserTasks = (filters?: ParserTaskFilters) => {
   }
 }
 
+// Хук для получения конкретной задачи парсера
+export const useParserTask = (taskId: string) => {
+  const [task, setTask] = useState<ParseStatus | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchTask = useCallback(async () => {
+    if (!taskId) return
+
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await apiClient.getParserTask(taskId)
+      setTask(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch parser task')
+    } finally {
+      setLoading(false)
+    }
+  }, [taskId])
+
+  useEffect(() => {
+    fetchTask()
+  }, [fetchTask])
+
+  return {
+    task,
+    loading,
+    error,
+    refetch: fetchTask,
+  }
+}
+
 // Хук для истории парсера
-export const useParserHistory = (skip = 0, limit = 10) => {
+export const useParserHistory = (page = 1, size = 10) => {
   const [history, setHistory] = useState<ParserHistoryResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -148,14 +181,14 @@ export const useParserHistory = (skip = 0, limit = 10) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient.getParserHistory(skip, limit)
+      const data = await apiClient.getParserHistory(page, size)
       setHistory(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch parser history')
     } finally {
       setLoading(false)
     }
-  }, [skip, limit])
+  }, [page, size])
 
   useEffect(() => {
     fetchHistory()
@@ -191,15 +224,12 @@ export const useStartParser = () => {
 
   const startBulkParser = useCallback(
     async (bulkData: StartBulkParserForm): Promise<BulkParseResponse> => {
-      console.log('Hook: Starting bulk parser with data:', bulkData)
       setStarting(true)
       setError(null)
       try {
         const result = await apiClient.startBulkParser(bulkData)
-        console.log('Hook: Bulk parser completed with result:', result)
         return result
       } catch (err) {
-        console.error('Hook: Bulk parser failed:', err)
         const errorMessage = err instanceof Error ? err.message : 'Failed to start bulk parser'
         setError(errorMessage)
         throw new Error(errorMessage)
@@ -223,11 +253,11 @@ export const useStopParser = () => {
   const [stopping, setStopping] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const stopParser = useCallback(async () => {
+  const stopParser = useCallback(async (request: StopParseRequest = {}) => {
     setStopping(true)
     setError(null)
     try {
-      const result = await apiClient.stopParser()
+      const result = await apiClient.stopParser(request)
       return result
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to stop parser'

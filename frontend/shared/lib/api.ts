@@ -7,6 +7,12 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ''
 
 // Import types
+import type {
+  Comment as VKComment,
+  CommentsResponse,
+  CommentFilters,
+  UpdateCommentRequest,
+} from '@/entities/comment'
 import type { GlobalStats, DashboardStats } from '@/entities/dashboard'
 import type {
   VKGroup,
@@ -14,6 +20,10 @@ import type {
   CreateGroupRequest,
   UpdateGroupRequest,
   GroupsFilters,
+  GroupStats,
+  GroupsStats,
+  GroupBulkAction,
+  GroupBulkResponse,
   UploadGroupsResponse,
   UploadProgress,
 } from '@/entities/groups'
@@ -23,14 +33,13 @@ import type {
   CreateKeywordRequest,
   UpdateKeywordRequest,
   KeywordsFilters,
+  KeywordsSearchRequest,
+  KeywordStats,
+  KeywordCategoriesResponse,
+  KeywordBulkAction,
+  KeywordBulkResponse,
   UploadKeywordsResponse,
 } from '@/entities/keywords'
-import type {
-  Comment as VKComment,
-  CommentsResponse,
-  CommentFilters,
-  UpdateCommentRequest,
-} from '@/entities/comment'
 import type {
   ParseTaskCreate,
   ParseTaskResponse,
@@ -42,6 +51,9 @@ import type {
   ParserTaskFilters,
   StartBulkParserForm,
   BulkParseResponse,
+  ParseStatus,
+  StopParseRequest,
+  StopParseResponse,
 } from '@/entities/parser'
 
 export class ApiClient {
@@ -51,10 +63,7 @@ export class ApiClient {
     this.baseURL = baseURL
   }
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
 
     const config: RequestInit = {
@@ -69,41 +78,51 @@ export class ApiClient {
       const response = await fetch(url, config)
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
-        )
+        let errorMessage = `HTTP error! status: ${response.status}`
+
+        try {
+          const errorData = await response.json()
+          // Backend может возвращать ошибки в формате { error: { message: string } }
+          if (errorData.error?.message) {
+            errorMessage = errorData.error.message
+          } else if (errorData.message) {
+            errorMessage = errorData.message
+          } else if (errorData.detail) {
+            errorMessage = errorData.detail
+          }
+        } catch {
+          // Если не удается распарсить JSON, используем стандартное сообщение
+        }
+
+        throw new Error(errorMessage)
+      }
+
+      // Для некоторых endpoints может не быть тела ответа
+      if (response.status === 204) {
+        return undefined as T
       }
 
       return await response.json()
     } catch (error) {
-      console.error(`API request failed: ${endpoint}`, error)
-      throw error
+      if (error instanceof Error) {
+        throw error
+      }
+      throw new Error('Unknown error occurred')
     }
   }
 
-  async getComment(id: number): Promise<VKComment> {
+  async getComment(_id: number): Promise<VKComment> {
     // TODO: Endpoint не реализован на backend
-    console.warn(`getComment(${id}): Endpoint not implemented on backend yet`)
     throw new Error('Endpoint not implemented')
   }
 
-  async updateComment(
-    id: number,
-    data: UpdateCommentRequest
-  ): Promise<VKComment> {
+  async updateComment(_id: number, _data: UpdateCommentRequest): Promise<VKComment> {
     // TODO: Endpoint не реализован на backend
-    console.warn(
-      `updateComment(${id}): Endpoint not implemented on backend yet`
-    )
     throw new Error('Endpoint not implemented')
   }
 
-  async deleteComment(id: number): Promise<void> {
+  async deleteComment(_id: number): Promise<void> {
     // TODO: Endpoint не реализован на backend
-    console.warn(
-      `deleteComment(${id}): Endpoint not implemented on backend yet`
-    )
     throw new Error('Endpoint not implemented')
   }
 
@@ -119,13 +138,17 @@ export class ApiClient {
   // Groups API
   async getGroups(params?: GroupsFilters): Promise<GroupsResponse> {
     const queryParams = new URLSearchParams()
-    if (params?.active_only !== undefined)
-      queryParams.append('active_only', params.active_only.toString())
+    if (params?.is_active !== undefined)
+      queryParams.append('is_active', params.is_active.toString())
     if (params?.search) queryParams.append('search', params.search)
-    if (params?.page !== undefined)
-      queryParams.append('page', params.page.toString())
-    if (params?.size !== undefined)
-      queryParams.append('size', params.size.toString())
+    if (params?.has_monitoring !== undefined)
+      queryParams.append('has_monitoring', params.has_monitoring.toString())
+    if (params?.min_members !== undefined)
+      queryParams.append('min_members', params.min_members.toString())
+    if (params?.max_members !== undefined)
+      queryParams.append('max_members', params.max_members.toString())
+    if (params?.page !== undefined) queryParams.append('page', params.page.toString())
+    if (params?.size !== undefined) queryParams.append('size', params.size.toString())
 
     const queryString = queryParams.toString()
     const endpoint = `/api/v1/groups${queryString ? `?${queryString}` : ''}`
@@ -157,8 +180,57 @@ export class ApiClient {
     return this.request(`/api/v1/groups/${id}`)
   }
 
-  async getGroupStats(id: number): Promise<any> {
+  async getGroupStats(id: number): Promise<GroupStats> {
     return this.request(`/api/v1/groups/${id}/stats`)
+  }
+
+  async getGroupsOverviewStats(): Promise<GroupsStats> {
+    return this.request('/api/v1/groups/stats/overview')
+  }
+
+  async searchGroups(q: string, params?: GroupsFilters): Promise<GroupsResponse> {
+    const queryParams = new URLSearchParams()
+    queryParams.append('q', q)
+    if (params?.is_active !== undefined)
+      queryParams.append('is_active', params.is_active.toString())
+    if (params?.page !== undefined) queryParams.append('page', params.page.toString())
+    if (params?.size !== undefined) queryParams.append('size', params.size.toString())
+
+    return this.request(`/api/v1/groups/search/?${queryParams.toString()}`)
+  }
+
+  async activateGroup(id: number): Promise<VKGroup> {
+    return this.request(`/api/v1/groups/${id}/activate`, {
+      method: 'POST',
+    })
+  }
+
+  async deactivateGroup(id: number): Promise<VKGroup> {
+    return this.request(`/api/v1/groups/${id}/deactivate`, {
+      method: 'POST',
+    })
+  }
+
+  async bulkActivateGroups(actionData: GroupBulkAction): Promise<GroupBulkResponse> {
+    return this.request('/api/v1/groups/bulk/activate', {
+      method: 'POST',
+      body: JSON.stringify(actionData),
+    })
+  }
+
+  async bulkDeactivateGroups(actionData: GroupBulkAction): Promise<GroupBulkResponse> {
+    return this.request('/api/v1/groups/bulk/deactivate', {
+      method: 'POST',
+      body: JSON.stringify(actionData),
+    })
+  }
+
+  async getGroupByVkId(vkId: number): Promise<VKGroup> {
+    return this.request(`/api/v1/groups/vk/${vkId}`)
+  }
+
+  async getGroupByScreenName(screenName: string): Promise<VKGroup> {
+    return this.request(`/api/v1/groups/screen/${screenName}`)
   }
 
   async uploadGroups(formData: FormData): Promise<UploadGroupsResponse> {
@@ -174,14 +246,19 @@ export class ApiClient {
   // Keywords API
   async getKeywords(params?: KeywordsFilters): Promise<KeywordsResponse> {
     const queryParams = new URLSearchParams()
-    if (params?.page !== undefined)
-      queryParams.append('page', params.page.toString())
-    if (params?.size !== undefined)
-      queryParams.append('size', params.size.toString())
+    if (params?.page !== undefined) queryParams.append('page', params.page.toString())
+    if (params?.size !== undefined) queryParams.append('size', params.size.toString())
     if (params?.active_only !== undefined)
       queryParams.append('active_only', params.active_only.toString())
     if (params?.category) queryParams.append('category', params.category)
-    if (params?.search) queryParams.append('q', params.search)
+    if (params?.priority_min !== undefined)
+      queryParams.append('priority_min', params.priority_min.toString())
+    if (params?.priority_max !== undefined)
+      queryParams.append('priority_max', params.priority_max.toString())
+    if (params?.match_count_min !== undefined)
+      queryParams.append('match_count_min', params.match_count_min.toString())
+    if (params?.match_count_max !== undefined)
+      queryParams.append('match_count_max', params.match_count_max.toString())
 
     const queryString = queryParams.toString()
     const endpoint = `/api/v1/keywords${queryString ? `?${queryString}` : ''}`
@@ -196,10 +273,7 @@ export class ApiClient {
     })
   }
 
-  async updateKeyword(
-    id: number,
-    updates: UpdateKeywordRequest
-  ): Promise<Keyword> {
+  async updateKeyword(id: number, updates: UpdateKeywordRequest): Promise<Keyword> {
     return this.request(`/api/v1/keywords/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
@@ -216,8 +290,54 @@ export class ApiClient {
     return this.request(`/api/v1/keywords/${id}`)
   }
 
-  async getKeywordStats(id: number): Promise<any> {
+  async getKeywordStats(id: number): Promise<KeywordStats> {
     return this.request(`/api/v1/keywords/${id}/stats`)
+  }
+
+  async searchKeywords(searchRequest: KeywordsSearchRequest): Promise<KeywordsResponse> {
+    const queryParams = new URLSearchParams()
+    queryParams.append('query', searchRequest.query)
+    if (searchRequest.active_only !== undefined)
+      queryParams.append('active_only', searchRequest.active_only.toString())
+    if (searchRequest.category) queryParams.append('category', searchRequest.category)
+    if (searchRequest.limit !== undefined)
+      queryParams.append('limit', searchRequest.limit.toString())
+    if (searchRequest.offset !== undefined)
+      queryParams.append('offset', searchRequest.offset.toString())
+
+    return this.request(`/api/v1/keywords/search?${queryParams.toString()}`)
+  }
+
+  async getKeywordsCategories(): Promise<KeywordCategoriesResponse> {
+    return this.request('/api/v1/keywords/categories')
+  }
+
+  async bulkActivateKeywords(actionData: KeywordBulkAction): Promise<KeywordBulkResponse> {
+    return this.request('/api/v1/keywords/bulk/activate', {
+      method: 'POST',
+      body: JSON.stringify(actionData),
+    })
+  }
+
+  async bulkDeactivateKeywords(actionData: KeywordBulkAction): Promise<KeywordBulkResponse> {
+    return this.request('/api/v1/keywords/bulk/deactivate', {
+      method: 'POST',
+      body: JSON.stringify(actionData),
+    })
+  }
+
+  async bulkArchiveKeywords(actionData: KeywordBulkAction): Promise<KeywordBulkResponse> {
+    return this.request('/api/v1/keywords/bulk/archive', {
+      method: 'POST',
+      body: JSON.stringify(actionData),
+    })
+  }
+
+  async bulkDeleteKeywords(actionData: KeywordBulkAction): Promise<KeywordBulkResponse> {
+    return this.request('/api/v1/keywords/bulk/delete', {
+      method: 'POST',
+      body: JSON.stringify(actionData),
+    })
   }
 
   async uploadKeywords(formData: FormData): Promise<UploadKeywordsResponse> {
@@ -242,19 +362,11 @@ export class ApiClient {
     })
   }
 
-  async startBulkParser(
-    bulkData: StartBulkParserForm
-  ): Promise<BulkParseResponse> {
-    console.log('API: Starting bulk parser with data:', bulkData)
-    const result = await this.request<BulkParseResponse>(
-      '/api/v1/parser/parse/bulk',
-      {
-        method: 'POST',
-        body: JSON.stringify(bulkData),
-      }
-    )
-    console.log('API: Bulk parser response:', result)
-    return result
+  async startBulkParser(bulkData: StartBulkParserForm): Promise<BulkParseResponse> {
+    return this.request<BulkParseResponse>('/api/v1/parser/parse', {
+      method: 'POST',
+      body: JSON.stringify(bulkData),
+    })
   }
 
   async getParserState(): Promise<ParserState> {
@@ -269,17 +381,12 @@ export class ApiClient {
     return this.request('/api/v1/parser/stats/global')
   }
 
-  async getParserTasks(
-    filters?: ParserTaskFilters
-  ): Promise<ParserTasksResponse> {
+  async getParserTasks(filters?: ParserTaskFilters): Promise<ParserTasksResponse> {
     const queryParams = new URLSearchParams()
-    if (filters?.page !== undefined)
-      queryParams.append('page', filters.page.toString())
-    if (filters?.size !== undefined)
-      queryParams.append('size', filters.size.toString())
+    if (filters?.page !== undefined) queryParams.append('page', filters.page.toString())
+    if (filters?.size !== undefined) queryParams.append('size', filters.size.toString())
     if (filters?.status) queryParams.append('status', filters.status)
-    if (filters?.group_id !== undefined)
-      queryParams.append('group_id', filters.group_id.toString())
+    if (filters?.group_id !== undefined) queryParams.append('group_id', filters.group_id.toString())
     if (filters?.date_from) queryParams.append('date_from', filters.date_from)
     if (filters?.date_to) queryParams.append('date_to', filters.date_to)
 
@@ -289,30 +396,33 @@ export class ApiClient {
     return this.request(endpoint)
   }
 
-  async stopParser(): Promise<{ status: string; message: string }> {
+  async getParserTask(taskId: string): Promise<ParseStatus> {
+    return this.request(`/api/v1/parser/tasks/${taskId}`)
+  }
+
+  async stopParser(request: StopParseRequest = {}): Promise<StopParseResponse> {
+    const body = Object.keys(request).length > 0 ? request : null
     return this.request('/api/v1/parser/stop', {
       method: 'POST',
+      body: body ? JSON.stringify(body) : null,
     })
   }
 
-  async getParserHistory(skip = 0, limit = 10): Promise<ParserHistoryResponse> {
+  async getParserHistory(page = 1, size = 10): Promise<ParserHistoryResponse> {
     const queryParams = new URLSearchParams()
-    queryParams.append('skip', skip.toString())
-    queryParams.append('limit', limit.toString())
+    queryParams.append('page', page.toString())
+    queryParams.append('size', size.toString())
 
-    return this.request(`/api/v1/parser/history?${queryParams.toString()}`)
+    return this.request(`/api/v1/parser/tasks?${queryParams.toString()}`)
   }
 
   // Comments API (Parser related)
   async getComments(filters?: CommentFilters): Promise<CommentsResponse> {
     const queryParams = new URLSearchParams()
-    if (filters?.page !== undefined)
-      queryParams.append('page', filters.page.toString())
-    if (filters?.size !== undefined)
-      queryParams.append('size', filters.size.toString())
+    if (filters?.page !== undefined) queryParams.append('page', filters.page.toString())
+    if (filters?.size !== undefined) queryParams.append('size', filters.size.toString())
     if (filters?.text) queryParams.append('text', filters.text)
-    if (filters?.group_id !== undefined)
-      queryParams.append('group_id', filters.group_id.toString())
+    if (filters?.group_id !== undefined) queryParams.append('group_id', filters.group_id.toString())
     if (filters?.keyword_id !== undefined)
       queryParams.append('keyword_id', filters.keyword_id.toString())
     if (filters?.authorId !== undefined)
@@ -365,6 +475,22 @@ export class ApiClient {
   // Health check
   async healthCheck(): Promise<{ success: boolean; message: string }> {
     return this.request('/api/v1/health')
+  }
+
+  async detailedHealthCheck(): Promise<Record<string, unknown>> {
+    return this.request('/api/v1/health/detailed')
+  }
+
+  async readinessCheck(): Promise<Record<string, unknown>> {
+    return this.request('/api/v1/health/ready')
+  }
+
+  async livenessCheck(): Promise<Record<string, unknown>> {
+    return this.request('/api/v1/health/live')
+  }
+
+  async systemStatus(): Promise<Record<string, unknown>> {
+    return this.request('/api/v1/health/status')
   }
 }
 

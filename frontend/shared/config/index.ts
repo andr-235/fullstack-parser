@@ -1,13 +1,13 @@
 // Конфигурация приложения
 export const config = {
   api: {
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+    // В Docker окружении используем пустой baseUrl - запросы пойдут через Nginx
+    baseUrl: process.env.NEXT_PUBLIC_API_URL || '',
     timeout: 10000,
   },
   app: {
     name: 'Парсер комментариев VK',
-    description:
-      'Современное веб-приложение для парсинга и анализа комментариев VK',
+    description: 'Современное веб-приложение для парсинга и анализа комментариев VK',
     version: '1.0.0',
   },
 } as const

@@ -7,6 +7,9 @@ import {
   UpdateGroupRequest,
   GroupsFilters,
   GroupStats,
+  GroupsStats,
+  GroupBulkAction,
+  GroupBulkResponse,
   UploadGroupsResponse,
   UploadProgress,
 } from './types'
@@ -20,16 +23,7 @@ export const useGroups = (filters?: GroupsFilters) => {
     setLoading(true)
     setError(null)
     try {
-      const params: any = {}
-
-      if (filters?.active_only !== undefined) {
-        params.active_only = filters.active_only
-      }
-      if (filters?.search) {
-        params.search = filters.search
-      }
-
-      const response: GroupsResponse = await apiClient.getGroups(params)
+      const response: GroupsResponse = await apiClient.getGroups(filters)
       setGroups(response.items)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch groups')
@@ -40,7 +34,16 @@ export const useGroups = (filters?: GroupsFilters) => {
 
   useEffect(() => {
     fetchGroups()
-  }, [filters?.active_only, filters?.search])
+  }, [
+    filters?.is_active,
+    filters?.active_only,
+    filters?.search,
+    filters?.has_monitoring,
+    filters?.min_members,
+    filters?.max_members,
+    filters?.page,
+    filters?.size,
+  ])
 
   const createGroup = async (groupData: CreateGroupRequest): Promise<VKGroup> => {
     try {
@@ -209,6 +212,169 @@ export const useUploadGroups = () => {
     getUploadProgress,
     uploadProgress,
     uploading,
+    error,
+  }
+}
+
+export const useGroupsStats = () => {
+  const [stats, setStats] = useState<GroupsStats | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchStats = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data: GroupsStats = await apiClient.getGroupsOverviewStats()
+      setStats(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch groups stats')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchStats()
+  }, [])
+
+  return {
+    stats,
+    loading,
+    error,
+    refetch: fetchStats,
+  }
+}
+
+export const useGroupBulkOperations = () => {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const activateGroups = async (actionData: GroupBulkAction): Promise<GroupBulkResponse> => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await apiClient.bulkActivateGroups(actionData)
+      return result
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to activate groups'
+      setError(errorMessage)
+      throw new Error(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deactivateGroups = async (actionData: GroupBulkAction): Promise<GroupBulkResponse> => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await apiClient.bulkDeactivateGroups(actionData)
+      return result
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to deactivate groups'
+      setError(errorMessage)
+      throw new Error(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return {
+    activateGroups,
+    deactivateGroups,
+    loading,
+    error,
+  }
+}
+
+export const useGroupActions = (id: number) => {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const activateGroup = async (): Promise<VKGroup> => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await apiClient.activateGroup(id)
+      return result
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to activate group'
+      setError(errorMessage)
+      throw new Error(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deactivateGroup = async (): Promise<VKGroup> => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await apiClient.deactivateGroup(id)
+      return result
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to deactivate group'
+      setError(errorMessage)
+      throw new Error(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getGroupByVkId = async (vkId: number): Promise<VKGroup> => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await apiClient.getGroupByVkId(vkId)
+      return result
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch group by VK ID'
+      setError(errorMessage)
+      throw new Error(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getGroupByScreenName = async (screenName: string): Promise<VKGroup> => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await apiClient.getGroupByScreenName(screenName)
+      return result
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to fetch group by screen name'
+      setError(errorMessage)
+      throw new Error(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const searchGroups = async (q: string, filters?: GroupsFilters): Promise<GroupsResponse> => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await apiClient.searchGroups(q, filters)
+      return result
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to search groups'
+      setError(errorMessage)
+      throw new Error(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return {
+    activateGroup,
+    deactivateGroup,
+    getGroupByVkId,
+    getGroupByScreenName,
+    searchGroups,
+    loading,
     error,
   }
 }

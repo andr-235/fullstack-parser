@@ -1,13 +1,21 @@
+export interface KeywordCategory {
+  name: string
+  description?: string
+}
+
+export interface KeywordStatus {
+  is_active: boolean
+  is_archived: boolean
+}
+
 export interface Keyword {
   id: number
-  keyword: string
-  word?: string
-  category?: string
-  is_active: boolean
-  is_case_sensitive?: boolean
-  is_whole_word?: boolean
-  total_matches: number
+  word: string
+  category?: KeywordCategory
+  status: KeywordStatus
   description?: string
+  priority: number
+  match_count: number
   created_at: string
   updated_at: string
 }
@@ -38,12 +46,22 @@ export const KEYWORD_CATEGORIES_MAP = {
 export type KeywordCategory = (typeof KEYWORD_CATEGORIES)[number]['key']
 
 export interface KeywordsFilters {
-  is_active?: boolean
   active_only?: boolean
   category?: string
-  search?: string
+  priority_min?: number
+  priority_max?: number
+  match_count_min?: number
+  match_count_max?: number
   page?: number
   size?: number
+}
+
+export interface KeywordsSearchRequest {
+  query: string
+  active_only?: boolean
+  category?: string
+  limit?: number
+  offset?: number
 }
 
 export interface KeywordsResponse {
@@ -51,29 +69,57 @@ export interface KeywordsResponse {
   total: number
   page: number
   size: number
-  total_pages: number
+  pages: number
 }
 
 export interface CreateKeywordRequest {
-  keyword: string
-  category?: string
-  is_active?: boolean
+  word: string
+  category_name?: string
+  category_description?: string
+  description?: string
+  priority?: number
 }
 
 export interface UpdateKeywordRequest {
-  keyword?: string
   word?: string
-  category?: string
-  is_active?: boolean
-  is_case_sensitive?: boolean
-  is_whole_word?: boolean
+  category_name?: string
+  category_description?: string
   description?: string
+  priority?: number
+}
+
+export interface KeywordBulkAction {
+  keyword_ids: number[]
+  action: 'activate' | 'deactivate' | 'archive' | 'delete'
+}
+
+export interface KeywordBulkResponse {
+  total_requested: number
+  successful: number
+  failed: number
+  errors: Array<Record<string, unknown>>
 }
 
 export interface KeywordStats {
   total_keywords: number
   active_keywords: number
-  inactive_keywords: number
+  archived_keywords: number
+  total_categories: number
+  total_matches: number
+  avg_matches_per_keyword: number
+  top_categories: Array<Record<string, unknown>>
+}
+
+export interface KeywordCategoryStats {
+  category_name: string
+  keyword_count: number
+  active_count: number
+  total_matches: number
+}
+
+export interface KeywordCategoriesResponse {
+  categories: string[]
+  categories_with_stats: KeywordCategoryStats[]
 }
 
 export interface UploadKeywordsResponse {

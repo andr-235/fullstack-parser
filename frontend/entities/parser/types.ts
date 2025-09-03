@@ -1,86 +1,59 @@
 export interface ParseTaskCreate {
-  group_id: number
-  keywords?: string[]
+  group_ids: number[]
   max_posts?: number
-  start_date?: string
-  end_date?: string
-  forceReparse?: boolean
+  max_comments_per_post?: number
+  force_reparse?: boolean
+  priority?: 'low' | 'normal' | 'high'
 }
 
 export interface ParseTaskResponse {
   task_id: string
-  status: 'pending' | 'running' | 'stopped' | 'completed' | 'failed'
-  progress: number
-  message?: string
-  group_id?: number
-  group_name?: string
-  posts_processed?: number
-  started_at: string
-  error_message?: string
-  stats?: {
-    posts_processed: number
-    comments_found: number
-  }
+  status: string
+  group_ids: number[]
+  estimated_time?: number
   created_at: string
-  updated_at: string
-  result?: any
 }
 
 export interface ParserState {
   is_running: boolean
-  status?: 'running' | 'stopped' | 'failed'
-  current_task?: ParseTaskResponse
-  task?: ParseTaskResponse
-  queue_length: number
-  last_activity: string
-  task_id?: string
-  started_at?: string
-  posts_processed?: number
-  group_name?: string
-  group_id?: number
-  progress?: number
+  active_tasks: number
+  queue_size: number
+  total_tasks_processed: number
+  total_posts_found: number
+  total_comments_found: number
+  last_activity?: string
+  uptime_seconds: number
 }
 
 export interface ParserStats {
-  total_parsed: number
-  total_posts_processed: number
-  comments_found: number
-  matches_found: number
-  errors_count: number
-  total_runs: number
-  successful_runs: number
-  avg_processing_time: number
-  average_duration: number
+  total_tasks: number
+  completed_tasks: number
+  failed_tasks: number
+  running_tasks: number
+  total_posts_found: number
+  total_comments_found: number
+  total_processing_time: number
+  average_task_duration: number
 }
 
-export interface ParserGlobalStats {
-  active_tasks: number
-  total_tasks: number
-  total_comments: number
-  total_posts_processed: number
-  comments_with_keywords: number
-  completed_today: number
-  failed_today: number
-  active_groups: number
-  total_groups: number
-  active_keywords: number
-  total_keywords: number
-  last_parse_time?: string
-  avg_completion_time: number
+export interface ParserGlobalStats extends ParserStats {
+  // Наследует все поля из ParserStats
 }
 
 export interface ParserTasksResponse {
-  items: ParseTaskResponse[]
+  items: ParseTask[]
   total: number
   page: number
   size: number
+  pages: number
 }
 
 export interface ParserHistoryResponse {
-  items: ParseTaskResponse[]
+  items: ParseTask[]
   total: number
   page: number
   size: number
+  pages: number
 }
 
 export interface ParserSession {
@@ -92,8 +65,44 @@ export interface ParserSession {
   updated_at: string
 }
 
+export interface ParseTask {
+  id: string
+  group_ids: number[]
+  config: Record<string, unknown>
+  status: string
+  created_at: string
+  started_at?: string
+  completed_at?: string
+  progress: number
+  result?: Record<string, unknown>
+}
+
+export interface ParseStatus {
+  task_id: string
+  status: string
+  progress: number
+  current_group?: number
+  groups_completed: number
+  groups_total: number
+  posts_found: number
+  comments_found: number
+  errors: string[]
+  started_at?: string
+  completed_at?: string
+  duration?: number
+}
+
+export interface StopParseRequest {
+  task_id?: string
+}
+
+export interface StopParseResponse {
+  stopped_tasks: string[]
+  message: string
+}
+
 export interface ParserTaskFilters {
-  status?: 'pending' | 'running' | 'completed' | 'failed'
+  status?: string
   group_id?: number
   date_from?: string
   date_to?: string
@@ -102,21 +111,13 @@ export interface ParserTaskFilters {
 }
 
 export interface StartBulkParserForm {
-  groups: number[]
-  keywords: string[]
-  max_posts_per_group?: number
+  group_ids: number[]
   max_posts?: number
-  start_date?: string
-  end_date?: string
-  forceReparse?: boolean
-  max_concurrent?: number
+  max_comments_per_post?: number
+  force_reparse?: boolean
+  priority?: 'low' | 'normal' | 'high'
 }
 
-export interface BulkParseResponse {
-  task_ids: string[]
-  total_groups: number
-  total_keywords: number
-  estimated_time: number
-  started_tasks: number
-  failed_groups: string[]
+export interface BulkParseResponse extends ParseTaskResponse {
+  // Наследует все поля из ParseTaskResponse
 }
