@@ -392,9 +392,6 @@ jobs:
           docker compose -f docker-compose.prod.yml pull
           docker compose -f docker-compose.prod.yml up -d --build
 
-          echo "Running database migrations..."
-          docker compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
-
           echo "Waiting for services to be healthy..."
           docker compose -f docker-compose.prod.yml exec -T backend python -c "
           import time

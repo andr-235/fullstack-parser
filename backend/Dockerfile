@@ -59,6 +59,10 @@ COPY --from=builder /app/.venv /app/.venv
 # Copy application source code
 COPY src/ ./src/
 
+# Copy Alembic configuration
+COPY alembic.ini ./
+COPY alembic/ ./alembic/
+
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh

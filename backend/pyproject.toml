@@ -96,6 +96,10 @@ passlib = "^1.7.4"
 python-jose = "^3.5.0"
 email-validator = "^2.3.0"
 
+[tool.poetry.scripts]
+migrate = "alembic:upgrade head"
+makemigrations = "alembic:revision --autogenerate"
+
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.4.1"
 pytest-cov = "4.1.0"
