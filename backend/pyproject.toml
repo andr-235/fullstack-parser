@@ -104,7 +104,7 @@ httpx = "0.26.0"
 black = "25.1.0"
 isort = "5.13.2"
 ruff = "0.12.1"
-mypy = "1.8.0"
+mypy = "1.17.1"
 bandit = {extras = ["toml"], version = ">=1.7.6"}
 python-dotenv = "1.1.1"
 watchdog = "3.0.0"
