@@ -289,7 +289,7 @@ def parse_vk_comments_task(
         logger.info(f"🚀 Начало парсинга комментариев для группы {group_id}")
 
         # Имитируем контекст ARQ для совместимости
-        ctx = {}
+        ctx: Dict[str, Any] = {}
 
         # Запускаем асинхронную функцию
         result = asyncio.run(
@@ -320,7 +320,7 @@ def analyze_text_morphology_task(
             f"🔍 Начало морфологического анализа текста (длина: {len(text)} символов)"
         )
 
-        ctx = {}
+        ctx: Dict[str, Any] = {}
         result = asyncio.run(
             analyze_text_morphology_celery(ctx, text, analysis_type)
         )
@@ -349,7 +349,7 @@ def extract_keywords_task(
             f"🔑 Начало извлечения ключевых слов (мин. частота: {min_frequency})"
         )
 
-        ctx = {}
+        ctx: Dict[str, Any] = {}
         result = asyncio.run(
             extract_keywords_celery(ctx, text, min_frequency, max_keywords)
         )
@@ -378,7 +378,7 @@ def send_notification_task(
             f"📧 Отправка {notification_type} уведомления для {recipient}"
         )
 
-        ctx = {}
+        ctx: Dict[str, Any] = {}
         result = asyncio.run(
             send_notification_celery(
                 ctx, recipient, message, notification_type
@@ -417,7 +417,7 @@ def generate_report_task(
             f"📊 Генерация отчета '{report_type}' за период {date_from} - {date_to}"
         )
 
-        ctx = {}
+        ctx: Dict[str, Any] = {}
         result = asyncio.run(
             generate_report_celery(
                 ctx, report_type, date_from, date_to, filters
@@ -448,7 +448,7 @@ def cleanup_old_data_task(
     try:
         logger.info(f"🧹 Очистка данных старше {days_old} дней")
 
-        ctx = {}
+        ctx: Dict[str, Any] = {}
         result = asyncio.run(
             cleanup_old_data_celery(ctx, days_old, data_types)
         )
@@ -477,7 +477,7 @@ def process_batch_comments_task(
             f"📦 Пакетная обработка {len(comment_ids)} комментариев (операция: {operation})"
         )
 
-        ctx = {}
+        ctx: Dict[str, Any] = {}
         result = asyncio.run(
             process_batch_comments_celery(ctx, comment_ids, operation)
         )
@@ -502,7 +502,7 @@ def update_statistics_task(self, stat_type: str = "daily") -> Dict[str, Any]:
     try:
         logger.info(f"📈 Обновление {stat_type} статистики")
 
-        ctx = {}
+        ctx: Dict[str, Any] = {}
         result = asyncio.run(update_statistics_celery(ctx, stat_type))
 
         logger.info(f"✅ Статистика '{stat_type}' обновлена")
@@ -523,7 +523,7 @@ def backup_database_task(self, backup_type: str = "full") -> Dict[str, Any]:
     try:
         logger.info(f"💾 Создание {backup_type} бэкапа базы данных")
 
-        ctx = {}
+        ctx: Dict[str, Any] = {}
         result = asyncio.run(backup_database_celery(ctx, backup_type))
 
         if result.get("created"):
