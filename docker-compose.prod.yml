@@ -42,6 +42,7 @@ services:
       - DEBUG=false
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/vk_parser
+      - C_FORCE_ROOT=true
       - CORS_ORIGINS=http://localhost:3000,http://nginx:80
     expose:
       - "8000"
@@ -71,13 +72,13 @@ services:
         max_attempts: 3
         window: 120s
 
-  # ARQ Worker сервис (для фоновых задач)
-  arq_worker:
+  # Celery Worker сервис (для фоновых задач)
+  celery_worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
       target: runtime
-    container_name: fullstack_prod_arq_worker
+    container_name: fullstack_prod_celery_worker
     restart: unless-stopped
     env_file:
       - .env.prod
@@ -86,7 +87,16 @@ services:
       - DEBUG=false
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql+asyncpg://postgres:5432/vk_parser
-    command: ["worker"]
+    command:
+      [
+        "celery",
+        "-A",
+        "src.celery_app",
+        "worker",
+        "--loglevel=info",
+        "--concurrency=2",
+        "--pool=prefork",
+      ]
     depends_on:
       postgres:
         condition: service_healthy
@@ -100,8 +110,16 @@ services:
     logging: *default-logging
     healthcheck:
       <<: *default-healthcheck
-      test: ["CMD", "pgrep", "-f", "arq"]
-      interval: 60s
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import psutil; print('Celery OK' if any('celery' in p.name().lower() for p in psutil.process_iter()) else 'No Celery')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     deploy:
       resources:
         limits:
@@ -251,7 +269,7 @@ services:
         condition: service_healthy
       backend:
         condition: service_healthy
-      arq_worker:
+      celery_worker:
         condition: service_healthy
     networks:
       - prod-app-network

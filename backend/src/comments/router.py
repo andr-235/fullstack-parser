@@ -27,8 +27,31 @@ from ..pagination import (
     SizeParam,
     SearchParam,
 )
-from ..infrastructure.arq_service import arq_service
-from ..arq_tasks.schemas import TaskEnqueueRequest, TaskStatusResponse
+from ..infrastructure.celery_service import celery_service
+
+# Схемы для Celery задач
+from pydantic import BaseModel
+from typing import Any, Dict, Optional
+
+
+class TaskEnqueueRequest(BaseModel):
+    """Схема для запроса постановки задачи в очередь"""
+
+    function_name: str
+    args: Optional[list] = None
+    kwargs: Optional[Dict[str, Any]] = None
+
+
+class TaskStatusResponse(BaseModel):
+    """Схема для ответа со статусом задачи"""
+
+    job_id: str
+    status: str
+    result: Optional[Any] = None
+    error: Optional[str] = None
+    created_at: Optional[str] = None
+
+
 from ..responses import APIResponse
 
 router = APIRouter(
@@ -305,14 +328,14 @@ async def search_comments(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-# ARQ интеграция - асинхронные задачи для комментариев
+# Celery интеграция - асинхронные задачи для комментариев
 
 
 @router.post(
     "/parse/vk/async",
     summary="Асинхронный парсинг комментариев VK",
     description="""
-    Запускает асинхронный парсинг комментариев VK через ARQ.
+    Запускает асинхронный парсинг комментариев VK через Celery.
 
     **Пример использования:**
     ```json
@@ -339,12 +362,12 @@ async def parse_comments_async(
     """
     Асинхронный парсинг комментариев VK
 
-    Добавляет задачу парсинга в очередь ARQ и возвращает ID задачи.
+    Добавляет задачу парсинга в очередь Celery и возвращает ID задачи.
     """
     try:
         # Добавляем задачу в очередь
-        job_id = await arq_service.enqueue_job(
-            function_name="parse_vk_comments",
+        job_id = celery_service.enqueue_job(
+            "celery_tasks.parse_vk_comments",
             group_id=group_id,
             post_id=post_id,
             limit=limit,
@@ -364,8 +387,7 @@ async def parse_comments_async(
                 "group_id": group_id,
                 "post_id": post_id,
                 "limit": limit,
-                "status_url": f"/api/v1/arq/status/{job_id}",
-                "result_url": f"/api/v1/arq/result/{job_id}",
+                "job_id": job_id,
             },
         )
 
@@ -378,7 +400,7 @@ async def parse_comments_async(
 @router.post(
     "/analyze/async",
     summary="Асинхронный анализ комментариев",
-    description="Запускает пакетный анализ комментариев через ARQ",
+    description="Запускает пакетный анализ комментариев через Celery",
 )
 async def analyze_comments_async(
     comment_ids: List[int] = Query(
@@ -392,7 +414,7 @@ async def analyze_comments_async(
     """
     Асинхронный анализ комментариев
 
-    Добавляет задачу анализа в очередь ARQ.
+    Добавляет задачу анализа в очередь Celery.
     """
     try:
         if analysis_type == "morphology":
@@ -408,8 +430,8 @@ async def analyze_comments_async(
             )
 
         # Добавляем задачу в очередь
-        job_id = await arq_service.enqueue_job(
-            function_name=function_name,
+        job_id = celery_service.enqueue_job(
+            "celery_tasks.process_batch_comments",
             comment_ids=comment_ids,
             operation=operation,
         )
@@ -427,8 +449,7 @@ async def analyze_comments_async(
                 "function": function_name,
                 "comment_count": len(comment_ids),
                 "analysis_type": analysis_type,
-                "status_url": f"/api/v1/arq/status/{job_id}",
-                "result_url": f"/api/v1/arq/result/{job_id}",
+                "job_id": job_id,
             },
         )
 
@@ -443,7 +464,7 @@ async def analyze_comments_async(
 @router.post(
     "/report/async",
     summary="Асинхронная генерация отчета",
-    description="Запускает генерацию отчета по комментариям через ARQ",
+    description="Запускает генерацию отчета по комментариям через Celery",
 )
 async def generate_report_async(
     report_type: str = Query(
@@ -462,7 +483,7 @@ async def generate_report_async(
     """
     Асинхронная генерация отчета
 
-    Добавляет задачу генерации отчета в очередь ARQ.
+    Добавляет задачу генерации отчета в очередь Celery.
     """
     try:
         # Валидация дат
@@ -478,8 +499,8 @@ async def generate_report_async(
             )
 
         # Добавляем задачу в очередь
-        job_id = await arq_service.enqueue_job(
-            function_name="generate_report",
+        job_id = celery_service.enqueue_job(
+            "celery_tasks.generate_report",
             report_type=report_type,
             date_from=date_from,
             date_to=date_to,
@@ -501,8 +522,7 @@ async def generate_report_async(
                 "date_from": date_from,
                 "date_to": date_to,
                 "group_id": group_id,
-                "status_url": f"/api/v1/arq/status/{job_id}",
-                "result_url": f"/api/v1/arq/result/{job_id}",
+                "job_id": job_id,
             },
         )
 
@@ -518,7 +538,7 @@ async def generate_report_async(
 @router.post(
     "/cleanup/async",
     summary="Асинхронная очистка старых данных",
-    description="Запускает очистку старых комментариев через ARQ",
+    description="Запускает очистку старых комментариев через Celery",
 )
 async def cleanup_comments_async(
     days_old: int = Query(30, description="Удалить данные старше N дней"),
@@ -529,12 +549,12 @@ async def cleanup_comments_async(
     """
     Асинхронная очистка старых данных
 
-    Добавляет задачу очистки в очередь ARQ.
+    Добавляет задачу очистки в очередь Celery.
     """
     try:
         # Добавляем задачу в очередь
-        job_id = await arq_service.enqueue_job(
-            function_name="cleanup_old_data",
+        job_id = celery_service.enqueue_job(
+            "celery_tasks.cleanup_old_data",
             days_old=days_old,
             data_types=data_types,
         )
@@ -552,8 +572,7 @@ async def cleanup_comments_async(
                 "function": "cleanup_old_data",
                 "days_old": days_old,
                 "data_types": data_types,
-                "status_url": f"/api/v1/arq/status/{job_id}",
-                "result_url": f"/api/v1/arq/result/{job_id}",
+                "job_id": job_id,
             },
         )
 
@@ -572,10 +591,10 @@ async def get_task_status(job_id: str) -> TaskStatusResponse:
     """
     Получить статус задачи по ID
 
-    Возвращает информацию о выполнении задачи ARQ.
+    Возвращает информацию о выполнении задачи Celery.
     """
     try:
-        status_info = await arq_service.get_job_status(job_id)
+        status_info = celery_service.get_job_status(job_id)
 
         if not status_info:
             raise HTTPException(status_code=404, detail="Задача не найдена")

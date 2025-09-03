@@ -13,6 +13,12 @@ run_arq_worker() {
     exec arq src.arq_tasks.worker.worker_settings "$@"
 }
 
+# Function to run Celery worker
+run_celery_worker() {
+    echo "🚀 Starting Celery worker..."
+    exec /app/.venv/bin/celery "$@"
+}
+
 # Main entrypoint logic
 case "$1" in
     "uvicorn"|"fastapi")
@@ -23,10 +29,14 @@ case "$1" in
         shift
         run_arq_worker "$@"
         ;;
+    "celery")
+        shift
+        run_celery_worker "$@"
+        ;;
     *)
         # Default to FastAPI if no specific command
         echo "Unknown command: $1"
-        echo "Available commands: uvicorn, fastapi, arq, worker"
+        echo "Available commands: uvicorn, fastapi, arq, worker, celery"
         exit 1
         ;;
 esac

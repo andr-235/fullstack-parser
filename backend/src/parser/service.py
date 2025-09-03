@@ -14,6 +14,7 @@
 """
 
 import asyncio
+import logging
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from uuid import uuid4
@@ -33,6 +34,8 @@ from ..vk_api.exceptions import (
     VKAPIError,
 )
 from .exceptions import VKAPITimeoutException, VKAPILimitExceededException
+
+logger = logging.getLogger(__name__)
 
 
 class ParserService:

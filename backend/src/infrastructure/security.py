@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 from functools import lru_cache
 
-import jwt
+from jose import jwt
 from passlib.context import CryptContext
 
 from .config import infrastructure_config

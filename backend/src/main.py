@@ -47,9 +47,8 @@ from .handlers import (
     vk_api_exception_handler,
 )
 
-# Импорт ARQ модуля
-from .arq_tasks.router import router as arq_router
-from .infrastructure.arq_service import arq_service
+# Импорт Celery модуля
+from .infrastructure.celery_service import celery_service
 
 # Простое логирование
 logging.basicConfig(level=logging.INFO)
@@ -71,16 +70,15 @@ async def lifespan(app: FastAPI):
         logger.error(f"❌ Ошибка инициализации БД: {e}")
         raise
 
-    # Инициализируем ARQ сервис (если включен)
-    if getattr(settings, "arq_enabled", False):
-        try:
-            await arq_service.initialize()
-            logger.info("⚡ ARQ сервис инициализирован")
-        except Exception as e:
-            logger.error(f"❌ Ошибка инициализации ARQ: {e}")
-            raise
-    else:
-        logger.info("⚡ ARQ сервис отключен в конфигурации")
+    # Инициализируем Celery сервис
+    try:
+        from .celery_app import app as celery_app
+
+        await celery_service.initialize(celery_app)
+        logger.info("⚡ Celery сервис инициализирован")
+    except Exception as e:
+        logger.error(f"❌ Ошибка инициализации Celery: {e}")
+        raise
 
     logger.info("✅ Система готова к работе!")
     logger.info("📋 API v1.7.0 доступен: /api/v1")
@@ -90,13 +88,12 @@ async def lifespan(app: FastAPI):
 
     logger.info("🛑 Остановка VK Comments Parser...")
 
-    # Закрываем ARQ сервис
-    if getattr(settings, "arq_enabled", False):
-        try:
-            await arq_service.close()
-            logger.info("⚡ ARQ сервис закрыт")
-        except Exception as e:
-            logger.error(f"❌ Ошибка закрытия ARQ: {e}")
+    # Закрываем Celery сервис
+    try:
+        await celery_service.close()
+        logger.info("⚡ Celery сервис закрыт")
+    except Exception as e:
+        logger.error(f"❌ Ошибка закрытия Celery: {e}")
 
 
 # Создание FastAPI приложения
@@ -297,7 +294,6 @@ app.include_router(health_router, prefix="/api/v1", tags=["Health Monitoring"])
 app.include_router(
     error_reporting_router, prefix="/api/v1", tags=["Error Reports"]
 )
-app.include_router(arq_router, prefix="/api/v1", tags=["ARQ Tasks"])
 
 
 # Запуск сервера

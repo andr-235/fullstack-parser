@@ -136,42 +136,30 @@ class Settings(BaseSettings):
         description="Время жизни кеша в секундах",
     )
 
-    # Настройки ARQ (асинхронные задачи)
-    arq_enabled: bool = Field(
+    # Настройки Celery (асинхронные задачи)
+    celery_enabled: bool = Field(
         default=True,
-        description="Включены ли асинхронные задачи ARQ",
+        description="Включены ли асинхронные задачи Celery",
     )
-    arq_max_jobs: int = Field(
+    celery_broker_url: str = Field(
+        default="redis://redis:6379/0",
+        description="URL брокера сообщений для Celery",
+    )
+    celery_result_backend: str = Field(
+        default="redis://redis:6379/0",
+        description="URL для хранения результатов задач",
+    )
+    celery_max_jobs: int = Field(
         default=10,
         description="Максимальное количество одновременно выполняемых задач",
     )
-    arq_job_timeout: int = Field(
+    celery_task_timeout: int = Field(
         default=300,
         description="Таймаут выполнения задачи в секундах (5 минут)",
     )
-    arq_keep_result: int = Field(
+    celery_result_expires: int = Field(
         default=3600,
         description="Время хранения результатов задач в секундах (1 час)",
-    )
-    arq_max_tries: int = Field(
-        default=3,
-        description="Максимальное количество попыток выполнения задачи",
-    )
-    arq_poll_delay: float = Field(
-        default=0.5,
-        description="Задержка между опросами очереди в секундах",
-    )
-    arq_health_check_interval: int = Field(
-        default=60,
-        description="Интервал проверки здоровья в секундах",
-    )
-    arq_queue_name: str = Field(
-        default="arq:queue",
-        description="Имя очереди ARQ",
-    )
-    arq_burst_mode: bool = Field(
-        default=False,
-        description="Режим burst - остановка после обработки всех задач",
     )
 
     class Config:
