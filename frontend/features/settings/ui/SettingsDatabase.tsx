@@ -1,11 +1,12 @@
 'use client'
 
+import { Database } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Input } from '@/shared/ui'
 import { Label } from '@/shared/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui'
 import { Switch } from '@/shared/ui'
-import { Database } from 'lucide-react'
 
 export function SettingsDatabase() {
  return (

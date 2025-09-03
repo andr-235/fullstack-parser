@@ -1,11 +1,13 @@
 'use client'
 
-import { DashboardTopItem } from '@/entities/dashboard'
+import { Hash, ExternalLink, TrendingUp, Target, BarChart3 } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Badge } from '@/shared/ui'
 import { Button } from '@/shared/ui'
-import { Hash, ExternalLink, TrendingUp, Target, BarChart3 } from 'lucide-react'
 import { Progress } from '@/shared/ui'
+
+import { DashboardTopItem } from '@/entities/dashboard'
 
 interface TopKeywordsProps {
  keywords: DashboardTopItem[]

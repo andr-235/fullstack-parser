@@ -1,12 +1,13 @@
 'use client'
 
+import { Bell } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Input } from '@/shared/ui'
 import { Label } from '@/shared/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui'
 import { Switch } from '@/shared/ui'
 import { Separator } from '@/shared/ui'
-import { Bell } from 'lucide-react'
 
 export function SettingsNotifications() {
  return (

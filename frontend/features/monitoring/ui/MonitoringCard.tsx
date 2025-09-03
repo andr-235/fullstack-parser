@@ -1,7 +1,8 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { LucideIcon } from 'lucide-react'
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 
 interface MonitoringCardProps {
  title: string

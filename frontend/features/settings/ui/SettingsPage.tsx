@@ -1,17 +1,20 @@
 'use client'
 
+import { useState } from 'react'
+
+import { Save, RefreshCw } from 'lucide-react'
+
 import { Button } from '@/shared/ui'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui'
 import { Alert, AlertDescription } from '@/shared/ui'
-import { useState } from 'react'
-import { Save, RefreshCw } from 'lucide-react'
-import { SettingsGeneral } from './SettingsGeneral'
+
 import { SettingsApi } from './SettingsApi'
-import { SettingsDatabase } from './SettingsDatabase'
-import { SettingsNotifications } from './SettingsNotifications'
 import { SettingsAppearance } from './SettingsAppearance'
-import { SettingsList } from './SettingsList'
+import { SettingsDatabase } from './SettingsDatabase'
 import { SettingsFilters } from './SettingsFilters'
+import { SettingsGeneral } from './SettingsGeneral'
+import { SettingsList } from './SettingsList'
+import { SettingsNotifications } from './SettingsNotifications'
 
 export function SettingsPage() {
  const [isSaving, setIsSaving] = useState(false)

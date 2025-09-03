@@ -1,16 +1,20 @@
 'use client'
 
-import { Alert, AlertDescription } from '@/shared/ui'
-import { Button } from '@/shared/ui'
 import { useState, useCallback } from 'react'
+
 import { Play, Square, RefreshCw, AlertCircle, Zap } from 'lucide-react'
 
-import { ParserModal } from './ParserModal'
+import { Alert, AlertDescription } from '@/shared/ui'
+import { Button } from '@/shared/ui'
+
+import { useParser, useGroups, useStartParser } from '@/entities'
+
+import { LiveStats } from './LiveStats'
 import { ParserFilters } from './ParserFilters'
+import { ParserModal } from './ParserModal'
 import { ParserProgress } from './ParserProgress'
 import { ParserQueue } from './ParserQueue'
-import { LiveStats } from './LiveStats'
-import { useParser, useGroups, useStartParser } from '@/entities'
+
 
 export function ParserPage() {
     const [error, setError] = useState<string | null>(null)

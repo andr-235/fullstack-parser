@@ -1,16 +1,21 @@
 'use client'
 
-import { StatsCards } from '@/features/dashboard/ui/StatsCards'
-import { RecentComments } from '@/features/dashboard/ui/RecentComments'
-import { TopGroups } from '@/features/dashboard/ui/TopGroups'
-import { TopKeywords } from '@/features/dashboard/ui/TopKeywords'
-import { ActivityFeed } from '@/features/dashboard/ui/ActivityFeed'
-import { useGlobalStats, useDashboardStats } from '@/entities/dashboard'
+import { RefreshCw } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Alert, AlertDescription } from '@/shared/ui'
 import { Skeleton } from '@/shared/ui'
-import { RefreshCw } from 'lucide-react'
 import { Button } from '@/shared/ui'
+
+import { useGlobalStats, useDashboardStats } from '@/entities/dashboard'
+
+import { ActivityFeed } from '@/features/dashboard/ui/ActivityFeed'
+import { RecentComments } from '@/features/dashboard/ui/RecentComments'
+import { StatsCards } from '@/features/dashboard/ui/StatsCards'
+import { TopGroups } from '@/features/dashboard/ui/TopGroups'
+import { TopKeywords } from '@/features/dashboard/ui/TopKeywords'
+
+
 
 export function DashboardPage() {
  const { stats: globalStats, loading: globalLoading, error: globalError, refetch: refetchGlobal } = useGlobalStats()

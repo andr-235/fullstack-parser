@@ -1,6 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import * as z from 'zod'
+
 import { Button } from '@/shared/ui'
 import { Card, CardContent } from '@/shared/ui'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui'
@@ -9,9 +14,7 @@ import { Textarea } from '@/shared/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui'
 import { Switch } from '@/shared/ui'
 import { Label } from '@/shared/ui'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
+
 import { KEYWORD_CATEGORIES, KeywordCategory } from '@/entities/keywords'
 
 const keywordSchema = z.object({

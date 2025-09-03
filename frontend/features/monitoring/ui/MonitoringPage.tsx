@@ -1,15 +1,19 @@
 'use client'
 
+import { useState } from 'react'
+
+import { RefreshCw } from 'lucide-react'
+import { Monitor, Activity, Server, AlertTriangle, CheckCircle } from 'lucide-react'
+
 import { Button } from '@/shared/ui'
 import { Alert, AlertDescription } from '@/shared/ui'
-import { useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+
 import { MonitoringCard } from './MonitoringCard'
-import { MonitoringList } from './MonitoringList'
 import { MonitoringFilters } from './MonitoringFilters'
+import { MonitoringList } from './MonitoringList'
 import { MonitoringResources } from './MonitoringResources'
 import { MonitoringServices } from './MonitoringServices'
-import { Monitor, Activity, Server, AlertTriangle, CheckCircle } from 'lucide-react'
+
 
 export function MonitoringPage() {
  const [isRefreshing, setIsRefreshing] = useState(false)

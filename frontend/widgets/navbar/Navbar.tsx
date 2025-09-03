@@ -1,13 +1,11 @@
 'use client'
 
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+
 import { Bell, Search } from 'lucide-react'
-import { Button } from '@/shared/ui/button'
-import { Input } from '@/shared/ui/input'
+
 import { Badge } from '@/shared/ui/badge'
-import {
- SidebarTrigger,
-} from '@/shared/ui/sidebar'
-import { Separator } from '@/shared/ui/separator'
 import {
  Breadcrumb,
  BreadcrumbItem,
@@ -16,9 +14,13 @@ import {
  BreadcrumbPage,
  BreadcrumbSeparator,
 } from '@/shared/ui/breadcrumb'
+import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
+import { Separator } from '@/shared/ui/separator'
+import {
+ SidebarTrigger,
+} from '@/shared/ui/sidebar'
 import { ThemeToggle } from '@/shared/ui/theme-toggle'
-import { usePathname } from 'next/navigation'
-import Link from 'next/link'
 
 interface NavbarProps {
  notificationCount?: number

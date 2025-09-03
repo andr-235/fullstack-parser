@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, ReactNode } from 'react'
+
 import { useUser } from '@/entities/user'
 
 interface AuthContextType {

@@ -128,11 +128,38 @@ export class ApiClient {
 
   // Stats API
   async getGlobalStats(): Promise<GlobalStats> {
-    return this.request('/api/v1/stats/global')
+    const backendStats = await this.request('/api/v1/parser/stats')
+    return this.adaptBackendStatsToGlobalStats(backendStats)
   }
 
   async getDashboardStats(): Promise<DashboardStats> {
-    return this.request('/api/v1/stats/dashboard')
+    const backendStats = await this.request('/api/v1/parser/stats')
+    return this.adaptBackendStatsToDashboardStats(backendStats)
+  }
+
+  // Адаптеры для преобразования данных backend в формат frontend
+  private adaptBackendStatsToGlobalStats(backendStats: any): GlobalStats {
+    return {
+      total_comments: backendStats.total_comments_found || 0,
+      total_matches: backendStats.completed_tasks || 0,
+      comments_with_keywords: backendStats.running_tasks || 0,
+      active_groups: backendStats.running_tasks || 0,
+      active_keywords: backendStats.completed_tasks || 0,
+      total_groups: backendStats.total_tasks || 0,
+      total_keywords: backendStats.failed_tasks || 0,
+    }
+  }
+
+  private adaptBackendStatsToDashboardStats(backendStats: any): DashboardStats {
+    return {
+      today_comments: backendStats.total_comments_found || 0,
+      today_matches: backendStats.completed_tasks || 0,
+      week_comments: backendStats.total_posts_found || 0,
+      week_matches: backendStats.running_tasks || 0,
+      recent_activity: [],
+      top_groups: [],
+      top_keywords: [],
+    }
   }
 
   // Groups API
@@ -435,39 +462,39 @@ export class ApiClient {
       queryParams.append('is_archived', filters.is_archived.toString())
 
     const queryString = queryParams.toString()
-    const endpoint = `/api/v1/parser/comments${queryString ? `?${queryString}` : ''}`
+    const endpoint = `/api/v1/comments${queryString ? `?${queryString}` : ''}`
 
     return this.request(endpoint)
   }
 
   async getCommentWithKeywords(commentId: number): Promise<VKComment> {
-    return this.request(`/api/v1/parser/comments/${commentId}`)
+    return this.request(`/api/v1/comments/${commentId}`)
   }
 
   async updateCommentStatus(
     commentId: number,
     statusUpdate: UpdateCommentRequest
   ): Promise<VKComment> {
-    return this.request(`/api/v1/parser/comments/${commentId}/status`, {
+    return this.request(`/api/v1/comments/${commentId}`, {
       method: 'PUT',
       body: JSON.stringify(statusUpdate),
     })
   }
 
   async markCommentViewed(commentId: number): Promise<VKComment> {
-    return this.request(`/api/v1/parser/comments/${commentId}/view`, {
+    return this.request(`/api/v1/comments/${commentId}/view`, {
       method: 'POST',
     })
   }
 
   async archiveComment(commentId: number): Promise<VKComment> {
-    return this.request(`/api/v1/parser/comments/${commentId}/archive`, {
+    return this.request(`/api/v1/comments/${commentId}/archive`, {
       method: 'POST',
     })
   }
 
   async unarchiveComment(commentId: number): Promise<VKComment> {
-    return this.request(`/api/v1/parser/comments/${commentId}/unarchive`, {
+    return this.request(`/api/v1/comments/${commentId}/unarchive`, {
       method: 'POST',
     })
   }

@@ -1,11 +1,13 @@
 'use client'
 
-import { RecentActivityItem } from '@/entities/dashboard'
+import { formatDistanceToNow } from 'date-fns'
+import { Activity, MessageSquare, Search, Settings, AlertCircle, Play, Pause } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Badge } from '@/shared/ui'
 import { Button } from '@/shared/ui'
-import { formatDistanceToNow } from 'date-fns'
-import { Activity, MessageSquare, Search, Settings, AlertCircle, Play, Pause } from 'lucide-react'
+
+import { RecentActivityItem } from '@/entities/dashboard'
 
 interface ActivityFeedProps {
   activities: RecentActivityItem[]

@@ -1,7 +1,8 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Activity } from 'lucide-react'
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 
 interface MonitoringEvent {
  id: string

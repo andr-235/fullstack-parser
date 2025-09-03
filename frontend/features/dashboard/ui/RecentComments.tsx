@@ -1,12 +1,14 @@
 'use client'
 
-import { RecentActivityItem } from '@/entities/dashboard'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { Badge } from '@/shared/ui'
-import { Button } from '@/shared/ui'
 import { formatDistanceToNow, format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { MessageSquare, ExternalLink, Clock, CheckCircle, AlertCircle, Users } from 'lucide-react'
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
+import { Button } from '@/shared/ui'
+
+import { RecentActivityItem } from '@/entities/dashboard'
 
 interface RecentCommentsProps {
  comments: RecentActivityItem[]

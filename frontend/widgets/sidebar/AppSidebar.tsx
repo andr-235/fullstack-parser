@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+
 import {
  GalleryVerticalEnd,
  LayoutDashboard,
@@ -12,11 +13,8 @@ import {
  Settings,
 } from 'lucide-react'
 
-import { NavMain } from './NavMain'
-import { NavProjects } from './NavProjects'
-import { NavUser } from './NavUser'
-import { TeamSwitcher } from './TeamSwitcher'
 import { useNavigation } from '@/shared/contexts/NavigationContext'
+import { Badge } from '@/shared/ui/badge'
 import {
  Sidebar,
  SidebarContent,
@@ -24,7 +22,12 @@ import {
  SidebarHeader,
  SidebarRail,
 } from '@/shared/ui/sidebar'
-import { Badge } from '@/shared/ui/badge'
+
+import { NavMain } from './NavMain'
+import { NavProjects } from './NavProjects'
+import { NavUser } from './NavUser'
+import { TeamSwitcher } from './TeamSwitcher'
+
 
 // Sample data for user and teams
 const user = {

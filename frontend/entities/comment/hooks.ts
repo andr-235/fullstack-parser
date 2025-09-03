@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
+
 import { apiClient } from '@/shared/lib'
+
 import {
   Comment,
   CreateCommentRequest,

@@ -1,12 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { CommentsList } from '@/features/comments/ui/CommentsList'
-import { CommentFilters } from '@/features/comments/ui/CommentFilters'
-import { useComments } from '@/entities/comment'
-import { Comment, CommentFilters as CommentFiltersType } from '@/entities/comment'
+
 import { Button } from '@/shared/ui'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+
+import { useComments } from '@/entities/comment'
+import { Comment, CommentFilters as CommentFiltersType } from '@/entities/comment'
+
+import { CommentFilters } from '@/features/comments/ui/CommentFilters'
+import { CommentsList } from '@/features/comments/ui/CommentsList'
 
 export function CommentsPage() {
  const [filters, setFilters] = useState<CommentFiltersType>({})

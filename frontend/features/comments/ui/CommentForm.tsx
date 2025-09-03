@@ -1,14 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import * as z from 'zod'
+
 import { Button } from '@/shared/ui'
 import { Card, CardContent } from '@/shared/ui'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui'
 import { Input } from '@/shared/ui'
 import { Textarea } from '@/shared/ui'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
 
 const commentSchema = z.object({
  content: z.string().min(1, 'Содержание комментария обязательно').max(1000, 'Комментарий слишком длинный'),

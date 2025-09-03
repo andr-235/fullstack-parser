@@ -1,10 +1,13 @@
 'use client'
 
+import { MessageSquare, Users, Hash, FolderOpen, TrendingUp, TrendingDown, Target, Calendar } from 'lucide-react'
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
+
 import { GlobalStats } from '@/entities/dashboard'
 import { useDashboardMetrics, useTrends } from '@/entities/dashboard'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { MessageSquare, Users, Hash, FolderOpen, TrendingUp, TrendingDown, Target, Calendar } from 'lucide-react'
-import { Badge } from '@/shared/ui'
+
 
 interface StatsCardsProps {
  stats: GlobalStats

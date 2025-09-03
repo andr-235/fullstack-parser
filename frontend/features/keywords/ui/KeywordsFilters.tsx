@@ -1,12 +1,14 @@
 'use client'
 
+import { Search, X, Eye, EyeOff } from 'lucide-react'
+
 import { Button } from '@/shared/ui'
 import { Input } from '@/shared/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui'
 import { Switch } from '@/shared/ui'
 import { Label } from '@/shared/ui'
+
 import { KeywordsFilters as KeywordsFiltersType, KEYWORD_CATEGORIES } from '@/entities/keywords'
-import { Search, X, Eye, EyeOff } from 'lucide-react'
 
 interface KeywordsFiltersProps {
  filters: KeywordsFiltersType

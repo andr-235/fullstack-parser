@@ -1,11 +1,12 @@
 'use client'
 
-import { AppSidebar } from '../sidebar/AppSidebar'
-import { AppNavbar } from '../navbar/AppNavbar'
 import {
  SidebarInset,
  SidebarProvider,
 } from '@/shared/ui/sidebar'
+
+import { AppNavbar } from '../navbar/AppNavbar'
+import { AppSidebar } from '../sidebar/AppSidebar'
 
 interface AppLayoutProps {
  children: React.ReactNode

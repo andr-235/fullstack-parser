@@ -1,11 +1,13 @@
 'use client'
 
+import { Search, X, Eye, EyeOff } from 'lucide-react'
+
 import { Button } from '@/shared/ui'
 import { Input } from '@/shared/ui'
 import { Switch } from '@/shared/ui'
 import { Label } from '@/shared/ui'
+
 import { CommentFilters as CommentFiltersType } from '@/entities/comment'
-import { Search, X, Eye, EyeOff } from 'lucide-react'
 
 interface CommentFiltersProps {
  filters: CommentFiltersType

@@ -1,10 +1,11 @@
 'use client'
 
+import { Palette } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Label } from '@/shared/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui'
 import { Switch } from '@/shared/ui'
-import { Palette } from 'lucide-react'
 
 export function SettingsAppearance() {
  return (

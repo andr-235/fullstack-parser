@@ -1,8 +1,9 @@
 'use client'
 
+import { LucideIcon } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Badge } from '@/shared/ui'
-import { LucideIcon } from 'lucide-react'
 
 interface SettingsCardProps {
  title: string

@@ -1,11 +1,13 @@
 'use client'
 
-import { DashboardTopItem } from '@/entities/dashboard'
+import { Users, ExternalLink, TrendingUp, MessageSquare, BarChart3 } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Badge } from '@/shared/ui'
 import { Button } from '@/shared/ui'
-import { Users, ExternalLink, TrendingUp, MessageSquare, BarChart3 } from 'lucide-react'
 import { Progress } from '@/shared/ui'
+
+import { DashboardTopItem } from '@/entities/dashboard'
 
 interface TopGroupsProps {
  groups: DashboardTopItem[]

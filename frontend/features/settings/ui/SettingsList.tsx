@@ -1,9 +1,11 @@
 'use client'
 
+import { Settings } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Badge } from '@/shared/ui'
+
 import { SettingsCard } from './SettingsCard'
-import { Settings } from 'lucide-react'
 
 interface SettingsItem {
  id: string

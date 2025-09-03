@@ -1,12 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Keyword } from '@/entities/keywords'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { Button } from '@/shared/ui'
-import { Badge } from '@/shared/ui'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui'
-import { KeywordForm } from '@/features/keywords/ui/KeywordForm'
+
 import { formatDistanceToNow } from 'date-fns'
 import {
  Hash,
@@ -21,12 +16,21 @@ import {
  Type,
  WholeWord
 } from 'lucide-react'
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+import { Button } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui'
 import {
  DropdownMenu,
  DropdownMenuContent,
  DropdownMenuItem,
  DropdownMenuTrigger,
 } from '@/shared/ui'
+
+import { Keyword } from '@/entities/keywords'
+
+import { KeywordForm } from '@/features/keywords/ui/KeywordForm'
 
 interface KeywordCardProps {
  keyword: Keyword

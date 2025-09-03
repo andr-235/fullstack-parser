@@ -1,12 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { VKGroup } from '@/entities/groups'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { Button } from '@/shared/ui'
-import { Badge } from '@/shared/ui'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui'
-import { GroupForm } from '@/features/groups/ui/GroupForm'
+
 import { formatDistanceToNow } from 'date-fns'
 import {
  Users,
@@ -21,12 +16,21 @@ import {
  Calendar,
  Hash
 } from 'lucide-react'
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+import { Button } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui'
 import {
  DropdownMenu,
  DropdownMenuContent,
  DropdownMenuItem,
  DropdownMenuTrigger,
 } from '@/shared/ui'
+
+import { VKGroup } from '@/entities/groups'
+
+import { GroupForm } from '@/features/groups/ui/GroupForm'
 
 interface GroupCardProps {
  group: VKGroup

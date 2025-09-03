@@ -1,17 +1,21 @@
 'use client'
 
 import { useState } from 'react'
-import { GroupsList } from '@/features/groups/ui/GroupsList'
-import { GroupsFilters } from '@/features/groups/ui/GroupsFilters'
-import { useGroups } from '@/entities/groups'
-import { GroupsFilters as GroupsFiltersType } from '@/entities/groups'
+
+import { Plus, Upload, RefreshCw } from 'lucide-react'
+
 import { Button } from '@/shared/ui'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui'
-import { GroupForm } from '@/features/groups/ui/GroupForm'
 import { FileUploadModal } from '@/shared/ui'
-import { Plus, Upload, RefreshCw } from 'lucide-react'
 import { Alert, AlertDescription } from '@/shared/ui'
+
+import { GroupsFilters as GroupsFiltersType } from '@/entities/groups'
+import { useGroups } from '@/entities/groups'
+
+import { GroupForm } from '@/features/groups/ui/GroupForm'
+import { GroupsFilters } from '@/features/groups/ui/GroupsFilters'
+import { GroupsList } from '@/features/groups/ui/GroupsList'
 
 export function GroupsPage() {
  const [filters, setFilters] = useState<GroupsFiltersType>({

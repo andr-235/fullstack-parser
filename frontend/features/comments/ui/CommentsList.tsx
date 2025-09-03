@@ -1,20 +1,22 @@
 'use client'
 
-import { Comment } from '@/entities/comment'
 import { formatDistanceToNow } from 'date-fns'
+import { Edit, Trash2, ThumbsUp, MessageCircle, MoreHorizontal } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Button } from '@/shared/ui'
 import { Badge } from '@/shared/ui'
 import { Avatar, AvatarFallback } from '@/shared/ui'
 import { Skeleton } from '@/shared/ui'
 import { Alert, AlertDescription } from '@/shared/ui'
-import { Edit, Trash2, ThumbsUp, MessageCircle, MoreHorizontal } from 'lucide-react'
 import {
  DropdownMenu,
  DropdownMenuContent,
  DropdownMenuItem,
  DropdownMenuTrigger,
 } from '@/shared/ui'
+
+import { Comment } from '@/entities/comment'
 
 interface CommentsListProps {
  comments: Comment[]

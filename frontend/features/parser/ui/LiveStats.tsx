@@ -1,9 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { Badge } from '@/shared/ui'
-import { Skeleton } from '@/shared/ui'
+
 import {
  BarChart3,
  TrendingUp,
@@ -32,6 +30,11 @@ import {
  Area,
  AreaChart
 } from 'recharts'
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
+import { Skeleton } from '@/shared/ui'
+
 import type { ParserStats, ParserGlobalStats, ParserState } from '@/entities/parser'
 
 interface LiveStatsProps {

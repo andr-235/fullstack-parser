@@ -1,13 +1,17 @@
 'use client'
 
-import { Keyword } from '@/entities/keywords'
+import { Hash, MessageSquare, FolderOpen } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Button } from '@/shared/ui'
 import { Badge } from '@/shared/ui'
 import { Skeleton } from '@/shared/ui'
 import { Alert, AlertDescription } from '@/shared/ui'
+
+import { Keyword } from '@/entities/keywords'
+
 import { KeywordCard } from '@/features/keywords/ui/KeywordCard'
-import { Hash, MessageSquare, FolderOpen } from 'lucide-react'
+
 
 interface KeywordsListProps {
  keywords: Keyword[]

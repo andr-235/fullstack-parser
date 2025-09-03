@@ -1,5 +1,8 @@
 'use client'
 
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+
 import {
  Folder,
  Forward,
@@ -24,8 +27,6 @@ import {
  SidebarMenuItem,
  useSidebar,
 } from '@/shared/ui/sidebar'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 
 export function NavProjects({
  projects,

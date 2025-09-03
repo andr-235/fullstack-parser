@@ -1,4 +1,5 @@
 import { useState } from 'react'
+
 import { Post, CreatePostRequest, UpdatePostRequest } from './types'
 
 export const usePosts = () => {

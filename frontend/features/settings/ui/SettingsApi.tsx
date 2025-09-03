@@ -1,12 +1,13 @@
 'use client'
 
+import { Key } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Input } from '@/shared/ui'
 import { Label } from '@/shared/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui'
 import { Switch } from '@/shared/ui'
 import { Button } from '@/shared/ui'
-import { Key } from 'lucide-react'
 
 export function SettingsApi() {
  return (

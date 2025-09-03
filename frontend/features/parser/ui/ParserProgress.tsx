@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { Badge } from '@/shared/ui'
-import { Progress } from '@/shared/ui'
+
+import { formatDistanceToNow, differenceInSeconds } from 'date-fns'
+import { ru } from 'date-fns/locale'
 import {
  Clock,
  Zap,
@@ -13,8 +13,11 @@ import {
  TrendingUp,
  Activity
 } from 'lucide-react'
-import { formatDistanceToNow, differenceInSeconds } from 'date-fns'
-import { ru } from 'date-fns/locale'
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
+import { Progress } from '@/shared/ui'
+
 import type { ParserState } from '@/entities/parser'
 
 interface ParserProgressProps {

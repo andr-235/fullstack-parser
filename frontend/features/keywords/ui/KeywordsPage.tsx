@@ -1,17 +1,21 @@
 'use client'
 
 import { useState } from 'react'
-import { KeywordsList } from '@/features/keywords/ui/KeywordsList'
-import { KeywordsFilters } from '@/features/keywords/ui/KeywordsFilters'
-import { useKeywords } from '@/entities/keywords'
-import { KeywordsFilters as KeywordsFiltersType } from '@/entities/keywords'
+
+import { Plus, Upload, RefreshCw } from 'lucide-react'
+
 import { Button } from '@/shared/ui'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui'
-import { KeywordForm } from '@/features/keywords/ui/KeywordForm'
 import { FileUploadModal } from '@/shared/ui'
-import { Plus, Upload, RefreshCw } from 'lucide-react'
 import { Alert, AlertDescription } from '@/shared/ui'
+
+import { KeywordsFilters as KeywordsFiltersType } from '@/entities/keywords'
+import { useKeywords } from '@/entities/keywords'
+
+import { KeywordForm } from '@/features/keywords/ui/KeywordForm'
+import { KeywordsFilters } from '@/features/keywords/ui/KeywordsFilters'
+import { KeywordsList } from '@/features/keywords/ui/KeywordsList'
 
 export function KeywordsPage() {
  const [filters, setFilters] = useState<KeywordsFiltersType>({

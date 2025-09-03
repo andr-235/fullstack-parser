@@ -1,9 +1,10 @@
 'use client'
 
+import { Filter, X } from 'lucide-react'
+
 import { Button } from '@/shared/ui'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Badge } from '@/shared/ui'
-import { Filter, X } from 'lucide-react'
 
 interface ParserFiltersProps {
  filters: {

@@ -1,13 +1,16 @@
 'use client'
 
+import { useState } from 'react'
+
+import { Play, Settings } from 'lucide-react'
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui'
 import { Button } from '@/shared/ui'
 import { Input } from '@/shared/ui'
 import { Label } from '@/shared/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui'
 import { Switch } from '@/shared/ui'
-import { Play, Settings } from 'lucide-react'
-import { useState } from 'react'
+
 import type { VKGroup } from '@/entities/groups'
 
 interface ParserModalProps {

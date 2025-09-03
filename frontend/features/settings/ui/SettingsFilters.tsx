@@ -1,9 +1,10 @@
 'use client'
 
+import { Filter, X, Settings, Database, Bell, Palette, Globe } from 'lucide-react'
+
 import { Button } from '@/shared/ui'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Badge } from '@/shared/ui'
-import { Filter, X, Settings, Database, Bell, Palette, Globe } from 'lucide-react'
 
 interface SettingsFiltersProps {
  filters: {

@@ -1,7 +1,11 @@
 'use client'
 
 import { useState, useRef } from 'react'
+
 import { Upload, FileText, X, CheckCircle, AlertCircle } from 'lucide-react'
+
+import { Alert, AlertDescription } from '@/shared/ui/alert'
+import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import {
  Dialog,
@@ -15,8 +19,6 @@ import {
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Progress } from '@/shared/ui/progress'
-import { Alert, AlertDescription } from '@/shared/ui/alert'
-import { Badge } from '@/shared/ui/badge'
 
 export interface FileUploadModalProps {
  /** Тип загрузки - для определения API endpoint и параметров */

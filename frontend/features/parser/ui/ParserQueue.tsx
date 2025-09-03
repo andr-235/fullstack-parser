@@ -1,9 +1,7 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { Badge } from '@/shared/ui'
-import { Progress } from '@/shared/ui'
-import { Skeleton } from '@/shared/ui'
+import { formatDistanceToNow } from 'date-fns'
+import { ru } from 'date-fns/locale'
 import {
   List,
   CheckCircle,
@@ -15,8 +13,12 @@ import {
   FileText,
   ArrowRight
 } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
-import { ru } from 'date-fns/locale'
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+import { Badge } from '@/shared/ui'
+import { Progress } from '@/shared/ui'
+import { Skeleton } from '@/shared/ui'
+
 import type { ParserTasksResponse, ParseTaskResponse, ParseTask } from '@/entities/parser'
 
 interface ParserQueueProps {

@@ -1,13 +1,17 @@
 'use client'
 
-import { VKGroup } from '@/entities/groups'
+import { MessageSquare, Users, Hash, FolderOpen } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Button } from '@/shared/ui'
 import { Badge } from '@/shared/ui'
 import { Skeleton } from '@/shared/ui'
 import { Alert, AlertDescription } from '@/shared/ui'
+
+import { VKGroup } from '@/entities/groups'
+
 import { GroupCard } from '@/features/groups/ui/GroupCard'
-import { MessageSquare, Users, Hash, FolderOpen } from 'lucide-react'
+
 
 interface GroupsListProps {
  groups: VKGroup[]
