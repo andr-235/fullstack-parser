@@ -41,9 +41,7 @@ class CommentRepository:
 
     async def get_by_vk_id(self, vk_comment_id: str) -> Optional[BaseComment]:
         """Получить комментарий по VK ID"""
-        query = select(BaseComment).where(
-            BaseComment.vk_comment_id == vk_comment_id
-        )
+        query = select(BaseComment).where(BaseComment.vk_id == vk_comment_id)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
@@ -55,13 +53,15 @@ class CommentRepository:
         search_text: Optional[str] = None,
     ) -> List[BaseComment]:
         """Получить комментарии по ID группы"""
-        query = select(BaseComment).where(BaseComment.vk_group_id == group_id)
+        query = select(BaseComment).where(BaseComment.group_id == group_id)
 
         if search_text:
             query = query.where(BaseComment.text.ilike(f"%{search_text}%"))
 
         query = (
-            query.order_by(desc(BaseComment.date)).limit(limit).offset(offset)
+            query.order_by(desc(BaseComment.published_at))
+            .limit(limit)
+            .offset(offset)
         )
         result = await self.db.execute(query)
         return list(result.scalars().all())
@@ -70,8 +70,12 @@ class CommentRepository:
         self, post_id: str, limit: int = 100, offset: int = 0
     ) -> List[BaseComment]:
         """Получить комментарии к посту"""
-        query = select(BaseComment).where(BaseComment.vk_post_id == post_id)
-        query = query.order_by(BaseComment.date).limit(limit).offset(offset)
+        query = select(BaseComment).where(BaseComment.post_id == post_id)
+        query = (
+            query.order_by(BaseComment.published_at)
+            .limit(limit)
+            .offset(offset)
+        )
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
@@ -112,7 +116,7 @@ class CommentRepository:
     async def count_by_group(self, group_id: str) -> int:
         """Подсчитать количество комментариев в группе"""
         query = select(func.count()).select_from(BaseComment)
-        query = query.where(BaseComment.vk_group_id == group_id)
+        query = query.where(BaseComment.group_id == group_id)
         result = await self.db.execute(query)
         return result.scalar() or 0
 

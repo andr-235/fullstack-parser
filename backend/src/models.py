@@ -8,7 +8,7 @@
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from sqlalchemy import Column, DateTime, Integer, String, Text, func
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -79,15 +79,34 @@ class User(BaseModel):
 class Group(BaseModel):
     """Модель группы VK"""
 
-    __tablename__ = "groups"
+    __tablename__ = "vk_groups"
 
-    vk_group_id = Column(String(50), unique=True, index=True, nullable=False)
-    name = Column(String(255), nullable=False)
-    screen_name = Column(String(100), unique=True, index=True, nullable=False)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    vk_id = Column(Integer, unique=True, index=True, nullable=False)
+    screen_name = Column(String(255), nullable=True)
+    name = Column(String(500), nullable=False)
     description = Column(Text, nullable=True)
-    members_count = Column(Integer, default=0)
-    is_active = Column(Integer, default=1, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default="now()", nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True), server_default="now()", nullable=False
+    )
+    max_posts_to_check = Column(Integer, default=100)
+    auto_monitoring_enabled = Column(Boolean, default=False, nullable=False)
+    monitoring_interval_minutes = Column(Integer, default=60)
+    next_monitoring_at = Column(DateTime(timezone=True), nullable=True)
+    monitoring_priority = Column(Integer, default=5)
     last_parsed_at = Column(DateTime(timezone=True), nullable=True)
+    total_posts_parsed = Column(Integer, default=0)
+    total_comments_found = Column(Integer, default=0)
+    monitoring_runs_count = Column(Integer, default=0)
+    last_monitoring_success = Column(DateTime(timezone=True), nullable=True)
+    last_monitoring_error = Column(Text, nullable=True)
+    members_count = Column(Integer, nullable=True)
+    is_closed = Column(Boolean, default=False, nullable=False)
+    photo_url = Column(String(500), nullable=True)
 
 
 class Keyword(BaseModel):
@@ -105,33 +124,62 @@ class Keyword(BaseModel):
 class Comment(BaseModel):
     """Модель комментария"""
 
-    __tablename__ = "comments"
+    __tablename__ = "vk_comments"
 
-    vk_comment_id = Column(String(50), unique=True, index=True, nullable=False)
-    vk_post_id = Column(String(50), index=True, nullable=False)
-    vk_group_id = Column(String(50), index=True, nullable=False)
-    author_id = Column(String(50), index=True, nullable=False)
-    author_name = Column(String(255), nullable=False)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    vk_id = Column(Integer, unique=True, index=True, nullable=False)
     text = Column(Text, nullable=False)
+    post_id = Column(Integer, index=True, nullable=False)
+    author_id = Column(Integer, index=True, nullable=False)
+    is_archived = Column(Boolean, default=False, nullable=False)
+    is_viewed = Column(Boolean, default=False, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default="now()", nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True), server_default="now()", nullable=False
+    )
+    published_at = Column(DateTime(timezone=True), nullable=False)
+    post_vk_id = Column(Integer, nullable=True)
+    author_name = Column(String(200), nullable=True)
+    author_screen_name = Column(String(100), nullable=True)
+    author_photo_url = Column(String(500), nullable=True)
     likes_count = Column(Integer, default=0)
-    date = Column(DateTime(timezone=True), nullable=False)
+    parent_comment_id = Column(Integer, index=True, nullable=True)
+    has_attachments = Column(Boolean, default=False, nullable=False)
+    attachments_info = Column(Text, nullable=True)
+    is_processed = Column(Boolean, default=False, nullable=False)
     processed_at = Column(DateTime(timezone=True), nullable=True)
+    matched_keywords_count = Column(Integer, default=0, nullable=False)
+    viewed_at = Column(DateTime(timezone=True), nullable=True)
+    archived_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class Post(BaseModel):
     """Модель поста VK"""
 
-    __tablename__ = "posts"
+    __tablename__ = "vk_posts"
 
-    vk_post_id = Column(String(50), unique=True, index=True, nullable=False)
-    vk_group_id = Column(String(50), index=True, nullable=False)
-    author_id = Column(String(50), index=True, nullable=False)
-    author_name = Column(String(255), nullable=False)
-    text = Column(Text, nullable=False)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    vk_id = Column(Integer, index=True, nullable=False)
+    group_id = Column(Integer, index=True, nullable=False)
+    text = Column(Text, nullable=True)
+    created_at = Column(
+        DateTime(timezone=True), server_default="now()", nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True), server_default="now()", nullable=False
+    )
+    published_at = Column(DateTime(timezone=True), nullable=False)
+    vk_owner_id = Column(Integer, default=0, nullable=False)
     likes_count = Column(Integer, default=0)
+    reposts_count = Column(Integer, default=0)
     comments_count = Column(Integer, default=0)
-    date = Column(DateTime(timezone=True), nullable=False)
-    processed_at = Column(DateTime(timezone=True), nullable=True)
+    views_count = Column(Integer, default=0)
+    is_parsed = Column(Boolean, default=False, nullable=False)
+    parsed_at = Column(DateTime(timezone=True), nullable=True)
+    has_attachments = Column(Boolean, default=False, nullable=False)
+    attachments_info = Column(Text, nullable=True)
 
 
 class ErrorReport(BaseModel):

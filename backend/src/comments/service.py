@@ -41,14 +41,14 @@ class CommentService:
         # Формируем ответ
         result = {
             "id": comment.id,
-            "vk_comment_id": comment.vk_comment_id,
-            "vk_post_id": comment.vk_post_id,
-            "vk_group_id": comment.vk_group_id,
+            "vk_comment_id": comment.vk_id,
+            "vk_post_id": comment.post_id,
+            "vk_group_id": comment.group_id,
             "author_id": comment.author_id,
             "author_name": comment.author_name,
             "text": comment.text,
             "likes_count": comment.likes_count,
-            "date": comment.date,
+            "date": comment.published_at,
             "processed_at": comment.processed_at,
             "created_at": comment.created_at,
             "updated_at": comment.updated_at,
@@ -78,9 +78,9 @@ class CommentService:
         return [
             {
                 "id": comment.id,
-                "vk_comment_id": comment.vk_comment_id,
-                "vk_post_id": comment.vk_post_id,
-                "vk_group_id": comment.vk_group_id,
+                "vk_comment_id": comment.vk_id,
+                "vk_post_id": comment.post_id,
+                "vk_group_id": comment.group_id,
                 "author_id": comment.author_id,
                 "author_name": comment.author_name,
                 "text": comment.text,
@@ -104,9 +104,9 @@ class CommentService:
         return [
             {
                 "id": comment.id,
-                "vk_comment_id": comment.vk_comment_id,
-                "vk_post_id": comment.vk_post_id,
-                "vk_group_id": comment.vk_group_id,
+                "vk_comment_id": comment.vk_id,
+                "vk_post_id": comment.post_id,
+                "vk_group_id": comment.group_id,
                 "author_id": comment.author_id,
                 "author_name": comment.author_name,
                 "text": comment.text,
@@ -125,13 +125,13 @@ class CommentService:
         """Создать новый комментарий"""
         # Валидация данных
         required_fields = [
-            "vk_comment_id",
-            "vk_post_id",
-            "vk_group_id",
+            "vk_id",
+            "post_id",
+            "group_id",
             "author_id",
             "author_name",
             "text",
-            "date",
+            "published_at",
         ]
         for field in required_fields:
             if field not in comment_data or not comment_data[field]:
@@ -140,13 +140,11 @@ class CommentService:
                 )
 
         # Проверяем, что комментарий с таким VK ID не существует
-        existing = await self.repository.get_by_vk_id(
-            comment_data["vk_comment_id"]
-        )
+        existing = await self.repository.get_by_vk_id(comment_data["vk_id"])
         if existing:
             raise ValidationError(
                 "Комментарий с таким VK ID уже существует",
-                field="vk_comment_id",
+                field="vk_id",
             )
 
         # Создаем комментарий

@@ -13,6 +13,14 @@
         "portalocker",
         "mcp-sequential-thinking"
       ]
+    },
+    "postgres": {
+      "command": "bunx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:postgres@postgres:5432/vk_parser"
+      ]
     }
   }
 }

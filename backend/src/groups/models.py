@@ -177,7 +177,7 @@ class GroupRepository:
                 func.avg(Comment.likes_count).label("avg_likes"),
             )
             .select_from(Comment)
-            .where(Comment.vk_group_id == group.vk_id)
+            .where(Comment.group_id == group.vk_id)
         )
 
         result = await self.db.execute(comments_query)

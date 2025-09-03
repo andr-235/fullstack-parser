@@ -14,14 +14,14 @@ from ..pagination import PaginatedResponse
 class CommentBase(BaseModel):
     """Базовая схема комментария"""
 
-    vk_comment_id: str = Field(..., description="ID комментария в VK")
-    vk_post_id: str = Field(..., description="ID поста в VK")
-    vk_group_id: str = Field(..., description="ID группы в VK")
+    vk_id: str = Field(..., description="ID комментария в VK")
+    post_id: str = Field(..., description="ID поста в VK")
+    group_id: str = Field(..., description="ID группы в VK")
     author_id: str = Field(..., description="ID автора комментария")
     author_name: str = Field(..., description="Имя автора")
     text: str = Field(..., description="Текст комментария")
     likes_count: int = Field(default=0, description="Количество лайков")
-    date: datetime = Field(..., description="Дата публикации")
+    published_at: datetime = Field(..., description="Дата публикации")
 
 
 class CommentCreate(CommentBase):

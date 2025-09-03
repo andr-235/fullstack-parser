@@ -37,6 +37,7 @@ export interface UpdateCommentRequest {
 export interface CommentFilters {
   is_viewed?: boolean
   group_id?: number
+  post_id?: number
   keyword_id?: number
   limit?: number
   offset?: number

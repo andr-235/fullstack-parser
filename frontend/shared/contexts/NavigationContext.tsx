@@ -40,10 +40,9 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
    setIsLoading(true)
 
    // Получаем данные параллельно для лучшей производительности
-   const [globalStats, dashboardStats, commentsResponse] = await Promise.all([
+   const [globalStats, dashboardStats] = await Promise.all([
     apiClient.getGlobalStats().catch(() => null),
     apiClient.getDashboardStats().catch(() => null),
-    apiClient.getComments({ size: 1 }).catch(() => null),
    ])
 
    if (globalStats && dashboardStats) {
@@ -51,6 +50,22 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
      comments: {
       total: globalStats.total_comments || 0,
       new: dashboardStats.today_comments || 0,
+     },
+     groups: {
+      total: globalStats.total_groups || 0,
+      active: globalStats.active_groups || 0,
+     },
+     keywords: {
+      total: globalStats.total_keywords || 0,
+      active: globalStats.active_keywords || 0,
+     },
+    })
+   } else if (globalStats) {
+    // Если dashboardStats не загрузился, используем только globalStats
+    setStats({
+     comments: {
+      total: globalStats.total_comments || 0,
+      new: 0,
      },
      groups: {
       total: globalStats.total_groups || 0,

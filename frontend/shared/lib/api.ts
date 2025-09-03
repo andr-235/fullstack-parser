@@ -448,8 +448,27 @@ export class ApiClient {
     const queryParams = new URLSearchParams()
     if (filters?.page !== undefined) queryParams.append('page', filters.page.toString())
     if (filters?.size !== undefined) queryParams.append('size', filters.size.toString())
-    if (filters?.text) queryParams.append('text', filters.text)
-    if (filters?.group_id !== undefined) queryParams.append('group_id', filters.group_id.toString())
+
+    // Всегда используем search endpoint для гибкости поиска
+    let endpoint = '/api/v1/comments/search'
+
+    if (filters?.text) {
+      // Если есть текстовый поиск
+      queryParams.append('q', filters.text)
+    } else if (filters?.group_id !== undefined) {
+      // Если указана группа - добавляем её как дополнительный фильтр
+      queryParams.append('q', '  ') // Минимальная длина для валидации
+      queryParams.append('group_id', filters.group_id.toString())
+    } else if (filters?.post_id !== undefined) {
+      // Если указан пост - добавляем его как дополнительный фильтр
+      queryParams.append('q', '  ') // Минимальная длина для валидации
+      queryParams.append('post_id', filters.post_id.toString())
+    } else {
+      // Если нет параметров - ищем все комментарии
+      queryParams.append('q', '  ') // Минимальная длина для валидации
+    }
+
+    // Добавляем дополнительные фильтры
     if (filters?.keyword_id !== undefined)
       queryParams.append('keyword_id', filters.keyword_id.toString())
     if (filters?.authorId !== undefined)
@@ -462,9 +481,9 @@ export class ApiClient {
       queryParams.append('is_archived', filters.is_archived.toString())
 
     const queryString = queryParams.toString()
-    const endpoint = `/api/v1/comments${queryString ? `?${queryString}` : ''}`
+    const fullEndpoint = `${endpoint}${queryString ? `?${queryString}` : ''}`
 
-    return this.request(endpoint)
+    return this.request(fullEndpoint)
   }
 
   async getCommentWithKeywords(commentId: number): Promise<VKComment> {
