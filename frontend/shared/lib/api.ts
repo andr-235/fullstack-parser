@@ -74,41 +74,73 @@ export class ApiClient {
       ...options,
     }
 
-    try {
-      const response = await fetch(url, config)
+    // Retry логика для обработки временных ошибок
+    const maxRetries = 3
+    let lastError: Error | null = null
 
-      if (!response.ok) {
-        let errorMessage = `HTTP error! status: ${response.status}`
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, config)
 
-        try {
-          const errorData = await response.json()
-          // Backend может возвращать ошибки в формате { error: { message: string } }
-          if (errorData.error?.message) {
-            errorMessage = errorData.error.message
-          } else if (errorData.message) {
-            errorMessage = errorData.message
-          } else if (errorData.detail) {
-            errorMessage = errorData.detail
+        if (!response.ok) {
+          // Для ошибок 503 и 429 делаем retry
+          if ((response.status === 503 || response.status === 429) && attempt < maxRetries - 1) {
+            const delay = Math.pow(2, attempt) * 1000 // Exponential backoff: 1s, 2s, 4s
+            await new Promise(resolve => setTimeout(resolve, delay))
+            continue
           }
-        } catch {
-          // Если не удается распарсить JSON, используем стандартное сообщение
+
+          let errorMessage = `HTTP error! status: ${response.status}`
+
+          try {
+            const errorData = await response.json()
+            // Backend может возвращать ошибки в формате { error: { message: string } }
+            if (errorData.error?.message) {
+              errorMessage = errorData.error.message
+            } else if (errorData.message) {
+              errorMessage = errorData.message
+            } else if (errorData.detail) {
+              errorMessage = errorData.detail
+            }
+          } catch {
+            // Если не удается распарсить JSON, используем стандартное сообщение
+          }
+
+          throw new Error(errorMessage)
         }
 
-        throw new Error(errorMessage)
-      }
+        // Для некоторых endpoints может не быть тела ответа
+        if (response.status === 204) {
+          return undefined as T
+        }
 
-      // Для некоторых endpoints может не быть тела ответа
-      if (response.status === 204) {
-        return undefined as T
-      }
+        return await response.json()
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown error occurred')
 
-      return await response.json()
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error
+        // Если это не сетевая ошибка или последняя попытка, прерываем retry
+        if (attempt === maxRetries - 1 || !this.isRetryableError(lastError)) {
+          break
+        }
+
+        // Задержка перед следующей попыткой
+        const delay = Math.pow(2, attempt) * 1000
+        await new Promise(resolve => setTimeout(resolve, delay))
       }
-      throw new Error('Unknown error occurred')
     }
+
+    throw lastError || new Error('Unknown error occurred')
+  }
+
+  private isRetryableError(error: Error): boolean {
+    const message = error.message.toLowerCase()
+    return (
+      message.includes('network') ||
+      message.includes('timeout') ||
+      message.includes('fetch') ||
+      message.includes('503') ||
+      message.includes('429')
+    )
   }
 
   async getComment(_id: number): Promise<VKComment> {
@@ -128,34 +160,34 @@ export class ApiClient {
 
   // Stats API
   async getGlobalStats(): Promise<GlobalStats> {
-    const backendStats = await this.request('/api/v1/parser/stats')
+    const backendStats = await this.request<Record<string, unknown>>('/api/v1/parser/stats')
     return this.adaptBackendStatsToGlobalStats(backendStats)
   }
 
   async getDashboardStats(): Promise<DashboardStats> {
-    const backendStats = await this.request('/api/v1/parser/stats')
+    const backendStats = await this.request<Record<string, unknown>>('/api/v1/parser/stats')
     return this.adaptBackendStatsToDashboardStats(backendStats)
   }
 
   // Адаптеры для преобразования данных backend в формат frontend
-  private adaptBackendStatsToGlobalStats(backendStats: any): GlobalStats {
+  private adaptBackendStatsToGlobalStats(backendStats: Record<string, unknown>): GlobalStats {
     return {
-      total_comments: backendStats.total_comments_found || 0,
-      total_matches: backendStats.completed_tasks || 0,
-      comments_with_keywords: backendStats.running_tasks || 0,
-      active_groups: backendStats.running_tasks || 0,
-      active_keywords: backendStats.completed_tasks || 0,
-      total_groups: backendStats.total_tasks || 0,
-      total_keywords: backendStats.failed_tasks || 0,
+      total_comments: Number(backendStats.total_comments_found) || 0,
+      total_matches: Number(backendStats.completed_tasks) || 0,
+      comments_with_keywords: Number(backendStats.running_tasks) || 0,
+      active_groups: Number(backendStats.running_tasks) || 0,
+      active_keywords: Number(backendStats.completed_tasks) || 0,
+      total_groups: Number(backendStats.total_tasks) || 0,
+      total_keywords: Number(backendStats.failed_tasks) || 0,
     }
   }
 
-  private adaptBackendStatsToDashboardStats(backendStats: any): DashboardStats {
+  private adaptBackendStatsToDashboardStats(backendStats: Record<string, unknown>): DashboardStats {
     return {
-      today_comments: backendStats.total_comments_found || 0,
-      today_matches: backendStats.completed_tasks || 0,
-      week_comments: backendStats.total_posts_found || 0,
-      week_matches: backendStats.running_tasks || 0,
+      today_comments: Number(backendStats.total_comments_found) || 0,
+      today_matches: Number(backendStats.completed_tasks) || 0,
+      week_comments: Number(backendStats.total_posts_found) || 0,
+      week_matches: Number(backendStats.running_tasks) || 0,
       recent_activity: [],
       top_groups: [],
       top_keywords: [],
@@ -450,7 +482,7 @@ export class ApiClient {
     if (filters?.size !== undefined) queryParams.append('size', filters.size.toString())
 
     // Всегда используем search endpoint для гибкости поиска
-    let endpoint = '/api/v1/comments/search'
+    const endpoint = '/api/v1/comments/search'
 
     if (filters?.text) {
       // Если есть текстовый поиск

@@ -7,13 +7,13 @@ import { Play, Square, RefreshCw, AlertCircle, Zap } from 'lucide-react'
 import { Alert, AlertDescription } from '@/shared/ui'
 import { Button } from '@/shared/ui'
 
-import { useParser, useGroups, useStartParser } from '@/entities'
-
 import { LiveStats } from './LiveStats'
 import { ParserFilters } from './ParserFilters'
 import { ParserModal } from './ParserModal'
 import { ParserProgress } from './ParserProgress'
 import { ParserQueue } from './ParserQueue'
+
+import { useParser, useGroups, useStartParser } from '@/entities'
 
 
 export function ParserPage() {
@@ -28,14 +28,12 @@ export function ParserPage() {
         globalStats,
         tasks,
         isRunning,
-        isStopped,
-        hasError,
         startParser,
         stopParser,
         loading,
         processing,
         refetch,
-    } = useParser(2000) // Автообновление каждые 2 секунды
+    } = useParser(5000) // Автообновление каждые 5 секунд (увеличено для снижения нагрузки)
 
     const { startBulkParser } = useStartParser()
 
@@ -47,7 +45,7 @@ export function ParserPage() {
         size: 100 // Получаем все активные группы
     })
 
-    const handleStartParser = useCallback(async () => {
+    const _handleStartParser = useCallback(async () => {
         if (!groups || groups.length === 0) {
             setError('Нет доступных активных групп для парсинга')
             return
@@ -70,7 +68,7 @@ export function ParserPage() {
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Не удалось запустить парсер'
             setError(errorMessage)
-            console.error('Failed to start parser:', err)
+            // console.error('Failed to start parser:', err)
         }
     }, [groups, startParser])
 
@@ -81,7 +79,7 @@ export function ParserPage() {
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Не удалось остановить парсер'
             setError(errorMessage)
-            console.error('Failed to stop parser:', err)
+            // console.error('Failed to stop parser:', err)
         }
     }, [stopParser])
 
@@ -108,8 +106,8 @@ export function ParserPage() {
             }
             if (config.parseAllGroups) {
                 // Запуск массового парсинга всех групп через backend API
-                console.log('Starting bulk parser with config:', config)
-                console.log('Available groups:', groups?.length || 0)
+                // console.log('Starting bulk parser with config:', config)
+                // console.log('Available groups:', groups?.length || 0)
 
                 const result = await startBulkParser({
                     group_ids: groups?.map(g => g.id) || [],
@@ -117,7 +115,7 @@ export function ParserPage() {
                     force_reparse: config.forceReparse,
                 })
 
-                console.log('Bulk parser result:', result)
+                // console.log('Bulk parser result:', result)
 
                 // Показываем результат массового парсинга
                 if (result.task_id) {
@@ -139,7 +137,7 @@ export function ParserPage() {
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Не удалось запустить парсер'
             setError(errorMessage)
-            console.error('Failed to start parser:', err)
+            // console.error('Failed to start parser:', err)
         }
     }, [groups, startParser, startBulkParser, refetch])
 
@@ -157,9 +155,14 @@ export function ParserPage() {
 
                     {/* Статус индикатор */}
                     <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                        <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-green-500 animate-pulse' :
+                            error ? 'bg-red-500' :
+                                'bg-gray-400'
+                            }`} />
                         <span className="text-sm font-medium">
-                            {isRunning ? 'Активен' : 'Неактивен'}
+                            {isRunning ? 'Активен' :
+                                error ? 'Ошибка' :
+                                    'Неактивен'}
                         </span>
                     </div>
                 </div>

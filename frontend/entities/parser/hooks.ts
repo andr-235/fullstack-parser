@@ -313,19 +313,49 @@ export const useParser = (autoRefreshInterval: number = 3000) => {
   const loading = stateLoading || statsLoading || globalStatsLoading
   const processing = starting || stopping
 
+  // Счетчик ошибок для остановки автообновления
+  const [errorCount, setErrorCount] = useState(0)
+  const MAX_ERRORS = 5 // Максимум ошибок подряд перед остановкой автообновления
+
   // Автоматическое обновление данных
   useEffect(() => {
-    if (!isRunning) return
+    if (!isRunning || errorCount >= MAX_ERRORS) return
 
     const interval = setInterval(() => {
-      refetchState()
-      refetchStats()
-      refetchGlobalStats()
-      refetchTasks()
+      // Добавляем обработку ошибок для предотвращения бесконечных запросов
+      Promise.all([
+        refetchState().catch(err => {
+          console.warn('Failed to refetch parser state:', err)
+          setErrorCount(prev => prev + 1)
+        }),
+        refetchStats().catch(err => {
+          console.warn('Failed to refetch parser stats:', err)
+          setErrorCount(prev => prev + 1)
+        }),
+        refetchGlobalStats().catch(err => {
+          console.warn('Failed to refetch global stats:', err)
+          setErrorCount(prev => prev + 1)
+        }),
+        refetchTasks().catch(err => {
+          console.warn('Failed to refetch parser tasks:', err)
+          setErrorCount(prev => prev + 1)
+        }),
+      ]).then(() => {
+        // Сбрасываем счетчик ошибок при успешном обновлении
+        setErrorCount(0)
+      })
     }, autoRefreshInterval)
 
     return () => clearInterval(interval)
-  }, [isRunning, autoRefreshInterval, refetchState, refetchStats, refetchGlobalStats, refetchTasks])
+  }, [
+    isRunning,
+    autoRefreshInterval,
+    refetchState,
+    refetchStats,
+    refetchGlobalStats,
+    refetchTasks,
+    errorCount,
+  ])
 
   const refetch = useCallback(() => {
     refetchState()

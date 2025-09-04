@@ -4,10 +4,23 @@ FastAPI роутер для модуля Keywords
 Определяет API эндпоинты для управления ключевыми словами
 """
 
+import json
+import csv
+import io
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    Query,
+    HTTPException,
+    status,
+    UploadFile,
+    File,
+    Form,
+)
 
 from .dependencies import get_keywords_service
+from ..exceptions import ValidationError
 from .schemas import (
     KeywordCreate,
     KeywordUpdate,
@@ -163,8 +176,12 @@ async def delete_keyword(
             )
     except HTTPException:
         raise
-    except Exception as e:
+    except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail="An unexpected error occurred"
+        )
 
 
 @router.patch(
@@ -429,6 +446,58 @@ async def import_keywords(
             update_existing=request.update_existing,
         )
         return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post(
+    "/upload",
+    summary="Загрузка ключевых слов из файла",
+    description="Загрузить ключевые слова из файла (JSON, CSV, TXT)",
+)
+async def upload_keywords(
+    file: UploadFile = File(...),
+    is_active: bool = Form(True),
+    is_case_sensitive: bool = Form(False),
+    is_whole_word: bool = Form(False),
+    service: KeywordsService = Depends(get_keywords_service),
+) -> dict:
+    """Загрузка ключевых слов из файла"""
+    try:
+        # Читаем содержимое файла
+        content = await file.read()
+        file_content = content.decode("utf-8")
+
+        # Определяем тип файла по расширению
+        file_extension = (
+            file.filename.split(".")[-1].lower() if file.filename else "txt"
+        )
+
+        # Парсим файл в зависимости от типа
+        if file_extension == "json":
+            keywords_data = json.loads(file_content)
+        elif file_extension == "csv":
+            keywords_data = service.parse_csv_keywords(file_content)
+        else:  # txt
+            keywords_data = service.parse_txt_keywords(file_content)
+
+        # Применяем параметры к каждому ключевому слову
+        for keyword in keywords_data:
+            keyword["is_active"] = is_active
+            keyword["is_case_sensitive"] = is_case_sensitive
+            keyword["is_whole_word"] = is_whole_word
+
+        # Импортируем ключевые слова
+        result = await service.import_keywords(
+            import_data=json.dumps(keywords_data),
+            update_existing=False,
+        )
+
+        return {
+            "success": result["successful"],
+            "failed": result["failed"],
+            "errors": [str(error) for error in result["errors"]],
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

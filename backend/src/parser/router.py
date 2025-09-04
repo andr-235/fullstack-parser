@@ -187,6 +187,23 @@ async def get_parsing_stats(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get(
+    "/stats/global",
+    response_model=ParseStats,
+    summary="Получить глобальную статистику парсинга",
+    description="Получить глобальную статистику работы парсера (алиас для /stats)",
+)
+async def get_global_parsing_stats(
+    service: ParserService = Depends(get_parser_service),
+) -> ParseStats:
+    """Получить глобальную статистику парсинга"""
+    try:
+        stats = await service.get_parsing_stats()
+        return ParseStats(**stats)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post(
     "/test/{group_id}",
     summary="Тестовый парсинг группы",

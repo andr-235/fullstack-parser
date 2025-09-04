@@ -217,11 +217,11 @@ class KeywordsService:
         if not existing:
             return False
 
-        # Проверка статуса (нельзя удалять активные ключевые слова)
-        if existing.get("status", {}).get("is_active", True):
-            raise ValidationError(
-                "Нельзя удалять активное ключевое слово. Сначала деактивируйте его."
-            )
+        # Удаляем активные ключевые слова без предварительной деактивации
+        # if existing.get("status", {}).get("is_active", True):
+        #     raise ValidationError(
+        #         "Нельзя удалять активное ключевое слово. Сначала деактивируйте его."
+        #     )
 
         return await self.repository.delete(keyword_id)
 
@@ -904,6 +904,45 @@ class KeywordsService:
             lines.append(line)
 
         return "\n".join(lines)
+
+    def parse_csv_keywords(self, content: str) -> List[Dict[str, Any]]:
+        """Парсинг CSV файла с ключевыми словами"""
+        keywords = []
+        reader = csv.DictReader(io.StringIO(content))
+
+        for row in reader:
+            keyword = {
+                "word": row.get("word", "").strip(),
+                "description": row.get("description", "").strip() or None,
+                "category_name": row.get("category", "").strip() or None,
+                "priority": int(row.get("priority", 5)),
+            }
+
+            if keyword["word"]:
+                keywords.append(keyword)
+
+        return keywords
+
+    def parse_txt_keywords(self, content: str) -> List[Dict[str, Any]]:
+        """Парсинг TXT файла с ключевыми словами (по одному слову на строку)"""
+        keywords = []
+        lines = content.strip().split("\n")
+
+        for line in lines:
+            word = line.strip()
+            if word and not word.startswith(
+                "#"
+            ):  # Пропускаем пустые строки и комментарии
+                keywords.append(
+                    {
+                        "word": word,
+                        "description": None,
+                        "category_name": None,
+                        "priority": 5,
+                    }
+                )
+
+        return keywords
 
 
 # Экспорт
