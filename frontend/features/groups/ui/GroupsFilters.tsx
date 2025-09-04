@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui'
 import { Input } from '@/shared/ui'
 import { Switch } from '@/shared/ui'
 import { Label } from '@/shared/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui'
 
 import { GroupsFilters as GroupsFiltersType } from '@/entities/groups'
 
@@ -62,8 +63,8 @@ export function GroupsFilters({ filters, onFiltersChange }: GroupsFiltersProps) 
     )}
    </div>
 
-   {/* Status Toggles */}
-   <div className="flex flex-wrap gap-6">
+   {/* Status Toggles and Page Size */}
+   <div className="flex flex-wrap gap-6 items-center">
     <div className="flex items-center space-x-2">
      <Switch
       id="active-only"
@@ -86,6 +87,26 @@ export function GroupsFilters({ filters, onFiltersChange }: GroupsFiltersProps) 
       <EyeOff className="h-4 w-4" />
       Показывать только неактивные группы
      </Label>
+    </div>
+
+    <div className="flex items-center space-x-2">
+     <Label htmlFor="page-size" className="text-sm">
+      Записей на странице:
+     </Label>
+     <Select
+      value={filters.size?.toString() || '20'}
+      onValueChange={(value) => updateFilter('size', parseInt(value))}
+     >
+      <SelectTrigger className="w-20">
+       <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+       <SelectItem value="10">10</SelectItem>
+       <SelectItem value="20">20</SelectItem>
+       <SelectItem value="50">50</SelectItem>
+       <SelectItem value="100">100</SelectItem>
+      </SelectContent>
+     </Select>
     </div>
    </div>
   </div>

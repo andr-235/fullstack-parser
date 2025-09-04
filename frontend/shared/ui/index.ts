@@ -3,20 +3,9 @@ export { Alert, AlertDescription, AlertTitle } from './alert'
 export { Avatar, AvatarFallback, AvatarImage } from './avatar'
 export { Badge, badgeVariants } from './badge'
 export { Button, buttonVariants } from './button'
-export {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from './card'
+export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './card'
 export { Checkbox } from './checkbox'
-export {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from './collapsible'
+export { Collapsible, CollapsibleContent, CollapsibleTrigger } from './collapsible'
 export {
   Dialog,
   DialogContent,
@@ -115,11 +104,7 @@ export {
   ToastViewport,
 } from './toast'
 export { Toaster } from './toaster'
-export {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from './tooltip'
+export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip'
 export { ThemeToggle } from './theme-toggle'
 export { FileUploadModal } from './file-upload-modal'
+export { Pagination, PaginationInfo } from './pagination'

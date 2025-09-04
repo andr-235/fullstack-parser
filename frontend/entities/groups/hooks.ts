@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 import { apiClient } from '@/shared/lib'
 
@@ -20,32 +20,35 @@ export const useGroups = (filters?: GroupsFilters) => {
   const [groups, setGroups] = useState<VKGroup[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    size: 20,
+    pages: 0,
+  })
 
-  const fetchGroups = async () => {
+  const fetchGroups = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       const response: GroupsResponse = await apiClient.getGroups(filters)
       setGroups(response.items)
+      setPagination({
+        total: response.total,
+        page: response.page,
+        size: response.size,
+        pages: response.pages,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch groups')
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters])
 
   useEffect(() => {
     fetchGroups()
-  }, [
-    filters?.is_active,
-    filters?.active_only,
-    filters?.search,
-    filters?.has_monitoring,
-    filters?.min_members,
-    filters?.max_members,
-    filters?.page,
-    filters?.size,
-  ])
+  }, [fetchGroups])
 
   const createGroup = async (groupData: CreateGroupRequest): Promise<VKGroup> => {
     try {
@@ -84,6 +87,7 @@ export const useGroups = (filters?: GroupsFilters) => {
     groups,
     loading,
     error,
+    pagination,
     createGroup,
     updateGroup,
     deleteGroup,
@@ -97,7 +101,7 @@ export const useGroup = (id: number) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchGroup = async () => {
+  const fetchGroup = useCallback(async () => {
     if (!id) return
 
     setLoading(true)
@@ -110,11 +114,11 @@ export const useGroup = (id: number) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id])
 
   useEffect(() => {
     fetchGroup()
-  }, [id])
+  }, [fetchGroup])
 
   return {
     group,
@@ -129,7 +133,7 @@ export const useGroupStats = (id: number) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!id) return
 
     setLoading(true)
@@ -142,11 +146,11 @@ export const useGroupStats = (id: number) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id])
 
   useEffect(() => {
     fetchStats()
-  }, [id])
+  }, [fetchStats])
 
   return {
     stats,
@@ -185,7 +189,7 @@ export const useUploadGroups = () => {
     }
   }
 
-  const getUploadProgress = async (uploadId: string): Promise<UploadProgress> => {
+  const getUploadProgress = async (_uploadId: string): Promise<UploadProgress> => {
     try {
       // TODO: Implement upload progress tracking
       // const progress: UploadProgress = await apiClient.getGroupsUploadProgress(uploadId)

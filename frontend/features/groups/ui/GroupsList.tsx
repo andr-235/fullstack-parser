@@ -3,12 +3,9 @@
 import { MessageSquare, Users, Hash, FolderOpen } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { Button } from '@/shared/ui'
-import { Badge } from '@/shared/ui'
 import { Skeleton } from '@/shared/ui'
-import { Alert, AlertDescription } from '@/shared/ui'
 
-import { VKGroup } from '@/entities/groups'
+import { VKGroup, UpdateGroupRequest } from '@/entities/groups'
 
 import { GroupCard } from '@/features/groups/ui/GroupCard'
 
@@ -16,20 +13,18 @@ import { GroupCard } from '@/features/groups/ui/GroupCard'
 interface GroupsListProps {
  groups: VKGroup[]
  loading?: boolean
- onUpdate?: (id: number, updates: any) => void
+ totalGroups?: number
+ totalActiveGroups?: number
+ onUpdate?: (id: number, updates: UpdateGroupRequest) => void
  onDelete?: (id: number) => void
  onToggleStatus?: (id: number, isActive: boolean) => void
-}
-
-interface GroupsListPropsWithHandlers extends GroupsListProps {
- onUpdate: (id: number, updates: any) => void
- onDelete: (id: number) => void
- onToggleStatus: (id: number, isActive: boolean) => void
 }
 
 export function GroupsList({
  groups,
  loading,
+ totalGroups,
+ totalActiveGroups,
  onUpdate,
  onDelete,
  onToggleStatus
@@ -83,7 +78,9 @@ export function GroupsList({
       <Users className="h-4 w-4 text-muted-foreground" />
      </CardHeader>
      <CardContent>
-      <div className="text-2xl font-bold">{groups.length}</div>
+      <div className="text-2xl font-bold">
+       {totalGroups !== undefined ? totalGroups.toLocaleString() : groups.length}
+      </div>
      </CardContent>
     </Card>
 
@@ -94,7 +91,7 @@ export function GroupsList({
      </CardHeader>
      <CardContent>
       <div className="text-2xl font-bold">
-       {groups.filter(g => g.is_active).length}
+       {totalActiveGroups !== undefined ? totalActiveGroups.toLocaleString() : groups.filter(g => g.is_active).length}
       </div>
      </CardContent>
     </Card>

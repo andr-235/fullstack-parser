@@ -2,15 +2,16 @@
 
 import { useState } from 'react'
 
-import { Plus, Upload, RefreshCw } from 'lucide-react'
+import { Plus, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/shared/ui'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui'
 import { FileUploadModal } from '@/shared/ui'
 import { Alert, AlertDescription } from '@/shared/ui'
+import { Pagination } from '@/shared/ui'
 
-import { GroupsFilters as GroupsFiltersType } from '@/entities/groups'
+import { GroupsFilters as GroupsFiltersType, UpdateGroupRequest } from '@/entities/groups'
 import { useGroups } from '@/entities/groups'
 
 import { GroupForm } from '@/features/groups/ui/GroupForm'
@@ -20,6 +21,8 @@ import { GroupsList } from '@/features/groups/ui/GroupsList'
 export function GroupsPage() {
  const [filters, setFilters] = useState<GroupsFiltersType>({
   active_only: true,
+  page: 1,
+  size: 20,
  })
  const [showCreateForm, setShowCreateForm] = useState(false)
 
@@ -27,6 +30,7 @@ export function GroupsPage() {
   groups,
   loading,
   error,
+  pagination,
   createGroup,
   updateGroup,
   deleteGroup,
@@ -34,22 +38,44 @@ export function GroupsPage() {
   refetch,
  } = useGroups(filters)
 
- const handleCreateGroup = async (data: any) => {
+ const handleCreateGroup = async (data: {
+  vk_id_or_screen_name: string
+  name?: string | undefined
+  screen_name?: string | undefined
+  description?: string | undefined
+  is_active?: boolean | undefined
+  max_posts_to_check?: number | undefined
+ }) => {
   try {
-   await createGroup(data)
+   // Преобразуем данные формы в CreateGroupRequest
+   const vkId = parseInt(data.vk_id_or_screen_name)
+   if (isNaN(vkId)) {
+    throw new Error('VK ID должен быть числом')
+   }
+
+   const createData = {
+    vk_id: vkId,
+    name: data.name || '',
+    screen_name: data.screen_name || '',
+    ...(data.description && { description: data.description }),
+   }
+
+   await createGroup(createData)
    setShowCreateForm(false)
    refetch()
   } catch (err) {
+   // eslint-disable-next-line no-console
    console.error('Failed to create group:', err)
    throw err
   }
  }
 
- const handleUpdateGroup = async (id: number, updates: any) => {
+ const handleUpdateGroup = async (id: number, updates: UpdateGroupRequest) => {
   try {
    await updateGroup(id, updates)
    refetch()
   } catch (err) {
+   // eslint-disable-next-line no-console
    console.error('Failed to update group:', err)
    throw err
   }
@@ -60,6 +86,7 @@ export function GroupsPage() {
    await deleteGroup(id)
    refetch()
   } catch (err) {
+   // eslint-disable-next-line no-console
    console.error('Failed to delete group:', err)
    throw err
   }
@@ -70,13 +97,18 @@ export function GroupsPage() {
    await toggleGroupStatus(id, isActive)
    refetch()
   } catch (err) {
+   // eslint-disable-next-line no-console
    console.error('Failed to toggle group status:', err)
    throw err
   }
  }
 
  const handleFiltersChange = (newFilters: GroupsFiltersType) => {
-  setFilters(newFilters)
+  setFilters({ ...newFilters, page: 1 }) // Сбрасываем на первую страницу при изменении фильтров
+ }
+
+ const handlePageChange = (page: number) => {
+  setFilters(prev => ({ ...prev, page }))
  }
 
  const handleRefresh = () => {
@@ -164,10 +196,25 @@ export function GroupsPage() {
    <GroupsList
     groups={groups}
     loading={loading}
+    totalGroups={pagination.total}
+    totalActiveGroups={groups.filter(g => g.is_active).length}
     onUpdate={handleUpdateGroup}
     onDelete={handleDeleteGroup}
     onToggleStatus={handleToggleStatus}
    />
+
+   {/* Pagination */}
+   {pagination.pages > 1 && (
+    <div className="mt-6">
+     <Pagination
+      currentPage={pagination.page}
+      totalPages={pagination.pages}
+      totalItems={pagination.total}
+      itemsPerPage={pagination.size}
+      onPageChange={handlePageChange}
+     />
+    </div>
+   )}
   </div>
  )
 }
