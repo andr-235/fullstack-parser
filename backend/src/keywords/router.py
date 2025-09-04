@@ -72,12 +72,16 @@ async def get_keywords(
     ),
     category: Optional[str] = Query(None, description="Фильтр по категории"),
     search: Optional[str] = Query(None, description="Поисковый запрос"),
-    limit: int = Query(50, ge=1, le=100, description="Количество результатов"),
-    offset: int = Query(0, ge=0, description="Смещение"),
+    page: int = Query(1, ge=1, description="Номер страницы"),
+    size: int = Query(50, ge=1, le=100, description="Размер страницы"),
     service: KeywordsService = Depends(get_keywords_service),
 ) -> KeywordsListResponse:
     """Получить ключевые слова с фильтрами"""
     try:
+        # Преобразуем page/size в limit/offset
+        limit = size
+        offset = (page - 1) * size
+
         result = await service.get_keywords(
             active_only=active_only,
             category=category,

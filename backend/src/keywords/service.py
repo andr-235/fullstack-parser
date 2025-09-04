@@ -142,13 +142,18 @@ class KeywordsService:
         total = len(filtered_keywords)
         paginated_keywords = filtered_keywords[offset : offset + limit]
 
+        # Вычисляем параметры пагинации
+        if limit <= 0:
+            limit = 50  # Значение по умолчанию
+        page = (offset // limit) + 1
+        pages = (total + limit - 1) // limit
+
         return {
             "items": paginated_keywords,
             "total": total,
-            "limit": limit,
-            "offset": offset,
-            "has_next": offset + limit < total,
-            "has_prev": offset > 0,
+            "page": page,
+            "size": limit,
+            "pages": pages,
         }
 
     async def update_keyword(
@@ -386,7 +391,10 @@ class KeywordsService:
                 elif action == "archive":
                     result = await self.archive_keyword(keyword_id)
                 elif action == "delete":
-                    result = await self.delete_keyword(keyword_id)
+                    success = await self.delete_keyword(keyword_id)
+                    result = (
+                        await self.get_keyword(keyword_id) if success else None
+                    )
 
                 if result is not None:
                     successful += 1
