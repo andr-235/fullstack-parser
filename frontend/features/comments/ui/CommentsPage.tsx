@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 
 import { useComments } from '@/entities/comment'
-import { Comment, CommentFilters as CommentFiltersType } from '@/entities/comment'
+import { CommentFilters as CommentFiltersType } from '@/entities/comment'
 
 import { CommentFilters } from '@/features/comments/ui/CommentFilters'
 import { CommentsList } from '@/features/comments/ui/CommentsList'
@@ -24,12 +24,11 @@ export function CommentsPage() {
   refetch
  } = useComments(filters)
 
- const handleUpdateComment = async (id: string, updates: { is_viewed?: boolean; is_archived?: boolean }) => {
+ const _handleUpdateComment = async (id: string, updates: { is_viewed?: boolean; is_archived?: boolean }) => {
   try {
    await updateComment(id, updates)
    refetch()
   } catch (err) {
-   console.error('Failed to update comment:', err)
    throw err
   }
  }
@@ -39,7 +38,6 @@ export function CommentsPage() {
    await markAsViewed(id)
    refetch()
   } catch (err) {
-   console.error('Failed to mark comment as viewed:', err)
    throw err
   }
  }
@@ -49,7 +47,6 @@ export function CommentsPage() {
    await deleteComment(id)
    refetch()
   } catch (err) {
-   console.error('Failed to delete comment:', err)
    throw err
   }
  }
@@ -87,7 +84,9 @@ export function CommentsPage() {
    {error && (
     <Card className="border-destructive">
      <CardContent className="py-4">
-      <p className="text-destructive">Ошибка: {error}</p>
+      <p className="text-destructive">
+       Ошибка: {typeof error === 'string' ? error : JSON.stringify(error)}
+      </p>
       <Button
        variant="outline"
        size="sm"

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 import { apiClient } from '@/shared/lib'
 
@@ -15,11 +15,11 @@ export const useComments = (filters?: CommentFilters) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const params: any = {}
+      const params: Record<string, unknown> = {}
 
       if (filters?.is_viewed !== undefined) params.is_viewed = filters.is_viewed
       if (filters?.group_id) params.group_id = filters.group_id
@@ -28,23 +28,35 @@ export const useComments = (filters?: CommentFilters) => {
       const response: CommentsResponse = await apiClient.getComments(params)
       setComments(response.items)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch comments')
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : 'Failed to fetch comments'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters])
 
   useEffect(() => {
     fetchComments()
-  }, [filters])
+  }, [fetchComments])
 
-  const createComment = async (comment: CreateCommentRequest) => {
+  const createComment = async (_comment: CreateCommentRequest) => {
     try {
       // Note: Backend doesn't support creating comments via API
       // This is for future use or if you add this functionality
       throw new Error('Creating comments is not supported via API')
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Failed to create comment')
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : 'Failed to create comment'
+      throw new Error(errorMessage)
     }
   }
 
@@ -56,7 +68,13 @@ export const useComments = (filters?: CommentFilters) => {
       )
       return updatedComment
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Failed to update comment')
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : 'Failed to update comment'
+      throw new Error(errorMessage)
     }
   }
 
@@ -65,7 +83,13 @@ export const useComments = (filters?: CommentFilters) => {
       await apiClient.deleteComment(parseInt(id))
       setComments(prev => prev.filter(comment => comment.id !== parseInt(id)))
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Failed to delete comment')
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : 'Failed to delete comment'
+      throw new Error(errorMessage)
     }
   }
 
@@ -78,7 +102,13 @@ export const useComments = (filters?: CommentFilters) => {
         )
       )
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Failed to mark comment as viewed')
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : 'Failed to mark comment as viewed'
+      throw new Error(errorMessage)
     }
   }
 
