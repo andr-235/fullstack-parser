@@ -4,13 +4,11 @@ import { apiClient } from '@/shared/lib'
 
 import {
   ParseTaskCreate,
-  ParseTaskResponse,
   ParserState,
   ParserStats,
   ParserGlobalStats,
   ParserTasksResponse,
   ParserHistoryResponse,
-  ParserSession,
   ParserTaskFilters,
   StartBulkParserForm,
   BulkParseResponse,
@@ -280,7 +278,7 @@ export const useStopParser = () => {
 }
 
 // Хук для автоматического обновления данных
-export const useAutoRefresh = (intervalMs: number = 5000, enabled: boolean = true) => {
+export const useAutoRefresh = (_intervalMs: number = 5000, enabled: boolean = true) => {
   const [isEnabled, setIsEnabled] = useState(enabled)
 
   const toggleAutoRefresh = useCallback(() => {
@@ -304,10 +302,10 @@ export const useParser = (autoRefreshInterval: number = 3000) => {
   } = useParserGlobalStats()
   const { startParser, starting } = useStartParser()
   const { stopParser, stopping } = useStopParser()
-  const { tasks, loading: tasksLoading, refetch: refetchTasks } = useParserTasks({ size: 10 })
+  const { tasks, refetch: refetchTasks } = useParserTasks({ size: 10 })
 
-  const isRunning = state?.is_running && state.active_tasks > 0
-  const isStopped = !state?.is_running && state?.active_tasks === 0
+  const isRunning = Boolean(state?.is_running && state.active_tasks > 0)
+  const isStopped = Boolean(!state?.is_running && state?.active_tasks === 0)
   const hasError = false // В новом API статус ошибки не определен в ParserState
 
   const loading = stateLoading || statsLoading || globalStatsLoading
@@ -324,20 +322,20 @@ export const useParser = (autoRefreshInterval: number = 3000) => {
     const interval = setInterval(() => {
       // Добавляем обработку ошибок для предотвращения бесконечных запросов
       Promise.all([
-        refetchState().catch(err => {
-          console.warn('Failed to refetch parser state:', err)
+        refetchState().catch(_err => {
+          // console.warn('Failed to refetch parser state:', err)
           setErrorCount(prev => prev + 1)
         }),
-        refetchStats().catch(err => {
-          console.warn('Failed to refetch parser stats:', err)
+        refetchStats().catch(_err => {
+          // console.warn('Failed to refetch parser stats:', err)
           setErrorCount(prev => prev + 1)
         }),
-        refetchGlobalStats().catch(err => {
-          console.warn('Failed to refetch global stats:', err)
+        refetchGlobalStats().catch(_err => {
+          // console.warn('Failed to refetch global stats:', err)
           setErrorCount(prev => prev + 1)
         }),
-        refetchTasks().catch(err => {
-          console.warn('Failed to refetch parser tasks:', err)
+        refetchTasks().catch(_err => {
+          // console.warn('Failed to refetch parser tasks:', err)
           setErrorCount(prev => prev + 1)
         }),
       ]).then(() => {
