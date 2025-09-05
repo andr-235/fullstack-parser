@@ -315,9 +315,9 @@ export const useParser = (autoRefreshInterval: number = 3000) => {
   const [errorCount, setErrorCount] = useState(0)
   const MAX_ERRORS = 5 // Максимум ошибок подряд перед остановкой автообновления
 
-  // Автоматическое обновление данных
+  // Автоматическое обновление данных (отключено если autoRefreshInterval = 0)
   useEffect(() => {
-    if (!isRunning || errorCount >= MAX_ERRORS) return
+    if (!isRunning || errorCount >= MAX_ERRORS || autoRefreshInterval <= 0) return
 
     const interval = setInterval(() => {
       // Добавляем обработку ошибок для предотвращения бесконечных запросов

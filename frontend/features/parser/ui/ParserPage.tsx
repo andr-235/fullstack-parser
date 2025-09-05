@@ -33,7 +33,7 @@ export function ParserPage() {
         loading,
         processing,
         refetch,
-    } = useParser(5000) // Автообновление каждые 5 секунд (увеличено для снижения нагрузки)
+    } = useParser(0) // Отключено автообновление
 
     const { startBulkParser } = useStartParser()
 
@@ -151,6 +151,9 @@ export function ParserPage() {
                         <p className="text-muted-foreground">
                             Панель управления парсером комментариев VK
                         </p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            Автообновление отключено - используйте кнопку &quot;Обновить данные&quot;
+                        </p>
                     </div>
 
                     {/* Статус индикатор */}
@@ -172,10 +175,10 @@ export function ParserPage() {
                         variant="outline"
                         onClick={handleRefresh}
                         disabled={loading}
-                        className="gap-2"
+                        className="gap-2 border-blue-200 hover:border-blue-300"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                        Обновить
+                        Обновить данные
                     </Button>
 
                     {!isRunning ? (
