@@ -27,12 +27,16 @@ export function KeywordsFilters({ filters, onFiltersChange }: KeywordsFiltersPro
  }
 
  const clearFilters = () => {
-  onFiltersChange({})
+  onFiltersChange({
+   active_only: true, // Сохраняем базовый фильтр
+  })
  }
 
- const hasActiveFilters = Object.values(filters).some(value =>
-  value !== undefined && value !== null && value !== ''
- )
+ const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
+  // Не считаем active_only: true как активный фильтр, так как это базовое состояние
+  if (key === 'active_only' && value === true) return false
+  return value !== undefined && value !== null && value !== ''
+ })
 
  return (
   <div className="space-y-4">

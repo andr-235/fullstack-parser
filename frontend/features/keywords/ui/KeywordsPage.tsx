@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-import { Plus, Upload, RefreshCw } from 'lucide-react'
+import { Plus, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/shared/ui'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
@@ -10,18 +10,38 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { FileUploadModal } from '@/shared/ui'
 import { Alert, AlertDescription } from '@/shared/ui'
 
-import { KeywordsFilters as KeywordsFiltersType } from '@/entities/keywords'
+import { KeywordsFilters as KeywordsFiltersType, CreateKeywordRequest, UpdateKeywordRequest } from '@/entities/keywords'
 import { useKeywords } from '@/entities/keywords'
 
 import { KeywordForm } from '@/features/keywords/ui/KeywordForm'
 import { KeywordsFilters } from '@/features/keywords/ui/KeywordsFilters'
 import { KeywordsList } from '@/features/keywords/ui/KeywordsList'
 
+const FILTERS_STORAGE_KEY = 'keywords-filters'
+
 export function KeywordsPage() {
  const [filters, setFilters] = useState<KeywordsFiltersType>({
   active_only: true,
  })
  const [showCreateForm, setShowCreateForm] = useState(false)
+
+ // Загружаем фильтры из localStorage при инициализации
+ useEffect(() => {
+  const savedFilters = localStorage.getItem(FILTERS_STORAGE_KEY)
+  if (savedFilters) {
+   try {
+    const parsedFilters = JSON.parse(savedFilters)
+    setFilters(parsedFilters)
+   } catch (error) {
+    // Игнорируем ошибки парсинга, используем значения по умолчанию
+   }
+  }
+ }, [])
+
+ // Сохраняем фильтры в localStorage при изменении
+ useEffect(() => {
+  localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters))
+ }, [filters])
 
  const {
   keywords,
@@ -34,23 +54,28 @@ export function KeywordsPage() {
   refetch,
  } = useKeywords(filters)
 
- const handleCreateKeyword = async (data: any) => {
+ const handleCreateKeyword = async (data: { word: string; category?: string | undefined; description?: string | undefined; is_active?: boolean | undefined; is_case_sensitive?: boolean | undefined; is_whole_word?: boolean | undefined }) => {
   try {
-   await createKeyword(data)
+   // Преобразуем данные формы в формат API
+   const createData: CreateKeywordRequest = {
+    word: data.word,
+    ...(data.category && { category_name: data.category }),
+    ...(data.description && { description: data.description }),
+    priority: 0, // Значение по умолчанию
+   }
+   await createKeyword(createData)
    setShowCreateForm(false)
    refetch()
   } catch (err) {
-   console.error('Failed to create keyword:', err)
    throw err
   }
  }
 
- const handleUpdateKeyword = async (id: number, updates: any) => {
+ const handleUpdateKeyword = async (id: number, updates: UpdateKeywordRequest) => {
   try {
    await updateKeyword(id, updates)
    refetch()
   } catch (err) {
-   console.error('Failed to update keyword:', err)
    throw err
   }
  }
@@ -60,7 +85,6 @@ export function KeywordsPage() {
    await deleteKeyword(id)
    refetch()
   } catch (err) {
-   console.error('Failed to delete keyword:', err)
    throw err
   }
  }
@@ -70,7 +94,6 @@ export function KeywordsPage() {
    await toggleKeywordStatus(id, isActive)
    refetch()
   } catch (err) {
-   console.error('Failed to toggle keyword status:', err)
    throw err
   }
  }
