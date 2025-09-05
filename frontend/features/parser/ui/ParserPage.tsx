@@ -101,32 +101,74 @@ export function ParserPage() {
                 setError('Нет доступных активных групп для парсинга')
                 return
             }
+
+            // Проверяем лимит групп для массового парсинга
+            if (config.parseAllGroups && groups && groups.length > 1000) {
+                setError(`Слишком много групп для парсинга (${groups.length}). Максимум 1000 групп за раз.`)
+                return
+            }
             if (config.groupId && (!groups || !groups.find(g => g.id === config.groupId))) {
                 setError('Выбранная группа не найдена')
                 return
             }
             if (config.parseAllGroups) {
                 // Запуск массового парсинга всех групп через backend API
-                // console.log('Starting bulk parser with config:', config)
-                // console.log('Available groups:', groups?.length || 0)
+                const allGroupIds = groups?.map(g => g.id) || []
 
-                const result = await startBulkParser({
-                    group_ids: groups?.map(g => g.id) || [],
-                    max_posts: config.maxPosts,
-                    force_reparse: config.forceReparse,
-                })
-
-                // console.log('Bulk parser result:', result)
-
-                // Показываем результат массового парсинга
-                if (result.task_id) {
-                    setError(`Успешно запущена задача парсинга с ID: ${result.task_id}`)
-                } else {
-                    setError('Задача парсинга запущена, но не удалось получить ID задачи')
+                if (allGroupIds.length === 0) {
+                    setError('Нет доступных активных групп для парсинга')
+                    return
                 }
 
-                // Обновляем состояние сразу после запуска
-                refetch()
+                // Разбиваем группы на батчи по 100 штук (лимит API)
+                const BATCH_SIZE = 100
+                const batches: number[][] = []
+
+                for (let i = 0; i < allGroupIds.length; i += BATCH_SIZE) {
+                    batches.push(allGroupIds.slice(i, i + BATCH_SIZE))
+                }
+
+                try {
+                    const results = []
+
+                    // Запускаем парсинг для каждого батча
+                    for (let i = 0; i < batches.length; i++) {
+                        const batch = batches[i]
+
+                        if (!batch || batch.length === 0) {
+                            continue
+                        }
+
+                        // Обновляем сообщение о прогрессе
+                        setError(`Запуск парсинга батча ${i + 1}/${batches.length} (${batch.length} групп)...`)
+
+                        const result = await startBulkParser({
+                            group_ids: batch,
+                            max_posts: config.maxPosts,
+                            force_reparse: config.forceReparse,
+                        })
+
+                        results.push(result)
+
+                        // Небольшая задержка между батчами, чтобы не перегружать API
+                        if (i < batches.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 1000))
+                        }
+                    }
+
+                    // Показываем результат массового парсинга
+                    const totalTasks = results.filter(r => r.task_id).length
+                    if (totalTasks > 0) {
+                        setError(`Успешно запущено ${totalTasks} задач парсинга для ${allGroupIds.length} групп`)
+                    } else {
+                        setError('Задачи парсинга запущены, но не удалось получить ID задач')
+                    }
+
+                    // Обновляем состояние сразу после запуска
+                    refetch()
+                } catch (batchError) {
+                    setError(`Ошибка при запуске массового парсинга: ${batchError instanceof Error ? batchError.message : 'Неизвестная ошибка'}`)
+                }
             } else if (config.groupId) {
                 // Запуск парсинга одной группы
                 await startParser({

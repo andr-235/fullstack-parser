@@ -44,6 +44,12 @@ export function ParserModal({
    return
   }
 
+  // Проверяем лимит групп для массового парсинга
+  if (parseAllGroups && activeGroups.length > 1000) {
+   alert(`Слишком много групп для парсинга (${activeGroups.length}). Максимум 1000 групп за раз.`)
+   return
+  }
+
   onStartParsing({
    groupId: parseAllGroups ? undefined : Number(selectedGroupId),
    parseAllGroups,
@@ -116,7 +122,7 @@ export function ParserModal({
        </Select>
        {activeGroups.length === 0 && (
         <p className="text-sm text-muted-foreground">
-         Нет активных групп. Сначала настройте группы в разделе "Группы".
+         Нет активных групп. Сначала настройте группы в разделе &quot;Группы&quot;.
         </p>
        )}
        {parseAllGroups && (
@@ -124,6 +130,16 @@ export function ParserModal({
          <p className="text-sm text-blue-800 dark:text-blue-200">
           📊 Будет запущен парсинг <strong>{activeGroups.length} активных групп</strong>
          </p>
+         {activeGroups.length > 100 && (
+          <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+           ⚠️ Группы будут разбиты на батчи по 100 штук для соблюдения лимитов API
+          </p>
+         )}
+         {activeGroups.length > 1000 && (
+          <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+           ❌ Слишком много групп ({activeGroups.length}). Максимум 1000 групп за раз.
+          </p>
+         )}
         </div>
        )}
       </div>
