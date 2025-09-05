@@ -42,7 +42,7 @@ export function ParserPage() {
     // Получаем список групп для выбора (без автоматического запроса)
     const { groups, loading: groupsLoading, refetch: refetchGroups } = useGroups({
         active_only: true,
-        size: 100 // Получаем все активные группы
+        size: 10000 // Получаем все активные группы
     }, false)
 
     const _handleStartParser = useCallback(async () => {

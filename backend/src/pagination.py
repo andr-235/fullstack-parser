@@ -93,9 +93,9 @@ SizeParam = Annotated[
     int,
     Query(
         ge=1,
-        le=100,
+        le=10000,
         description="Размер страницы",
-        examples=[10, 20, 50],
+        examples=[10, 20, 50, 100, 500, 1000],
     ),
 ]
 

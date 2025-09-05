@@ -42,7 +42,7 @@ class PaginationInfo(BaseModel):
     """Информация о пагинации с enterprise-grade метаданными"""
 
     page: int = Field(..., description="Текущий номер страницы", ge=1)
-    size: int = Field(..., description="Размер страницы", ge=1, le=100)
+    size: int = Field(..., description="Размер страницы", ge=1, le=10000)
     total: int = Field(..., description="Общее количество элементов", ge=0)
     has_next: bool = Field(..., description="Есть ли следующая страница")
     has_prev: bool = Field(..., description="Есть ли предыдущая страница")

@@ -75,13 +75,44 @@ export function ParserProgress({ state, isRunning }: ParserProgressProps) {
       Прогресс парсинга
      </CardTitle>
     </CardHeader>
-    <CardContent>
+    <CardContent className="space-y-6">
      <div className="flex flex-col items-center justify-center py-8 text-center">
       <Clock className="h-12 w-12 text-muted-foreground mb-4" />
       <p className="text-muted-foreground">Парсер не запущен</p>
       <p className="text-sm text-muted-foreground">
        Запустите парсинг, чтобы увидеть детальный прогресс
       </p>
+     </div>
+
+     {/* Дополнительная информация для заполнения пространства */}
+     <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+       <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+        <FileText className="h-4 w-4 text-green-500" />
+        <div>
+         <p className="text-sm font-medium">Обработано постов</p>
+         <p className="text-lg font-bold">0</p>
+        </div>
+       </div>
+
+       <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+        <Zap className="h-4 w-4 text-purple-500" />
+        <div>
+         <p className="text-sm font-medium">Скорость</p>
+         <p className="text-lg font-bold">0/мин</p>
+        </div>
+       </div>
+      </div>
+
+      <div className="p-3 bg-muted/50 rounded-lg border">
+       <div className="flex items-center gap-2 mb-2">
+        <Users className="h-4 w-4 text-indigo-500" />
+        <span className="text-sm font-medium">Готов к работе</span>
+       </div>
+       <p className="text-sm text-muted-foreground">
+        Парсер готов к запуску. Выберите группы для парсинга и нажмите кнопку "Запустить парсер".
+       </p>
+      </div>
      </div>
     </CardContent>
    </Card>
