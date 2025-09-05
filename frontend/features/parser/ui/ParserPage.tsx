@@ -143,17 +143,14 @@ export function ParserPage() {
     }, [groups, startParser, startBulkParser, refetch])
 
     return (
-        <div className="container mx-auto py-6 space-y-6">
+        <div className="container mx-auto py-8 space-y-8">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Парсер</h1>
                         <p className="text-muted-foreground">
                             Панель управления парсером комментариев VK
-                        </p>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                            Автообновление отключено - используйте кнопку «Обновить данные»
                         </p>
                     </div>
 
@@ -171,6 +168,14 @@ export function ParserPage() {
                     </div>
                 </div>
 
+                {/* Уведомление об отключенном автообновлении */}
+                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                        Автообновление отключено - используйте кнопку «Обновить данные»
+                    </p>
+                </div>
+
+                {/* Кнопки управления */}
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
@@ -252,7 +257,7 @@ export function ParserPage() {
             {/* Основная информация */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Детальный прогресс парсинга */}
-                <div>
+                <div className="space-y-4">
                     <ParserProgress
                         state={state}
                         isRunning={isRunning ?? false}
@@ -260,7 +265,7 @@ export function ParserPage() {
                 </div>
 
                 {/* Статистика в реальном времени */}
-                <div>
+                <div className="space-y-4">
                     <LiveStats
                         stats={stats}
                         globalStats={globalStats}
@@ -272,14 +277,16 @@ export function ParserPage() {
             </div>
 
             {/* Очередь задач */}
-            <ParserQueue
-                tasks={tasks}
-                loading={loading}
-                currentTaskId=""
-            />
+            <div className="space-y-4">
+                <ParserQueue
+                    tasks={tasks}
+                    loading={loading}
+                    currentTaskId=""
+                />
+            </div>
 
             {/* Настройки и управление */}
-            <div className="grid grid-cols-1 gap-6">
+            <div className="space-y-4">
                 <ParserFilters filters={filters} onFiltersChange={setFilters} />
             </div>
         </div>
