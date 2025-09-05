@@ -17,7 +17,7 @@ import {
 } from './types'
 
 // Хук для управления состоянием парсера
-export const useParserState = () => {
+export const useParserState = (autoFetch: boolean = true) => {
   const [state, setState] = useState<ParserState | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,8 +36,10 @@ export const useParserState = () => {
   }, [])
 
   useEffect(() => {
-    fetchState()
-  }, [fetchState])
+    if (autoFetch) {
+      fetchState()
+    }
+  }, [fetchState, autoFetch])
 
   return {
     state,
@@ -48,7 +50,7 @@ export const useParserState = () => {
 }
 
 // Хук для статистики парсера
-export const useParserStats = () => {
+export const useParserStats = (autoFetch: boolean = true) => {
   const [stats, setStats] = useState<ParserStats | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -67,8 +69,10 @@ export const useParserStats = () => {
   }, [])
 
   useEffect(() => {
-    fetchStats()
-  }, [fetchStats])
+    if (autoFetch) {
+      fetchStats()
+    }
+  }, [fetchStats, autoFetch])
 
   return {
     stats,
@@ -79,7 +83,7 @@ export const useParserStats = () => {
 }
 
 // Хук для глобальной статистики парсера
-export const useParserGlobalStats = () => {
+export const useParserGlobalStats = (autoFetch: boolean = true) => {
   const [stats, setStats] = useState<ParserGlobalStats | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -98,8 +102,10 @@ export const useParserGlobalStats = () => {
   }, [])
 
   useEffect(() => {
-    fetchStats()
-  }, [fetchStats])
+    if (autoFetch) {
+      fetchStats()
+    }
+  }, [fetchStats, autoFetch])
 
   return {
     stats,
@@ -110,7 +116,7 @@ export const useParserGlobalStats = () => {
 }
 
 // Хук для управления задачами парсера
-export const useParserTasks = (filters?: ParserTaskFilters) => {
+export const useParserTasks = (filters?: ParserTaskFilters, autoFetch: boolean = true) => {
   const [tasks, setTasks] = useState<ParserTasksResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -129,8 +135,10 @@ export const useParserTasks = (filters?: ParserTaskFilters) => {
   }, [filters])
 
   useEffect(() => {
-    fetchTasks()
-  }, [fetchTasks])
+    if (autoFetch) {
+      fetchTasks()
+    }
+  }, [fetchTasks, autoFetch])
 
   return {
     tasks,
@@ -293,16 +301,35 @@ export const useAutoRefresh = (_intervalMs: number = 5000, enabled: boolean = tr
 
 // Хук для управления парсером (комбинированный)
 export const useParser = (autoRefreshInterval: number = 3000) => {
-  const { state, loading: stateLoading, refetch: refetchState } = useParserState()
-  const { stats, loading: statsLoading, refetch: refetchStats } = useParserStats()
+  const {
+    state,
+    loading: stateLoading,
+    refetch: refetchState,
+  } = useParserState(autoRefreshInterval > 0)
+  const {
+    stats,
+    loading: statsLoading,
+    refetch: refetchStats,
+  } = useParserStats(autoRefreshInterval > 0)
   const {
     stats: globalStats,
     loading: globalStatsLoading,
     refetch: refetchGlobalStats,
-  } = useParserGlobalStats()
+  } = useParserGlobalStats(autoRefreshInterval > 0)
   const { startParser, starting } = useStartParser()
   const { stopParser, stopping } = useStopParser()
-  const { tasks, refetch: refetchTasks } = useParserTasks({ size: 10 })
+  const { tasks, refetch: refetchTasks } = useParserTasks({ size: 10 }, autoRefreshInterval > 0)
+
+  // Если автообновление отключено, делаем только один запрос при инициализации
+  useEffect(() => {
+    if (autoRefreshInterval <= 0) {
+      // Делаем только один запрос при инициализации, если автообновление отключено
+      refetchState()
+      refetchStats()
+      refetchGlobalStats()
+      refetchTasks()
+    }
+  }, [autoRefreshInterval, refetchState, refetchStats, refetchGlobalStats, refetchTasks])
 
   const isRunning = Boolean(state?.is_running && state.active_tasks > 0)
   const isStopped = Boolean(!state?.is_running && state?.active_tasks === 0)

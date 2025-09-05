@@ -39,11 +39,11 @@ export function ParserPage() {
 
 
 
-    // Получаем список групп для выбора
-    const { groups, loading: groupsLoading } = useGroups({
+    // Получаем список групп для выбора (без автоматического запроса)
+    const { groups, loading: groupsLoading, refetch: refetchGroups } = useGroups({
         active_only: true,
         size: 100 // Получаем все активные группы
-    })
+    }, false)
 
     const _handleStartParser = useCallback(async () => {
         if (!groups || groups.length === 0) {
@@ -85,7 +85,8 @@ export function ParserPage() {
 
     const handleRefresh = useCallback(() => {
         refetch()
-    }, [refetch])
+        refetchGroups()
+    }, [refetch, refetchGroups])
 
     const handleStartParsing = useCallback(async (config: {
         groupId?: number | undefined

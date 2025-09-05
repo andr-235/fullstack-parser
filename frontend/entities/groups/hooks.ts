@@ -16,7 +16,7 @@ import {
   UploadProgress,
 } from './types'
 
-export const useGroups = (filters?: GroupsFilters) => {
+export const useGroups = (filters?: GroupsFilters, autoFetch: boolean = true) => {
   const [groups, setGroups] = useState<VKGroup[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -47,8 +47,10 @@ export const useGroups = (filters?: GroupsFilters) => {
   }, [filters])
 
   useEffect(() => {
-    fetchGroups()
-  }, [fetchGroups])
+    if (autoFetch) {
+      fetchGroups()
+    }
+  }, [fetchGroups, autoFetch])
 
   const createGroup = async (groupData: CreateGroupRequest): Promise<VKGroup> => {
     try {
