@@ -172,7 +172,7 @@ export function LiveStats({ stats, globalStats, state, loading, isRunning }: Liv
  }
 
  return (
-  <div className="space-y-6">
+  <div className="space-y-4">
    {/* Основные метрики */}
    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
     <Card className="relative overflow-hidden">
@@ -264,7 +264,7 @@ export function LiveStats({ stats, globalStats, state, loading, isRunning }: Liv
    </div>
 
    {/* Графики */}
-   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
     {/* Столбчатая диаграмма */}
     <Card>
      <CardHeader>
@@ -410,7 +410,7 @@ export function LiveStats({ stats, globalStats, state, loading, isRunning }: Liv
    </Card>
 
    {/* Дополнительная информация */}
-   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
     <Card>
      <CardContent className="p-4">
       <div className="flex items-center gap-3">

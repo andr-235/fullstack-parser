@@ -152,7 +152,7 @@ export function ParserPage() {
                             Панель управления парсером комментариев VK
                         </p>
                         <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                            Автообновление отключено - используйте кнопку &quot;Обновить данные&quot;
+                            Автообновление отключено - используйте кнопку «Обновить данные»
                         </p>
                     </div>
 
@@ -249,9 +249,9 @@ export function ParserPage() {
             )}
 
             {/* Основная информация */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Детальный прогресс парсинга */}
-                <div className="lg:col-span-2">
+                <div>
                     <ParserProgress
                         state={state}
                         isRunning={isRunning ?? false}
@@ -259,7 +259,7 @@ export function ParserPage() {
                 </div>
 
                 {/* Статистика в реальном времени */}
-                <div className="lg:col-span-1">
+                <div>
                     <LiveStats
                         stats={stats}
                         globalStats={globalStats}
