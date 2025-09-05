@@ -66,7 +66,7 @@ export function ParserProgress({ state, isRunning }: ParserProgressProps) {
   return null
  }
 
- if (!isRunning) {
+ if (!isRunning && !state?.is_running) {
   return (
    <Card>
     <CardHeader>

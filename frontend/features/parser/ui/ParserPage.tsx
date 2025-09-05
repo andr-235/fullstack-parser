@@ -251,7 +251,7 @@ export function ParserPage() {
                 <div className="lg:col-span-2">
                     <ParserProgress
                         state={state}
-                        isRunning={!!isRunning}
+                        isRunning={isRunning}
                     />
                 </div>
 
@@ -262,7 +262,7 @@ export function ParserPage() {
                         globalStats={globalStats}
                         state={state}
                         loading={loading}
-                        isRunning={!!isRunning}
+                        isRunning={isRunning}
                     />
                 </div>
             </div>

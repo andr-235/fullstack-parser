@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react'
 import {
  BarChart3,
  TrendingUp,
- TrendingDown,
  Activity,
  MessageSquare,
  Users,
@@ -25,8 +24,6 @@ import {
  PieChart,
  Pie,
  Cell,
- LineChart,
- Line,
  Area,
  AreaChart
 } from 'recharts'
@@ -93,7 +90,7 @@ export function LiveStats({ stats, globalStats, state, loading, isRunning }: Liv
     animateValue(key as keyof typeof animatedValues, current, target)
    }
   })
- }, [stats, globalStats])
+ }, [stats, globalStats, animatedValues])
 
  const formatNumber = (num: number) => {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
@@ -482,7 +479,7 @@ export function LiveStats({ stats, globalStats, state, loading, isRunning }: Liv
         <p className="text-lg font-semibold">
          {new Date(state.last_activity).toLocaleString('ru-RU')}
         </p>
-        {isRunning && (
+        {(isRunning || state?.is_running) && (
          <Badge variant="default" className="mt-2">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1" />
           Активен сейчас
