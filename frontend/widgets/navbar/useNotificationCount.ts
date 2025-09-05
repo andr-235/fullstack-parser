@@ -34,10 +34,9 @@ export function useNotificationCount() {
 
     fetchNotificationCount()
 
-    // Обновляем каждые 30 секунд
-    const interval = setInterval(fetchNotificationCount, 30000)
-
-    return () => clearInterval(interval)
+    // Автообновление отключено для снижения нагрузки
+    // const interval = setInterval(fetchNotificationCount, 30000)
+    // return () => clearInterval(interval)
   }, [])
 
   return count

@@ -125,8 +125,8 @@ export function ParserPage() {
                     setError('Задача парсинга запущена, но не удалось получить ID задачи')
                 }
 
-                // Обновляем состояние через некоторое время
-                setTimeout(() => refetch(), 2000)
+                // Обновляем состояние сразу после запуска
+                refetch()
             } else if (config.groupId) {
                 // Запуск парсинга одной группы
                 await startParser({

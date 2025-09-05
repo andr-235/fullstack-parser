@@ -78,7 +78,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     })
    }
   } catch (error) {
-   console.error('Failed to fetch navigation stats:', error)
+   // console.error('Failed to fetch navigation stats:', error)
   } finally {
    setIsLoading(false)
   }
@@ -87,10 +87,9 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
  useEffect(() => {
   fetchStats()
 
-  // Обновляем статистику каждые 2 минуты
-  const interval = setInterval(fetchStats, 2 * 60 * 1000)
-
-  return () => clearInterval(interval)
+  // Автообновление отключено для снижения нагрузки
+  // const interval = setInterval(fetchStats, 2 * 60 * 1000)
+  // return () => clearInterval(interval)
  }, [])
 
  const refreshStats = async () => {

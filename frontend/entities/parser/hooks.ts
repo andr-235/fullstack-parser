@@ -320,16 +320,8 @@ export const useParser = (autoRefreshInterval: number = 3000) => {
   const { stopParser, stopping } = useStopParser()
   const { tasks, refetch: refetchTasks } = useParserTasks({ size: 10 }, autoRefreshInterval > 0)
 
-  // Если автообновление отключено, делаем только один запрос при инициализации
-  useEffect(() => {
-    if (autoRefreshInterval <= 0) {
-      // Делаем только один запрос при инициализации, если автообновление отключено
-      refetchState()
-      refetchStats()
-      refetchGlobalStats()
-      refetchTasks()
-    }
-  }, [autoRefreshInterval, refetchState, refetchStats, refetchGlobalStats, refetchTasks])
+  // Если автообновление отключено, НЕ делаем запросы при инициализации
+  // Данные будут загружаться только по кнопке "Обновить данные"
 
   const isRunning = Boolean(state?.is_running && state.active_tasks > 0)
   const isStopped = Boolean(!state?.is_running && state?.active_tasks === 0)
