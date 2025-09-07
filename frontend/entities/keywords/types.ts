@@ -131,13 +131,5 @@ export interface UploadKeywordsResponse {
   errors: string[]
 }
 
-export interface UploadProgress {
-  loaded: number
-  total: number
-  percentage: number
-  processed: number
-  created: number
-  updated: number
-  skipped: number
-  errors: string[]
-}
+// UploadProgress is imported from groups to avoid duplication
+export type { UploadProgress } from '../groups/types'
