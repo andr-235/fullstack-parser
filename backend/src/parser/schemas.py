@@ -201,6 +201,19 @@ class ParseStats(BaseModel):
     average_task_duration: float = Field(
         ..., description="Средняя длительность задачи"
     )
+    # Лимиты парсинга
+    max_groups_per_request: int = Field(
+        ..., description="Максимум групп за один запрос"
+    )
+    max_posts_per_request: int = Field(
+        ..., description="Максимум постов за запрос"
+    )
+    max_comments_per_request: int = Field(
+        ..., description="Максимум комментариев за запрос"
+    )
+    max_users_per_request: int = Field(
+        ..., description="Максимум пользователей за запрос"
+    )
 
 
 class VKAPIError(BaseModel):

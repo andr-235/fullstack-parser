@@ -12,9 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/shared/ui'
 
 import type { VKGroup } from '@/entities/groups'
+import type { ParserStats } from '@/entities/parser'
 
 interface ParserModalProps {
  groups?: VKGroup[]
+ stats?: ParserStats | null
  onStartParsing: (config: {
   groupId?: number | undefined
   parseAllGroups: boolean
@@ -28,6 +30,7 @@ interface ParserModalProps {
 
 export function ParserModal({
  groups = [],
+ stats,
  onStartParsing,
  isOpen,
  onOpenChange,
@@ -45,8 +48,8 @@ export function ParserModal({
   }
 
   // Проверяем лимит групп для массового парсинга
-  if (parseAllGroups && activeGroups.length > 1000) {
-   alert(`Слишком много групп для парсинга (${activeGroups.length}). Максимум 1000 групп за раз.`)
+  if (parseAllGroups && stats && activeGroups.length > stats.max_groups_per_request) {
+   alert(`Слишком много групп для парсинга (${activeGroups.length}). Максимум ${stats.max_groups_per_request} групп за раз.`)
    return
   }
 
@@ -135,9 +138,9 @@ export function ParserModal({
            ⚠️ Группы будут разбиты на батчи по 100 штук для соблюдения лимитов API
           </p>
          )}
-         {activeGroups.length > 1000 && (
+         {stats && activeGroups.length > stats.max_groups_per_request && (
           <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-           ❌ Слишком много групп ({activeGroups.length}). Максимум 1000 групп за раз.
+           ❌ Слишком много групп ({activeGroups.length}). Максимум {stats.max_groups_per_request} групп за раз.
           </p>
          )}
         </div>

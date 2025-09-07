@@ -34,6 +34,11 @@ export interface ParserStats {
   total_comments_found: number
   total_processing_time: number
   average_task_duration: number
+  // Лимиты парсинга
+  max_groups_per_request: number
+  max_posts_per_request: number
+  max_comments_per_request: number
+  max_users_per_request: number
 }
 
 export interface ParserGlobalStats extends ParserStats {

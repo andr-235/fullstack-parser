@@ -20,6 +20,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from .client import VKAPIClient
+from .config import ParserConfig
 from ..exceptions import ValidationError, ServiceUnavailableError
 from ..vk_api.service import VKAPIService
 from ..vk_api.dependencies import create_vk_api_service
@@ -48,8 +49,8 @@ class ParserService:
     def __init__(
         self,
         repository=None,
-        client: VKAPIClient = None,
-        vk_api_service: VKAPIService = None,
+        client: Optional[VKAPIClient] = None,
+        vk_api_service: Optional[VKAPIService] = None,
     ):
         self.repository = repository
         self.client = client or VKAPIClient()
@@ -90,9 +91,10 @@ class ParserService:
                 "Необходимо указать хотя бы одну группу", field="group_ids"
             )
 
-        if len(group_ids) > 100:
+        if len(group_ids) > ParserConfig.MAX_GROUPS_PER_REQUEST:
             raise ValidationError(
-                "Максимум 100 групп за один запрос", field="group_ids"
+                f"Максимум {ParserConfig.MAX_GROUPS_PER_REQUEST} групп за один запрос",
+                field="group_ids",
             )
 
         # Валидация параметров
@@ -359,6 +361,9 @@ class ParserService:
 
         avg_duration = total_time / task_count if task_count > 0 else 0
 
+        # Получаем лимиты из конфигурации
+        limits = ParserConfig.get_parsing_limits()
+
         return {
             "total_tasks": total_tasks,
             "completed_tasks": completed_tasks,
@@ -368,6 +373,11 @@ class ParserService:
             "total_comments_found": total_comments,
             "total_processing_time": int(total_time),
             "average_task_duration": round(avg_duration, 2),
+            # Лимиты парсинга
+            "max_groups_per_request": limits["max_groups"],
+            "max_posts_per_request": limits["max_posts"],
+            "max_comments_per_request": limits["max_comments"],
+            "max_users_per_request": limits["max_users"],
         }
 
     async def parse_group(

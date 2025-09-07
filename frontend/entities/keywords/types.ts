@@ -130,3 +130,14 @@ export interface UploadKeywordsResponse {
   failed: number
   errors: string[]
 }
+
+export interface UploadProgress {
+  loaded: number
+  total: number
+  percentage: number
+  processed: number
+  created: number
+  updated: number
+  skipped: number
+  errors: string[]
+}

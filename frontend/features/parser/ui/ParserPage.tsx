@@ -103,8 +103,8 @@ export function ParserPage() {
             }
 
             // Проверяем лимит групп для массового парсинга
-            if (config.parseAllGroups && groups && groups.length > 1000) {
-                setError(`Слишком много групп для парсинга (${groups.length}). Максимум 1000 групп за раз.`)
+            if (config.parseAllGroups && groups && stats && groups.length > stats.max_groups_per_request) {
+                setError(`Слишком много групп для парсинга (${groups.length}). Максимум ${stats.max_groups_per_request} групп за раз.`)
                 return
             }
             if (config.groupId && (!groups || !groups.find(g => g.id === config.groupId))) {
@@ -182,7 +182,7 @@ export function ParserPage() {
             setError(errorMessage)
             // console.error('Failed to start parser:', err)
         }
-    }, [groups, startParser, startBulkParser, refetch])
+    }, [groups, stats, startParser, startBulkParser, refetch])
 
     return (
         <div className="container mx-auto py-8 space-y-8">
@@ -233,6 +233,7 @@ export function ParserPage() {
                         <>
                             <ParserModal
                                 groups={groups}
+                                stats={stats}
                                 onStartParsing={handleStartParsing}
                                 isOpen={modalOpen}
                                 onOpenChange={setModalOpen}

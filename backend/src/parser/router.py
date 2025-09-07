@@ -8,6 +8,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, HTTPException, Request
 
 from .dependencies import get_parser_service
+from .config import ParserConfig
 from .schemas import (
     ParseRequest,
     ParseResponse,
@@ -17,6 +18,7 @@ from .schemas import (
     StopParseResponse,
     ParseTaskListResponse,
     ParseStats,
+    ParseTask,
 )
 from .service import ParserService
 from ..pagination import (
@@ -54,8 +56,14 @@ async def start_parsing(
     try:
         result = await service.start_parsing(
             group_ids=request.group_ids,
-            max_posts=request.max_posts,
-            max_comments_per_post=request.max_comments_per_post,
+            max_posts=(
+                request.max_posts if request.max_posts is not None else 100
+            ),
+            max_comments_per_post=(
+                request.max_comments_per_post
+                if request.max_comments_per_post is not None
+                else 100
+            ),
             force_reparse=request.force_reparse,
             priority=request.priority,
         )
@@ -148,11 +156,14 @@ async def get_tasks_list(
     )
 
     # Получаем задачи
-    tasks = await service.get_tasks_list(
+    tasks_data = await service.get_tasks_list(
         limit=pagination.limit,
         offset=pagination.offset,
         status_filter=status,
     )
+
+    # Преобразуем словари в объекты ParseTask
+    tasks = [ParseTask(**task) for task in tasks_data]
 
     # В реальности нужно получить total из БД
     total = len(tasks)  # Заглушка
