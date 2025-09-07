@@ -102,11 +102,7 @@ export function ParserPage() {
                 return
             }
 
-            // Проверяем лимит групп для массового парсинга
-            if (config.parseAllGroups && groups && stats && groups.length > stats.max_groups_per_request) {
-                setError(`Слишком много групп для парсинга (${groups.length}). Максимум ${stats.max_groups_per_request} групп за раз.`)
-                return
-            }
+            // Лимиты групп убраны - можно парсить любое количество групп
             if (config.groupId && (!groups || !groups.find(g => g.id === config.groupId))) {
                 setError('Выбранная группа не найдена')
                 return
@@ -120,46 +116,19 @@ export function ParserPage() {
                     return
                 }
 
-                // Разбиваем группы на батчи по 100 штук (лимит API)
-                const BATCH_SIZE = 100
-                const batches: number[][] = []
-
-                for (let i = 0; i < allGroupIds.length; i += BATCH_SIZE) {
-                    batches.push(allGroupIds.slice(i, i + BATCH_SIZE))
-                }
-
+                // Лимиты убраны - отправляем все группы сразу
                 try {
-                    const results = []
+                    setError(`Запуск парсинга для ${allGroupIds.length} групп...`)
 
-                    // Запускаем парсинг для каждого батча
-                    for (let i = 0; i < batches.length; i++) {
-                        const batch = batches[i]
-
-                        if (!batch || batch.length === 0) {
-                            continue
-                        }
-
-                        // Обновляем сообщение о прогрессе
-                        setError(`Запуск парсинга батча ${i + 1}/${batches.length} (${batch.length} групп)...`)
-
-                        const result = await startBulkParser({
-                            group_ids: batch,
-                            max_posts: config.maxPosts,
-                            force_reparse: config.forceReparse,
-                        })
-
-                        results.push(result)
-
-                        // Небольшая задержка между батчами, чтобы не перегружать API
-                        if (i < batches.length - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 1000))
-                        }
-                    }
+                    const result = await startBulkParser({
+                        group_ids: allGroupIds,
+                        max_posts: config.maxPosts,
+                        force_reparse: config.forceReparse,
+                    })
 
                     // Показываем результат массового парсинга
-                    const totalTasks = results.filter(r => r.task_id).length
-                    if (totalTasks > 0) {
-                        setError(`Успешно запущено ${totalTasks} задач парсинга для ${allGroupIds.length} групп`)
+                    if (result.task_id) {
+                        setError(`Успешно запущена задача парсинга для ${allGroupIds.length} групп`)
                     } else {
                         setError('Задачи парсинга запущены, но не удалось получить ID задач')
                     }
