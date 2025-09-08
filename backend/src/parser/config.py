@@ -21,7 +21,7 @@ class ParserConfig:
     MAX_REQUESTS_PER_SECOND = 3
     MAX_POSTS_PER_REQUEST = 100
     MAX_COMMENTS_PER_REQUEST = 100
-    MAX_GROUPS_PER_REQUEST = 100
+    MAX_GROUPS_PER_REQUEST = 10000  # Увеличен лимит для массового парсинга
     MAX_USERS_PER_REQUEST = 1000
 
     # Настройки парсинга
@@ -31,7 +31,7 @@ class ParserConfig:
     DEFAULT_PRIORITY = "normal"
 
     # Ограничения
-    MAX_GROUP_IDS_PER_REQUEST = 100
+    MAX_GROUP_IDS_PER_REQUEST = 10000  # Увеличен лимит для массового парсинга
     MAX_POSTS_PER_GROUP = 1000
     MAX_COMMENTS_PER_POST = 1000
 

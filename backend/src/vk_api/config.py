@@ -46,7 +46,7 @@ class VKAPIRequestLimits(BaseModel):
         default=100, gt=0, description="Максимум комментариев за запрос"
     )
     max_groups_per_request: int = Field(
-        default=1000, gt=0, description="Максимум групп за запрос"
+        default=10000, gt=0, description="Максимум групп за запрос"
     )
     max_users_per_request: int = Field(
         default=1000, gt=0, description="Максимум пользователей за запрос"

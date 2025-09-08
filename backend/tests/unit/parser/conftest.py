@@ -160,7 +160,7 @@ def sample_parse_stats():
         total_comments_found=2450,
         total_processing_time=450,
         average_task_duration=45.0,
-        max_groups_per_request=50,
+        max_groups_per_request=10000,
         max_posts_per_request=100,
         max_comments_per_request=200,
         max_users_per_request=1000,
