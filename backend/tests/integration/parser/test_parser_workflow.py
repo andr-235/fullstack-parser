@@ -382,8 +382,8 @@ class TestParserWorkflowIntegration:
                 max_comments_per_post=10,
             )
 
-        # Test with too many groups
-        large_group_list = list(range(101))  # More than max allowed
+        # Test with too many groups (превышает новый лимит 10000)
+        large_group_list = list(range(10001))  # More than max allowed
         with pytest.raises(Exception):  # ValidationError
             await service.start_parsing(
                 group_ids=large_group_list,
