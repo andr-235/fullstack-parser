@@ -41,7 +41,9 @@ class TestParserService:
 
     def test_init_without_vk_api_service(self):
         """Test service initialization without VK API service"""
-        with patch("src.parser.service.create_vk_api_service") as mock_create:
+        with patch(
+            "src.vk_api.dependencies.create_vk_api_service_sync"
+        ) as mock_create:
             mock_vk_api = Mock()
             mock_create.return_value = mock_vk_api
 

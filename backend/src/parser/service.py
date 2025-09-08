@@ -60,7 +60,9 @@ class ParserService:
             self.vk_api = vk_api_service
         else:
             # Создаем экземпляр VK API сервиса для внутренних вызовов
-            self.vk_api = create_vk_api_service()
+            from ..vk_api.dependencies import create_vk_api_service_sync
+
+            self.vk_api = create_vk_api_service_sync()
 
         # Храним состояния задач в памяти для простоты (task_id -> данные задачи)
         self.tasks: Dict[str, Dict[str, Any]] = {}
