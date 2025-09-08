@@ -499,7 +499,9 @@ class ParserService:
 
         for attempt in range(max_retries):
             try:
-                return await func(*args, **kwargs)
+                # Вызываем функцию и ждем результат
+                result = await func(*args, **kwargs)
+                return result
             except VKAPITimeoutException as e:
                 last_exception = e
                 if attempt < max_retries - 1:  # Don't delay on last attempt
