@@ -42,13 +42,17 @@ async def get_parser_client():
     return VKAPIClient()
 
 
+# Глобальный экземпляр сервиса парсера для сохранения состояния задач
+_parser_service_instance = None
+
+
 async def get_parser_service(
     repository=Depends(get_parser_repository),
     client=Depends(get_parser_client),
     vk_api_service=None,
 ):
     """
-    Получить сервис парсера
+    Получить сервис парсера (синглтон)
 
     Args:
         repository: Репозиторий парсера
@@ -58,14 +62,22 @@ async def get_parser_service(
     Returns:
         ParserService: Сервис для бизнес-логики парсинга
     """
-    # Импорт здесь для избежания циклических зависимостей
-    from .service import ParserService
+    global _parser_service_instance
 
     # Если VK API сервис не передан, создаем его
     if vk_api_service is None:
-        vk_api_service = create_vk_api_service()
+        vk_api_service = await create_vk_api_service()
 
-    return ParserService(repository, client, vk_api_service)
+    # Создаем экземпляр только один раз
+    if _parser_service_instance is None:
+        # Импорт здесь для избежания циклических зависимостей
+        from .service import ParserService
+
+        _parser_service_instance = ParserService(
+            repository, client, vk_api_service
+        )
+
+    return _parser_service_instance
 
 
 # Экспорт зависимостей

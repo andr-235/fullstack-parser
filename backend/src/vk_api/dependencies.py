@@ -10,7 +10,7 @@ from .service import VKAPIService
 from .models import VKAPIRepository, get_vk_api_repository
 
 
-def create_vk_api_service(
+async def create_vk_api_service(
     repository: Optional[VKAPIRepository] = None,
 ) -> VKAPIService:
     """
@@ -23,7 +23,7 @@ def create_vk_api_service(
         VKAPIService: Экземпляр сервиса
     """
     if repository is None:
-        repository = get_vk_api_repository()
+        repository = await get_vk_api_repository()
 
     return VKAPIService(repository)
 

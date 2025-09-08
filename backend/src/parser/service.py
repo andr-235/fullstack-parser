@@ -142,10 +142,12 @@ class ParserService:
 
         self.tasks[task_id] = task
 
-        # В реальном приложении здесь будет отправка в очередь (ARQ, Celery и т.д.)
-        # Пока просто помечаем как запущенную
+        # Запускаем асинхронное выполнение парсинга
         task["status"] = "running"
         task["started_at"] = datetime.utcnow()
+
+        # Запускаем парсинг в фоновом режиме
+        asyncio.create_task(self._execute_parsing_task(task_id))
 
         return {
             "task_id": task_id,
@@ -511,6 +513,84 @@ class ParserService:
 
         # If we get here, all retries failed
         raise last_exception
+
+    async def _execute_parsing_task(self, task_id: str) -> None:
+        """
+        Выполнить задачу парсинга в фоновом режиме
+
+        Args:
+            task_id: ID задачи для выполнения
+        """
+        try:
+            task = self.tasks.get(task_id)
+            if not task:
+                logger.error(f"Задача {task_id} не найдена")
+                return
+
+            group_ids = task["group_ids"]
+            config = task["config"]
+
+            logger.info(
+                f"Начинаем парсинг задачи {task_id} для {len(group_ids)} групп"
+            )
+
+            # Парсим каждую группу
+            for i, group_id in enumerate(group_ids):
+                if task["status"] != "running":
+                    logger.info(
+                        f"Задача {task_id} остановлена, прерываем парсинг"
+                    )
+                    break
+
+                try:
+                    # Обновляем текущую группу
+                    task["current_group"] = group_id
+                    task["progress"] = (i / len(group_ids)) * 100
+
+                    logger.info(
+                        f"Парсинг группы {group_id} ({i+1}/{len(group_ids)})"
+                    )
+
+                    # Выполняем парсинг группы
+                    group_result = await self.parse_group(
+                        group_id=group_id,
+                        max_posts=config["max_posts"],
+                        max_comments_per_post=config["max_comments_per_post"],
+                    )
+
+                    # Обновляем статистику задачи
+                    task["posts_found"] += group_result["posts_found"]
+                    task["comments_found"] += group_result["comments_found"]
+                    task["groups_completed"] += 1
+
+                    logger.info(
+                        f"Группа {group_id} обработана: {group_result['posts_found']} постов, {group_result['comments_found']} комментариев"
+                    )
+
+                except Exception as e:
+                    error_msg = f"Ошибка парсинга группы {group_id}: {str(e)}"
+                    logger.error(error_msg)
+                    task["errors"].append(error_msg)
+
+            # Завершаем задачу
+            if task["status"] == "running":
+                task["status"] = "completed"
+                task["progress"] = 100.0
+                task["completed_at"] = datetime.utcnow()
+                logger.info(f"Задача {task_id} завершена успешно")
+            else:
+                logger.info(f"Задача {task_id} остановлена")
+
+        except Exception as e:
+            logger.error(
+                f"Критическая ошибка выполнения задачи {task_id}: {str(e)}"
+            )
+            if task_id in self.tasks:
+                self.tasks[task_id]["status"] = "failed"
+                self.tasks[task_id]["errors"].append(
+                    f"Критическая ошибка: {str(e)}"
+                )
+                self.tasks[task_id]["completed_at"] = datetime.utcnow()
 
 
 # Экспорт
