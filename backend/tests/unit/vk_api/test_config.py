@@ -140,7 +140,7 @@ class TestVKAPIRequestLimits:
 
         assert config.max_posts_per_request == 100
         assert config.max_comments_per_request == 100
-        assert config.max_groups_per_request == 1000
+        assert config.max_groups_per_request == 10000
         assert config.max_users_per_request == 1000
         assert config.max_group_members_per_request == 1000
 

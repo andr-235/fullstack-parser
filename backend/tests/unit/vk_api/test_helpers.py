@@ -488,7 +488,7 @@ class TestLimitsResponse:
             max_requests_per_second=3,
             max_posts_per_request=100,
             max_comments_per_request=100,
-            max_groups_per_request=1000,
+            max_groups_per_request=10000,
             max_users_per_request=1000,
             current_request_count=5,
             last_request_time=1609459200.0,
