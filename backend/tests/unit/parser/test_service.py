@@ -93,13 +93,13 @@ class TestParserService:
     @pytest.mark.asyncio
     async def test_start_parsing_too_many_groups(self, service):
         """Test parsing start with too many groups"""
-        group_ids = list(range(101))  # 101 groups
+        group_ids = list(range(10001))  # 10001 groups (превышает лимит 10000)
 
         # Act & Assert
         with pytest.raises(ValidationError) as exc_info:
             await service.start_parsing(group_ids=group_ids)
 
-        assert "Максимум 100 групп за один запрос" in str(exc_info.value)
+        assert "Максимум 10000 групп за один запрос" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_start_parsing_invalid_max_posts(
