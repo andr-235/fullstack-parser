@@ -51,12 +51,25 @@ class CommentRepository:
         limit: int = 50,
         offset: int = 0,
         search_text: Optional[str] = None,
+        is_viewed: Optional[bool] = None,
+        is_archived: Optional[bool] = None,
     ) -> List[BaseComment]:
         """Получить комментарии по ID группы"""
-        query = select(BaseComment).where(BaseComment.group_id == group_id)
+        group_id_int = int(group_id) if group_id.isdigit() else 0
+
+        # Получаем комментарии по group_vk_id
+        query = select(BaseComment).where(
+            BaseComment.group_vk_id == group_id_int
+        )
 
         if search_text:
             query = query.where(BaseComment.text.ilike(f"%{search_text}%"))
+
+        if is_viewed is not None:
+            query = query.where(BaseComment.is_viewed == is_viewed)
+
+        if is_archived is not None:
+            query = query.where(BaseComment.is_archived == is_archived)
 
         query = (
             query.order_by(desc(BaseComment.published_at))
@@ -67,12 +80,52 @@ class CommentRepository:
         return list(result.scalars().all())
 
     async def get_by_post_id(
-        self, post_id: str, limit: int = 100, offset: int = 0
+        self,
+        post_id: str,
+        limit: int = 100,
+        offset: int = 0,
+        is_viewed: Optional[bool] = None,
+        is_archived: Optional[bool] = None,
     ) -> List[BaseComment]:
         """Получить комментарии к посту"""
         query = select(BaseComment).where(BaseComment.post_id == post_id)
+
+        if is_viewed is not None:
+            query = query.where(BaseComment.is_viewed == is_viewed)
+
+        if is_archived is not None:
+            query = query.where(BaseComment.is_archived == is_archived)
+
         query = (
             query.order_by(BaseComment.published_at)
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def get_all_comments(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        search_text: Optional[str] = None,
+        is_viewed: Optional[bool] = None,
+        is_archived: Optional[bool] = None,
+    ) -> List[BaseComment]:
+        """Получить все комментарии с пагинацией"""
+        query = select(BaseComment)
+
+        if search_text:
+            query = query.where(BaseComment.text.ilike(f"%{search_text}%"))
+
+        if is_viewed is not None:
+            query = query.where(BaseComment.is_viewed == is_viewed)
+
+        if is_archived is not None:
+            query = query.where(BaseComment.is_archived == is_archived)
+
+        query = (
+            query.order_by(desc(BaseComment.published_at))
             .limit(limit)
             .offset(offset)
         )
@@ -112,13 +165,6 @@ class CommentRepository:
         await self.db.delete(comment)
         await self.db.commit()
         return True
-
-    async def count_by_group(self, group_id: str) -> int:
-        """Подсчитать количество комментариев в группе"""
-        query = select(func.count()).select_from(BaseComment)
-        query = query.where(BaseComment.group_id == group_id)
-        result = await self.db.execute(query)
-        return result.scalar() or 0
 
     async def get_stats(self) -> Dict[str, Any]:
         """Получить статистику комментариев"""
@@ -173,10 +219,77 @@ class CommentRepository:
         await self.db.commit()
         return result.rowcount
 
+    async def count_by_group(
+        self,
+        group_id: str,
+        search_text: Optional[str] = None,
+        is_viewed: Optional[bool] = None,
+        is_archived: Optional[bool] = None,
+    ) -> int:
+        """Подсчитать количество комментариев в группе"""
+        group_id_int = int(group_id) if group_id.isdigit() else 0
+
+        query = select(func.count(BaseComment.id)).where(
+            BaseComment.group_vk_id == group_id_int
+        )
+
+        if search_text:
+            query = query.where(BaseComment.text.ilike(f"%{search_text}%"))
+
+        if is_viewed is not None:
+            query = query.where(BaseComment.is_viewed == is_viewed)
+
+        if is_archived is not None:
+            query = query.where(BaseComment.is_archived == is_archived)
+
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
+    async def count_by_post(
+        self,
+        post_id: str,
+        is_viewed: Optional[bool] = None,
+        is_archived: Optional[bool] = None,
+    ) -> int:
+        """Подсчитать количество комментариев к посту"""
+        query = select(func.count(BaseComment.id)).where(
+            BaseComment.post_id == post_id
+        )
+
+        if is_viewed is not None:
+            query = query.where(BaseComment.is_viewed == is_viewed)
+
+        if is_archived is not None:
+            query = query.where(BaseComment.is_archived == is_archived)
+
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
+    async def count_all(
+        self,
+        search_text: Optional[str] = None,
+        is_viewed: Optional[bool] = None,
+        is_archived: Optional[bool] = None,
+    ) -> int:
+        """Подсчитать общее количество комментариев"""
+        query = select(func.count(BaseComment.id))
+
+        if search_text:
+            query = query.where(BaseComment.text.ilike(f"%{search_text}%"))
+
+        if is_viewed is not None:
+            query = query.where(BaseComment.is_viewed == is_viewed)
+
+        if is_archived is not None:
+            query = query.where(BaseComment.is_archived == is_archived)
+
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
 
 # Функции для создания репозитория
 async def get_comment_repository(
-    db: AsyncSession = get_db_session,
+    db: AsyncSession,
 ) -> CommentRepository:
     """Создать репозиторий комментариев"""
     return CommentRepository(db)

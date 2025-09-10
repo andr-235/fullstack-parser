@@ -272,3 +272,29 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
 async def get_db() -> AsyncSession:
     """Получить сессию БД для использования в сервисах"""
     return database_service.session_maker()
+
+
+def get_sync_db_session():
+    """Получить синхронную сессию БД для использования в репозиториях"""
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy import create_engine
+    from .config import config_service
+
+    db_config = config_service.get_database_config()
+    # Преобразуем async URL в sync URL
+    sync_url = db_config["url"].replace(
+        "postgresql+asyncpg://", "postgresql://"
+    )
+
+    engine = create_engine(sync_url)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return SessionLocal()
+
+
+# Экспорт функций
+__all__ = [
+    "get_database_service",
+    "get_db_session",
+    "get_db",
+    "get_sync_db_session",
+]

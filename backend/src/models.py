@@ -114,11 +114,22 @@ class Keyword(BaseModel):
 
     __tablename__ = "keywords"
 
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     word = Column(String(255), unique=True, index=True, nullable=False)
-    is_active = Column(Integer, default=1, nullable=False)
+    description = Column(Text, nullable=True)
+    category_name = Column(String(100), nullable=True, index=True)
+    category_description = Column(Text, nullable=True)
+    priority = Column(Integer, default=5, nullable=False)
+    match_count = Column(Integer, default=0, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    is_archived = Column(Boolean, default=False, nullable=False)
     group_id = Column(
         Integer, index=True, nullable=True
     )  # NULL = глобальное ключевое слово
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime, default=func.now(), onupdate=func.now(), nullable=False
+    )
 
 
 class Comment(BaseModel):
@@ -141,6 +152,7 @@ class Comment(BaseModel):
     )
     published_at = Column(DateTime(timezone=True), nullable=False)
     post_vk_id = Column(Integer, nullable=True)
+    group_vk_id = Column(Integer, nullable=True, index=True)
     author_name = Column(String(200), nullable=True)
     author_screen_name = Column(String(100), nullable=True)
     author_photo_url = Column(String(500), nullable=True)
