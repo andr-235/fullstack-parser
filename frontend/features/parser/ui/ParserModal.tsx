@@ -113,7 +113,7 @@ export function ParserModal({
         </SelectTrigger>
         <SelectContent>
          {activeGroups.map((group) => (
-          <SelectItem key={group.id} value={group.id.toString()}>
+          <SelectItem key={group.id} value={group.vk_id.toString()}>
            {group.name} ({group.screen_name})
           </SelectItem>
          ))}

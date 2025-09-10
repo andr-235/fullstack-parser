@@ -93,17 +93,68 @@ export class ApiClient {
           let errorMessage = `HTTP error! status: ${response.status}`
 
           try {
+            // Сначала пытаемся получить текст ответа для 500 ошибок
+            if (response.status === 500) {
+              try {
+                const errorText = await response.text()
+                if (errorText && errorText.trim()) {
+                  errorMessage = errorText.trim()
+                  throw new Error(errorMessage)
+                }
+              } catch (textError) {
+                // Если не удалось получить текст, продолжаем с JSON парсингом
+              }
+            }
+
+            // Пытаемся распарсить как JSON
             const errorData = await response.json()
-            // Backend может возвращать ошибки в формате { error: { message: string } }
+            // Backend может возвращать ошибки в различных форматах
             if (errorData.error?.message) {
               errorMessage = errorData.error.message
             } else if (errorData.message) {
               errorMessage = errorData.message
             } else if (errorData.detail) {
-              errorMessage = errorData.detail
+              // Обработка FastAPI validation errors (422)
+              if (Array.isArray(errorData.detail)) {
+                // FastAPI validation errors format: { detail: [{ type, loc, msg, input }] }
+                const validationErrors = errorData.detail
+                  .map((err: any) => {
+                    const field = err.loc ? err.loc.slice(1).join('.') : 'field'
+                    return `${field}: ${err.msg}`
+                  })
+                  .join('; ')
+                errorMessage = `Validation error: ${validationErrors}`
+              } else if (typeof errorData.detail === 'string') {
+                errorMessage = errorData.detail
+              } else {
+                errorMessage = `Server error: ${JSON.stringify(errorData.detail)}`
+              }
+            } else if (errorData.error?.detail) {
+              errorMessage = errorData.error.detail
+            } else if (typeof errorData === 'string') {
+              errorMessage = errorData
+            } else if (errorData && typeof errorData === 'object') {
+              // Если это объект, пытаемся найти любое строковое поле
+              const stringFields = Object.values(errorData).filter(
+                (value): value is string => typeof value === 'string'
+              )
+              if (stringFields.length > 0) {
+                errorMessage = stringFields[0]!
+              } else {
+                errorMessage = `Server error: ${JSON.stringify(errorData)}`
+              }
             }
-          } catch {
-            // Если не удается распарсить JSON, используем стандартное сообщение
+          } catch (jsonError) {
+            // Если не удается распарсить JSON, пытаемся получить текст ответа
+            try {
+              const errorText = await response.text()
+              if (errorText && errorText.trim()) {
+                errorMessage = errorText.trim()
+              }
+            } catch (textError) {
+              // Если и текст получить не удается, используем стандартное сообщение
+              console.warn('Failed to parse error response as JSON or text:', jsonError, textError)
+            }
           }
 
           throw new Error(errorMessage)
@@ -197,8 +248,14 @@ export class ApiClient {
   // Groups API
   async getGroups(params?: GroupsFilters): Promise<GroupsResponse> {
     const queryParams = new URLSearchParams()
-    if (params?.is_active !== undefined)
+
+    // Обрабатываем active_only как приоритетный параметр
+    if (params?.active_only !== undefined) {
+      queryParams.append('is_active', params.active_only.toString())
+    } else if (params?.is_active !== undefined) {
       queryParams.append('is_active', params.is_active.toString())
+    }
+
     if (params?.search) queryParams.append('search', params.search)
     if (params?.has_monitoring !== undefined)
       queryParams.append('has_monitoring', params.has_monitoring.toString())
@@ -415,17 +472,33 @@ export class ApiClient {
 
   // Parser API
   async startParser(taskData: ParseTaskCreate): Promise<ParseTaskResponse> {
-    return this.request('/api/v1/parser/parse', {
-      method: 'POST',
-      body: JSON.stringify(taskData),
-    })
+    console.log('API: startParser called with data:', taskData)
+    try {
+      const result = await this.request<ParseTaskResponse>('/api/v1/parser/parse', {
+        method: 'POST',
+        body: JSON.stringify(taskData),
+      })
+      console.log('API: startParser result:', result)
+      return result
+    } catch (error) {
+      console.error('API: startParser error:', error)
+      throw error
+    }
   }
 
   async startBulkParser(bulkData: StartBulkParserForm): Promise<BulkParseResponse> {
-    return this.request<BulkParseResponse>('/api/v1/parser/parse', {
-      method: 'POST',
-      body: JSON.stringify(bulkData),
-    })
+    console.log('API: startBulkParser called with data:', bulkData)
+    try {
+      const result = await this.request<BulkParseResponse>('/api/v1/parser/parse', {
+        method: 'POST',
+        body: JSON.stringify(bulkData),
+      })
+      console.log('API: startBulkParser result:', result)
+      return result
+    } catch (error) {
+      console.error('API: startBulkParser error:', error)
+      throw error
+    }
   }
 
   async getParserState(): Promise<ParserState> {
@@ -460,11 +533,20 @@ export class ApiClient {
   }
 
   async stopParser(request: StopParseRequest = {}): Promise<StopParseResponse> {
-    const body = Object.keys(request).length > 0 ? request : null
-    return this.request('/api/v1/parser/stop', {
-      method: 'POST',
-      body: body ? JSON.stringify(body) : null,
-    })
+    console.log('API: stopParser called with request:', request)
+    try {
+      // Всегда отправляем объект, даже если он пустой
+      const body = Object.keys(request).length > 0 ? request : {}
+      const result = await this.request<StopParseResponse>('/api/v1/parser/stop', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+      console.log('API: stopParser result:', result)
+      return result
+    } catch (error) {
+      console.error('API: stopParser error:', error)
+      throw error
+    }
   }
 
   async getParserHistory(page = 1, size = 10): Promise<ParserHistoryResponse> {

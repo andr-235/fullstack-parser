@@ -240,7 +240,41 @@ export const useStartParser = () => {
         const result = await apiClient.startBulkParser(bulkData)
         return result
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to start bulk parser'
+        // Улучшенная обработка ошибок
+        let errorMessage = 'Failed to start bulk parser'
+
+        if (err instanceof Error) {
+          errorMessage = err.message
+        } else if (typeof err === 'string') {
+          errorMessage = err
+        } else if (err && typeof err === 'object') {
+          // Пытаемся извлечь сообщение из объекта ошибки
+          if ('message' in err) {
+            errorMessage = String(err.message)
+          } else if ('detail' in err) {
+            errorMessage = String(err.detail)
+          } else if (
+            'error' in err &&
+            err.error &&
+            typeof err.error === 'object' &&
+            'message' in err.error
+          ) {
+            errorMessage = String(err.error.message)
+          } else {
+            // Избегаем [object Object] - показываем структуру объекта
+            try {
+              errorMessage = `Error: ${JSON.stringify(err, null, 2)}`
+            } catch {
+              errorMessage = `Error: ${String(err)}`
+            }
+          }
+        }
+
+        console.error('Bulk parser error:', err)
+        console.error('Error type:', typeof err)
+        console.error('Error constructor:', err?.constructor?.name)
+        console.error('Parsed error message:', errorMessage)
+
         setError(errorMessage)
         throw new Error(errorMessage)
       } finally {
@@ -264,13 +298,16 @@ export const useStopParser = () => {
   const [error, setError] = useState<string | null>(null)
 
   const stopParser = useCallback(async (request: StopParseRequest = {}) => {
+    console.log('Hook: stopParser called with request:', request)
     setStopping(true)
     setError(null)
     try {
       const result = await apiClient.stopParser(request)
+      console.log('Hook: stopParser result:', result)
       return result
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to stop parser'
+      console.error('Hook: stopParser error:', err)
       setError(errorMessage)
       throw new Error(errorMessage)
     } finally {
@@ -301,11 +338,8 @@ export const useAutoRefresh = (_intervalMs: number = 5000, enabled: boolean = tr
 
 // Хук для управления парсером (комбинированный)
 export const useParser = (autoRefreshInterval: number = 3000) => {
-  const {
-    state,
-    loading: stateLoading,
-    refetch: refetchState,
-  } = useParserState(autoRefreshInterval > 0)
+  // Всегда загружаем состояние парсера при инициализации для правильного отображения кнопок
+  const { state, loading: stateLoading, refetch: refetchState } = useParserState(true) // Всегда загружаем состояние
   const {
     stats,
     loading: statsLoading,
@@ -323,8 +357,11 @@ export const useParser = (autoRefreshInterval: number = 3000) => {
   // Если автообновление отключено, НЕ делаем запросы при инициализации
   // Данные будут загружаться только по кнопке "Обновить данные"
 
-  const isRunning = Boolean(state?.is_running && state.active_tasks > 0)
-  const isStopped = Boolean(!state?.is_running && state?.active_tasks === 0)
+  // Определяем состояние парсера
+  // Если state еще не загружен, считаем что парсер не работает
+  // Если state загружен, используем данные из API
+  const isRunning = state ? Boolean(state.is_running && state.active_tasks > 0) : false
+  const isStopped = state ? Boolean(!state.is_running && state.active_tasks === 0) : false
   const hasError = false // В новом API статус ошибки не определен в ParserState
 
   const loading = stateLoading || statsLoading || globalStatsLoading

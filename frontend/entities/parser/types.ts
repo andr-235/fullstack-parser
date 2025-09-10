@@ -22,7 +22,9 @@ export interface ParserState {
   total_posts_found: number
   total_comments_found: number
   last_activity?: string
+  started_at?: string
   uptime_seconds: number
+  overall_progress: number
 }
 
 export interface ParserStats {

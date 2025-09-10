@@ -10,6 +10,42 @@ import {
   CommentsResponse,
 } from './types'
 
+// Типы для обработки ошибок API
+interface ApiError {
+  message?: string
+  detail?: string
+  error?: {
+    message?: string
+  }
+}
+
+// Вспомогательная функция для обработки ошибок
+function getErrorMessage(err: unknown, defaultMessage: string): string {
+  if (err instanceof Error) {
+    return err.message
+  }
+
+  if (typeof err === 'string') {
+    return err
+  }
+
+  if (typeof err === 'object' && err !== null) {
+    const apiError = err as ApiError
+    if (apiError.message) {
+      return apiError.message
+    }
+    if (apiError.detail) {
+      return apiError.detail
+    }
+    if (apiError.error?.message) {
+      return apiError.error.message
+    }
+    return `API Error: ${JSON.stringify(apiError)}`
+  }
+
+  return defaultMessage
+}
+
 export const useComments = (filters?: CommentFilters) => {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(false)
@@ -25,15 +61,15 @@ export const useComments = (filters?: CommentFilters) => {
       if (filters?.group_id) params.group_id = filters.group_id
       if (filters?.keyword_id) params.keyword_id = filters.keyword_id
 
+      // Если нет фильтров, используем поиск для получения всех комментариев
+      if (!filters?.group_id && !filters?.text) {
+        params.text = '**' // Специальный запрос для получения всех комментариев
+      }
+
       const response: CommentsResponse = await apiClient.getComments(params)
       setComments(response.items)
     } catch (err) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : typeof err === 'string'
-            ? err
-            : 'Failed to fetch comments'
+      const errorMessage = getErrorMessage(err, 'Failed to fetch comments')
       setError(errorMessage)
     } finally {
       setLoading(false)
@@ -68,12 +104,7 @@ export const useComments = (filters?: CommentFilters) => {
       )
       return updatedComment
     } catch (err) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : typeof err === 'string'
-            ? err
-            : 'Failed to update comment'
+      const errorMessage = getErrorMessage(err, 'Failed to update comment')
       throw new Error(errorMessage)
     }
   }
@@ -83,12 +114,7 @@ export const useComments = (filters?: CommentFilters) => {
       await apiClient.deleteComment(parseInt(id))
       setComments(prev => prev.filter(comment => comment.id !== parseInt(id)))
     } catch (err) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : typeof err === 'string'
-            ? err
-            : 'Failed to delete comment'
+      const errorMessage = getErrorMessage(err, 'Failed to delete comment')
       throw new Error(errorMessage)
     }
   }
@@ -102,12 +128,7 @@ export const useComments = (filters?: CommentFilters) => {
         )
       )
     } catch (err) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : typeof err === 'string'
-            ? err
-            : 'Failed to mark comment as viewed'
+      const errorMessage = getErrorMessage(err, 'Failed to mark comment as viewed')
       throw new Error(errorMessage)
     }
   }

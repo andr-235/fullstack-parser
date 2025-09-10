@@ -85,7 +85,12 @@ export function CommentsPage() {
     <Card className="border-destructive">
      <CardContent className="py-4">
       <p className="text-destructive">
-       Ошибка: {typeof error === 'string' ? error : JSON.stringify(error)}
+       Ошибка: {typeof error === 'string' ? error :
+        typeof error === 'object' && error !== null ?
+         (error as { message?: string; detail?: string }).message ||
+         (error as { message?: string; detail?: string }).detail ||
+         JSON.stringify(error) :
+         String(error)}
       </p>
       <Button
        variant="outline"

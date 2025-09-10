@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 import { Play, Square, RefreshCw, AlertCircle, Zap } from 'lucide-react'
 
@@ -39,13 +39,35 @@ export function ParserPage() {
 
 
 
-    // Получаем список групп для выбора (без автоматического запроса)
-    const { groups, loading: groupsLoading, refetch: refetchGroups } = useGroups({
+    // Получаем список групп для выбора (с автоматическим запросом)
+    const { groups, loading: groupsLoading, error: groupsError, refetch: refetchGroups } = useGroups({
         active_only: true,
         size: 10000 // Получаем все активные группы
-    }, false)
+    }, true) // Включаем автоматическую загрузку
+
+    // Логируем состояние загрузки групп для отладки
+    useEffect(() => {
+        // eslint-disable-next-line no-console
+        console.log('Groups loading state:', {
+            groupsLoading,
+            groupsCount: groups?.length,
+            groupsError,
+            modalOpen
+        })
+    }, [groupsLoading, groups, groupsError, modalOpen])
+
+    // Загружаем группы при открытии модального окна
+    useEffect(() => {
+        if (modalOpen && (!groups || groups.length === 0) && !groupsLoading) {
+            // eslint-disable-next-line no-console
+            console.log('Refetching groups because modal opened and no groups')
+            refetchGroups()
+        }
+    }, [modalOpen, groups, groupsLoading, refetchGroups])
 
     const _handleStartParser = useCallback(async () => {
+        console.log('_handleStartParser called', { groups: groups?.length, groupsLoading })
+
         if (!groups || groups.length === 0) {
             setError('Нет доступных активных групп для парсинга')
             return
@@ -54,32 +76,36 @@ export function ParserPage() {
         setError(null)
         try {
             // Выбираем первую активную группу для примера
-            const groupId = groups[0]?.id
+            const groupId = groups[0]?.vk_id
             if (!groupId) {
                 setError('Нет доступных активных групп для парсинга')
                 return
             }
 
-            await startParser({
+            console.log('Starting parser with group:', groupId)
+            const result = await startParser({
                 group_ids: [groupId],
                 max_posts: 100,
                 force_reparse: false,
             })
+            console.log('Parser started successfully:', result)
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Не удалось запустить парсер'
+            console.error('Failed to start parser:', err)
             setError(errorMessage)
-            // console.error('Failed to start parser:', err)
         }
-    }, [groups, startParser])
+    }, [groups, groupsLoading, startParser])
 
     const handleStopParser = useCallback(async () => {
+        console.log('handleStopParser called')
         setError(null)
         try {
-            await stopParser()
+            const result = await stopParser()
+            console.log('Parser stopped successfully:', result)
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Не удалось остановить парсер'
+            console.error('Failed to stop parser:', err)
             setError(errorMessage)
-            // console.error('Failed to stop parser:', err)
         }
     }, [stopParser])
 
@@ -94,22 +120,28 @@ export function ParserPage() {
         maxPosts: number
         forceReparse: boolean
     }) => {
+        console.log('handleStartParsing called with config:', config)
         setError(null)
+
+        // Логируем состояние групп при запуске
+        console.log('Starting parser with config:', config, 'Groups:', groups, 'Groups loading:', groupsLoading)
+
         try {
             // Проверяем наличие групп перед запуском
             if (config.parseAllGroups && (!groups || groups.length === 0)) {
                 setError('Нет доступных активных групп для парсинга')
+                console.log('No groups available for parsing')
                 return
             }
 
             // Лимиты групп убраны - можно парсить любое количество групп
-            if (config.groupId && (!groups || !groups.find(g => g.id === config.groupId))) {
+            if (config.groupId && (!groups || !groups.find(g => g.vk_id === config.groupId))) {
                 setError('Выбранная группа не найдена')
                 return
             }
             if (config.parseAllGroups) {
                 // Запуск массового парсинга всех групп через backend API
-                const allGroupIds = groups?.map(g => g.id) || []
+                const allGroupIds = groups?.map(g => g.vk_id) || []
 
                 if (allGroupIds.length === 0) {
                     setError('Нет доступных активных групп для парсинга')
@@ -120,11 +152,14 @@ export function ParserPage() {
                 try {
                     setError(`Запуск парсинга для ${allGroupIds.length} групп...`)
 
+                    console.log('Starting bulk parser with groups:', allGroupIds)
                     const result = await startBulkParser({
                         group_ids: allGroupIds,
                         max_posts: config.maxPosts,
                         force_reparse: config.forceReparse,
                     })
+
+                    console.log('Bulk parser result:', result)
 
                     // Показываем результат массового парсинга
                     if (result.task_id) {
@@ -136,22 +171,54 @@ export function ParserPage() {
                     // Обновляем состояние сразу после запуска
                     refetch()
                 } catch (batchError) {
-                    setError(`Ошибка при запуске массового парсинга: ${batchError instanceof Error ? batchError.message : 'Неизвестная ошибка'}`)
+                    console.error('Bulk parser error:', batchError)
+                    console.error('Error type:', typeof batchError)
+                    console.error('Error constructor:', batchError?.constructor?.name)
+
+                    // Улучшенная обработка ошибок
+                    let errorMessage = 'Неизвестная ошибка'
+
+                    if (batchError instanceof Error) {
+                        errorMessage = batchError.message
+                    } else if (typeof batchError === 'string') {
+                        errorMessage = batchError
+                    } else if (batchError && typeof batchError === 'object') {
+                        // Пытаемся извлечь сообщение из объекта ошибки
+                        if ('message' in batchError) {
+                            errorMessage = String(batchError.message)
+                        } else if ('detail' in batchError) {
+                            errorMessage = String(batchError.detail)
+                        } else if ('error' in batchError && batchError.error && typeof batchError.error === 'object' && 'message' in batchError.error) {
+                            errorMessage = String(batchError.error.message)
+                        } else {
+                            // Если не можем извлечь сообщение, показываем структуру объекта
+                            try {
+                                errorMessage = `Ошибка: ${JSON.stringify(batchError, null, 2)}`
+                            } catch {
+                                errorMessage = `Ошибка: ${String(batchError)}`
+                            }
+                        }
+                    }
+
+                    console.error('Parsed error message:', errorMessage)
+                    setError(`Ошибка при запуске массового парсинга: ${errorMessage}`)
                 }
             } else if (config.groupId) {
                 // Запуск парсинга одной группы
-                await startParser({
+                console.log('Starting single group parser with group:', config.groupId)
+                const result = await startParser({
                     group_ids: [config.groupId],
                     max_posts: config.maxPosts,
                     force_reparse: config.forceReparse,
                 })
+                console.log('Single group parser result:', result)
             }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Не удалось запустить парсер'
+            console.error('Failed to start parser:', err)
             setError(errorMessage)
-            // console.error('Failed to start parser:', err)
         }
-    }, [groups, stats, startParser, startBulkParser, refetch])
+    }, [groups, groupsLoading, startParser, startBulkParser, refetch])
 
     return (
         <div className="container mx-auto py-8 space-y-8">
@@ -197,6 +264,7 @@ export function ParserPage() {
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                         Обновить данные
                     </Button>
+
 
                     {!isRunning ? (
                         <>
@@ -261,6 +329,24 @@ export function ParserPage() {
                             className="ml-4"
                         >
                             Закрыть
+                        </Button>
+                    </AlertDescription>
+                </Alert>
+            )}
+
+            {/* Groups Loading Error */}
+            {groupsError && (
+                <Alert className="border-yellow-500">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                        Ошибка загрузки групп: {groupsError}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => refetchGroups()}
+                            className="ml-4"
+                        >
+                            Повторить
                         </Button>
                     </AlertDescription>
                 </Alert>

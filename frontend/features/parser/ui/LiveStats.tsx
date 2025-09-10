@@ -63,7 +63,7 @@ export function LiveStats({ stats, globalStats, state, loading, isRunning }: Liv
    avgDuration: Math.round(stats.average_task_duration || 0)
   }
 
-  const animateValue = (key: keyof typeof animatedValues, start: number, end: number, duration: number = 1500) => {
+  const animateValue = (key: keyof typeof animatedValues, start: number, end: number, duration: number = 800) => {
    const startTime = Date.now()
    const animate = () => {
     const elapsed = Date.now() - startTime
@@ -80,17 +80,17 @@ export function LiveStats({ stats, globalStats, state, loading, isRunning }: Liv
      clearInterval(interval)
      setAnimatedValues(prev => ({ ...prev, [key]: end }))
     }
-   }, 50)
+   }, 30) // Более частое обновление для плавности
   }
 
-  // Анимируем каждое значение
+  // Анимируем каждое значение только если есть значительные изменения
   Object.entries(targetValues).forEach(([key, target]) => {
    const current = animatedValues[key as keyof typeof animatedValues]
-   if (current !== target) {
+   if (Math.abs(current - target) > 0.1) { // Только если разница больше 0.1
     animateValue(key as keyof typeof animatedValues, current, target)
    }
   })
- }, [stats, globalStats, animatedValues])
+ }, [stats, globalStats, animatedValues]) // Включаем animatedValues в зависимости
 
  const formatNumber = (num: number) => {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
