@@ -9,7 +9,8 @@ from datetime import datetime
 
 from .models import GroupRepository
 from ..exceptions import GroupNotFoundError, ValidationError
-from ..infrastructure import cache_service, logging_service
+from ..infrastructure import cache_service
+from ..infrastructure.logging import get_loguru_logger
 
 
 class GroupService:
@@ -21,7 +22,7 @@ class GroupService:
 
     def __init__(self, repository: GroupRepository):
         self.repository = repository
-        self.logger = logging_service.get_logger("groups")
+        self.logger = get_loguru_logger("groups")
 
     async def get_group(self, group_id: int) -> Dict[str, Any]:
         """Получить группу по ID"""
