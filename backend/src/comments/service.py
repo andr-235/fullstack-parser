@@ -9,7 +9,8 @@ from datetime import datetime
 
 from .models import CommentRepository
 from ..exceptions import CommentNotFoundError, ValidationError
-from ..infrastructure import cache_service, logging_service
+from ..infrastructure import cache_service
+from ..infrastructure.logging import get_loguru_logger
 
 
 class CommentService:
@@ -21,7 +22,50 @@ class CommentService:
 
     def __init__(self, repository: CommentRepository):
         self.repository = repository
-        self.logger = logging_service.get_logger("comments")
+        self.logger = get_loguru_logger("comments")
+
+    def _map_comment_to_response(self, comment) -> Dict[str, Any]:
+        """Маппинг комментария из БД в формат ответа API"""
+        return {
+            "id": comment.id,
+            "vk_id": str(comment.vk_id),
+            "text": comment.text,
+            "author": comment.author_name or str(comment.author_id),
+            "author_name": comment.author_name,
+            "author_screen_name": comment.author_screen_name,
+            "author_photo_url": comment.author_photo_url,
+            "post_id": comment.post_id,
+            "post_vk_id": (
+                str(comment.post_vk_id) if comment.post_vk_id else None
+            ),
+            "group_id": comment.group_vk_id or 0,
+            "date": (
+                comment.published_at.isoformat()
+                if comment.published_at
+                else ""
+            ),
+            "published_at": (
+                comment.published_at.isoformat()
+                if comment.published_at
+                else None
+            ),
+            "is_viewed": comment.is_viewed,
+            "is_archived": comment.is_archived,
+            "likes_count": comment.likes_count,
+            "parent_comment_id": comment.parent_comment_id,
+            "matched_keywords_count": comment.matched_keywords_count,
+            "processed_at": (
+                comment.processed_at.isoformat()
+                if comment.processed_at
+                else None
+            ),
+            "created_at": (
+                comment.created_at.isoformat() if comment.created_at else None
+            ),
+            "updated_at": (
+                comment.updated_at.isoformat() if comment.updated_at else None
+            ),
+        }
 
     async def get_comment(self, comment_id: int) -> Dict[str, Any]:
         """Получить комментарий по ID"""
@@ -39,20 +83,7 @@ class CommentService:
             raise CommentNotFoundError(comment_id)
 
         # Формируем ответ
-        result = {
-            "id": comment.id,
-            "vk_comment_id": comment.vk_id,
-            "vk_post_id": comment.post_id,
-            "vk_group_id": comment.group_id,
-            "author_id": comment.author_id,
-            "author_name": comment.author_name,
-            "text": comment.text,
-            "likes_count": comment.likes_count,
-            "date": comment.published_at,
-            "processed_at": comment.processed_at,
-            "created_at": comment.created_at,
-            "updated_at": comment.updated_at,
-        }
+        result = self._map_comment_to_response(comment)
 
         # Сохраняем в кеш
         await cache_service.set("comment", cache_key, result)
@@ -66,6 +97,8 @@ class CommentService:
         limit: int = 50,
         offset: int = 0,
         search_text: Optional[str] = None,
+        is_viewed: Optional[bool] = None,
+        is_archived: Optional[bool] = None,
     ) -> List[Dict[str, Any]]:
         """Получить комментарии группы с пагинацией"""
         comments = await self.repository.get_by_group_id(
@@ -73,51 +106,49 @@ class CommentService:
             limit=limit,
             offset=offset,
             search_text=search_text,
+            is_viewed=is_viewed,
+            is_archived=is_archived,
         )
 
-        return [
-            {
-                "id": comment.id,
-                "vk_comment_id": comment.vk_id,
-                "vk_post_id": comment.post_id,
-                "vk_group_id": comment.group_id,
-                "author_id": comment.author_id,
-                "author_name": comment.author_name,
-                "text": comment.text,
-                "likes_count": comment.likes_count,
-                "date": comment.date,
-                "processed_at": comment.processed_at,
-                "created_at": comment.created_at,
-                "updated_at": comment.updated_at,
-            }
-            for comment in comments
-        ]
+        return [self._map_comment_to_response(comment) for comment in comments]
+
+    async def get_all_comments(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        search_text: Optional[str] = None,
+        is_viewed: Optional[bool] = None,
+        is_archived: Optional[bool] = None,
+    ) -> List[Dict[str, Any]]:
+        """Получить все комментарии с пагинацией"""
+        comments = await self.repository.get_all_comments(
+            limit=limit,
+            offset=offset,
+            search_text=search_text,
+            is_viewed=is_viewed,
+            is_archived=is_archived,
+        )
+
+        return [self._map_comment_to_response(comment) for comment in comments]
 
     async def get_comments_by_post(
-        self, post_id: str, limit: int = 100, offset: int = 0
+        self,
+        post_id: str,
+        limit: int = 100,
+        offset: int = 0,
+        is_viewed: Optional[bool] = None,
+        is_archived: Optional[bool] = None,
     ) -> List[Dict[str, Any]]:
         """Получить комментарии к посту"""
         comments = await self.repository.get_by_post_id(
-            post_id=post_id, limit=limit, offset=offset
+            post_id=post_id,
+            limit=limit,
+            offset=offset,
+            is_viewed=is_viewed,
+            is_archived=is_archived,
         )
 
-        return [
-            {
-                "id": comment.id,
-                "vk_comment_id": comment.vk_id,
-                "vk_post_id": comment.post_id,
-                "vk_group_id": comment.group_id,
-                "author_id": comment.author_id,
-                "author_name": comment.author_name,
-                "text": comment.text,
-                "likes_count": comment.likes_count,
-                "date": comment.date,
-                "processed_at": comment.processed_at,
-                "created_at": comment.created_at,
-                "updated_at": comment.updated_at,
-            }
-            for comment in comments
-        ]
+        return [self._map_comment_to_response(comment) for comment in comments]
 
     async def create_comment(
         self, comment_data: Dict[str, Any]
@@ -127,7 +158,7 @@ class CommentService:
         required_fields = [
             "vk_id",
             "post_id",
-            "group_id",
+            "group_vk_id",
             "author_id",
             "author_name",
             "text",
@@ -149,7 +180,7 @@ class CommentService:
 
         # Создаем комментарий
         comment = await self.repository.create(comment_data)
-        return await self.get_comment(comment.id)
+        return await self.get_comment(int(comment.id))
 
     async def update_comment(
         self, comment_id: int, update_data: Dict[str, Any]
@@ -211,6 +242,8 @@ class CommentService:
         group_id: Optional[str] = None,
         limit: int = 50,
         offset: int = 0,
+        is_viewed: Optional[bool] = None,
+        is_archived: Optional[bool] = None,
     ) -> List[Dict[str, Any]]:
         """Поиск комментариев по тексту"""
         if not query or len(query.strip()) < 2:
@@ -219,12 +252,27 @@ class CommentService:
                 field="query",
             )
 
-        return await self.get_comments_by_group(
-            group_id=group_id or "",
-            limit=limit,
-            offset=offset,
-            search_text=query.strip(),
-        )
+        # Специальный запрос "**" означает получить все комментарии без фильтрации по тексту
+        search_text = None if query.strip() == "**" else query.strip()
+
+        if group_id:
+            return await self.get_comments_by_group(
+                group_id=group_id,
+                limit=limit,
+                offset=offset,
+                search_text=search_text,
+                is_viewed=is_viewed,
+                is_archived=is_archived,
+            )
+        else:
+            # Если группа не указана, получаем все комментарии
+            return await self.get_all_comments(
+                limit=limit,
+                offset=offset,
+                search_text=search_text,
+                is_viewed=is_viewed,
+                is_archived=is_archived,
+            )
 
 
 # Экспорт

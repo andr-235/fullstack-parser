@@ -82,6 +82,12 @@ async def get_comments(
     post_id: Optional[str] = Query(
         None, description="ID поста для фильтрации"
     ),
+    is_viewed: Optional[bool] = Query(
+        None, description="Фильтр по статусу просмотра"
+    ),
+    is_archived: Optional[bool] = Query(
+        None, description="Фильтр по статусу архивирования"
+    ),
     search: SearchParam = None,
     # Сервисы
     service: CommentService = Depends(get_comment_service),
@@ -98,10 +104,16 @@ async def get_comments(
     if post_id:
         # Комментарии к конкретному посту
         comments = await service.get_comments_by_post(
-            post_id=post_id, limit=pagination.limit, offset=pagination.offset
+            post_id=post_id,
+            limit=pagination.limit,
+            offset=pagination.offset,
+            is_viewed=is_viewed,
+            is_archived=is_archived,
         )
-        # Для поста получаем общее количество комментариев
-        total = len(comments)  # В реальности нужно получить из БД
+        # Получаем общее количество комментариев к посту
+        total = await service.repository.count_by_post(
+            post_id=post_id, is_viewed=is_viewed, is_archived=is_archived
+        )
 
     elif group_id:
         # Комментарии группы
@@ -110,10 +122,16 @@ async def get_comments(
             limit=pagination.limit,
             offset=pagination.offset,
             search_text=pagination.search,
+            is_viewed=is_viewed,
+            is_archived=is_archived,
         )
         # Получаем общее количество для пагинации
-        stats = await service.get_group_stats(group_id)
-        total = stats["total_comments"]
+        total = await service.repository.count_by_group(
+            group_id=group_id,
+            search_text=pagination.search,
+            is_viewed=is_viewed,
+            is_archived=is_archived,
+        )
 
     else:
         # Общий поиск по всем комментариям
@@ -123,12 +141,23 @@ async def get_comments(
                 detail="Необходимо указать group_id, post_id или поисковый запрос",
             )
 
+        # Специальный запрос "**" означает получить все комментарии
+        if pagination.search == "**":
+            pagination.search = None
+
         comments = await service.search_comments(
-            query=pagination.search,
+            query=pagination.search or "**",  # Fallback для None
             limit=pagination.limit,
             offset=pagination.offset,
+            is_viewed=is_viewed,
+            is_archived=is_archived,
         )
-        total = len(comments)  # В реальности нужно получить из БД
+        # Получаем общее количество для пагинации
+        total = await service.repository.count_all(
+            search_text=pagination.search,  # None означает все комментарии
+            is_viewed=is_viewed,
+            is_archived=is_archived,
+        )
 
     return CommentListResponse(
         items=[CommentResponse(**c) for c in comments],
@@ -141,6 +170,67 @@ async def get_comments(
             else 0
         ),
     )
+
+
+@router.get(
+    "/search",
+    response_model=CommentListResponse,
+    summary="Поиск комментариев",
+    description="Поиск комментариев по тексту с фильтрацией",
+)
+async def search_comments(
+    q: str = Query(..., min_length=2, description="Поисковый запрос"),
+    group_id: Optional[str] = Query(
+        None, description="Ограничить поиск группой"
+    ),
+    is_viewed: Optional[bool] = Query(
+        None, description="Фильтр по статусу просмотра"
+    ),
+    is_archived: Optional[bool] = Query(
+        None, description="Фильтр по статусу архивирования"
+    ),
+    page: PageParam = 1,
+    size: SizeParam = 20,
+    service: CommentService = Depends(get_comment_service),
+) -> CommentListResponse:
+    """Поиск комментариев по тексту"""
+    try:
+        pagination = PaginationParams(page=page, size=size)
+        comments = await service.search_comments(
+            query=q,
+            group_id=group_id,
+            limit=pagination.limit,
+            offset=pagination.offset,
+            is_viewed=is_viewed,
+            is_archived=is_archived,
+        )
+
+        # Получаем общее количество для пагинации
+        if group_id:
+            total = await service.repository.count_by_group(
+                group_id=group_id,
+                search_text=q,
+                is_viewed=is_viewed,
+                is_archived=is_archived,
+            )
+        else:
+            total = await service.repository.count_all(
+                search_text=q, is_viewed=is_viewed, is_archived=is_archived
+            )
+        return CommentListResponse(
+            items=[CommentResponse(**c) for c in comments],
+            total=total,
+            page=pagination.page,
+            size=pagination.size,
+            pages=(
+                (total + pagination.size - 1) // pagination.size
+                if pagination.size > 0
+                else 0
+            ),
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get(
@@ -281,49 +371,6 @@ async def get_group_stats(
     try:
         stats = await service.get_group_stats(group_id)
         return CommentStats(**stats)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get(
-    "/search/",
-    response_model=CommentListResponse,
-    summary="Поиск комментариев",
-    description="Поиск комментариев по тексту с фильтрацией",
-)
-async def search_comments(
-    q: str = Query(..., min_length=2, description="Поисковый запрос"),
-    group_id: Optional[str] = Query(
-        None, description="Ограничить поиск группой"
-    ),
-    page: PageParam = 1,
-    size: SizeParam = 20,
-    service: CommentService = Depends(get_comment_service),
-) -> CommentListResponse:
-    """Поиск комментариев по тексту"""
-    try:
-        pagination = PaginationParams(page=page, size=size)
-        comments = await service.search_comments(
-            query=q,
-            group_id=group_id,
-            limit=pagination.limit,
-            offset=pagination.offset,
-        )
-
-        # В реальности нужно получить total из БД
-        total = len(comments)
-        return CommentListResponse(
-            items=[CommentResponse(**c) for c in comments],
-            total=total,
-            page=pagination.page,
-            size=pagination.size,
-            pages=(
-                (total + pagination.size - 1) // pagination.size
-                if pagination.size > 0
-                else 0
-            ),
-        )
-
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
