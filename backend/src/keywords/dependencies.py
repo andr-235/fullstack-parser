@@ -6,31 +6,30 @@
 
 from typing import Optional
 from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .service import KeywordsService
 from .models import KeywordsRepository, get_keywords_repository
-
-# Глобальный экземпляр репозитория для сохранения данных между запросами
-_keywords_repository: Optional[KeywordsRepository] = None
+from ..database import get_db_session
 
 
-async def get_keywords_repository_singleton() -> KeywordsRepository:
+async def get_keywords_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> KeywordsRepository:
     """
-    Получить синглтон репозитория ключевых слов
+    Получить репозиторий ключевых слов с сессией БД
+
+    Args:
+        db: Сессия базы данных
 
     Returns:
-        KeywordsRepository: Единственный экземпляр репозитория
+        KeywordsRepository: Репозиторий ключевых слов
     """
-    global _keywords_repository
-    if _keywords_repository is None:
-        _keywords_repository = KeywordsRepository()
-    return _keywords_repository
+    return KeywordsRepository(db)
 
 
 async def get_keywords_service(
-    repository: KeywordsRepository = Depends(
-        get_keywords_repository_singleton
-    ),
+    repository: KeywordsRepository = Depends(get_keywords_repository),
 ) -> KeywordsService:
     """
     Получить сервис ключевых слов

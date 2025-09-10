@@ -1,482 +1,712 @@
 """
-Вспомогательные функции модуля Parser
+Общие утилиты для модуля Parser
 
-Содержит утилиты для работы с парсингом VK данных
+Содержит общие вспомогательные функции для парсинга VK данных
 """
 
+from __future__ import annotations
 import time
-import hashlib
-from typing import Dict, Any, List, Optional, Union
-from datetime import datetime, timedelta
-
-from .constants import (
-    MAX_GROUP_IDS_PER_REQUEST,
-    MAX_POSTS_PER_GROUP,
-    MAX_COMMENTS_PER_POST,
+import asyncio
+import re
+import logging
+from typing import (
+    Dict,
+    Any,
+    List,
+    Optional,
+    Union,
+    Tuple,
+    Callable,
+    TypeVar,
+    Generic,
+    Iterator,
+    AsyncGenerator,
 )
+from datetime import datetime, timedelta
+from dataclasses import dataclass
+from functools import wraps
+
+from .config import parser_settings
+
+# Настройка логирования
+logger = logging.getLogger(__name__)
+
+# Type variables для generic функций
+T = TypeVar("T")
+R = TypeVar("R")
 
 
-def validate_parsing_request(data: Dict[str, Any]) -> List[str]:
+def retry_with_backoff(
+    max_attempts: Optional[int] = None,
+    base_delay: float = 1.0,
+    max_delay: float = 60.0,
+    backoff_factor: float = 2.0,
+    exceptions: Tuple[type[BaseException], ...] = (Exception,),
+):
     """
-    Валидировать запрос на парсинг
+    Декоратор для повторных попыток с экспоненциальной задержкой.
 
     Args:
-        data: Данные запроса для валидации
+        max_attempts: Максимум попыток
+        base_delay: Базовая задержка в секундах
+        max_delay: Максимальная задержка в секундах
+        backoff_factor: Коэффициент увеличения задержки
+        exceptions: Типы исключений для повторных попыток
 
     Returns:
-        List[str]: Список ошибок валидации (пустой если валидация прошла)
+        Callable: Декоратор функции
     """
-    errors = []
+    if max_attempts is None:
+        max_attempts = parser_settings.max_retry_attempts
 
-    # Проверка обязательных полей: считаем обязательным само наличие ключа,
-    # но не добавляем сообщение для пустого списка (обрабатывается ниже)
-    required_fields = ["group_ids"]
-    for field in required_fields:
-        if field not in data:
-            # Тест ожидает короткое сообщение без кавычек
-            errors.append(f"{field} не заполнено")
+    def decorator(func):
+        @wraps(func)
+        async def async_wrapper(*args: Any, **kwargs: Any):
+            last_exception: Optional[BaseException] = None
 
-    # Валидация group_ids
-    if "group_ids" in data:
-        group_ids = data["group_ids"]
-        if not isinstance(group_ids, list):
-            errors.append("group_ids должен быть списком")
-        elif len(group_ids) == 0:
-            # Тест ожидает две ошибки: пустой список и требование типа список
-            errors.append("group_ids не может быть пустым")
-            errors.append("group_ids должен быть списком")
-        elif len(group_ids) > MAX_GROUP_IDS_PER_REQUEST:
-            errors.append(
-                f"Максимум {MAX_GROUP_IDS_PER_REQUEST} групп за запрос"
-            )
-        else:
-            for i, group_id in enumerate(group_ids):
-                if not isinstance(group_id, int) or group_id <= 0:
-                    errors.append(
-                        f"group_ids[{i}] должен быть положительным целым числом"
+            for attempt in range(max_attempts):
+                try:
+                    return await func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    logger.warning(
+                        f"Attempt {attempt + 1}/{max_attempts} failed for {func.__name__}: {e}"
                     )
 
-    # Валидация max_posts
-    if "max_posts" in data:
-        max_posts = data["max_posts"]
-        if not isinstance(max_posts, int) or not (
-            1 <= max_posts <= MAX_POSTS_PER_GROUP
-        ):
-            errors.append(
-                f"max_posts должен быть от 1 до {MAX_POSTS_PER_GROUP}"
+                    if attempt == max_attempts - 1:
+                        raise e
+
+                    # Рассчитываем задержку
+                    delay = min(
+                        base_delay * (backoff_factor**attempt), max_delay
+                    )
+                    logger.info(f"Retrying in {delay:.2f} seconds...")
+                    await asyncio.sleep(delay)
+
+            raise last_exception or RuntimeError("Max attempts exceeded")
+
+        @wraps(func)
+        def sync_wrapper(*args: Any, **kwargs: Any):
+            last_exception: Optional[BaseException] = None
+
+            for attempt in range(max_attempts):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    logger.warning(
+                        f"Attempt {attempt + 1}/{max_attempts} failed for {func.__name__}: {e}"
+                    )
+
+                    if attempt == max_attempts - 1:
+                        raise e
+
+                    # Рассчитываем задержку
+                    delay = min(
+                        base_delay * (backoff_factor**attempt), max_delay
+                    )
+                    logger.info(f"Retrying in {delay:.2f} seconds...")
+                    time.sleep(delay)
+
+            raise last_exception or RuntimeError("Max attempts exceeded")
+
+        if asyncio.iscoroutinefunction(func):
+            return async_wrapper
+        else:
+            return sync_wrapper
+
+    return decorator
+
+
+def measure_execution_time(func):
+    """
+    Декоратор для измерения времени выполнения функции.
+
+    Args:
+        func: Функция для измерения
+
+    Returns:
+        Callable: Обернутая функция
+    """
+
+    @wraps(func)
+    async def async_wrapper(*args: Any, **kwargs: Any):
+        start_time = time.time()
+        try:
+            result = await func(*args, **kwargs)
+            return result
+        finally:
+            execution_time = time.time() - start_time
+            logger.info(
+                f"Function {func.__name__} executed in {execution_time:.2f} seconds"
             )
 
-    # Валидация max_comments_per_post
-    if "max_comments_per_post" in data:
-        max_comments = data["max_comments_per_post"]
-        if not isinstance(max_comments, int) or not (
-            1 <= max_comments <= MAX_COMMENTS_PER_POST
-        ):
-            errors.append(
-                f"max_comments_per_post должен быть от 1 до {MAX_COMMENTS_PER_POST}"
+    @wraps(func)
+    def sync_wrapper(*args: Any, **kwargs: Any):
+        start_time = time.time()
+        try:
+            result = func(*args, **kwargs)
+            return result
+        finally:
+            execution_time = time.time() - start_time
+            logger.info(
+                f"Function {func.__name__} executed in {execution_time:.2f} seconds"
             )
 
-    # Валидация priority
-    if "priority" in data:
-        priority = data["priority"]
-        if priority not in ["low", "normal", "high"]:
-            errors.append("priority должен быть: low, normal, high")
-
-    # Валидация force_reparse
-    if "force_reparse" in data:
-        force_reparse = data["force_reparse"]
-        if not isinstance(force_reparse, bool):
-            errors.append("force_reparse должен быть boolean")
-
-    return errors
+    if asyncio.iscoroutinefunction(func):
+        return async_wrapper
+    else:
+        return sync_wrapper
 
 
-def calculate_task_progress(
-    groups_completed: int,
-    groups_total: int,
-    posts_found: int = 0,
-    comments_found: int = 0,
+def create_batch_chunks(items: List[T], chunk_size: int) -> List[List[T]]:
+    """
+    Разделить список на батчи.
+
+    Args:
+        items: Список элементов
+        chunk_size: Размер батча
+
+    Returns:
+        List[List[T]]: Список батчей
+    """
+    if chunk_size <= 0:
+        raise ValueError("chunk_size должен быть положительным числом")
+
+    return [
+        items[i : i + chunk_size] for i in range(0, len(items), chunk_size)
+    ]
+
+
+def safe_get(data: Dict[str, Any], key: str, default: Any = None) -> Any:
+    """
+    Безопасно получить значение из словаря.
+
+    Args:
+        data: Словарь
+        key: Ключ (может быть вложенным через точку)
+        default: Значение по умолчанию
+
+    Returns:
+        Union[T, Any]: Значение или default
+    """
+    if not data or not key:
+        return default
+
+    keys = key.split(".")
+    current: Any = data
+
+    for k in keys:
+        if isinstance(current, dict) and k in current:
+            current = current[k]
+        else:
+            return default
+
+    return current
+
+
+def merge_dicts(*dicts: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Объединить несколько словарей.
+
+    Args:
+        *dicts: Словари для объединения
+
+    Returns:
+        Dict[str, Any]: Объединенный словарь
+    """
+    result: Dict[str, Any] = {}
+    for d in dicts:
+        if d:
+            result.update(d)
+    return result
+
+
+def filter_none_values(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Удалить None значения из словаря.
+
+    Args:
+        data: Исходный словарь
+
+    Returns:
+        Dict[str, Any]: Словарь без None значений
+    """
+    return {k: v for k, v in data.items() if v is not None}
+
+
+def convert_to_utc(dt: datetime) -> datetime:
+    """
+    Конвертировать datetime в UTC.
+
+    Args:
+        dt: Объект datetime
+
+    Returns:
+        datetime: UTC datetime
+    """
+    if dt.tzinfo is None:
+        # Предполагаем что это уже UTC
+        return dt
+    return dt.astimezone()
+
+
+def format_timestamp(timestamp: Union[int, float, datetime]) -> str:
+    """
+    Форматировать timestamp в читаемый вид.
+
+    Args:
+        timestamp: Timestamp или datetime
+
+    Returns:
+        str: Отформатированная дата
+    """
+    if isinstance(timestamp, (int, float)):
+        dt = datetime.fromtimestamp(timestamp)
+    else:
+        dt = timestamp
+
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def calculate_percentage(
+    part: Union[int, float], total: Union[int, float]
 ) -> float:
     """
-    Вычислить прогресс выполнения задачи
+    Рассчитать процент.
 
     Args:
-        groups_completed: Количество завершенных групп
-        groups_total: Общее количество групп
-        posts_found: Найденные посты
-        comments_found: Найденные комментарии
+        part: Часть
+        total: Общее количество
 
     Returns:
-        float: Прогресс в процентах (0-100)
+        float: Процент
     """
-    if groups_total == 0:
-        return 100.0
-
-    # По ожиданию тестов прогресс базируется только на группах
-    base_progress = (groups_completed / groups_total) * 100
-    return min(base_progress, 100.0)
+    if total == 0:
+        return 0.0
+    return (part / total) * 100
 
 
-def estimate_parsing_time(
-    group_count: Union[int, List[int]],
-    avg_posts_per_group: int = 50,
-    avg_comments_per_post: int = 20,
-    time_per_api_call: float = 0.5,
-) -> int:
+def clamp(
+    value: Union[int, float],
+    min_val: Union[int, float],
+    max_val: Union[int, float],
+) -> Union[int, float]:
     """
-    Оценить время выполнения парсинга
+    Ограничить значение диапазоном.
 
     Args:
-        group_count: Количество групп
-        avg_posts_per_group: Среднее постов на группу
-        avg_comments_per_post: Среднее комментариев на пост
-        time_per_api_call: Время на один API вызов
+        value: Значение
+        min_val: Минимальное значение
+        max_val: Максимальное значение
 
     Returns:
-        int: Ожидаемое время в секундах
+        Union[int, float]: Ограниченное значение
     """
-    # Поддерживаем как число групп, так и список идентификаторов
-    groups = (
-        len(group_count) if isinstance(group_count, list) else int(group_count)
-    )
-    if groups <= 0:
-        return 0
-
-    # API вызовы: 1 на группу + по 1 на каждый пост для комментариев
-    api_calls = groups + (groups * avg_posts_per_group)
-    estimated_time = api_calls * time_per_api_call
-
-    # Минимальная длительность задачи — 30 секунд
-    return max(int(estimated_time), 30)
+    return max(min_val, min(value, max_val))
 
 
-def format_parsing_result(result: Dict[str, Any]) -> Dict[str, Any]:
+def is_valid_email(email: str) -> bool:
     """
-    Форматировать результат парсинга для API ответа
+    Проверить валидность email.
 
     Args:
-        result: Результат парсинга
+        email: Email адрес
 
     Returns:
-        Dict[str, Any]: Форматированный результат
+        bool: True если email валиден
     """
-    formatted = result.copy()
-
-    # Форматирование времени
-    if "duration_seconds" in formatted:
-        formatted["duration_seconds"] = round(formatted["duration_seconds"], 2)
-
-    # Форматирование ошибок
-    if "errors" in formatted and formatted["errors"]:
-        formatted["errors"] = [str(error) for error in formatted["errors"]]
-
-    # Добавление метаданных
-    formatted["formatted_at"] = datetime.utcnow().isoformat()
-
-    return formatted
-
-
-def generate_cache_key(method: str, params: Dict[str, Any]) -> str:
-    """
-    Сгенерировать ключ кеша для VK API запроса
-
-    Args:
-        method: Метод API
-        params: Параметры запроса
-
-    Returns:
-        str: Ключ кеша
-    """
-    # Сортируем параметры для консистентности
-    sorted_params = sorted(params.items())
-    params_str = str(sorted_params)
-
-    # Создаем хеш
-    params_hash = hashlib.md5(params_str.encode()).hexdigest()[:8]
-
-    return f"vk_api:{method}:{params_hash}"
-
-
-def is_rate_limit_exceeded(
-    request_count: int, time_window: int = 1, max_requests: int = 3
-) -> bool:
-    """
-    Проверить превышение rate limit
-
-    Args:
-        request_count: Количество запросов в окне времени
-        time_window: Размер окна времени в секундах
-        max_requests: Максимум запросов в окне
-
-    Returns:
-        bool: True если лимит превышен
-    """
-    return request_count >= max_requests
-
-
-def calculate_retry_delay(
-    attempt: int, base_delay: float = 1.0, backoff: float = 2.0
-) -> float:
-    """
-    Вычислить задержку для повторной попытки
-
-    Args:
-        attempt: Номер попытки (начиная с 1)
-        base_delay: Базовая задержка
-        backoff: Коэффициент увеличения
-
-    Returns:
-        float: Задержка в секундах
-    """
-    return base_delay * (backoff ** (attempt - 1))
-
-
-def sanitize_vk_text(text: str) -> str:
-    """
-    Очистить текст от VK-специфичных элементов
-
-    Args:
-        text: Исходный текст
-
-    Returns:
-        str: Очищенный текст
-    """
-    if not text:
-        return ""
-
-    # Удаление ссылок на пользователей [id|name]
-    text = __import__("re").sub(r"\[id\d+\|[^\]]+\]", "", text)
-
-    # Удаление ссылок на сообщества [club|name]
-    text = __import__("re").sub(r"\[club\d+\|[^\]]+\]", "", text)
-
-    # Удаление HTML-тегов
-    text = __import__("re").sub(r"<[^>]+>", "", text)
-
-    # Сохраняем визуальный разрыв для двойных переводов строк как двойной пробел,
-    # затем схлопываем остальные пробелы/переводы до одного пробела
-    re = __import__("re")
-    text = re.sub(r"\r\n|\r", "\n", text)
-    # Двойные и более переводов строк превращаем в двойной пробел
-    text = re.sub(r"\n{2,}", "  ", text)
-    # Оставшиеся одиночные переводы строк/табы -> один пробел (не схлопываем обычные пробелы)
-    text = re.sub(r"[\t\n]+", " ", text).strip()
-
-    return text
-
-
-def extract_vk_entities(text: str) -> Dict[str, List[str]]:
-    """
-    Извлечь сущности VK из текста (пользователи, сообщества, ссылки)
-
-    Args:
-        text: Текст для анализа
-
-    Returns:
-        Dict[str, List[str]]: Найденные сущности
-    """
-    import re
-
-    entities: Dict[str, List[str]] = {
-        "users": [],
-        "groups": [],
-        "urls": [],
-        "mentions": [],
-        "hashtags": [],
-        "links": [],
-    }
-
-    # Извлечение пользователей [id123|Имя]
-    user_matches = re.findall(r"\[id(\d+)\|[^\]]+\]", text)
-    entities["users"] = [f"user_{uid}" for uid in user_matches]
-
-    # Извлечение сообществ [club123|Название]
-    group_matches = re.findall(r"\[club(\d+)\|[^\]]+\]", text)
-    entities["groups"] = [f"group_{gid}" for gid in group_matches]
-
-    # Извлечение URL/links
-    url_matches = re.findall(r"https?://[^\s]+", text)
-    entities["urls"] = url_matches
-    entities["links"] = url_matches
-
-    # Извлечение mentions @username
-    mention_matches = re.findall(r"@[A-Za-z0-9_]+", text)
-    entities["mentions"] = mention_matches
-
-    # Извлечение hashtags #tag
-    hashtag_matches = re.findall(r"#[A-Za-z0-9_]+", text)
-    entities["hashtags"] = hashtag_matches
-
-    return entities
-
-
-def validate_vk_group_id(group_id: int) -> bool:
-    """
-    Валидировать ID группы VK
-
-    Args:
-        group_id: ID группы для проверки
-
-    Returns:
-        bool: True если валиден
-    """
-    # VK group IDs могут быть положительными или отрицательными
-    # Отрицательные - для сообществ, положительные - для пабликов
-    # Тесты ожидают True только для положительных ID в разумных пределах
-    if not isinstance(group_id, int):
+    if not isinstance(email, str) or not email.strip():
         return False
-    if group_id <= 0:
-        return False
-    # Ограничим размер до 10^9 для защиты от невалидных больших значений
-    return group_id < 10**9
+
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    return bool(re.match(pattern, email.strip()))
 
 
-def validate_vk_post_id(post_id: str) -> bool:
+def is_valid_url(url: str) -> bool:
     """
-    Валидировать ID поста VK
+    Проверить валидность URL.
 
     Args:
-        post_id: ID поста для проверки
+        url: URL
 
     Returns:
-        bool: True если валиден
+        bool: True если URL валиден
+    """
+    if not isinstance(url, str) or not url.strip():
+        return False
+
+    pattern = r"^https?://(?:[-\w.])+(?:\:[0-9]+)?(?:/(?:[\w/_.])*(?:\?(?:[\w&=%.])*)?(?:\#(?:[\w.])*)?)?$"
+    return bool(re.match(pattern, url.strip()))
+
+
+def truncate_string(text: str, max_length: int, suffix: str = "...") -> str:
+    """
+    Обрезать строку до максимальной длины.
+
+    Args:
+        text: Исходная строка
+        max_length: Максимальная длина
+        suffix: Суффикс для обрезанных строк
+
+    Returns:
+        str: Обрезанная строка
+    """
+    if not isinstance(text, str):
+        return str(text)
+
+    if len(text) <= max_length:
+        return text
+
+    return text[: max_length - len(suffix)] + suffix
+
+
+def deduplicate_list(items: List[T]) -> List[T]:
+    """
+    Удалить дубликаты из списка с сохранением порядка.
+
+    Args:
+        items: Список элементов
+
+    Returns:
+        List[T]: Список без дубликатов
+    """
+    seen: set = set()
+    result: List[T] = []
+
+    for item in items:
+        if item not in seen:
+            seen.add(item)
+            result.append(item)
+
+    return result
+
+
+async def chunked_async_generator(
+    items: List[T], chunk_size: int
+) -> AsyncGenerator[List[T], None]:
+    """
+    Асинхронный генератор для обработки элементов батчами.
+
+    Args:
+        items: Список элементов
+        chunk_size: Размер батча
+
+    Yields:
+        List[T]: Батч элементов
+    """
+    if chunk_size <= 0:
+        raise ValueError("chunk_size должен быть положительным числом")
+
+    for i in range(0, len(items), chunk_size):
+        yield items[i : i + chunk_size]
+        # Небольшая пауза между батчами
+        await asyncio.sleep(0.01)
+
+
+# Дополнительные утилиты
+def safe_int(value: Any, default: int = 0) -> int:
+    """
+    Безопасно преобразовать значение в int.
+
+    Args:
+        value: Значение для преобразования
+        default: Значение по умолчанию
+
+    Returns:
+        int: Преобразованное значение или default
     """
     try:
-        # Handle different formats:
-        # 1. wall{owner_id}_{post_id}
-        # 2. owner_id_post_id
-        # 3. Pure numeric post_id (assumes positive owner_id)
-        if post_id.startswith("wall"):
-            # Remove "wall" prefix
-            post_id = post_id[4:]
+        return int(value)
+    except (ValueError, TypeError):
+        return default
 
-        parts = post_id.split("_")
-        if len(parts) == 2:
-            # Format: owner_id_post_id
-            owner_id, post_id_num = int(parts[0]), int(parts[1])
-            return validate_vk_group_id(owner_id) and post_id_num > 0
-        elif len(parts) == 1 and parts[0].isdigit():
-            # Format: pure numeric post_id (assume positive owner_id)
-            post_id_num = int(parts[0])
-            return post_id_num > 0
+
+def safe_float(value: Any, default: float = 0.0) -> float:
+    """
+    Безопасно преобразовать значение в float.
+
+    Args:
+        value: Значение для преобразования
+        default: Значение по умолчанию
+
+    Returns:
+        float: Преобразованное значение или default
+    """
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+
+def safe_str(value: Any, default: str = "") -> str:
+    """
+    Безопасно преобразовать значение в str.
+
+    Args:
+        value: Значение для преобразования
+        default: Значение по умолчанию
+
+    Returns:
+        str: Преобразованное значение или default
+    """
+    try:
+        return str(value) if value is not None else default
+    except (ValueError, TypeError):
+        return default
+
+
+def is_empty(value: Any) -> bool:
+    """
+    Проверить является ли значение пустым.
+
+    Args:
+        value: Значение для проверки
+
+    Returns:
+        bool: True если значение пустое
+    """
+    if value is None:
+        return True
+    if isinstance(value, (str, list, dict, tuple)):
+        return len(value) == 0
+    return False
+
+
+def get_nested_value(
+    data: Dict[str, Any], keys: List[str], default: Optional[T] = None
+) -> Union[T, Any]:
+    """
+    Получить значение по вложенным ключам.
+
+    Args:
+        data: Словарь данных
+        keys: Список ключей для поиска
+        default: Значение по умолчанию
+
+    Returns:
+        Union[T, Any]: Найденное значение или default
+    """
+    current = data
+    for key in keys:
+        if isinstance(current, dict) and key in current:
+            current = current[key]
         else:
-            return False
-
-    except (ValueError, IndexError):
-        return False
+            return default
+    return current
 
 
-def generate_task_summary(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Сгенерировать сводку по списку задач
+# Импорт функций из data_utils
+import hashlib
+import json
+from datetime import timedelta
 
-    Args:
-        tasks: Список задач
 
-    Returns:
-        Dict[str, Any]: Сводная статистика
-    """
-    if not tasks:
-        return {
-            "total_tasks": 0,
-            "completed_tasks": 0,
-            "running_tasks": 0,
-            "failed_tasks": 0,
-            "total_posts": 0,
-            "total_comments": 0,
-            "total_errors": 0,
-            "avg_completion_time": 0,
-        }
+# Функции из data_utils.py
+def generate_task_id(group_ids: List[int], config: Dict[str, Any]) -> str:
+    """Генерировать уникальный ID задачи"""
+    data = {
+        "group_ids": sorted(group_ids),
+        "config": config,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+    data_str = json.dumps(data, sort_keys=True)
+    hash_obj = hashlib.md5(data_str.encode())
+    return hash_obj.hexdigest()
 
-    total_tasks = len(tasks)
-    completed_tasks = sum(1 for task in tasks if task["status"] == "completed")
-    running_tasks = sum(1 for task in tasks if task["status"] == "running")
-    failed_tasks = sum(1 for task in tasks if task["status"] == "failed")
 
-    # Дополнительная статистика по постам и комментариям
-    total_posts = sum(task.get("posts_found", 0) for task in tasks)
-    total_comments = sum(task.get("comments_found", 0) for task in tasks)
-    total_errors = sum(len(task.get("errors", [])) for task in tasks)
+def calculate_estimated_time(
+    group_count: int,
+    max_posts: int,
+    max_comments: int,
+    requests_per_second: int = 3,
+) -> int:
+    """Рассчитать ожидаемое время выполнения задачи"""
+    posts_requests = group_count * 1
+    comments_requests = group_count * max_posts
+    total_requests = posts_requests + comments_requests
+    base_time = total_requests / requests_per_second
+    estimated_time = int(base_time * 1.2)
+    return max(estimated_time, 1)
 
-    # Среднее время выполнения
-    completion_times = [
-        task["duration"]
-        for task in tasks
-        if task["status"] == "completed" and task.get("duration")
+
+def format_duration(seconds: float) -> str:
+    """Форматировать длительность в читаемый вид"""
+    if seconds < 60:
+        return f"{seconds:.1f}с"
+    elif seconds < 3600:
+        minutes = seconds / 60
+        return f"{minutes:.1f}м"
+    else:
+        hours = seconds / 3600
+        return f"{hours:.1f}ч"
+
+
+def format_file_size(bytes_size: int) -> str:
+    """Форматировать размер файла в читаемый вид"""
+    size = float(bytes_size)
+    for unit in ["Б", "КБ", "МБ", "ГБ"]:
+        if size < 1024.0:
+            return f"{size:.1f} {unit}"
+        size /= 1024.0
+    return f"{size:.1f} ТБ"
+
+
+def clean_text(text: str) -> str:
+    """Очистить текст от лишних символов"""
+    if not text:
+        return ""
+    text = " ".join(text.split())
+    text = re.sub(r"<[^>]+>", "", text)
+    return text.strip()
+
+
+def extract_hashtags(text: str) -> List[str]:
+    """Извлечь хештеги из текста"""
+    if not text:
+        return []
+    hashtag_pattern = r"#[\w\u0400-\u04FF]+"
+    hashtags = re.findall(hashtag_pattern, text, re.IGNORECASE)
+    return [tag.lower() for tag in hashtags]
+
+
+def extract_mentions(text: str) -> List[str]:
+    """Извлечь упоминания из текста"""
+    if not text:
+        return []
+    mention_pattern = r"@[\w\u0400-\u04FF]+"
+    mentions = re.findall(mention_pattern, text, re.IGNORECASE)
+    return [mention.lower() for mention in mentions]
+
+
+def calculate_sentiment_score(text: str) -> float:
+    """Рассчитать простой sentiment score для текста"""
+    if not text:
+        return 0.0
+
+    positive_words = [
+        "хорошо",
+        "отлично",
+        "прекрасно",
+        "замечательно",
+        "супер",
+        "классно",
+        "круто",
+        "здорово",
+        "великолепно",
+        "восхитительно",
     ]
-    avg_completion_time = (
-        sum(completion_times) / len(completion_times)
-        if completion_times
-        else 0
-    )
+    negative_words = [
+        "плохо",
+        "ужасно",
+        "отвратительно",
+        "кошмар",
+        "ужас",
+        "гадость",
+        "мерзость",
+        "отвращение",
+        "ненависть",
+        "зло",
+    ]
+
+    text_lower = text.lower()
+    positive_count = sum(1 for word in positive_words if word in text_lower)
+    negative_count = sum(1 for word in negative_words if word in text_lower)
+
+    total_words = len(text.split())
+    if total_words == 0:
+        return 0.0
+
+    positive_score = positive_count / total_words
+    negative_score = negative_count / total_words
+    return positive_score - negative_score
+
+
+def group_data_by_field(
+    data: List[Dict[str, Any]], field: str
+) -> Dict[Any, List[Dict[str, Any]]]:
+    """Группировать данные по полю"""
+    grouped: Dict[Any, List[Dict[str, Any]]] = {}
+    for item in data:
+        key = item.get(field)
+        if key not in grouped:
+            grouped[key] = []
+        grouped[key].append(item)
+    return grouped
+
+
+def filter_data_by_condition(
+    data: List[Dict[str, Any]], condition: Callable[[Dict[str, Any]], bool]
+) -> List[Dict[str, Any]]:
+    """Фильтровать данные по условию"""
+    return [item for item in data if condition(item)]
+
+
+def sort_data_by_field(
+    data: List[Dict[str, Any]], field: str, reverse: bool = False
+) -> List[Dict[str, Any]]:
+    """Сортировать данные по полю"""
+    return sorted(data, key=lambda x: x.get(field, 0), reverse=reverse)
+
+
+def calculate_statistics(
+    data: List[Dict[str, Any]], field: str
+) -> Dict[str, float]:
+    """Рассчитать статистику по полю"""
+    if not data:
+        return {"min": 0, "max": 0, "avg": 0, "count": 0}
+
+    values = [
+        item.get(field, 0)
+        for item in data
+        if isinstance(item.get(field), (int, float))
+    ]
+
+    if not values:
+        return {"min": 0, "max": 0, "avg": 0, "count": 0}
 
     return {
-        "total_tasks": total_tasks,
-        "completed_tasks": completed_tasks,
-        "running_tasks": running_tasks,
-        "failed_tasks": failed_tasks,
-        "total_posts": total_posts,
-        "total_comments": total_comments,
-        "total_errors": total_errors,
-        "avg_completion_time": round(avg_completion_time, 2),
+        "min": min(values),
+        "max": max(values),
+        "avg": sum(values) / len(values),
+        "count": len(values),
     }
 
 
-def create_parsing_report(
-    parsing_data: Dict[str, Any],
-) -> Dict[str, Any]:
-    """
-    Создать отчет о парсинге
-
-    Args:
-        parsing_data: Данные парсинга
-
-    Returns:
-        Dict[str, Any]: Отчет о парсинге
-    """
-    # Extract data from parsing_data dictionary
-    group_id = parsing_data.get("group_id")
-    posts_found = parsing_data.get("posts_found", 0)
-    comments_found = parsing_data.get("comments_found", 0)
-    posts_saved = parsing_data.get("posts_saved", 0)
-    comments_saved = parsing_data.get("comments_saved", 0)
-    errors = parsing_data.get("errors", [])
-    duration_seconds = parsing_data.get("duration_seconds", 0)
-
-    # Calculate metrics
-    success_rate = (
-        round((posts_saved / posts_found) * 100, 1) if posts_found > 0 else 0
-    )
-    average_comments_per_post = (
-        round(comments_found / posts_found, 1) if posts_found > 0 else 0
-    )
-
-    return {
-        "group_id": group_id,
-        "posts_found": posts_found,
-        "comments_found": comments_found,
-        "posts_saved": posts_saved,
-        "comments_saved": comments_saved,
-        "success_rate": success_rate,
-        "average_comments_per_post": average_comments_per_post,
-        "duration_seconds": duration_seconds,
-        "errors": errors,
-    }
-
-
-# Экспорт всех функций
+# Экспорт
 __all__ = [
-    "validate_parsing_request",
-    "calculate_task_progress",
-    "estimate_parsing_time",
-    "format_parsing_result",
-    "generate_cache_key",
-    "is_rate_limit_exceeded",
-    "calculate_retry_delay",
-    "sanitize_vk_text",
-    "extract_vk_entities",
-    "validate_vk_group_id",
-    "validate_vk_post_id",
-    "generate_task_summary",
-    "create_parsing_report",
+    # Основные утилиты
+    "retry_with_backoff",
+    "measure_execution_time",
+    "create_batch_chunks",
+    "safe_get",
+    "merge_dicts",
+    "filter_none_values",
+    "convert_to_utc",
+    "format_timestamp",
+    "calculate_percentage",
+    "clamp",
+    "is_valid_email",
+    "is_valid_url",
+    "truncate_string",
+    "deduplicate_list",
+    "chunked_async_generator",
+    "safe_int",
+    "safe_float",
+    "safe_str",
+    "is_empty",
+    "get_nested_value",
+    # Функции из data_utils
+    "generate_task_id",
+    "calculate_estimated_time",
+    "format_duration",
+    "format_file_size",
+    "clean_text",
+    "extract_hashtags",
+    "extract_mentions",
+    "calculate_sentiment_score",
+    "group_data_by_field",
+    "filter_data_by_condition",
+    "sort_data_by_field",
+    "calculate_statistics",
 ]

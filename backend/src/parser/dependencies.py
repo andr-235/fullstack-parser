@@ -21,25 +21,20 @@ async def get_parser_repository(db: AsyncSession = Depends(get_db_session)):
         db: Сессия базы данных
 
     Returns:
-        ParserRepository: Репозиторий для работы с парсингом
+        None: Репозиторий удален, используется TaskManager
     """
-    # Импорт здесь для избежания циклических зависимостей
-    from .models import ParserRepository
-
-    return ParserRepository(db)
+    # TaskRepository удален, используется TaskManager в service.py
+    return None
 
 
-async def get_parser_client():
+async def get_parser_vk_api_service():
     """
-    Получить клиент VK API
+    Получить VK API сервис
 
     Returns:
-        VKAPIClient: Клиент для работы с VK API
+        VKAPIService: Сервис для работы с VK API
     """
-    # Импорт здесь для избежания циклических зависимостей
-    from .client import VKAPIClient
-
-    return VKAPIClient()
+    return await create_vk_api_service()
 
 
 # Глобальный экземпляр сервиса парсера для сохранения состояния задач
@@ -48,34 +43,26 @@ _parser_service_instance = None
 
 async def get_parser_service(
     repository=Depends(get_parser_repository),
-    client=Depends(get_parser_client),
-    vk_api_service=None,
+    vk_api_service=Depends(get_parser_vk_api_service),
 ):
     """
     Получить сервис парсера (синглтон)
 
     Args:
         repository: Репозиторий парсера
-        client: Клиент VK API
-        vk_api_service: VK API сервис (опционально)
+        vk_api_service: VK API сервис
 
     Returns:
         ParserService: Сервис для бизнес-логики парсинга
     """
     global _parser_service_instance
 
-    # Если VK API сервис не передан, создаем его
-    if vk_api_service is None:
-        vk_api_service = await create_vk_api_service()
-
     # Создаем экземпляр только один раз
     if _parser_service_instance is None:
         # Импорт здесь для избежания циклических зависимостей
         from .service import ParserService
 
-        _parser_service_instance = ParserService(
-            repository, client, vk_api_service
-        )
+        _parser_service_instance = ParserService(repository, vk_api_service)
 
     return _parser_service_instance
 
@@ -83,6 +70,6 @@ async def get_parser_service(
 # Экспорт зависимостей
 __all__ = [
     "get_parser_repository",
-    "get_parser_client",
+    "get_parser_vk_api_service",
     "get_parser_service",
 ]
