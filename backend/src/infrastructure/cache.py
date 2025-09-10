@@ -13,7 +13,7 @@ import redis.asyncio as redis
 from redis.asyncio import Redis
 
 from .config import infrastructure_config
-from .logging import logging_service
+from .logging import get_loguru_logger
 
 
 class CacheService:
@@ -28,7 +28,7 @@ class CacheService:
         self._redis: Optional[Redis] = None
         self._initialized = False
         self.default_ttl = infrastructure_config.CACHE_DEFAULT_TTL
-        self.logger = logging_service.get_logger("cache")
+        self.logger = get_loguru_logger("cache")
 
         # Cache key prefixes для разных типов данных
         self.prefixes = {

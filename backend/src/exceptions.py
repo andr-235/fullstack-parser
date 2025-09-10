@@ -104,7 +104,7 @@ class NotFoundError(APIError):
             suggestions.append(f"Проверьте корректность ID: {resource_id}")
 
         if search_criteria:
-            details["search_criteria"] = search_criteria
+            details["search_criteria"] = str(search_criteria)
             suggestions.append("Проверьте критерии поиска")
 
         suggestions.append(f"Убедитесь, что {resource} существует")
@@ -139,6 +139,16 @@ class GroupNotFoundError(NotFoundError):
         )
 
 
+class PostNotFoundError(NotFoundError):
+    """Пост не найден"""
+
+    def __init__(self, post_id: Optional[Any] = None):
+        super().__init__(
+            resource="Post",
+            resource_id=post_id,
+        )
+
+
 class VKAPIError(APIError):
     """Ошибка VK API с enterprise-grade информацией"""
 
@@ -158,15 +168,15 @@ class VKAPIError(APIError):
             details["vk_error_message"] = vk_error_msg
 
         if vk_error_code is not None:
-            details["vk_error_code"] = vk_error_code
+            details["vk_error_code"] = str(vk_error_code)
             suggestions.append(f"Проверьте код ошибки VK API: {vk_error_code}")
 
         if request_params:
-            details["request_params"] = request_params
+            details["request_params"] = str(request_params)
             suggestions.append("Проверьте параметры запроса к VK API")
 
         if retry_after:
-            details["retry_after"] = retry_after
+            details["retry_after"] = str(retry_after)
             suggestions.append(f"Повторите запрос через {retry_after} секунд")
 
         suggestions.append("Проверьте токен доступа VK API")
@@ -198,9 +208,9 @@ class RateLimitError(APIError):
         ]
 
         if client_ip:
-            details["client_ip"] = client_ip
+            details["client_ip"] = str(client_ip)
         if request_count:
-            details["request_count"] = request_count
+            details["request_count"] = str(request_count)
 
         super().__init__(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -226,7 +236,7 @@ class ServiceUnavailableError(APIError):
         if service_name:
             details["service_name"] = service_name
         if retry_after:
-            details["retry_after"] = retry_after
+            details["retry_after"] = str(retry_after)
             suggestions.append(
                 f"Рекомендуемое время ожидания: {retry_after} секунд"
             )

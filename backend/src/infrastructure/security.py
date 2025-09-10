@@ -16,7 +16,7 @@ from jose import jwt
 from passlib.context import CryptContext
 
 from .config import infrastructure_config
-from .logging import logging_service
+from .logging import get_loguru_logger
 
 
 class SecurityService:
@@ -39,7 +39,7 @@ class SecurityService:
         self.refresh_token_expire_days = (
             infrastructure_config.REFRESH_TOKEN_EXPIRE_DAYS
         )
-        self.logger = logging_service.get_logger("security")
+        self.logger = get_loguru_logger("security")
 
         # Метрики
         self._password_hash_count = 0

@@ -10,7 +10,16 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from alembic import context
 
 # Импортируем Base и все модели, чтобы Alembic видел их для автогенерации
-from src.models import Base
+from src.models import (
+    Base,
+    Comment,
+    Post,
+    Group,
+    User,
+    Keyword,
+    ErrorReport,
+    CommentKeywordMatch,
+)
 
 # Импортируем все модели для регистрации в метаданных
 from src import models

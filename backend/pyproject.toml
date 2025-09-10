@@ -52,12 +52,6 @@ module = [
 ]
 ignore_missing_imports = true
 
-[[tool.mypy.overrides]]
-module = [
-    "vkbottle.*",
-    "vkbottle_types.*",
-]
-ignore_missing_imports = true
 
 [tool.bandit]
 exclude_dirs = ["tests"]
@@ -77,28 +71,25 @@ readme = "README.md"
 packages = [{include = "src", from = "."}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<4.0"
 fastapi = "0.116.1"
-uvicorn = {version = "0.35.0", extras = ["standard"]}
-pydantic = {version = ">=2.5.0,<3.0.0"}
+uvicorn = {extras = ["standard"], version = "0.35.0"}
+pydantic = ">=2.5.0,<3.0.0"
 pydantic-settings = "2.1.0"
 sqlalchemy = ">=2.0.25"
 alembic = ">=1.13.0"
 asyncpg = "0.30.0"
 httpx = "0.26.0"
-psutil = "^7.0.0"
-celery = {extras = ["redis"], version = "^5.4.0"}
-vkbottle = "^4.6.0"
-structlog = "^25.4.0"
-pymorphy2 = "^0.9.1"
-python-multipart = "^0.0.20"
-passlib = "^1.7.4"
-python-jose = "^3.5.0"
-email-validator = "^2.3.0"
-
-[tool.poetry.scripts]
-migrate = "alembic:upgrade head"
-makemigrations = "alembic:revision --autogenerate"
+aiohttp = ">=3.9.0"
+psutil = ">=7.0.0"
+celery = {extras = ["redis"], version = ">=5.4.0"}
+structlog = ">=25.4.0"
+loguru = ">=0.7.2"
+pymorphy2 = ">=0.9.1"
+python-multipart = ">=0.0.20"
+passlib = ">=1.7.4"
+python-jose = ">=3.5.0"
+email-validator = ">=2.3.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.4.1"
@@ -116,10 +107,15 @@ types-passlib = ">=1.7.7.20250602"
 psycopg2-binary = ">=2.9.9"
 pytest-env = ">=1.1.5"
 pytest-aio = ">=1.9.0"
-pip-audit = "^2.9.0"
-pytest-xdist = "^3.8.0"
+pip-audit = ">=2.9.0"
+pytest-xdist = ">=3.8.0"
 types-croniter = "*"
-pytest-asyncio = "^1.1.0"
+pytest-asyncio = ">=1.1.0"
+
+[tool.poetry.scripts]
+migrate = "alembic:upgrade head"
+makemigrations = "alembic:revision --autogenerate"
+
 
 [build-system]
 requires = ["poetry-core"]

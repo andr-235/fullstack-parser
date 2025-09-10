@@ -7,51 +7,114 @@ Celery Tasks Service
 
 import logging
 from typing import Any, Dict, List, Optional
+from datetime import datetime
 
 from ..celery_app import app
 
 logger = logging.getLogger(__name__)
 
 
-# Заглушки функций из ARQ (пока что простые реализации)
+# Реальная реализация парсинга комментариев VK
 async def parse_vk_comments(
     ctx: Dict[str, Any],
     group_id: int,
     post_id: Optional[int] = None,
     limit: int = 100,
 ) -> Dict[str, Any]:
-    """Заглушка для парсинга комментариев VK"""
-    logger.info(f"🧪 Имитация парсинга комментариев для группы {group_id}")
-    import time
+    """Реальная реализация парсинга комментариев VK"""
+    logger.info(f"🚀 Начало парсинга комментариев для группы {group_id}")
 
-    time.sleep(2)  # Имитация работы
-    return {
-        "status": "success",
-        "group_id": group_id,
-        "post_id": post_id,
-        "comments_parsed": min(limit, 50),
-        "comments_saved": min(limit, 45),
-        "errors": [],
-        "timestamp": "2024-01-01T00:00:00Z",
-    }
+    try:
+        # Импортируем необходимые зависимости
+        from ..parser.service import ParserService
+        from ..vk_api.dependencies import create_vk_api_service_sync
+        from ..comments.dependencies import get_comment_repository
+        from ..database import get_db_session
+
+        # Создаем VK API сервис с правильным закрытием сессий
+        vk_api_service = create_vk_api_service_sync()
+
+        try:
+            # Создаем парсер сервис
+            parser_service = ParserService(vk_api_service=vk_api_service)
+
+            # Выполняем парсинг группы
+            result = await parser_service.parse_group(
+                group_id=group_id,
+                max_posts=10,  # Ограничиваем количество постов
+                max_comments_per_post=limit,
+            )
+        finally:
+            # Закрываем HTTP-сессии
+            await vk_api_service.close_sessions()
+
+        logger.info(
+            f"✅ Парсинг завершен: {result.get('comments_saved', 0)} комментариев"
+        )
+
+        return {
+            "status": "success",
+            "group_id": group_id,
+            "post_id": post_id,
+            "comments_parsed": result.get("comments_found", 0),
+            "comments_saved": result.get("comments_saved", 0),
+            "errors": result.get("errors", []),
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка парсинга группы {group_id}: {str(e)}")
+        return {
+            "status": "error",
+            "group_id": group_id,
+            "post_id": post_id,
+            "comments_parsed": 0,
+            "comments_saved": 0,
+            "errors": [str(e)],
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 async def analyze_text_morphology(
     ctx: Dict[str, Any], text: str, analysis_type: str = "full"
 ) -> Dict[str, Any]:
-    """Заглушка для морфологического анализа текста"""
+    """Реальная реализация морфологического анализа текста"""
     logger.info(
-        f"🔍 Имитация морфологического анализа текста (длина: {len(text)} символов)"
+        f"🔍 Начало морфологического анализа текста (длина: {len(text)} символов)"
     )
-    import time
 
-    time.sleep(1)  # Имитация работы
-    return {
-        "status": "success",
-        "words_count": len(text.split()),
-        "analysis_type": analysis_type,
-        "timestamp": "2024-01-01T00:00:00Z",
-    }
+    try:
+        # Импортируем необходимые зависимости
+        from ..nlp.morphology import MorphologyAnalyzer
+        from ..database import get_db_session
+
+        # Создаем анализатор морфологии
+        analyzer = MorphologyAnalyzer()
+
+        # Выполняем анализ
+        result = await analyzer.analyze_text(text, analysis_type)
+
+        logger.info(
+            f"✅ Морфологический анализ завершен: {result.get('words_count', 0)} слов"
+        )
+
+        return {
+            "status": "success",
+            "words_count": result.get("words_count", 0),
+            "analysis_type": analysis_type,
+            "morphology_data": result.get("morphology_data", {}),
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка морфологического анализа: {str(e)}")
+        return {
+            "status": "error",
+            "words_count": 0,
+            "analysis_type": analysis_type,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 async def extract_keywords(
@@ -60,17 +123,46 @@ async def extract_keywords(
     min_frequency: int = 2,
     max_keywords: int = 20,
 ) -> Dict[str, Any]:
-    """Заглушка для извлечения ключевых слов"""
-    logger.info(f"🔑 Имитация извлечения ключевых слов")
-    import time
+    """Реальная реализация извлечения ключевых слов"""
+    logger.info(
+        f"🔑 Начало извлечения ключевых слов из текста (длина: {len(text)} символов)"
+    )
 
-    time.sleep(1)  # Имитация работы
-    return {
-        "status": "success",
-        "keyword_count": min(max_keywords, 10),
-        "keywords": ["test", "keyword", "demo"],
-        "timestamp": "2024-01-01T00:00:00Z",
-    }
+    try:
+        # Импортируем необходимые зависимости
+        from ..nlp.keywords import KeywordExtractor
+        from ..database import get_db_session
+
+        # Создаем экстрактор ключевых слов
+        extractor = KeywordExtractor()
+
+        # Извлекаем ключевые слова
+        keywords = await extractor.extract_keywords(
+            text=text, min_frequency=min_frequency, max_keywords=max_keywords
+        )
+
+        logger.info(
+            f"✅ Извлечение ключевых слов завершено: {len(keywords)} слов"
+        )
+
+        return {
+            "status": "success",
+            "keyword_count": len(keywords),
+            "keywords": keywords,
+            "min_frequency": min_frequency,
+            "max_keywords": max_keywords,
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка извлечения ключевых слов: {str(e)}")
+        return {
+            "status": "error",
+            "keyword_count": 0,
+            "keywords": [],
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 async def send_notification(
@@ -79,20 +171,49 @@ async def send_notification(
     message: str,
     notification_type: str = "email",
 ) -> Dict[str, Any]:
-    """Заглушка для отправки уведомлений"""
+    """Реальная реализация отправки уведомлений"""
     logger.info(
-        f"📧 Имитация отправки {notification_type} уведомления для {recipient}"
+        f"📧 Начало отправки {notification_type} уведомления для {recipient}"
     )
-    import time
 
-    time.sleep(0.5)  # Имитация работы
-    return {
-        "status": "success",
-        "sent": True,
-        "recipient": recipient,
-        "notification_type": notification_type,
-        "timestamp": "2024-01-01T00:00:00Z",
-    }
+    try:
+        # Импортируем необходимые зависимости
+        from ..notifications.service import NotificationService
+        from ..database import get_db_session
+
+        # Создаем сервис уведомлений
+        notification_service = NotificationService()
+
+        # Отправляем уведомление
+        result = await notification_service.send_notification(
+            recipient=recipient,
+            message=message,
+            notification_type=notification_type,
+        )
+
+        logger.info(
+            f"✅ Уведомление отправлено: {result.get('message_id', 'unknown')}"
+        )
+
+        return {
+            "status": "success",
+            "sent": result.get("sent", False),
+            "recipient": recipient,
+            "notification_type": notification_type,
+            "message_id": result.get("message_id"),
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка отправки уведомления: {str(e)}")
+        return {
+            "status": "error",
+            "sent": False,
+            "recipient": recipient,
+            "notification_type": notification_type,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 async def generate_report(
@@ -102,18 +223,58 @@ async def generate_report(
     date_to: str,
     filters: Optional[Dict] = None,
 ) -> Dict[str, Any]:
-    """Заглушка для генерации отчетов"""
-    logger.info(f"📊 Имитация генерации отчета '{report_type}'")
-    import time
+    """Реальная реализация генерации отчетов"""
+    logger.info(
+        f"📊 Начало генерации отчета '{report_type}' с {date_from} по {date_to}"
+    )
 
-    time.sleep(2)  # Имитация работы
-    return {
-        "status": "success",
-        "generated": True,
-        "report_type": report_type,
-        "record_count": 100,
-        "timestamp": "2024-01-01T00:00:00Z",
-    }
+    try:
+        # Импортируем необходимые зависимости
+        from ..reports.service import ReportService
+        from ..database import get_db_session
+        from datetime import datetime
+
+        # Создаем сервис отчетов
+        report_service = ReportService()
+
+        # Парсим даты
+        date_from_dt = datetime.fromisoformat(date_from)
+        date_to_dt = datetime.fromisoformat(date_to)
+
+        # Генерируем отчет
+        result = await report_service.generate_report(
+            report_type=report_type,
+            date_from=date_from_dt,
+            date_to=date_to_dt,
+            filters=filters or {},
+        )
+
+        logger.info(
+            f"✅ Отчет сгенерирован: {result.get('file_path', 'unknown')}"
+        )
+
+        return {
+            "status": "success",
+            "generated": True,
+            "report_type": report_type,
+            "record_count": result.get("record_count", 0),
+            "file_path": result.get("file_path"),
+            "file_size": result.get("file_size"),
+            "date_from": date_from,
+            "date_to": date_to,
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка генерации отчета: {str(e)}")
+        return {
+            "status": "error",
+            "generated": False,
+            "report_type": report_type,
+            "record_count": 0,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 async def cleanup_old_data(
@@ -121,71 +282,182 @@ async def cleanup_old_data(
     days_old: int = 30,
     data_types: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
-    """Заглушка для очистки старых данных"""
-    logger.info(f"🧹 Имитация очистки данных старше {days_old} дней")
-    import time
+    """Реальная реализация очистки старых данных"""
+    logger.info(f"🧹 Начало очистки данных старше {days_old} дней")
 
-    time.sleep(1)  # Имитация работы
-    return {
-        "status": "success",
-        "total_deleted": 50,
-        "data_types": data_types or ["all"],
-        "timestamp": "2024-01-01T00:00:00Z",
-    }
+    try:
+        # Импортируем необходимые зависимости
+        from ..cleanup.service import CleanupService
+        from ..database import get_db_session
+        from datetime import datetime, timedelta
+
+        # Создаем сервис очистки
+        cleanup_service = CleanupService()
+
+        # Вычисляем дату отсечения
+        cutoff_date = datetime.now() - timedelta(days=days_old)
+
+        # Выполняем очистку
+        result = await cleanup_service.cleanup_old_data(
+            cutoff_date=cutoff_date,
+            data_types=data_types or ["comments", "logs", "reports"],
+        )
+
+        logger.info(
+            f"✅ Очистка завершена: {result.get('total_deleted', 0)} записей удалено"
+        )
+
+        return {
+            "status": "success",
+            "total_deleted": result.get("total_deleted", 0),
+            "data_types": data_types or ["all"],
+            "cutoff_date": cutoff_date.isoformat(),
+            "deleted_by_type": result.get("deleted_by_type", {}),
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка очистки данных: {str(e)}")
+        return {
+            "status": "error",
+            "total_deleted": 0,
+            "data_types": data_types or ["all"],
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 async def process_batch_comments(
     ctx: Dict[str, Any], comment_ids: List[int], operation: str = "analyze"
 ) -> Dict[str, Any]:
-    """Заглушка для пакетной обработки комментариев"""
+    """Реальная реализация пакетной обработки комментариев"""
     logger.info(
-        f"📦 Имитация пакетной обработки {len(comment_ids)} комментариев"
+        f"📦 Начало пакетной обработки {len(comment_ids)} комментариев (операция: {operation})"
     )
-    import time
 
-    time.sleep(1.5)  # Имитация работы
-    return {
-        "status": "success",
-        "total_comments": len(comment_ids),
-        "successful": len(comment_ids),
-        "failed": 0,
-        "operation": operation,
-        "timestamp": "2024-01-01T00:00:00Z",
-    }
+    try:
+        # Импортируем необходимые зависимости
+        from ..comments.service import CommentService
+        from ..database import get_db_session
+
+        # Создаем сервис комментариев
+        async with get_db_session() as db:
+            comment_service = CommentService(db)
+
+            # Выполняем пакетную обработку
+            result = await comment_service.process_batch_comments(
+                comment_ids=comment_ids, operation=operation
+            )
+
+        logger.info(
+            f"✅ Пакетная обработка завершена: {result.get('successful', 0)}/{len(comment_ids)} успешно"
+        )
+
+        return {
+            "status": "success",
+            "total_comments": len(comment_ids),
+            "successful": result.get("successful", 0),
+            "failed": result.get("failed", 0),
+            "operation": operation,
+            "errors": result.get("errors", []),
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка пакетной обработки комментариев: {str(e)}")
+        return {
+            "status": "error",
+            "total_comments": len(comment_ids),
+            "successful": 0,
+            "failed": len(comment_ids),
+            "operation": operation,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 async def update_statistics(
     ctx: Dict[str, Any], stat_type: str = "daily"
 ) -> Dict[str, Any]:
-    """Заглушка для обновления статистики"""
-    logger.info(f"📈 Имитация обновления {stat_type} статистики")
-    import time
+    """Реальная реализация обновления статистики"""
+    logger.info(f"📈 Начало обновления {stat_type} статистики")
 
-    time.sleep(1)  # Имитация работы
-    return {
-        "status": "success",
-        "stat_type": stat_type,
-        "updated_metrics": ["comments", "posts", "users"],
-        "timestamp": "2024-01-01T00:00:00Z",
-    }
+    try:
+        # Импортируем необходимые зависимости
+        from ..statistics.service import StatisticsService
+        from ..database import get_db_session
+
+        # Создаем сервис статистики
+        async with get_db_session() as db:
+            stats_service = StatisticsService(db)
+
+            # Обновляем статистику
+            result = await stats_service.update_statistics(stat_type=stat_type)
+
+        logger.info(
+            f"✅ Статистика обновлена: {result.get('records_updated', 0)} записей"
+        )
+
+        return {
+            "status": "success",
+            "updated": True,
+            "stat_type": stat_type,
+            "records_updated": result.get("records_updated", 0),
+            "statistics_data": result.get("statistics_data", {}),
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка обновления статистики: {str(e)}")
+        return {
+            "status": "error",
+            "updated": False,
+            "stat_type": stat_type,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 async def backup_database(
     ctx: Dict[str, Any], backup_type: str = "full"
 ) -> Dict[str, Any]:
-    """Заглушка для создания резервной копии базы данных"""
-    logger.info(f"💾 Имитация создания {backup_type} бэкапа базы данных")
-    import time
+    """Реальная реализация создания резервной копии базы данных"""
+    logger.info(f"💾 Начало создания {backup_type} бэкапа базы данных")
 
-    time.sleep(3)  # Имитация работы
-    return {
-        "status": "success",
-        "created": True,
-        "backup_type": backup_type,
-        "file_path": "/tmp/backup.sql",
-        "file_size": 1024000,
-        "timestamp": "2024-01-01T00:00:00Z",
-    }
+    try:
+        # Импортируем необходимые зависимости
+        from ..backup.service import BackupService
+        from ..database import get_db_session
+
+        # Создаем сервис резервного копирования
+        backup_service = BackupService()
+
+        # Создаем резервную копию
+        result = await backup_service.create_backup(backup_type=backup_type)
+
+        logger.info(
+            f"✅ Резервная копия создана: {result.get('file_path', 'unknown')}"
+        )
+
+        return {
+            "status": "success",
+            "created": True,
+            "backup_type": backup_type,
+            "file_path": result.get("file_path"),
+            "file_size": result.get("file_size"),
+            "compression_ratio": result.get("compression_ratio"),
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка создания резервной копии: {str(e)}")
+        return {
+            "status": "error",
+            "created": False,
+            "backup_type": backup_type,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 # Обновляем функции для работы с Celery

@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 
 from .config import settings
 from .database import database_service
@@ -50,9 +51,10 @@ from .handlers import (
 # Импорт Celery модуля
 from .infrastructure.celery_service import celery_service
 
-# Простое логирование
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Инициализация логгера
+from .infrastructure.logging import get_loguru_logger
+
+logger = get_loguru_logger("main")
 
 
 @asynccontextmanager
@@ -155,7 +157,7 @@ app.add_middleware(
 )
 
 # Добавляем кастомное middleware
-app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(RequestLoggingMiddleware, log_request_body=True)
 app.add_middleware(SimpleRateLimitMiddleware)
 
 
@@ -171,7 +173,36 @@ async def handle_api_exception(request: Request, exc: APIError):
                 "message": exc.detail,
                 "status_code": exc.status_code,
             },
-            "extra_data": exc.extra_data,
+            "extra_data": getattr(exc, "details", None),
+        },
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def handle_validation_exception(
+    request: Request, exc: RequestValidationError
+):
+    """Обработчик ошибок валидации FastAPI/Pydantic"""
+    # Логируем детали ошибки валидации
+    logger.error(f"Validation error on {request.url}: {exc.errors()}")
+
+    # Convert errors to JSON-serializable format
+    errors = []
+    for error in exc.errors():
+        errors.append(
+            {
+                "type": error.get("type", "validation_error"),
+                "loc": error.get("loc", []),
+                "msg": error.get("msg", "Validation error"),
+                "input": error.get("input", None),
+            }
+        )
+
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": errors,
+            "message": "Validation error",
         },
     )
 
@@ -194,7 +225,7 @@ async def handle_http_exception(request: Request, exc: HTTPException):
 @app.exception_handler(Exception)
 async def handle_unexpected_error(request: Request, exc: Exception):
     """Обработчик непредвиденных ошибок"""
-    logger.error(f"Unexpected error: {exc}", exc_info=True)
+    logger.error(f"Unexpected error: {exc}")
     return JSONResponse(
         status_code=500,
         content={
@@ -208,9 +239,10 @@ async def handle_unexpected_error(request: Request, exc: Exception):
 
 
 # Дополнительные обработчики исключений
-app.add_exception_handler(Exception, generic_exception_handler)
-app.add_exception_handler(ValueError, validation_exception_handler)
+# Порядок важен - более специфичные обработчики должны быть добавлены первыми
 app.add_exception_handler(BaseAPIException, base_exception_handler)
+app.add_exception_handler(ValueError, validation_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 
 # Базовый роутер для информации о API

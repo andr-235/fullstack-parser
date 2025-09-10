@@ -279,24 +279,21 @@ async def create_empty_success_response(
 async def base_exception_handler(request: Request, exc):
     """Base exception handler"""
     return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"}
+        status_code=500, content={"detail": "Internal server error"}
     )
 
 
 async def cache_exception_handler(request: Request, exc):
     """Cache exception handler"""
     return JSONResponse(
-        status_code=503,
-        content={"detail": "Cache service unavailable"}
+        status_code=503, content={"detail": "Cache service unavailable"}
     )
 
 
 async def database_exception_handler(request: Request, exc):
     """Database exception handler"""
     return JSONResponse(
-        status_code=503,
-        content={"detail": "Database service unavailable"}
+        status_code=503, content={"detail": "Database service unavailable"}
     )
 
 
@@ -304,29 +301,30 @@ async def generic_exception_handler(request: Request, exc):
     """Generic exception handler"""
     return JSONResponse(
         status_code=500,
-        content={"detail": "An unexpected error occurred"}
+        content={
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred",
+                "status_code": 500,
+            }
+        },
     )
 
 
 async def rate_limit_exception_handler(request: Request, exc):
     """Rate limit exception handler"""
     return JSONResponse(
-        status_code=429,
-        content={"detail": "Rate limit exceeded"}
+        status_code=429, content={"detail": "Rate limit exceeded"}
     )
 
 
 async def validation_exception_handler(request: Request, exc):
     """Validation exception handler"""
-    return JSONResponse(
-        status_code=422,
-        content={"detail": str(exc)}
-    )
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
 async def vk_api_exception_handler(request: Request, exc):
     """VK API exception handler"""
     return JSONResponse(
-        status_code=503,
-        content={"detail": "VK API service unavailable"}
+        status_code=503, content={"detail": "VK API service unavailable"}
     )
