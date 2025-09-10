@@ -33,6 +33,7 @@ from .config import (
     VK_ERROR_PERMISSION_DENIED,
     USER_AGENTS,
 )
+from ..infrastructure.logging import get_loguru_logger
 
 
 class VKAPIClient:
@@ -59,7 +60,7 @@ class VKAPIClient:
         """
         self.access_token = access_token or vk_api_config.access_token
         self.session = session
-        self.logger = logger or logging.getLogger(__name__)
+        self.logger = logger or get_loguru_logger("vk-api-client")
 
         # Rate limiting
         self.last_request_time = 0
@@ -179,9 +180,11 @@ class VKAPIClient:
                     vk_api_config.retry.max_delay,
                 )
 
-                self.logger.warning(
+                self.logger.warn(
                     f"VK API request failed (attempt {attempt}/{vk_api_config.retry.max_attempts}), "
-                    f"retrying in {wait_time:.2f}s: {e}"
+                    f"retrying in {wait_time:.2f}s: {e} | "
+                    f"attempt={attempt}, max_attempts={vk_api_config.retry.max_attempts}, "
+                    f"wait_time={wait_time:.2f}, error_type={type(e).__name__}, retryable=True"
                 )
 
                 await asyncio.sleep(wait_time)
@@ -232,7 +235,10 @@ class VKAPIClient:
             )  # Для mypy: сессия гарантированно существует
 
             # Логируем запрос
-            self.logger.debug(f"VK API Request: {vk_method} - {params}")
+            self.logger.debug(
+                f"VK API Request: {vk_method} | "
+                f"method={vk_method}, params={params}, http_method={http_method}, url={url}"
+            )
 
             # Выполняем запрос
             if http_method.upper() == "GET":
@@ -242,15 +248,22 @@ class VKAPIClient:
 
                     # Логируем ответ
                     self.logger.debug(
-                        f"VK API Response: {vk_method} - {response.status} - {response_time:.2f}s"
+                        f"VK API Response: {vk_method} - {response.status} - {response_time:.2f}s",
                     )
 
                     # Проверяем статус ответа
                     if response.status == 429:
                         raise VKAPIRateLimitError(method=vk_method)
+                    elif response.status == 503:
+                        # 503 Service Unavailable - временная ошибка, можно повторить
+                        raise VKAPINetworkError(
+                            f"Service temporarily unavailable: {response.status}",
+                            details={"method": vk_method},
+                        )
                     elif response.status >= 500:
                         raise VKAPINetworkError(
-                            f"Server error: {response.status}"
+                            f"Server error: {response.status}",
+                            details={"method": vk_method},
                         )
                     elif response.status >= 400:
                         raise VKAPIError(
@@ -271,12 +284,24 @@ class VKAPIClient:
                     response_text = await response.text()
                     response_time = time.time() - start_time
 
+                    # Логируем ответ для POST
+                    self.logger.debug(
+                        f"VK API Response: {vk_method} - {response.status} - {response_time:.2f}s",
+                    )
+
                     # Аналогичная обработка
                     if response.status == 429:
                         raise VKAPIRateLimitError(method=vk_method)
+                    elif response.status == 503:
+                        # 503 Service Unavailable - временная ошибка, можно повторить
+                        raise VKAPINetworkError(
+                            f"Service temporarily unavailable: {response.status}",
+                            details={"method": vk_method},
+                        )
                     elif response.status >= 500:
                         raise VKAPINetworkError(
-                            f"Server error: {response.status}"
+                            f"Server error: {response.status}",
+                            details={"method": vk_method},
                         )
                     elif response.status >= 400:
                         raise VKAPIError(
@@ -292,12 +317,10 @@ class VKAPIClient:
                         )
 
         except asyncio.TimeoutError:
-            raise VKAPITimeoutError(
-                timeout=vk_api_config.connection.timeout, method=vk_method
-            )
+            raise VKAPITimeoutError(timeout=vk_api_config.connection.timeout)
         except aiohttp.ClientError as e:
             raise VKAPINetworkError(
-                f"Network error: {str(e)}", {"method": vk_method}
+                f"Network error: {str(e)}", details={"method": vk_method}
             )
 
     def _prepare_params(
@@ -340,10 +363,25 @@ class VKAPIClient:
         Raises:
             VKAPIError: Ошибка VK API
         """
+        # Логируем полный ответ для отладки
+        self.logger.debug(
+            f"VK API response for {method} | "
+            f"method={method}, response_keys={list(response.keys()) if isinstance(response, dict) else 'not_dict'}, "
+            f"has_error={'error' in response}, has_response={'response' in response}, "
+            f"full_response={response}"
+        )
+
         if "error" in response:
             error_info = response["error"]
             error_code = error_info.get("error_code", 0)
             error_msg = error_info.get("error_msg", "Unknown error")
+
+            # Логируем детали ошибки
+            self.logger.error(
+                f"VK API Error: {error_code}: {error_msg} | "
+                f"method={method}, error_code={error_code}, error_message={error_msg}, "
+                f"error_details={error_info}"
+            )
 
             # Определяем тип ошибки
             if error_code == VK_ERROR_ACCESS_DENIED:
@@ -361,6 +399,15 @@ class VKAPIClient:
                 )
             elif error_code == VK_ERROR_PERMISSION_DENIED:
                 raise VKAPIAccessDeniedError(method, error_msg)
+            elif error_code == 502:
+                # Ошибка 502 может быть не только rate limit
+                if (
+                    "rate limit" in error_msg.lower()
+                    or "too many requests" in error_msg.lower()
+                ):
+                    raise VKAPIRateLimitError(method=method)
+                else:
+                    raise VKAPINetworkError(f"Bad Gateway (502): {error_msg}")
             else:
                 raise VKAPIError(
                     error_msg,
@@ -391,7 +438,9 @@ class VKAPIClient:
             wait_time = 1.0 - (current_time - self.rate_limit_reset_time)
             if wait_time > 0:
                 self.logger.info(
-                    f"Rate limit reached, waiting {wait_time:.2f}s"
+                    f"Rate limit reached ({self.request_count}/{vk_api_config.rate_limit.max_requests_per_second}), waiting {wait_time:.2f}s | "
+                    f"current_requests={self.request_count}, max_requests={vk_api_config.rate_limit.max_requests_per_second}, "
+                    f"wait_time={wait_time:.2f}, window_seconds={vk_api_config.rate_limit.window_seconds}"
                 )
                 await asyncio.sleep(wait_time)
                 self.request_count = 0

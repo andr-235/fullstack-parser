@@ -306,6 +306,7 @@ def create_group_response(group_data: Dict[str, Any]) -> Dict[str, Any]:
         "photo_url": "",
         "is_closed": False,
         "type": "group",
+        "like": False,
         **group_data,
     }
 

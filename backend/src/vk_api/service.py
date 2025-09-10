@@ -71,7 +71,7 @@ from .exceptions import (
     VKAPINetworkError,
     VKAPIInvalidResponseError,
 )
-from ..infrastructure.logging import get_winston_logger
+from ..infrastructure.logging import get_loguru_logger
 from .base import (
     BaseVKAPIService,
     validate_id,
@@ -134,12 +134,21 @@ class VKAPIService(BaseVKAPIService):
         super().__init__(repository, client or VKAPIClient())
 
         # Используем Winston-подобный логгер для enterprise-grade логирования
-        self.logger = get_winston_logger("vk-api-service")
+        self.logger = get_loguru_logger("vk-api-service")
         # Сохраняем стандартный логгер для обратной совместимости
         self._std_logger = logging.getLogger(__name__)
 
         # Инициализация метрик
         self._metrics = vk_api_metrics
+
+    async def close_sessions(self):
+        """Закрыть все HTTP-сессии"""
+        if hasattr(self.client, "close_session"):
+            await self.client.close_session()
+        if hasattr(self.repository, "client") and hasattr(
+            self.repository.client, "close_session"
+        ):
+            await self.repository.client.close_session()
 
     @log_request("wall.get")
     @cached(
@@ -148,7 +157,9 @@ class VKAPIService(BaseVKAPIService):
     )
     @retry(max_attempts=3, backoff_factor=2.0)  # Повторные попытки при сбоях
     @timeout(25.0)  # Таймаут для получения постов
-    @rate_limit(max_calls=100, time_window=60.0)  # Ограничение запросов постов
+    @rate_limit(
+        max_calls=120, time_window=60.0
+    )  # Ограничение запросов постов (2 в секунду)
     @circuit_breaker(
         failure_threshold=5, recovery_timeout=60.0
     )  # Защита от массовых сбоев
@@ -186,6 +197,15 @@ class VKAPIService(BaseVKAPIService):
             posts_data = response["response"]
             posts = posts_data.get("items", [])
 
+            # Добавляем детальное логирование для отладки
+            self.logger.debug(
+                f"VK API wall.get response for group {group_id} | "
+                f"group_id={group_id}, count={count}, offset={offset}, "
+                f"total_posts={posts_data.get('count', 0)}, returned_posts={len(posts)}, "
+                f"response_keys={list(posts_data.keys()) if isinstance(posts_data, dict) else 'not_dict'}, "
+                f"operation=get_group_posts"
+            )
+
             result = create_posts_response(
                 posts=posts,
                 total_count=posts_data.get("count", 0),
@@ -214,13 +234,6 @@ class VKAPIService(BaseVKAPIService):
         except Exception as e:
             self.logger.error(
                 "Failed to get group posts",
-                meta={
-                    "group_id": group_id,
-                    "count": count,
-                    "offset": offset,
-                    "error": str(e),
-                    "operation": "get_group_posts",
-                },
             )
             raise ServiceUnavailableError(
                 f"Ошибка получения постов группы: {str(e)}"
@@ -293,15 +306,6 @@ class VKAPIService(BaseVKAPIService):
         except Exception as e:
             self.logger.error(
                 "Failed to get post comments",
-                meta={
-                    "group_id": group_id,
-                    "post_id": post_id,
-                    "count": count,
-                    "offset": offset,
-                    "sort": sort,
-                    "error": str(e),
-                    "operation": "get_post_comments",
-                },
             )
             raise ServiceUnavailableError(
                 f"Ошибка получения комментариев: {str(e)}"
@@ -322,17 +326,30 @@ class VKAPIService(BaseVKAPIService):
         """
         try:
             # Получаем данные через клиент
+            # Для VK API нужно передавать отрицательный ID группы
+            vk_group_id = -abs(group_id) if group_id > 0 else group_id
             params = {
-                "group_ids": str(group_id),
+                "group_ids": str(vk_group_id),
                 "fields": vk_api_config.group_fields,
             }
 
             response = await self.client.make_request("groups.getById", params)
 
-            if "response" not in response or not response["response"]:
+            if "response" not in response:
                 raise ServiceUnavailableError(f"Группа {group_id} не найдена")
 
-            group_data = response["response"][0]
+            response_data = response["response"]
+
+            # Новый формат: response содержит поля groups и profiles
+            if "groups" not in response_data or not response_data["groups"]:
+                self.logger.warning(
+                    f"VK API groups.getById returned empty groups for group {group_id}",
+                )
+                raise ServiceUnavailableError(
+                    f"Группа {group_id} недоступна или удалена"
+                )
+
+            group_data = response_data["groups"][0]
 
             result = {
                 "id": group_data.get("id"),
@@ -343,20 +360,43 @@ class VKAPIService(BaseVKAPIService):
                 "photo_url": group_data.get("photo_200", ""),
                 "is_closed": group_data.get("is_closed", False),
                 "type": group_data.get("type", "group"),
+                "like": group_data.get("like", False),
             }
+
+            # Добавляем информацию о профилях пользователей, если есть
+            profiles = response_data.get("profiles", [])
+            if profiles:
+                result["profiles"] = profiles
 
             return create_group_response(result)
 
-        except Exception as e:
-            self.logger.error(f"Error getting group info for {group_id}: {e}")
+        except VKAPINetworkError as e:
+            # Специальная обработка для сетевых ошибок (включая 503)
+            self.logger.warning(
+                f"VK API Network Error for group {group_id}: {e}",
+            )
             raise ServiceUnavailableError(
-                f"Ошибка получения информации о группе: {str(e)}"
+                f"Сервис временно недоступен для группы {group_id}: {str(e)}"
+            )
+        except VKAPIRateLimitError as e:
+            self.logger.warning(
+                f"VK API Rate Limit for group {group_id}: {e}",
+            )
+            raise ServiceUnavailableError(
+                f"Превышен лимит запросов для группы {group_id}: {str(e)}"
+            )
+        except Exception as e:
+            self.logger.error(
+                f"Unexpected error getting group info for {group_id}: {e}",
+            )
+            raise ServiceUnavailableError(
+                f"Ошибка получения информации о группе {group_id}: {str(e)}"
             )
 
     @validate_count(vk_api_config.limits.max_groups_per_request)
     @rate_limit(
-        max_calls=20, time_window=60.0
-    )  # Дополнительное ограничение на поиск
+        max_calls=120, time_window=60.0
+    )  # Дополнительное ограничение на поиск (2 в секунду)
     @circuit_breaker(
         failure_threshold=3, recovery_timeout=30.0
     )  # Защита от сбоев поиска
@@ -415,12 +455,17 @@ class VKAPIService(BaseVKAPIService):
 
             search_data = response["response"]
 
+            # Обрабатываем как старый формат (items), так и новый (groups)
+            groups = search_data.get("items", []) or search_data.get(
+                "groups", []
+            )
+
             return create_groups_response(
-                groups=search_data.get("items", []),
+                groups=groups,
                 total_count=search_data.get("count", 0),
                 requested_count=count,
                 offset=offset,
-                has_more=len(search_data.get("items", [])) == count,
+                has_more=len(groups) == count,
                 query=query,
                 country=country,
                 city=city,
@@ -433,8 +478,8 @@ class VKAPIService(BaseVKAPIService):
             raise ServiceUnavailableError(f"Ошибка поиска групп: {str(e)}")
 
     @rate_limit(
-        max_calls=30, time_window=60.0
-    )  # Ограничение на запросы пользователей
+        max_calls=120, time_window=60.0
+    )  # Ограничение на запросы пользователей (2 в секунду)
     @circuit_breaker(
         failure_threshold=5, recovery_timeout=45.0
     )  # Защита от массовых сбоев
@@ -504,8 +549,8 @@ class VKAPIService(BaseVKAPIService):
         failure_threshold=5, recovery_timeout=60.0
     )  # Защита от массовых сбоев
     @rate_limit(
-        max_calls=10, time_window=60.0
-    )  # Строгое ограничение на запросы участников
+        max_calls=120, time_window=60.0
+    )  # Строгое ограничение на запросы участников (2 в секунду)
     @timeout(30.0)  # Таймаут для получения участников
     @retry(max_attempts=3, backoff_factor=2.0)  # Повторные попытки при сбоях
     @cached(
@@ -594,8 +639,8 @@ class VKAPIService(BaseVKAPIService):
         failure_threshold=5, recovery_timeout=60.0
     )  # Защита от каскадных сбоев
     @rate_limit(
-        max_calls=20, time_window=60.0
-    )  # Ограничение на массовые операции
+        max_calls=120, time_window=60.0
+    )  # Ограничение на массовые операции (2 в секунду)
     @timeout(30.0)  # Таймаут для массовой операции
     @retry(max_attempts=2, backoff_factor=2.0)  # Повторные попытки при сбоях
     @log_request("bulk_wall.getById")
@@ -773,8 +818,8 @@ class VKAPIService(BaseVKAPIService):
             raise ServiceUnavailableError(f"Ошибка получения поста: {str(e)}")
 
     @rate_limit(
-        max_calls=5, time_window=60.0
-    )  # Строгое ограничение на валидацию токенов
+        max_calls=120, time_window=60.0
+    )  # Строгое ограничение на валидацию токенов (2 в секунду)
     @circuit_breaker(
         failure_threshold=2, recovery_timeout=60.0
     )  # Быстрое восстановление
@@ -791,6 +836,8 @@ class VKAPIService(BaseVKAPIService):
         try:
             # Проверяем токен через получение информации о текущем пользователе
             params = {"fields": "id,first_name,last_name"}
+
+            self.logger.debug("Validating VK API access token")
 
             response = await self.client.make_request("users.get", params)
 

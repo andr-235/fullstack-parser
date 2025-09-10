@@ -29,7 +29,7 @@ class VKAPIRateLimitConfig(BaseModel):
     """Конфигурация rate limiting"""
 
     max_requests_per_second: int = Field(
-        default=3, gt=0, description="Максимум запросов в секунду"
+        default=2, gt=0, description="Максимум запросов в секунду"
     )
     window_seconds: float = Field(
         default=1.0, gt=0, description="Окно времени в секундах"
@@ -158,7 +158,7 @@ class VKAPIConfig(BaseModel):
 
     # Поля запросов
     group_fields: str = Field(
-        default="id,name,screen_name,description,members_count,photo_200,is_closed,type",
+        default="id,name,screen_name,description,members_count,photo_200,is_closed,type,like",
         description="Поля для запросов групп",
     )
     user_fields: str = Field(
