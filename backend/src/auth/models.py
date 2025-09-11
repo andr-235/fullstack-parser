@@ -17,9 +17,10 @@ from sqlalchemy import (
     ForeignKey,
 )
 from sqlalchemy.orm import relationship, backref
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db_session
-from ..models import BaseModel
+from ..models import BaseModel, Base
 
 
 class UserModel(BaseModel):
@@ -144,9 +145,22 @@ class UserRepository:
     def __init__(self, db=None):
         self.db = db
 
-    async def get_db(self):
-        """Получить сессию БД"""
-        return self.db or get_db_session()
+    def get_db(self):
+        """Получить контекстный менеджер для сессии БД"""
+        if self.db is not None:
+            # Если сессия уже есть, возвращаем её как контекстный менеджер
+            from contextlib import asynccontextmanager
+
+            @asynccontextmanager
+            async def db_context():
+                yield self.db
+
+            return db_context()
+        else:
+            # Иначе используем стандартный get_db
+            from ..database import get_db
+
+            return get_db()
 
     async def create(self, user_data: Dict[str, Any]) -> UserModel:
         """
@@ -158,21 +172,20 @@ class UserRepository:
         Returns:
             UserModel: Созданный пользователь
         """
-        db = await self.get_db()
+        async with self.get_db() as db:
+            user = UserModel(
+                email=user_data["email"],
+                full_name=user_data["full_name"],
+                hashed_password=user_data["hashed_password"],
+                is_active=user_data.get("is_active", True),
+                is_superuser=user_data.get("is_superuser", False),
+                email_verified=user_data.get("email_verified", False),
+            )
 
-        user = UserModel(
-            email=user_data["email"],
-            full_name=user_data["full_name"],
-            hashed_password=user_data["hashed_password"],
-            is_active=user_data.get("is_active", True),
-            is_superuser=user_data.get("is_superuser", False),
-            email_verified=user_data.get("email_verified", False),
-        )
-
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-        return user
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+            return user
 
     async def get_by_id(self, user_id: int) -> Optional[UserModel]:
         """
@@ -184,11 +197,11 @@ class UserRepository:
         Returns:
             Optional[UserModel]: Пользователь или None
         """
-        db = await self.get_db()
-        result = await db.execute(
-            select(UserModel).where(UserModel.id == user_id)
-        )
-        return result.scalar_one_or_none()
+        async with self.get_db() as db:
+            result = await db.execute(
+                select(UserModel).where(UserModel.id == user_id)
+            )
+            return result.scalar_one_or_none()
 
     async def get_by_email(self, email: str) -> Optional[UserModel]:
         """
@@ -200,11 +213,11 @@ class UserRepository:
         Returns:
             Optional[UserModel]: Пользователь или None
         """
-        db = await self.get_db()
-        result = await db.execute(
-            select(UserModel).where(UserModel.email == email)
-        )
-        return result.scalar_one_or_none()
+        async with self.get_db() as db:
+            result = await db.execute(
+                select(UserModel).where(UserModel.email == email)
+            )
+            return result.scalar_one_or_none()
 
     async def get_all(
         self,
@@ -225,31 +238,31 @@ class UserRepository:
         Returns:
             List[UserModel]: Список пользователей
         """
-        db = await self.get_db()
-        query = select(UserModel)
+        async with self.get_db() as db:
+            query = select(UserModel)
 
-        # Фильтры
-        if is_active is not None:
-            query = query.where(UserModel.is_active == is_active)
+            # Фильтры
+            if is_active is not None:
+                query = query.where(UserModel.is_active == is_active)
 
-        if search:
-            search_filter = f"%{search}%"
-            query = query.where(
-                or_(
-                    UserModel.email.ilike(search_filter),
-                    UserModel.full_name.ilike(search_filter),
+            if search:
+                search_filter = f"%{search}%"
+                query = query.where(
+                    or_(
+                        UserModel.email.ilike(search_filter),
+                        UserModel.full_name.ilike(search_filter),
+                    )
                 )
+
+            # Сортировка и пагинация
+            query = (
+                query.order_by(desc(UserModel.created_at))
+                .limit(limit)
+                .offset(offset)
             )
 
-        # Сортировка и пагинация
-        query = (
-            query.order_by(desc(UserModel.created_at))
-            .limit(limit)
-            .offset(offset)
-        )
-
-        result = await db.execute(query)
-        return list(result.scalars().all())
+            result = await db.execute(query)
+            return list(result.scalars().all())
 
     async def update(
         self, user_id: int, update_data: Dict[str, Any]
@@ -264,23 +277,22 @@ class UserRepository:
         Returns:
             UserModel: Обновленный пользователь
         """
-        db = await self.get_db()
+        async with self.get_db() as db:
+            # Получаем пользователя
+            user = await self.get_by_id(user_id)
+            if not user:
+                return None
 
-        # Получаем пользователя
-        user = await self.get_by_id(user_id)
-        if not user:
-            return None
+            # Обновляем поля
+            for key, value in update_data.items():
+                if hasattr(user, key):
+                    setattr(user, key, value)
 
-        # Обновляем поля
-        for key, value in update_data.items():
-            if hasattr(user, key):
-                setattr(user, key, value)
+            user.updated_at = datetime.utcnow()
 
-        user.updated_at = datetime.utcnow()
-
-        await db.commit()
-        await db.refresh(user)
-        return user
+            await db.commit()
+            await db.refresh(user)
+            return user
 
     async def delete(self, user_id: int) -> bool:
         """
@@ -292,15 +304,14 @@ class UserRepository:
         Returns:
             bool: True если пользователь удален
         """
-        db = await self.get_db()
+        async with self.get_db() as db:
+            user = await self.get_by_id(user_id)
+            if not user:
+                return False
 
-        user = await self.get_by_id(user_id)
-        if not user:
-            return False
-
-        await db.delete(user)
-        await db.commit()
-        return True
+            await db.delete(user)
+            await db.commit()
+            return True
 
     async def update_last_login(self, user_id: int) -> bool:
         """
@@ -362,58 +373,57 @@ class UserRepository:
         Returns:
             Dict[str, Any]: Статистика
         """
-        db = await self.get_db()
-
-        # Общая статистика
-        result = await db.execute(
-            select(
-                func.count(UserModel.id).label("total_users"),
-                func.sum(
-                    case((UserModel.is_active == True, 1), else_=0)
-                ).label("active_users"),
-                func.sum(
-                    case((UserModel.is_superuser == True, 1), else_=0)
-                ).label("superusers"),
-                func.count(
-                    case(
-                        (
-                            UserModel.created_at
-                            >= datetime.utcnow().replace(
-                                hour=0, minute=0, second=0, microsecond=0
-                            ),
-                            UserModel.id,
+        async with self.get_db() as db:
+            # Общая статистика
+            result = await db.execute(
+                select(
+                    func.count(UserModel.id).label("total_users"),
+                    func.sum(
+                        case((UserModel.is_active == True, 1), else_=0)
+                    ).label("active_users"),
+                    func.sum(
+                        case((UserModel.is_superuser == True, 1), else_=0)
+                    ).label("superusers"),
+                    func.count(
+                        case(
+                            (
+                                UserModel.created_at
+                                >= datetime.utcnow().replace(
+                                    hour=0, minute=0, second=0, microsecond=0
+                                ),
+                                UserModel.id,
+                            )
                         )
-                    )
-                ).label("new_users_today"),
+                    ).label("new_users_today"),
+                )
             )
-        )
 
-        stats = result.first()
-        if not stats:
+            stats = result.first()
+            if not stats:
+                return {
+                    "total_users": 0,
+                    "active_users": 0,
+                    "superusers": 0,
+                    "new_users_today": 0,
+                    "new_users_week": 0,
+                }
+
+            # Новые пользователи за неделю
+            week_ago = datetime.utcnow() - timedelta(days=7)
+            result = await db.execute(
+                select(func.count(UserModel.id)).where(
+                    UserModel.created_at >= week_ago
+                )
+            )
+            new_users_week = result.scalar() or 0
+
             return {
-                "total_users": 0,
-                "active_users": 0,
-                "superusers": 0,
-                "new_users_today": 0,
-                "new_users_week": 0,
+                "total_users": stats.total_users or 0,
+                "active_users": stats.active_users or 0,
+                "superusers": stats.superusers or 0,
+                "new_users_today": stats.new_users_today or 0,
+                "new_users_week": new_users_week,
             }
-
-        # Новые пользователи за неделю
-        week_ago = datetime.utcnow() - timedelta(days=7)
-        result = await db.execute(
-            select(func.count(UserModel.id)).where(
-                UserModel.created_at >= week_ago
-            )
-        )
-        new_users_week = result.scalar() or 0
-
-        return {
-            "total_users": stats.total_users or 0,
-            "active_users": stats.active_users or 0,
-            "superusers": stats.superusers or 0,
-            "new_users_today": stats.new_users_today or 0,
-            "new_users_week": new_users_week,
-        }
 
 
 # Функции для создания репозитория
