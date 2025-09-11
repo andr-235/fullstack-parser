@@ -8,13 +8,13 @@ import { Button } from '@/shared/ui'
 import { Badge } from '@/shared/ui'
 import { Avatar, AvatarFallback } from '@/shared/ui'
 import { Skeleton } from '@/shared/ui'
-import { Alert, AlertDescription } from '@/shared/ui'
 import {
  DropdownMenu,
  DropdownMenuContent,
  DropdownMenuItem,
  DropdownMenuTrigger,
 } from '@/shared/ui'
+import { HighlightText } from '@/shared/ui'
 
 import { Comment } from '@/entities/comment'
 
@@ -27,7 +27,7 @@ interface CommentsListProps {
  onLike?: (commentId: string) => void
 }
 
-export function CommentsList({ comments, loading, onEdit, onDelete, onMarkViewed, onLike }: CommentsListProps) {
+export function CommentsList({ comments, loading, onEdit: _onEdit, onDelete, onMarkViewed, onLike }: CommentsListProps) {
  if (loading) {
   return (
    <div className="space-y-4">
@@ -74,6 +74,7 @@ export function CommentsList({ comments, loading, onEdit, onDelete, onMarkViewed
        <div className="flex items-center gap-3">
         <Avatar className="h-8 w-8">
          {comment.author_photo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
            src={comment.author_photo_url}
            alt={comment.author_name || 'Author'}
@@ -149,7 +150,12 @@ export function CommentsList({ comments, loading, onEdit, onDelete, onMarkViewed
 
      <CardContent className="pt-0">
       <div className="space-y-3">
-       <p className="text-sm leading-relaxed">{comment.text}</p>
+       <HighlightText
+        text={comment.text}
+        keywords={comment.matched_keywords || []}
+        className="text-sm leading-relaxed"
+        highlightClassName="bg-yellow-200 text-yellow-900 px-1 rounded font-medium"
+       />
 
        {comment.matched_keywords && comment.matched_keywords.length > 0 && (
         <div className="flex flex-wrap gap-1">

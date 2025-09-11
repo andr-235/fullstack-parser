@@ -62,7 +62,7 @@ class SettingsConfig:
             "access_token": "",
             "api_version": "5.199",
             "requests_per_second": 3,
-            "max_posts_per_request": 100,
+            "max_posts_per_request": 10,
             "max_comments_per_request": 100,
             "max_groups_per_request": 10000,
             "max_users_per_request": 1000,

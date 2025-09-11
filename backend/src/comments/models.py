@@ -1,302 +1,286 @@
 """
-SQLAlchemy модели для модуля Comments
+Модели SQLAlchemy для модуля Comments
 
-Определяет репозиторий и специфические модели для работы с комментариями
+Определяет модели данных для работы с комментариями VK
 """
 
-from typing import List, Optional, Dict, Any
+from datetime import datetime
+from typing import Optional, List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..keywords.models import Keyword
+    from ..authors.infrastructure.models import Author
 from sqlalchemy import (
-    select,
-    and_,
-    or_,
-    desc,
-    func,
+    Column,
+    Integer,
     String,
     Text,
-    Integer,
+    Boolean,
     DateTime,
+    ForeignKey,
+    Index,
+    func,
 )
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy.dialects.postgresql import JSONB
 
-from ..models import Comment as BaseComment
-from ..database import get_db_session
-from ..exceptions import CommentNotFoundError
+from ..models import BaseModel
 
 
-class CommentRepository:
+class Comment(BaseModel):
     """
-    Репозиторий для работы с комментариями
+    Модель комментария VK
 
-    Предоставляет интерфейс для CRUD операций с комментариями
+    Основная модель для хранения комментариев из VK API
     """
 
-    def __init__(self, db: AsyncSession):
-        self.db = db
+    __tablename__ = "vk_comments"
 
-    async def get_by_id(self, comment_id: int) -> Optional[BaseComment]:
-        """Получить комментарий по ID"""
-        query = select(BaseComment).where(BaseComment.id == comment_id)
-        result = await self.db.execute(query)
-        return result.scalar_one_or_none()
+    # Основные поля
+    vk_id: Mapped[int] = mapped_column(
+        Integer, unique=True, index=True, nullable=False
+    )
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    post_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    author_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
 
-    async def get_by_vk_id(self, vk_comment_id: str) -> Optional[BaseComment]:
-        """Получить комментарий по VK ID"""
-        query = select(BaseComment).where(BaseComment.vk_id == vk_comment_id)
-        result = await self.db.execute(query)
-        return result.scalar_one_or_none()
+    # VK специфичные поля
+    post_vk_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    group_vk_id: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True, index=True
+    )
+    parent_comment_id: Mapped[Optional[int]] = mapped_column(
+        Integer, index=True, nullable=True
+    )
 
-    async def get_by_group_id(
-        self,
-        group_id: str,
-        limit: int = 50,
-        offset: int = 0,
-        search_text: Optional[str] = None,
-        is_viewed: Optional[bool] = None,
-        is_archived: Optional[bool] = None,
-    ) -> List[BaseComment]:
-        """Получить комментарии по ID группы"""
-        group_id_int = int(group_id) if group_id.isdigit() else 0
+    # Информация об авторе
+    author_name: Mapped[Optional[str]] = mapped_column(
+        String(200), nullable=True
+    )
+    author_screen_name: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
+    )
+    author_photo_url: Mapped[Optional[str]] = mapped_column(
+        String(500), nullable=True
+    )
 
-        # Получаем комментарии по group_vk_id
-        query = select(BaseComment).where(
-            BaseComment.group_vk_id == group_id_int
-        )
+    # Статистика и взаимодействия
+    likes_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    matched_keywords_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
 
-        if search_text:
-            query = query.where(BaseComment.text.ilike(f"%{search_text}%"))
+    # Статусы
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    is_viewed: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    is_processed: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    has_attachments: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
 
-        if is_viewed is not None:
-            query = query.where(BaseComment.is_viewed == is_viewed)
+    # Временные метки
+    published_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    processed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    viewed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    archived_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
-        if is_archived is not None:
-            query = query.where(BaseComment.is_archived == is_archived)
+    # Дополнительные данные
+    attachments_info: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True
+    )
+    extra_data: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
 
-        query = (
-            query.order_by(desc(BaseComment.published_at))
-            .limit(limit)
-            .offset(offset)
-        )
-        result = await self.db.execute(query)
-        return list(result.scalars().all())
+    # Связи
+    author = relationship(
+        "authors.infrastructure.models.Author",
+        back_populates="comments",
+        foreign_keys=[author_id],
+        lazy="select"
+    )
 
-    async def get_by_post_id(
-        self,
-        post_id: str,
-        limit: int = 100,
-        offset: int = 0,
-        is_viewed: Optional[bool] = None,
-        is_archived: Optional[bool] = None,
-    ) -> List[BaseComment]:
-        """Получить комментарии к посту"""
-        query = select(BaseComment).where(BaseComment.post_id == post_id)
+    # Индексы для оптимизации запросов
+    __table_args__ = (
+        Index("ix_vk_comments_group_published", "group_vk_id", "published_at"),
+        Index("ix_vk_comments_post_published", "post_id", "published_at"),
+        Index("ix_vk_comments_author_published", "author_id", "published_at"),
+        Index(
+            "ix_vk_comments_status_processed",
+            "is_viewed",
+            "is_processed",
+            "is_archived",
+        ),
+        Index("ix_vk_comments_text_search", "text", postgresql_using="gin"),
+    )
 
-        if is_viewed is not None:
-            query = query.where(BaseComment.is_viewed == is_viewed)
+    def __repr__(self) -> str:
+        return f"<Comment(id={self.id}, vk_id={self.vk_id}, author={self.author_name})>"
 
-        if is_archived is not None:
-            query = query.where(BaseComment.is_archived == is_archived)
-
-        query = (
-            query.order_by(BaseComment.published_at)
-            .limit(limit)
-            .offset(offset)
-        )
-        result = await self.db.execute(query)
-        return list(result.scalars().all())
-
-    async def get_all_comments(
-        self,
-        limit: int = 50,
-        offset: int = 0,
-        search_text: Optional[str] = None,
-        is_viewed: Optional[bool] = None,
-        is_archived: Optional[bool] = None,
-    ) -> List[BaseComment]:
-        """Получить все комментарии с пагинацией"""
-        query = select(BaseComment)
-
-        if search_text:
-            query = query.where(BaseComment.text.ilike(f"%{search_text}%"))
-
-        if is_viewed is not None:
-            query = query.where(BaseComment.is_viewed == is_viewed)
-
-        if is_archived is not None:
-            query = query.where(BaseComment.is_archived == is_archived)
-
-        query = (
-            query.order_by(desc(BaseComment.published_at))
-            .limit(limit)
-            .offset(offset)
-        )
-        result = await self.db.execute(query)
-        return list(result.scalars().all())
-
-    async def create(self, comment_data: Dict[str, Any]) -> BaseComment:
-        """Создать новый комментарий"""
-        comment = BaseComment(**comment_data)
-        self.db.add(comment)
-        await self.db.commit()
-        await self.db.refresh(comment)
-        return comment
-
-    async def update(
-        self, comment_id: int, update_data: Dict[str, Any]
-    ) -> BaseComment:
-        """Обновить комментарий"""
-        comment = await self.get_by_id(comment_id)
-        if not comment:
-            raise CommentNotFoundError(comment_id)
-
-        for key, value in update_data.items():
-            if hasattr(comment, key):
-                setattr(comment, key, value)
-
-        await self.db.commit()
-        await self.db.refresh(comment)
-        return comment
-
-    async def delete(self, comment_id: int) -> bool:
-        """Удалить комментарий"""
-        comment = await self.get_by_id(comment_id)
-        if not comment:
+    @property
+    def is_recent(self) -> bool:
+        """Проверяет, является ли комментарий недавним (за последние 24 часа)"""
+        if not self.published_at:
             return False
+        return (datetime.utcnow() - self.published_at).total_seconds() < 86400
 
-        await self.db.delete(comment)
-        await self.db.commit()
-        return True
+    @property
+    def has_keywords(self) -> bool:
+        """Проверяет, есть ли у комментария совпадения с ключевыми словами"""
+        return self.matched_keywords_count > 0
 
-    async def get_stats(self) -> Dict[str, Any]:
-        """Получить статистику комментариев"""
-        # Общее количество
-        total_query = select(func.count()).select_from(BaseComment)
-        total_result = await self.db.execute(total_query)
-        total = total_result.scalar() or 0
-
-        # Среднее количество лайков
-        avg_likes_query = select(
-            func.avg(BaseComment.likes_count)
-        ).select_from(BaseComment)
-        avg_likes_result = await self.db.execute(avg_likes_query)
-        avg_likes = avg_likes_result.scalar() or 0.0
-
-        return {
-            "total_comments": total,
-            "avg_likes_per_comment": round(avg_likes, 2),
-        }
-
-    async def mark_as_viewed(self, comment_id: int) -> bool:
+    def mark_as_viewed(self) -> None:
         """Отметить комментарий как просмотренный"""
-        from datetime import datetime
+        self.is_viewed = True
+        self.viewed_at = datetime.utcnow()
+        self.updated_at = datetime.utcnow()
 
-        update_data = {
-            "processed_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow(),
-        }
-        try:
-            await self.update(comment_id, update_data)
-            return True
-        except CommentNotFoundError:
-            return False
+    def mark_as_processed(self) -> None:
+        """Отметить комментарий как обработанный"""
+        self.is_processed = True
+        self.processed_at = datetime.utcnow()
+        self.updated_at = datetime.utcnow()
 
-    async def bulk_update(
-        self, comment_ids: List[int], update_data: Dict[str, Any]
-    ) -> int:
-        """Массовое обновление комментариев"""
-        from sqlalchemy import update
-        from datetime import datetime
-
-        # Добавляем время обновления
-        update_data["updated_at"] = datetime.utcnow()
-
-        query = (
-            update(BaseComment)
-            .where(BaseComment.id.in_(comment_ids))
-            .values(**update_data)
-        )
-
-        result = await self.db.execute(query)
-        await self.db.commit()
-        return result.rowcount
-
-    async def count_by_group(
-        self,
-        group_id: str,
-        search_text: Optional[str] = None,
-        is_viewed: Optional[bool] = None,
-        is_archived: Optional[bool] = None,
-    ) -> int:
-        """Подсчитать количество комментариев в группе"""
-        group_id_int = int(group_id) if group_id.isdigit() else 0
-
-        query = select(func.count(BaseComment.id)).where(
-            BaseComment.group_vk_id == group_id_int
-        )
-
-        if search_text:
-            query = query.where(BaseComment.text.ilike(f"%{search_text}%"))
-
-        if is_viewed is not None:
-            query = query.where(BaseComment.is_viewed == is_viewed)
-
-        if is_archived is not None:
-            query = query.where(BaseComment.is_archived == is_archived)
-
-        result = await self.db.execute(query)
-        return result.scalar() or 0
-
-    async def count_by_post(
-        self,
-        post_id: str,
-        is_viewed: Optional[bool] = None,
-        is_archived: Optional[bool] = None,
-    ) -> int:
-        """Подсчитать количество комментариев к посту"""
-        query = select(func.count(BaseComment.id)).where(
-            BaseComment.post_id == post_id
-        )
-
-        if is_viewed is not None:
-            query = query.where(BaseComment.is_viewed == is_viewed)
-
-        if is_archived is not None:
-            query = query.where(BaseComment.is_archived == is_archived)
-
-        result = await self.db.execute(query)
-        return result.scalar() or 0
-
-    async def count_all(
-        self,
-        search_text: Optional[str] = None,
-        is_viewed: Optional[bool] = None,
-        is_archived: Optional[bool] = None,
-    ) -> int:
-        """Подсчитать общее количество комментариев"""
-        query = select(func.count(BaseComment.id))
-
-        if search_text:
-            query = query.where(BaseComment.text.ilike(f"%{search_text}%"))
-
-        if is_viewed is not None:
-            query = query.where(BaseComment.is_viewed == is_viewed)
-
-        if is_archived is not None:
-            query = query.where(BaseComment.is_archived == is_archived)
-
-        result = await self.db.execute(query)
-        return result.scalar() or 0
+    def archive(self) -> None:
+        """Архивировать комментарий"""
+        self.is_archived = True
+        self.archived_at = datetime.utcnow()
+        self.updated_at = datetime.utcnow()
 
 
-# Функции для создания репозитория
-async def get_comment_repository(
-    db: AsyncSession,
-) -> CommentRepository:
-    """Создать репозиторий комментариев"""
-    return CommentRepository(db)
+class CommentKeywordMatch(BaseModel):
+    """
+    Модель для связи комментариев с ключевыми словами
+
+    Связывает комментарии с найденными в них ключевыми словами
+    """
+
+    __tablename__ = "comment_keyword_matches"
+
+    comment_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("vk_comments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    keyword_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("keywords.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Дополнительная информация о совпадении
+    match_position: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
+    match_context: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    confidence_score: Mapped[Optional[float]] = mapped_column(nullable=True)
+
+    # Связи
+    comment: Mapped["Comment"] = relationship(
+        "Comment", back_populates="keyword_matches"
+    )
+    keyword: Mapped["Keyword"] = relationship("Keyword")
+
+    __table_args__ = (
+        Index(
+            "ix_comment_keyword_unique",
+            "comment_id",
+            "keyword_id",
+            unique=True,
+        ),
+        Index("ix_comment_keyword_comment", "comment_id"),
+        Index("ix_comment_keyword_keyword", "keyword_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<CommentKeywordMatch(comment_id={self.comment_id}, keyword_id={self.keyword_id})>"
 
 
-# Экспорт
+class CommentAnalysis(BaseModel):
+    """
+    Модель для хранения результатов анализа комментариев
+
+    Содержит результаты различных видов анализа текста комментариев
+    """
+
+    __tablename__ = "comment_analyses"
+
+    comment_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("vk_comments.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    # Результаты анализа
+    sentiment_score: Mapped[Optional[float]] = mapped_column(nullable=True)
+    sentiment_label: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True
+    )
+    language: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    toxicity_score: Mapped[Optional[float]] = mapped_column(nullable=True)
+
+    # Морфологический анализ
+    word_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    character_count: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
+    avg_word_length: Mapped[Optional[float]] = mapped_column(nullable=True)
+
+    # Дополнительные метрики
+    readability_score: Mapped[Optional[float]] = mapped_column(nullable=True)
+    complexity_score: Mapped[Optional[float]] = mapped_column(nullable=True)
+
+    # Метаданные анализа
+    analysis_version: Mapped[Optional[str]] = mapped_column(
+        String(20), nullable=True
+    )
+    analysis_data: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+
+    # Связи
+    comment: Mapped["Comment"] = relationship(
+        "Comment", back_populates="analysis"
+    )
+
+    def __repr__(self) -> str:
+        return f"<CommentAnalysis(comment_id={self.comment_id}, sentiment={self.sentiment_label})>"
+
+
+# Добавляем обратные связи к основной модели Comment
+Comment.keyword_matches: Mapped[List["CommentKeywordMatch"]] = relationship(
+    "CommentKeywordMatch",
+    back_populates="comment",
+    cascade="all, delete-orphan",
+)
+
+Comment.analysis: Mapped[Optional["CommentAnalysis"]] = relationship(
+    "CommentAnalysis",
+    back_populates="comment",
+    uselist=False,
+    cascade="all, delete-orphan",
+)
+
+
+# Экспорт моделей
 __all__ = [
-    "CommentRepository",
-    "get_comment_repository",
+    "Comment",
+    "CommentKeywordMatch",
+    "CommentAnalysis",
 ]

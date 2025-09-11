@@ -571,15 +571,15 @@ export class ApiClient {
       queryParams.append('q', filters.text)
     } else if (filters?.group_id !== undefined) {
       // Если указана группа - добавляем её как дополнительный фильтр
-      queryParams.append('q', '  ') // Минимальная длина для валидации
+      queryParams.append('q', '**') // Специальный запрос для получения всех комментариев
       queryParams.append('group_id', filters.group_id.toString())
     } else if (filters?.post_id !== undefined) {
       // Если указан пост - добавляем его как дополнительный фильтр
-      queryParams.append('q', '  ') // Минимальная длина для валидации
+      queryParams.append('q', '**') // Специальный запрос для получения всех комментариев
       queryParams.append('post_id', filters.post_id.toString())
     } else {
       // Если нет параметров - ищем все комментарии
-      queryParams.append('q', '  ') // Минимальная длина для валидации
+      queryParams.append('q', '**') // Специальный запрос для получения всех комментариев
     }
 
     // Добавляем дополнительные фильтры
@@ -593,6 +593,8 @@ export class ApiClient {
       queryParams.append('is_viewed', filters.is_viewed.toString())
     if (filters?.is_archived !== undefined)
       queryParams.append('is_archived', filters.is_archived.toString())
+    if (filters?.has_keywords !== undefined)
+      queryParams.append('has_keywords', filters.has_keywords.toString())
 
     const queryString = queryParams.toString()
     const fullEndpoint = `${endpoint}${queryString ? `?${queryString}` : ''}`

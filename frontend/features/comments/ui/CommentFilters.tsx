@@ -102,6 +102,18 @@ export function CommentFilters({ filters, onFiltersChange }: CommentFiltersProps
    <div className="flex flex-wrap gap-6">
     <div className="flex items-center space-x-2">
      <Switch
+      id="has-keywords-only"
+      checked={filters.has_keywords === true}
+      onCheckedChange={(checked) => updateFilter('has_keywords', checked || undefined)}
+     />
+     <Label htmlFor="has-keywords-only" className="text-sm flex items-center gap-1">
+      <Search className="h-4 w-4" />
+      Показывать только комментарии с ключевыми словами
+     </Label>
+    </div>
+
+    <div className="flex items-center space-x-2">
+     <Switch
       id="viewed-only"
       checked={filters.is_viewed === true}
       onCheckedChange={(checked) => updateFilter('is_viewed', checked || undefined)}

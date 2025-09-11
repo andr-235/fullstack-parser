@@ -152,6 +152,7 @@ files = [
 Mako = "*"
 SQLAlchemy = ">=1.4.0"
 typing-extensions = ">=4.12"
+tzdata = {version = "*", optional = true, markers = "extra == \"tz\""}
 
 [package.extras]
 tz = ["tzdata"]
@@ -3464,4 +3465,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "08d651931bac71314f0f4d4b77a797673055ed0fd8ecafd1a2a8c0a2e093ac11"
+content-hash = "2ae6b654bb1bbf3ede16c2a39a9163e4eff21dafb17962c694768be85568888a"

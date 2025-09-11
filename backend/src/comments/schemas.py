@@ -22,6 +22,12 @@ class CommentBase(BaseModel):
     text: str = Field(..., description="Текст комментария")
     likes_count: int = Field(default=0, description="Количество лайков")
     published_at: datetime = Field(..., description="Дата публикации")
+    matched_keywords: Optional[List[str]] = Field(
+        default=None, description="Список найденных ключевых слов"
+    )
+    matched_keywords_count: Optional[int] = Field(
+        default=None, description="Количество найденных ключевых слов"
+    )
 
 
 class CommentCreate(CommentBase):

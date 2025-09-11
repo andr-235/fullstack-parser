@@ -462,7 +462,7 @@ class ParserService:
     async def start_parsing(
         self,
         group_ids: List[int],
-        max_posts: int = 100,
+        max_posts: int = 10,
         max_comments_per_post: int = 100,
         force_reparse: bool = False,
         priority: str = "normal",
@@ -732,7 +732,7 @@ class ParserService:
     async def parse_group(
         self,
         group_id: int,
-        max_posts: int = 100,
+        max_posts: int = 10,
         max_comments_per_post: int = 100,
     ) -> Dict[str, Any]:
         """

@@ -36,10 +36,8 @@ from pydantic import (
 )
 
 
-class Base(DeclarativeBase):
-    """Базовый класс для SQLAlchemy моделей"""
-
-    pass
+# Используем Base из models.py для единообразия
+from ..models import Base
 
 
 class TimestampMixin:

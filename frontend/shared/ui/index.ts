@@ -108,3 +108,5 @@ export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tool
 export { ThemeToggle } from './theme-toggle'
 export { FileUploadModal } from './file-upload-modal'
 export { Pagination, PaginationInfo } from './pagination'
+export { HighlightText } from './highlight-text'
+export { InfiniteScroll } from './infinite-scroll'

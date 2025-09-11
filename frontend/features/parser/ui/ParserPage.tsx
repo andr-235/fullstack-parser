@@ -85,7 +85,7 @@ export function ParserPage() {
             console.log('Starting parser with group:', groupId)
             const result = await startParser({
                 group_ids: [groupId],
-                max_posts: 100,
+                max_posts: 10,
                 force_reparse: false,
             })
             console.log('Parser started successfully:', result)

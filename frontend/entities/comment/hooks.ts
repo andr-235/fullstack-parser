@@ -60,9 +60,10 @@ export const useComments = (filters?: CommentFilters) => {
       if (filters?.is_viewed !== undefined) params.is_viewed = filters.is_viewed
       if (filters?.group_id) params.group_id = filters.group_id
       if (filters?.keyword_id) params.keyword_id = filters.keyword_id
+      if (filters?.has_keywords !== undefined) params.has_keywords = filters.has_keywords
 
       // Если нет фильтров, используем поиск для получения всех комментариев
-      if (!filters?.group_id && !filters?.text) {
+      if (!filters?.group_id && !filters?.text && !filters?.has_keywords) {
         params.text = '**' // Специальный запрос для получения всех комментариев
       }
 

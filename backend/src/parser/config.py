@@ -26,7 +26,7 @@ class ParserSettings(BaseSettings):
         default=3, ge=1, le=10, description="Максимум запросов в секунду"
     )
     max_posts_per_request: int = Field(
-        default=100, ge=1, le=1000, description="Максимум постов за запрос"
+        default=10, ge=1, le=1000, description="Максимум постов за запрос"
     )
     max_comments_per_request: int = Field(
         default=100,
@@ -46,7 +46,7 @@ class ParserSettings(BaseSettings):
 
     # Настройки парсинга по умолчанию
     default_max_posts: int = Field(
-        default=100, ge=1, le=1000, description="Максимум постов по умолчанию"
+        default=10, ge=1, le=1000, description="Максимум постов по умолчанию"
     )
     default_max_comments_per_post: int = Field(
         default=100,

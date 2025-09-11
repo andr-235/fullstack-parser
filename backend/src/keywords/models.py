@@ -23,15 +23,22 @@ class KeywordsRepository:
     def __init__(self, db: Optional[AsyncSession] = None):
         self.db = db
 
-    async def get_db(self) -> AsyncSession:
-        """Получить сессию БД"""
+    async def get_db(self):
+        """Получить сессию БД с правильным управлением"""
         if self.db:
-            return self.db
+            # Возвращаем переданную сессию как контекстный менеджер
+            from contextlib import asynccontextmanager
+
+            @asynccontextmanager
+            async def session_context():
+                yield self.db
+
+            return session_context()
         else:
-            # Создаем новую асинхронную сессию
+            # Создаем новую сессию с контекстным менеджером
             from ..database import get_db
 
-            return await get_db()
+            return get_db()
 
     async def create(self, keyword_data: Dict[str, Any]) -> int:
         """
@@ -43,8 +50,13 @@ class KeywordsRepository:
         Returns:
             int: ID созданного ключевого слова
         """
-        db = await self.get_db()
+        async with await self.get_db() as db:
+            return await self._create_with_session(db, keyword_data)
 
+    async def _create_with_session(
+        self, db: AsyncSession, keyword_data: Dict[str, Any]
+    ) -> int:
+        """Создать ключевое слово с переданной сессией"""
         # Извлекаем данные категории
         category = keyword_data.get("category")
         category_name = None
@@ -86,7 +98,13 @@ class KeywordsRepository:
         Returns:
             Optional[Dict[str, Any]]: Ключевое слово или None
         """
-        db = await self.get_db()
+        async with await self.get_db() as db:
+            return await self._find_by_id_with_session(db, keyword_id)
+
+    async def _find_by_id_with_session(
+        self, db: AsyncSession, keyword_id: int
+    ) -> Optional[Dict[str, Any]]:
+        """Найти ключевое слово по ID с переданной сессией"""
         stmt = select(Keyword).where(Keyword.id == keyword_id)
         result = await db.execute(stmt)
         keyword = result.scalar_one_or_none()
@@ -105,14 +123,14 @@ class KeywordsRepository:
         Returns:
             Optional[Dict[str, Any]]: Ключевое слово или None
         """
-        db = await self.get_db()
-        stmt = select(Keyword).where(Keyword.word == word)
-        result = await db.execute(stmt)
-        keyword = result.scalar_one_or_none()
+        async with await self.get_db() as db:
+            stmt = select(Keyword).where(Keyword.word == word)
+            result = await db.execute(stmt)
+            keyword = result.scalar_one_or_none()
 
-        if keyword:
-            return self._keyword_to_dict(keyword)
-        return None
+            if keyword:
+                return self._keyword_to_dict(keyword)
+            return None
 
     async def find_all(self) -> List[Dict[str, Any]]:
         """
@@ -121,12 +139,12 @@ class KeywordsRepository:
         Returns:
             List[Dict[str, Any]]: Список всех ключевых слов
         """
-        db = await self.get_db()
-        stmt = select(Keyword).order_by(Keyword.created_at.desc())
-        result = await db.execute(stmt)
-        results = result.scalars().all()
+        async with await self.get_db() as db:
+            stmt = select(Keyword).order_by(Keyword.created_at.desc())
+            result = await db.execute(stmt)
+            results = result.scalars().all()
 
-        return [self._keyword_to_dict(keyword) for keyword in results]
+            return [self._keyword_to_dict(keyword) for keyword in results]
 
     async def update(
         self, keyword_id: int, update_data: Dict[str, Any]
@@ -141,29 +159,29 @@ class KeywordsRepository:
         Returns:
             bool: Успешно ли обновлено
         """
-        db = await self.get_db()
-        stmt = select(Keyword).where(Keyword.id == keyword_id)
-        result = await db.execute(stmt)
-        keyword = result.scalar_one_or_none()
+        async with await self.get_db() as db:
+            stmt = select(Keyword).where(Keyword.id == keyword_id)
+            result = await db.execute(stmt)
+            keyword = result.scalar_one_or_none()
 
-        if not keyword:
-            return False
+            if not keyword:
+                return False
 
-        # Обновляем поля
-        for field, value in update_data.items():
-            if hasattr(keyword, field) and field != "updated_at":
-                setattr(keyword, field, value)
+            # Обновляем поля
+            for field, value in update_data.items():
+                if hasattr(keyword, field) and field != "updated_at":
+                    setattr(keyword, field, value)
 
-        # Обновляем время изменения через SQLAlchemy
-        update_stmt = (
-            update(Keyword)
-            .where(Keyword.id == keyword_id)
-            .values(updated_at=datetime.utcnow())
-        )
-        await db.execute(update_stmt)
+            # Обновляем время изменения через SQLAlchemy
+            update_stmt = (
+                update(Keyword)
+                .where(Keyword.id == keyword_id)
+                .values(updated_at=datetime.utcnow())
+            )
+            await db.execute(update_stmt)
 
-        await db.commit()
-        return True
+            await db.commit()
+            return True
 
     async def delete(self, keyword_id: int) -> bool:
         """
@@ -175,17 +193,17 @@ class KeywordsRepository:
         Returns:
             bool: Успешно ли удалено
         """
-        db = await self.get_db()
-        stmt = select(Keyword).where(Keyword.id == keyword_id)
-        result = await db.execute(stmt)
-        keyword = result.scalar_one_or_none()
+        async with await self.get_db() as db:
+            stmt = select(Keyword).where(Keyword.id == keyword_id)
+            result = await db.execute(stmt)
+            keyword = result.scalar_one_or_none()
 
-        if not keyword:
-            return False
+            if not keyword:
+                return False
 
-        await db.delete(keyword)
-        await db.commit()
-        return True
+            await db.delete(keyword)
+            await db.commit()
+            return True
 
     async def count(self) -> int:
         """
@@ -194,11 +212,11 @@ class KeywordsRepository:
         Returns:
             int: Количество ключевых слов
         """
-        db = await self.get_db()
-        stmt = select(func.count(Keyword.id))
-        result = await db.execute(stmt)
-        value = result.scalar()
-        return result or 0
+        async with await self.get_db() as db:
+            stmt = select(func.count(Keyword.id))
+            result = await db.execute(stmt)
+            value = result.scalar()
+            return result or 0
 
     async def exists(self, keyword_id: int) -> bool:
         """
@@ -210,11 +228,11 @@ class KeywordsRepository:
         Returns:
             bool: Существует ли ключевое слово
         """
-        db = await self.get_db()
-        stmt = select(Keyword.id).where(Keyword.id == keyword_id)
-        result = await db.execute(stmt)
-        keyword = result.scalar_one_or_none()
-        return result is not None
+        async with await self.get_db() as db:
+            stmt = select(Keyword.id).where(Keyword.id == keyword_id)
+            result = await db.execute(stmt)
+            keyword = result.scalar_one_or_none()
+            return keyword is not None
 
     async def find_by_category(
         self, category_name: str
@@ -228,12 +246,14 @@ class KeywordsRepository:
         Returns:
             List[Dict[str, Any]]: Ключевые слова в категории
         """
-        db = await self.get_db()
-        stmt = select(Keyword).where(Keyword.category_name == category_name)
-        result = await db.execute(stmt)
-        results = result.scalars().all()
+        async with await self.get_db() as db:
+            stmt = select(Keyword).where(
+                Keyword.category_name == category_name
+            )
+            result = await db.execute(stmt)
+            results = result.scalars().all()
 
-        return [self._keyword_to_dict(keyword) for keyword in results]
+            return [self._keyword_to_dict(keyword) for keyword in results]
 
     async def find_active(self) -> List[Dict[str, Any]]:
         """
@@ -242,14 +262,14 @@ class KeywordsRepository:
         Returns:
             List[Dict[str, Any]]: Активные ключевые слова
         """
-        db = await self.get_db()
-        stmt = select(Keyword).where(
-            and_(Keyword.is_active == True, Keyword.is_archived == False)
-        )
-        result = await db.execute(stmt)
-        results = result.scalars().all()
+        async with await self.get_db() as db:
+            stmt = select(Keyword).where(
+                and_(Keyword.is_active == True, Keyword.is_archived == False)
+            )
+            result = await db.execute(stmt)
+            results = result.scalars().all()
 
-        return [self._keyword_to_dict(keyword) for keyword in results]
+            return [self._keyword_to_dict(keyword) for keyword in results]
 
     def _keyword_to_dict(self, keyword: Keyword) -> Dict[str, Any]:
         """
@@ -347,45 +367,49 @@ class KeywordsRepository:
         Returns:
             Dict[str, Any]: Статистика
         """
-        db = await self.get_db()
+        async with await self.get_db() as db:
+            # Общая статистика
+            total_stmt = select(func.count(Keyword.id))
+            total_result = await db.execute(total_stmt)
+            total = total_result.scalar() or 0
 
-        # Общая статистика
-        total_stmt = select(func.count(Keyword.id))
-        total = db.execute(total_stmt).scalar() or 0
+            # Активные ключевые слова
+            active_stmt = select(func.count(Keyword.id)).where(
+                Keyword.is_active == True
+            )
+            active_result = await db.execute(active_stmt)
+            active = active_result.scalar() or 0
 
-        # Активные ключевые слова
-        active_stmt = select(func.count(Keyword.id)).where(
-            Keyword.is_active == True
-        )
-        active = db.execute(active_stmt).scalar() or 0
+            # Архивированные ключевые слова
+            archived_stmt = select(func.count(Keyword.id)).where(
+                Keyword.is_archived == True
+            )
+            archived_result = await db.execute(archived_stmt)
+            archived = archived_result.scalar() or 0
 
-        # Архивированные ключевые слова
-        archived_stmt = select(func.count(Keyword.id)).where(
-            Keyword.is_archived == True
-        )
-        archived = db.execute(archived_stmt).scalar() or 0
+            # Общее количество совпадений
+            matches_stmt = select(func.sum(Keyword.match_count))
+            matches_result = await db.execute(matches_stmt)
+            total_matches = matches_result.scalar() or 0
 
-        # Общее количество совпадений
-        matches_stmt = select(func.sum(Keyword.match_count))
-        total_matches = db.execute(matches_stmt).scalar() or 0
+            # Количество категорий
+            categories_stmt = select(
+                func.count(func.distinct(Keyword.category_name))
+            ).where(Keyword.category_name.isnot(None))
+            categories_result = await db.execute(categories_stmt)
+            total_categories = categories_result.scalar() or 0
 
-        # Количество категорий
-        categories_stmt = select(
-            func.count(func.distinct(Keyword.category_name))
-        ).where(Keyword.category_name.isnot(None))
-        total_categories = db.execute(categories_stmt).scalar() or 0
-
-        return {
-            "total_keywords": total,
-            "active_keywords": active,
-            "archived_keywords": archived,
-            "inactive_keywords": total - active,
-            "total_categories": total_categories,
-            "total_matches": total_matches,
-            "avg_matches_per_keyword": (
-                total_matches / total if total > 0 else 0
-            ),
-        }
+            return {
+                "total_keywords": total,
+                "active_keywords": active,
+                "archived_keywords": archived,
+                "inactive_keywords": total - active,
+                "total_categories": total_categories,
+                "total_matches": total_matches,
+                "avg_matches_per_keyword": (
+                    total_matches / total if total > 0 else 0
+                ),
+            }
 
     async def search(self, query: str, **filters) -> List[Dict[str, Any]]:
         """
@@ -398,21 +422,20 @@ class KeywordsRepository:
         Returns:
             List[Dict[str, Any]]: Найденные ключевые слова
         """
-        db = await self.get_db()
-
-        # Поиск по слову, описанию и категории
-        stmt = select(Keyword).where(
-            or_(
-                Keyword.word.ilike(f"%{query}%"),
-                Keyword.description.ilike(f"%{query}%"),
-                Keyword.category_name.ilike(f"%{query}%"),
-                Keyword.category_description.ilike(f"%{query}%"),
+        async with await self.get_db() as db:
+            # Поиск по слову, описанию и категории
+            stmt = select(Keyword).where(
+                or_(
+                    Keyword.word.ilike(f"%{query}%"),
+                    Keyword.description.ilike(f"%{query}%"),
+                    Keyword.category_name.ilike(f"%{query}%"),
+                    Keyword.category_description.ilike(f"%{query}%"),
+                )
             )
-        )
 
-        result = await db.execute(stmt)
-        results = result.scalars().all()
-        return [self._keyword_to_dict(keyword) for keyword in results]
+            result = await db.execute(stmt)
+            results = result.scalars().all()
+            return [self._keyword_to_dict(keyword) for keyword in results]
 
     async def clear(self) -> int:
         """
@@ -421,21 +444,22 @@ class KeywordsRepository:
         Returns:
             int: Количество удаленных ключевых слов
         """
-        db = await self.get_db()
+        async with await self.get_db() as db:
+            # Подсчитываем количество перед удалением
+            count_stmt = select(func.count(Keyword.id))
+            count_result = await db.execute(count_stmt)
+            count = count_result.scalar() or 0
 
-        # Подсчитываем количество перед удалением
-        count_stmt = select(func.count(Keyword.id))
-        count = db.execute(count_stmt).scalar() or 0
+            # Удаляем все ключевые слова
+            delete_stmt = select(Keyword)
+            delete_result = await db.execute(delete_stmt)
+            keywords_to_delete = delete_result.scalars().all()
 
-        # Удаляем все ключевые слова
-        delete_stmt = select(Keyword)
-        keywords_to_delete = db.execute(delete_stmt).scalars().all()
+            for keyword in keywords_to_delete:
+                await db.delete(keyword)
 
-        for keyword in keywords_to_delete:
-            await db.delete(keyword)
-
-        await db.commit()
-        return count
+            await db.commit()
+            return count
 
     async def get_categories(self) -> List[str]:
         """
@@ -444,13 +468,13 @@ class KeywordsRepository:
         Returns:
             List[str]: Список категорий
         """
-        db = await self.get_db()
-        stmt = select(func.distinct(Keyword.category_name)).where(
-            Keyword.category_name.isnot(None)
-        )
-        result = await db.execute(stmt)
-        results = result.scalars().all()
-        return sorted([cat for cat in results if cat])
+        async with await self.get_db() as db:
+            stmt = select(func.distinct(Keyword.category_name)).where(
+                Keyword.category_name.isnot(None)
+            )
+            result = await db.execute(stmt)
+            results = result.scalars().all()
+            return sorted([cat for cat in results if cat])
 
     async def get_categories_with_stats(self) -> List[Dict[str, Any]]:
         """
@@ -459,40 +483,41 @@ class KeywordsRepository:
         Returns:
             List[Dict[str, Any]]: Категории со статистикой
         """
-        db = await self.get_db()
-
-        # Получаем статистику по категориям
-        stmt = (
-            select(
-                Keyword.category_name,
-                func.count(Keyword.id).label("keyword_count"),
-                func.sum(
-                    func.case((Keyword.is_active == True, 1), else_=0)
-                ).label("active_count"),
-                func.sum(Keyword.match_count).label("total_matches"),
-            )
-            .where(Keyword.category_name.isnot(None))
-            .group_by(Keyword.category_name)
-        )
-
-        result = await db.execute(stmt)
-        results = result.all()
-
-        category_stats = []
-        for row in results:
-            category_stats.append(
-                {
-                    "category_name": row.category_name,
-                    "keyword_count": row.keyword_count,
-                    "active_count": row.active_count,
-                    "total_matches": row.total_matches or 0,
-                }
+        async with await self.get_db() as db:
+            # Получаем статистику по категориям
+            stmt = (
+                select(
+                    Keyword.category_name,
+                    func.count(Keyword.id).label("keyword_count"),
+                    func.sum(
+                        func.case((Keyword.is_active == True, 1), else_=0)
+                    ).label("active_count"),
+                    func.sum(Keyword.match_count).label("total_matches"),
+                )
+                .where(Keyword.category_name.isnot(None))
+                .group_by(Keyword.category_name)
             )
 
-        return category_stats
+            result = await db.execute(stmt)
+            results = result.all()
+
+            category_stats = []
+            for row in results:
+                category_stats.append(
+                    {
+                        "category_name": row.category_name,
+                        "keyword_count": row.keyword_count,
+                        "active_count": row.active_count,
+                        "total_matches": row.total_matches or 0,
+                    }
+                )
+
+            return category_stats
 
 
 # Функции для создания репозитория
+
+
 async def get_keywords_repository(
     db: Optional[AsyncSession] = None,
 ) -> KeywordsRepository:

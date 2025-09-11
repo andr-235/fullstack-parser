@@ -138,7 +138,7 @@ export function GroupsPage() {
       onSuccess={handleRefresh}
       apiParams={{
        is_active: true,
-       max_posts_to_check: 100,
+       max_posts_to_check: 10,
       }}
      />
 

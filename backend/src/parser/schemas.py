@@ -54,12 +54,12 @@ class ParseRequest(BaseParserModel):
     max_posts: Annotated[
         Optional[int],
         Field(
-            default=100,
+            default=10,
             ge=1,
             le=1000,
             description="Максимум постов для обработки",
         ),
-    ] = 100
+    ] = 10
     max_comments_per_post: Annotated[
         Optional[int],
         Field(
@@ -158,7 +158,7 @@ class ParseRequest(BaseParserModel):
     def validate_limits(self) -> "ParseRequest":
         """Валидация лимитов и общего объема данных."""
         group_count = len(self.group_ids)
-        max_posts = self.max_posts or 100
+        max_posts = self.max_posts or 10
         max_comments_per_post = self.max_comments_per_post or 100
 
         # Импортируем настройки для получения лимитов

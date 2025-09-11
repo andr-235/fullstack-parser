@@ -9,7 +9,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .service import KeywordsService
-from .models import KeywordsRepository, get_keywords_repository
+from .models import KeywordsRepository
 from ..database import get_db_session
 
 

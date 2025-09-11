@@ -16,6 +16,7 @@ ENV POETRY_HOME=/opt/poetry \
  POETRY_VIRTUALENVS_IN_PROJECT=true \
  POETRY_NO_INTERACTION=1
 
+# Install Poetry using pip
 RUN pip install --no-cache-dir poetry==1.8.3
 
 # Set working directory
@@ -24,12 +25,8 @@ WORKDIR /app
 # Copy Poetry configuration files
 COPY pyproject.toml poetry.lock ./
 
-# Configure Poetry to create virtual environment in project
-RUN poetry config virtualenvs.create true
-RUN poetry config virtualenvs.in-project true
-
 # Install dependencies and create virtual environment
-RUN poetry install --only=main --no-dev
+RUN poetry install --only=main --no-root
 
 # Production stage
 FROM python:3.11-slim AS runtime

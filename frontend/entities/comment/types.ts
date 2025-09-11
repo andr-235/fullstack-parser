@@ -48,6 +48,7 @@ export interface CommentFilters {
   date_from?: string
   date_to?: string
   is_archived?: boolean
+  has_keywords?: boolean // Фильтр для показа только комментариев с ключевыми словами
 }
 
 export interface CommentsResponse {

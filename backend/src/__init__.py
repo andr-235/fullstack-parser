@@ -1,8 +1,14 @@
 """
-VK Comments Parser - FastAPI Application
-Структура проекта в соответствии с fastapi-best-practices
+VK Parser Backend
+
+FastAPI backend для парсинга комментариев VK
 """
 
-__version__ = "1.7.0"
-__author__ = "Andrey"
-__description__ = "Enterprise-grade VK Comments Parser с DDD архитектурой"
+# Импортируем все модели для регистрации в metadata
+from .models import *
+from .parser.models import ParsingTaskModel
+
+# Экспортируем Base для использования в других модулях
+from .models import Base
+
+__all__ = ["Base"]

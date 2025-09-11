@@ -18,6 +18,7 @@ from sqlalchemy import (
     Boolean,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from ..models import Post as BasePost
 from ..database import get_db_session
@@ -43,6 +44,16 @@ class PostRepository:
     async def get_by_vk_id(self, vk_post_id: int) -> Optional[BasePost]:
         """Получить пост по VK ID"""
         query = select(BasePost).where(BasePost.vk_id == vk_post_id)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_by_vk_id_and_group_id(
+        self, vk_post_id: int, group_id: int
+    ) -> Optional[BasePost]:
+        """Получить пост по VK ID и ID группы"""
+        query = select(BasePost).where(
+            and_(BasePost.vk_id == vk_post_id, BasePost.group_id == group_id)
+        )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
@@ -102,6 +113,66 @@ class PostRepository:
         await self.db.commit()
         await self.db.refresh(post)
         return post
+
+    async def upsert(self, post_data: Dict[str, Any]) -> BasePost:
+        """
+        Создать или обновить пост (upsert)
+
+        Использует PostgreSQL INSERT ... ON CONFLICT для атомарного upsert.
+        Если пост существует - обновляет его, иначе создает новый.
+        """
+        vk_id = post_data.get("vk_id")
+        group_id = post_data.get("group_id")
+
+        if not vk_id or not group_id:
+            raise ValueError("vk_id и group_id обязательны для upsert")
+
+        try:
+            # Сначала пытаемся создать новый пост
+            return await self.create(post_data)
+        except IntegrityError as e:
+            # Если это ошибка дублирования ключа, обновляем существующий пост
+            if (
+                "unique constraint" in str(e).lower()
+                or "duplicate key" in str(e).lower()
+            ):
+                # Откатываем транзакцию после ошибки дублирования
+                await self.db.rollback()
+
+                # Получаем существующий пост
+                existing_post = await self.get_by_vk_id_and_group_id(
+                    vk_id, group_id
+                )
+                if not existing_post:
+                    # Если пост не найден, это странно, но пробрасываем ошибку
+                    raise e
+
+                # Обновляем существующий пост
+                for key, value in post_data.items():
+                    if hasattr(existing_post, key) and key not in [
+                        "id",
+                        "created_at",
+                    ]:
+                        # Пропускаем поля, которые не должны обновляться при повторном парсинге
+                        if key in ["is_parsed", "parsed_at"]:
+                            continue
+                        setattr(existing_post, key, value)
+
+                # Обновляем время изменения (updated_at обновляется автоматически)
+                await self.db.commit()
+                await self.db.refresh(existing_post)
+                return existing_post
+            else:
+                # Если это не ошибка дублирования, пробрасываем её
+                raise e
+        except SQLAlchemyError as e:
+            # Откатываем транзакцию при любой ошибке SQLAlchemy
+            await self.db.rollback()
+            raise e
+        except Exception as e:
+            # Откатываем транзакцию при любой другой ошибке
+            await self.db.rollback()
+            raise e
 
     async def update(
         self, post_id: int, update_data: Dict[str, Any]
@@ -165,7 +236,6 @@ class PostRepository:
         update_data = {
             "is_parsed": True,
             "parsed_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow(),
         }
         try:
             await self.update(post_id, update_data)
@@ -180,8 +250,7 @@ class PostRepository:
         from sqlalchemy import update
         from datetime import datetime
 
-        # Добавляем время обновления
-        update_data["updated_at"] = datetime.utcnow()
+        # Время обновления добавляется автоматически через onupdate
 
         query = (
             update(BasePost)

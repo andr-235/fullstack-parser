@@ -326,10 +326,10 @@ class VKAPIService(BaseVKAPIService):
         """
         try:
             # Получаем данные через клиент
-            # Для VK API нужно передавать отрицательный ID группы
-            vk_group_id = -abs(group_id) if group_id > 0 else group_id
+            # Для VK API groups.getById нужны положительные ID групп
+            vk_group_id = abs(group_id)
             params = {
-                "group_ids": str(vk_group_id),
+                "group_id": vk_group_id,
                 "fields": vk_api_config.group_fields,
             }
 

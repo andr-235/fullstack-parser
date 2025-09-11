@@ -8,6 +8,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, HTTPException, Request
 
 from .dependencies import get_comment_service
+from .handlers import CommentHandlers
 from .schemas import (
     CommentResponse,
     CommentListResponse,
@@ -18,11 +19,7 @@ from .schemas import (
     CommentBulkAction,
     CommentBulkResponse,
 )
-from .service import CommentService
 from ..pagination import (
-    get_pagination_params,
-    PaginationParams,
-    create_paginated_response,
     PageParam,
     SizeParam,
     SearchParam,
@@ -90,85 +87,18 @@ async def get_comments(
     ),
     search: SearchParam = None,
     # Сервисы
-    service: CommentService = Depends(get_comment_service),
+    service=Depends(get_comment_service),
 ) -> CommentListResponse:
     """Получить список комментариев с фильтрацией и пагинацией"""
-
-    pagination = PaginationParams(
+    handlers = CommentHandlers(service)
+    return await handlers.get_comments(
         page=page,
         size=size,
+        group_id=group_id,
+        post_id=post_id,
+        is_viewed=is_viewed,
+        is_archived=is_archived,
         search=search,
-    )
-
-    # Определяем тип запроса
-    if post_id:
-        # Комментарии к конкретному посту
-        comments = await service.get_comments_by_post(
-            post_id=post_id,
-            limit=pagination.limit,
-            offset=pagination.offset,
-            is_viewed=is_viewed,
-            is_archived=is_archived,
-        )
-        # Получаем общее количество комментариев к посту
-        total = await service.repository.count_by_post(
-            post_id=post_id, is_viewed=is_viewed, is_archived=is_archived
-        )
-
-    elif group_id:
-        # Комментарии группы
-        comments = await service.get_comments_by_group(
-            group_id=group_id,
-            limit=pagination.limit,
-            offset=pagination.offset,
-            search_text=pagination.search,
-            is_viewed=is_viewed,
-            is_archived=is_archived,
-        )
-        # Получаем общее количество для пагинации
-        total = await service.repository.count_by_group(
-            group_id=group_id,
-            search_text=pagination.search,
-            is_viewed=is_viewed,
-            is_archived=is_archived,
-        )
-
-    else:
-        # Общий поиск по всем комментариям
-        if not pagination.search:
-            raise HTTPException(
-                status_code=400,
-                detail="Необходимо указать group_id, post_id или поисковый запрос",
-            )
-
-        # Специальный запрос "**" означает получить все комментарии
-        if pagination.search == "**":
-            pagination.search = None
-
-        comments = await service.search_comments(
-            query=pagination.search or "**",  # Fallback для None
-            limit=pagination.limit,
-            offset=pagination.offset,
-            is_viewed=is_viewed,
-            is_archived=is_archived,
-        )
-        # Получаем общее количество для пагинации
-        total = await service.repository.count_all(
-            search_text=pagination.search,  # None означает все комментарии
-            is_viewed=is_viewed,
-            is_archived=is_archived,
-        )
-
-    return CommentListResponse(
-        items=[CommentResponse(**c) for c in comments],
-        total=total,
-        page=pagination.page,
-        size=pagination.size,
-        pages=(
-            (total + pagination.size - 1) // pagination.size
-            if pagination.size > 0
-            else 0
-        ),
     )
 
 
@@ -189,48 +119,24 @@ async def search_comments(
     is_archived: Optional[bool] = Query(
         None, description="Фильтр по статусу архивирования"
     ),
+    has_keywords: Optional[bool] = Query(
+        None, description="Фильтр по наличию ключевых слов"
+    ),
     page: PageParam = 1,
     size: SizeParam = 20,
-    service: CommentService = Depends(get_comment_service),
+    service=Depends(get_comment_service),
 ) -> CommentListResponse:
     """Поиск комментариев по тексту"""
-    try:
-        pagination = PaginationParams(page=page, size=size)
-        comments = await service.search_comments(
-            query=q,
-            group_id=group_id,
-            limit=pagination.limit,
-            offset=pagination.offset,
-            is_viewed=is_viewed,
-            is_archived=is_archived,
-        )
-
-        # Получаем общее количество для пагинации
-        if group_id:
-            total = await service.repository.count_by_group(
-                group_id=group_id,
-                search_text=q,
-                is_viewed=is_viewed,
-                is_archived=is_archived,
-            )
-        else:
-            total = await service.repository.count_all(
-                search_text=q, is_viewed=is_viewed, is_archived=is_archived
-            )
-        return CommentListResponse(
-            items=[CommentResponse(**c) for c in comments],
-            total=total,
-            page=pagination.page,
-            size=pagination.size,
-            pages=(
-                (total + pagination.size - 1) // pagination.size
-                if pagination.size > 0
-                else 0
-            ),
-        )
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    handlers = CommentHandlers(service)
+    return await handlers.search_comments(
+        q=q,
+        group_id=group_id,
+        is_viewed=is_viewed,
+        is_archived=is_archived,
+        has_keywords=has_keywords,
+        page=page,
+        size=size,
+    )
 
 
 @router.get(
@@ -241,14 +147,11 @@ async def search_comments(
 )
 async def get_comment(
     comment_id: int,
-    service: CommentService = Depends(get_comment_service),
+    service=Depends(get_comment_service),
 ) -> CommentResponse:
     """Получить комментарий по ID"""
-    try:
-        comment = await service.get_comment(comment_id)
-        return CommentResponse(**comment)
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    handlers = CommentHandlers(service)
+    return await handlers.get_comment(comment_id)
 
 
 @router.post(
@@ -260,14 +163,11 @@ async def get_comment(
 )
 async def create_comment(
     comment_data: CommentCreate,
-    service: CommentService = Depends(get_comment_service),
+    service=Depends(get_comment_service),
 ) -> CommentResponse:
     """Создать новый комментарий"""
-    try:
-        created = await service.create_comment(comment_data.model_dump())
-        return CommentResponse(**created)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    handlers = CommentHandlers(service)
+    return await handlers.create_comment(comment_data)
 
 
 @router.put(
@@ -279,16 +179,11 @@ async def create_comment(
 async def update_comment(
     comment_id: int,
     comment_data: CommentUpdate,
-    service: CommentService = Depends(get_comment_service),
+    service=Depends(get_comment_service),
 ) -> CommentResponse:
     """Обновить комментарий"""
-    try:
-        updated = await service.update_comment(
-            comment_id, comment_data.model_dump(exclude_unset=True)
-        )
-        return CommentResponse(**updated)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    handlers = CommentHandlers(service)
+    return await handlers.update_comment(comment_id, comment_data)
 
 
 @router.delete(
@@ -299,17 +194,11 @@ async def update_comment(
 )
 async def delete_comment(
     comment_id: int,
-    service: CommentService = Depends(get_comment_service),
+    service=Depends(get_comment_service),
 ):
     """Удалить комментарий"""
-    try:
-        success = await service.delete_comment(comment_id)
-        if not success:
-            raise HTTPException(
-                status_code=404, detail="Комментарий не найден"
-            )
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    handlers = CommentHandlers(service)
+    await handlers.delete_comment(comment_id)
 
 
 @router.post(
@@ -320,14 +209,11 @@ async def delete_comment(
 )
 async def mark_comment_as_viewed(
     comment_id: int,
-    service: CommentService = Depends(get_comment_service),
+    service=Depends(get_comment_service),
 ) -> CommentResponse:
     """Отметить комментарий как просмотренный"""
-    try:
-        updated = await service.mark_as_viewed(comment_id)
-        return CommentResponse(**updated)
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    handlers = CommentHandlers(service)
+    return await handlers.mark_comment_as_viewed(comment_id)
 
 
 @router.post(
@@ -338,23 +224,11 @@ async def mark_comment_as_viewed(
 )
 async def bulk_mark_as_viewed(
     action_data: CommentBulkAction,
-    service: CommentService = Depends(get_comment_service),
+    service=Depends(get_comment_service),
 ) -> CommentBulkResponse:
     """Массовое отмечание комментариев как просмотренные"""
-    try:
-        if action_data.action != "view":
-            raise HTTPException(
-                status_code=400, detail="Поддерживается только действие 'view'"
-            )
-
-        result = await service.bulk_mark_as_viewed(action_data.comment_ids)
-        return CommentBulkResponse(
-            success_count=result["success_count"],
-            error_count=result["total_requested"] - result["success_count"],
-            errors=[],
-        )
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    handlers = CommentHandlers(service)
+    return await handlers.bulk_mark_as_viewed(action_data)
 
 
 @router.get(
@@ -365,14 +239,11 @@ async def bulk_mark_as_viewed(
 )
 async def get_group_stats(
     group_id: str,
-    service: CommentService = Depends(get_comment_service),
+    service=Depends(get_comment_service),
 ) -> CommentStats:
     """Получить статистику комментариев группы"""
-    try:
-        stats = await service.get_group_stats(group_id)
-        return CommentStats(**stats)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    handlers = CommentHandlers(service)
+    return await handlers.get_group_stats(group_id)
 
 
 # Celery интеграция - асинхронные задачи для комментариев

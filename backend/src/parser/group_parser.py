@@ -58,7 +58,7 @@ class GroupParser:
     async def parse_group(
         self,
         group_id: int,
-        max_posts: int = 100,
+        max_posts: int = 10,
         max_comments_per_post: int = 100,
     ) -> Dict[str, Any]:
         """
@@ -130,6 +130,9 @@ class GroupParser:
                 return self._create_error_result(
                     group_id, ["Группа не найдена"]
                 )
+
+            # Сохраняем группу в базу данных
+            await self._save_group_to_database(group_id, group_info)
 
             # Получаем посты группы
             posts = await self._get_group_posts_with_retry(group_id, max_posts)
@@ -222,6 +225,51 @@ class GroupParser:
             )
 
         return group_id
+
+    async def _save_group_to_database(
+        self, group_id: int, group_info: Dict[str, Any]
+    ) -> None:
+        """
+        Сохранить информацию о группе в базу данных
+
+        Args:
+            group_id: VK ID группы
+            group_info: Информация о группе от VK API
+        """
+        try:
+            from ..groups.models import GroupRepository
+            from ..database import get_db
+
+            # Получаем репозиторий групп
+            async with get_db() as db:
+                group_repo = GroupRepository(db)
+
+                # Проверяем, существует ли группа
+                existing_group = await group_repo.get_by_vk_id(group_id)
+                if existing_group:
+                    self._logger.debug(
+                        f"Group {group_id} already exists in database"
+                    )
+                    return
+
+                # Подготавливаем данные для сохранения
+                group_data = {
+                    "vk_id": group_id,
+                    "name": group_info.get("name", ""),
+                    "screen_name": group_info.get("screen_name", ""),
+                    "description": group_info.get("description", ""),
+                    "is_active": True,
+                }
+
+                # Сохраняем группу
+                await group_repo.create(group_data)
+                self._logger.info(f"Group {group_id} saved to database")
+
+        except Exception as e:
+            error_msg = f"Failed to save group {group_id}: {str(e)}"
+            self._logger.warning(error_msg)
+            # Пробрасываем ошибку, чтобы парсинг был прерван
+            raise Exception(error_msg)
 
     async def _get_group_info_with_retry(
         self, group_id: int
@@ -325,13 +373,8 @@ class GroupParser:
             List[Dict[str, Any]]: Список комментариев
         """
         try:
-            # Преобразуем внутренний group_id в VK ID группы
-            vk_group_id = await self._get_vk_group_id(group_id)
-            if not vk_group_id:
-                self._logger.warn(
-                    f"Не удалось найти VK ID для группы {group_id}"
-                )
-                return []
+            # Убеждаемся, что group_id - это VK ID группы
+            vk_group_id = await self._ensure_vk_group_id(group_id)
 
             result = await self._retry_vk_call(
                 self.vk_api.get_post_comments,
@@ -357,47 +400,110 @@ class GroupParser:
         Сохранить пост и комментарии в базу данных
 
         Args:
-            group_id: ID группы (внутренний ID из базы данных)
+            group_id: VK ID группы
             post: Данные поста
             comments: Список комментариев
             result: Результат для обновления
         """
         try:
             from ..posts.models import PostRepository
-            from ..comments.models import CommentRepository
+            from ..comments.repository import CommentRepository
+            from ..groups.models import GroupRepository
             from ..database import get_db
 
             # Получаем репозитории
-            db = await get_db()
-            post_repo = PostRepository(db)
-            comment_repo = CommentRepository(db)
+            async with get_db() as db:
+                post_repo = PostRepository(db)
+                comment_repo = CommentRepository(db)
+                group_repo = GroupRepository(db)
 
-            # Получаем VK ID группы для комментариев
-            vk_group_id = await self._get_vk_group_id(group_id)
+                # Убеждаемся, что group_id - это VK ID группы
+                vk_group_id = await self._ensure_vk_group_id(group_id)
 
-            # Подготавливаем данные поста
-            post_data = self._prepare_post_data(group_id, post)
+                # Получаем внутренний ID группы из базы данных
+                group = await group_repo.get_by_vk_id(vk_group_id)
+                if not group:
+                    error_msg = f"Группа с VK ID {vk_group_id} не найдена в базе данных"
+                    result["errors"].append(error_msg)
+                    self._logger.warn(error_msg)
+                    return
 
-            # Сохраняем пост
-            await post_repo.create(post_data)
-            result["posts_saved"] = 1
+                # Получаем ID группы (mypy требует явного приведения типа)
+                internal_group_id = int(group.id)
 
-            # Сохраняем комментарии
-            if comments:
-                for comment_data in comments:
-                    try:
-                        comment_to_save = self._prepare_comment_data(
-                            group_id, post["id"], comment_data, vk_group_id
-                        )
-                        # Пропускаем комментарии с пустым текстом
-                        if comment_to_save is None:
-                            continue
-                        await comment_repo.create(comment_to_save)
-                        result["comments_saved"] += 1
-                    except Exception as e:
-                        error_msg = f"Ошибка сохранения комментария {comment_data.get('id')}: {str(e)}"
-                        result["errors"].append(error_msg)
-                        self._logger.warn(error_msg)
+                # Подготавливаем данные поста
+                post_data = self._prepare_post_data(
+                    int(internal_group_id), post
+                )
+
+                # Сохраняем пост (используем upsert для избежания дублирования)
+                await post_repo.upsert(post_data)
+                result["posts_saved"] = 1
+
+                # Сохраняем комментарии
+                if comments:
+                    # Импортируем зависимости для авторов
+                    from ..authors.application.services import AuthorService
+                    from ..authors.infrastructure.repositories import AuthorRepository
+
+                    author_repo = AuthorRepository(db)
+                    author_service = AuthorService(author_repo)
+
+                    for comment_data in comments:
+                        try:
+                            comment_to_save = self._prepare_comment_data(  # type: ignore
+                                internal_group_id,
+                                post["id"],
+                                comment_data,
+                                vk_group_id,
+                            )
+                            # Пропускаем комментарии с пустым текстом
+                            if comment_to_save is None:
+                                continue
+
+                            # Создаем или получаем автора перед сохранением комментария
+                            author_id = comment_to_save.get("author_id")
+                            if author_id:
+                                author_name = comment_to_save.get(
+                                    "author_name"
+                                )
+                                author_screen_name = comment_to_save.get(
+                                    "author_screen_name"
+                                )
+                                author_photo_url = comment_to_save.get(
+                                    "author_photo_url"
+                                )
+
+                                await author_service.get_or_create_author(
+                                    vk_id=author_id,
+                                    author_name=(
+                                        author_name
+                                        if isinstance(author_name, str)
+                                        else None
+                                    ),
+                                    author_screen_name=(
+                                        author_screen_name
+                                        if isinstance(author_screen_name, str)
+                                        else None
+                                    ),
+                                    author_photo_url=(
+                                        author_photo_url
+                                        if isinstance(author_photo_url, str)
+                                        else None
+                                    ),
+                                )
+
+                            await comment_repo.upsert(comment_to_save)
+                            result["comments_saved"] += 1
+                        except Exception as e:
+                            error_msg = f"Ошибка сохранения комментария {comment_data.get('id')}: {str(e)}"
+                            result["errors"].append(error_msg)
+                            self._logger.warn(error_msg)
+                            # Откатываем транзакцию после ошибки
+                            try:
+                                await db.rollback()
+                            except Exception as rollback_error:
+                                self._logger.error(f"Ошибка при rollback: {rollback_error}")
 
         except Exception as e:
             error_msg = f"Ошибка сохранения поста {post['id']}: {str(e)}"
@@ -417,11 +523,28 @@ class GroupParser:
         Returns:
             Dict[str, Any]: Данные для сохранения
         """
+        # Валидация обязательных полей
+        vk_id = post.get("id")
+        if not vk_id:
+            raise ValueError(f"Пост без vk_id: {post}")
+
+        # Обрабатываем дату публикации
+        post_date = post.get("date")
+        if post_date is None or post_date == 0:
+            # Если дата отсутствует, используем текущее время
+            published_at = datetime.utcnow()
+        else:
+            try:
+                published_at = datetime.fromtimestamp(post_date)
+            except (ValueError, OSError) as e:
+                self._logger.warn(f"Неверная дата поста {vk_id}: {post_date}, используем текущее время")
+                published_at = datetime.utcnow()
+
         return {
-            "vk_id": post["id"],
+            "vk_id": vk_id,
             "group_id": group_id,
             "text": post.get("text", ""),
-            "published_at": datetime.fromtimestamp(post.get("date", 0)),
+            "published_at": published_at,
             "vk_owner_id": post.get("owner_id", 0),
             "likes_count": post.get("likes", {}).get("count", 0),
             "reposts_count": post.get("reposts", {}).get("count", 0),
@@ -452,20 +575,43 @@ class GroupParser:
         Returns:
             Optional[Dict[str, Any]]: Данные для сохранения или None для пустых комментариев
         """
+        # Валидация обязательных полей
+        vk_id = comment.get("id")
+        if not vk_id:
+            self._logger.warn(f"Комментарий без vk_id пропущен: {comment}")
+            return None
+
         # Пропускаем комментарии с пустым текстом
         text = comment.get("text", "").strip()
         if not text:
             return None  # Возвращаем None для пустых комментариев
 
+        # Обрабатываем дату публикации комментария
+        comment_date = comment.get("date")
+        if comment_date is None or comment_date == 0:
+            # Если дата отсутствует, используем текущее время
+            published_at = datetime.utcnow()
+        else:
+            try:
+                published_at = datetime.fromtimestamp(comment_date)
+            except (ValueError, OSError) as e:
+                self._logger.warn(f"Неверная дата комментария {vk_id}: {comment_date}, используем текущее время")
+                published_at = datetime.utcnow()
+
+        # Валидация author_id
+        author_id = comment.get("from_id", 0)
+        if not author_id or author_id == 0:
+            self._logger.warn(f"Комментарий {vk_id} без валидного author_id: {author_id}")
+            return None
+
         return {
-            "vk_id": comment.get("id"),
+            "vk_id": vk_id,
             "text": text,
             "post_id": post_id,
-            "author_id": comment.get("from_id", 0),
-            "published_at": datetime.fromtimestamp(comment.get("date", 0)),
+            "author_id": author_id,
+            "published_at": published_at,
             "post_vk_id": post_id,
-            "group_vk_id": vk_group_id
-            or group_id,  # Используем VK ID если передан
+            "group_vk_id": vk_group_id,
             "author_name": str(comment.get("from_id", "")),
             "likes_count": comment.get("likes", {}).get("count", 0),
             "parent_comment_id": comment.get("reply_to_comment"),

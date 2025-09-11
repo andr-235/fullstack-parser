@@ -9,7 +9,21 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, func
+from sqlalchemy.orm import Mapped, mapped_column
+
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import MetaData
+
+# Единая конвенция для именования индексов и ключей
+metadata = MetaData(
+    naming_convention={
+        "ix": "ix_%(column_0_label)s",
+        "uq": "uq_%(table_name)s_%(column_0_name)s",
+        "ck": "ck_%(table_name)s_%(constraint_name)s",
+        "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+        "pk": "pk_%(table_name)s",
+    }
+)
 
 
 class Base(DeclarativeBase):
@@ -19,7 +33,7 @@ class Base(DeclarativeBase):
     воспринимал базовый класс как тип, без необходимости аннотации Any.
     """
 
-    pass
+    metadata = metadata
 
 
 class BaseModel(Base):
@@ -81,32 +95,58 @@ class Group(BaseModel):
 
     __tablename__ = "vk_groups"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    vk_id = Column(Integer, unique=True, index=True, nullable=False)
-    screen_name = Column(String(255), nullable=True)
-    name = Column(String(500), nullable=False)
-    description = Column(Text, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, index=True, autoincrement=True
+    )
+    vk_id: Mapped[int] = mapped_column(
+        Integer, unique=True, index=True, nullable=False
+    )
+    screen_name: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True
+    )
+    name: Mapped[str] = mapped_column(String(500), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default="now()", nullable=False
     )
-    updated_at = Column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default="now()", nullable=False
     )
-    max_posts_to_check = Column(Integer, default=100)
-    auto_monitoring_enabled = Column(Boolean, default=False, nullable=False)
-    monitoring_interval_minutes = Column(Integer, default=60)
-    next_monitoring_at = Column(DateTime(timezone=True), nullable=True)
-    monitoring_priority = Column(Integer, default=5)
-    last_parsed_at = Column(DateTime(timezone=True), nullable=True)
-    total_posts_parsed = Column(Integer, default=0)
-    total_comments_found = Column(Integer, default=0)
-    monitoring_runs_count = Column(Integer, default=0)
-    last_monitoring_success = Column(DateTime(timezone=True), nullable=True)
-    last_monitoring_error = Column(Text, nullable=True)
-    members_count = Column(Integer, nullable=True)
-    is_closed = Column(Boolean, default=False, nullable=False)
-    photo_url = Column(String(500), nullable=True)
+    max_posts_to_check: Mapped[int] = mapped_column(Integer, default=10)
+    auto_monitoring_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    monitoring_interval_minutes: Mapped[int] = mapped_column(
+        Integer, default=60
+    )
+    next_monitoring_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    monitoring_priority: Mapped[int] = mapped_column(Integer, default=5)
+    last_parsed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    total_posts_parsed: Mapped[int] = mapped_column(Integer, default=0)
+    total_comments_found: Mapped[int] = mapped_column(Integer, default=0)
+    monitoring_runs_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_monitoring_success: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_monitoring_error: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True
+    )
+    members_count: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
+    is_closed: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    photo_url: Mapped[Optional[str]] = mapped_column(
+        String(500), nullable=True
+    )
 
 
 class Keyword(BaseModel):
@@ -132,41 +172,6 @@ class Keyword(BaseModel):
     )
 
 
-class Comment(BaseModel):
-    """Модель комментария"""
-
-    __tablename__ = "vk_comments"
-
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    vk_id = Column(Integer, unique=True, index=True, nullable=False)
-    text = Column(Text, nullable=False)
-    post_id = Column(Integer, index=True, nullable=False)
-    author_id = Column(Integer, index=True, nullable=False)
-    is_archived = Column(Boolean, default=False, nullable=False)
-    is_viewed = Column(Boolean, default=False, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default="now()", nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True), server_default="now()", nullable=False
-    )
-    published_at = Column(DateTime(timezone=True), nullable=False)
-    post_vk_id = Column(Integer, nullable=True)
-    group_vk_id = Column(Integer, nullable=True, index=True)
-    author_name = Column(String(200), nullable=True)
-    author_screen_name = Column(String(100), nullable=True)
-    author_photo_url = Column(String(500), nullable=True)
-    likes_count = Column(Integer, default=0)
-    parent_comment_id = Column(Integer, index=True, nullable=True)
-    has_attachments = Column(Boolean, default=False, nullable=False)
-    attachments_info = Column(Text, nullable=True)
-    is_processed = Column(Boolean, default=False, nullable=False)
-    processed_at = Column(DateTime(timezone=True), nullable=True)
-    matched_keywords_count = Column(Integer, default=0, nullable=False)
-    viewed_at = Column(DateTime(timezone=True), nullable=True)
-    archived_at = Column(DateTime(timezone=True), nullable=True)
-
-
 class Post(BaseModel):
     """Модель поста VK"""
 
@@ -182,7 +187,7 @@ class Post(BaseModel):
     updated_at = Column(
         DateTime(timezone=True), server_default="now()", nullable=False
     )
-    published_at = Column(DateTime(timezone=True), nullable=False)
+    published_at = Column(DateTime(timezone=True), nullable=True)
     vk_owner_id = Column(Integer, default=0, nullable=False)
     likes_count = Column(Integer, default=0)
     reposts_count = Column(Integer, default=0)
@@ -209,17 +214,6 @@ class ErrorReport(BaseModel):
     resolved = Column(Integer, default=0, nullable=False)
 
 
-class CommentKeywordMatch(BaseModel):
-    """Модель соответствия комментария ключевому слову"""
-
-    __tablename__ = "comment_keyword_matches"
-
-    comment_id = Column(Integer, index=True, nullable=False)
-    keyword_id = Column(Integer, index=True, nullable=False)
-    group_id = Column(Integer, index=True, nullable=False)
-    matched_at = Column(DateTime(timezone=True), server_default=func.now())
-
-
 # Импорт всех моделей для Alembic
 __all__ = [
     "Base",
@@ -227,8 +221,6 @@ __all__ = [
     "User",
     "Group",
     "Keyword",
-    "Comment",
     "Post",
     "ErrorReport",
-    "CommentKeywordMatch",
 ]

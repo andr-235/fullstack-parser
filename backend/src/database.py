@@ -16,28 +16,11 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
     AsyncEngine,
 )
-from sqlalchemy.orm import DeclarativeBase
 
 from .config import config_service
 
-
-# Единая конвенция для именования индексов и ключей
-metadata = MetaData(
-    naming_convention={
-        "ix": "ix_%(column_0_label)s",
-        "uq": "uq_%(table_name)s_%(column_0_name)s",
-        "ck": "ck_%(table_name)s_%(constraint_name)s",
-        "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-        "pk": "pk_%(table_name)s",
-    }
-)
-
-
-# Base class для моделей
-class Base(DeclarativeBase):
-    """Базовый класс для всех моделей SQLAlchemy."""
-
-    metadata = metadata
+# Импортируем Base из models.py для единообразия
+from .models import Base
 
 
 class DatabaseService:
@@ -269,9 +252,11 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-async def get_db() -> AsyncSession:
-    """Получить сессию БД для использования в сервисах"""
-    return database_service.session_maker()
+@asynccontextmanager
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Получить сессию БД для использования в сервисах (контекстный менеджер)"""
+    async with database_service.get_session() as session:
+        yield session
 
 
 def get_sync_db_session():
