@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/shared/ui/button";
 import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
 import { ResetPasswordForm } from "@/features/auth";
 
@@ -21,6 +24,18 @@ export default function ResetPasswordPage() {
       {/* Основной контент с размытием */}
       <div className="relative w-full max-w-md">
         <div className="backdrop-blur-xl bg-white/10 rounded-2xl shadow-2xl border border-white/20 p-8">
+          <div className="mb-6">
+            <Link href="/login">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Назад к входу
+              </Button>
+            </Link>
+          </div>
           <ResetPasswordForm />
         </div>
       </div>
