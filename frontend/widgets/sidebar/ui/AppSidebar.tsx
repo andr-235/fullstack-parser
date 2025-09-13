@@ -7,7 +7,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/shared/ui/sidebar";
+} from "./custom/Sidebar";
 import { GlassSidebar } from "@/shared/ui/glass-card/GlassSidebar";
 import { NavMain } from "./NavMain";
 import { NavUser } from "./NavUser";

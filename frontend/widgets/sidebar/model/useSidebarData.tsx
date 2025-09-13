@@ -11,7 +11,7 @@ import {
   FileText,
   Settings,
 } from "lucide-react";
-import { Badge } from "@/shared/ui/badge";
+import { Badge } from "../ui/custom/Badge";
 import { useNavigation } from "@/shared/contexts/NavigationContext";
 import { useSidebarStore } from "./sidebar-store";
 import type { SidebarData, SidebarStats } from "./types";
