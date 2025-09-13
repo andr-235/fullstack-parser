@@ -6,6 +6,8 @@ import { httpClient } from "@/shared/lib/http-client";
 import type {
   LoginRequest,
   LoginResponse,
+  RegisterRequest,
+  RegisterResponse,
   RefreshTokenRequest,
   RefreshTokenResponse,
   ChangePasswordRequest,
@@ -17,6 +19,13 @@ import type {
 } from "../model/types";
 
 export const authApi = {
+  /**
+   * Регистрация нового пользователя
+   */
+  async register(data: RegisterRequest): Promise<RegisterResponse> {
+    return httpClient.post<RegisterResponse>("/auth/register", data);
+  },
+
   /**
    * Вход в систему
    */

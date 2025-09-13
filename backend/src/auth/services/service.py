@@ -21,6 +21,8 @@ from ..schemas import (
     LoginResponse,
     RefreshTokenRequest,
     RefreshTokenResponse,
+    RegisterRequest,
+    RegisterResponse,
     ResetPasswordConfirmRequest,
     ResetPasswordRequest,
 )
@@ -55,6 +57,72 @@ class AuthService:
             async for db_session in get_db_session():
                 return UserRepository(db_session)
         return self.user_repository
+
+    async def register(self, request: RegisterRequest) -> RegisterResponse:
+        """Регистрация нового пользователя"""
+        user_repository = await self._get_user_repository()
+        
+        # Проверяем, существует ли пользователь
+        existing_user = await user_repository.get_by_email(request.email)
+        if existing_user:
+            from user.exceptions import UserAlreadyExistsError
+            raise UserAlreadyExistsError(request.email)
+
+        # Хешируем пароль
+        hashed_password = await self.password_service.hash_password(request.password)
+
+        # Создаем пользователя
+        from user.models import User
+        user = User(
+            email=request.email,
+            full_name=request.full_name,
+            hashed_password=hashed_password,
+            status="active",
+            is_superuser=False,
+            email_verified=False
+        )
+
+        # Сохраняем в БД
+        user = await user_repository.create(user)
+
+        # Создаем токены
+        token_data = {
+            "sub": str(user.id),
+            "email": user.email,
+            "is_superuser": user.is_superuser
+        }
+
+        access_token = await self.jwt_service.create_access_token(token_data)
+        refresh_token = await self.jwt_service.create_refresh_token(token_data)
+
+        # Кэшируем данные пользователя
+        if self.cache_service:
+            cache_key = f"user:{user.id}"
+            user_data = {
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "is_active": user.status == "active"
+            }
+            await self.cache_service.set(cache_key, user_data, ttl=self.config.user_cache_ttl_seconds)
+
+        # Логируем событие
+        if self.task_service:
+            await self.task_service.log_security_event(
+                "user_registered", str(user.id), {"email": user.email}
+            )
+
+        return RegisterResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_in=self.config.access_token_expire_minutes * 60,
+            user={
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "is_superuser": user.is_superuser
+            }
+        )
 
     async def login(self, request: LoginRequest) -> LoginResponse:
         """Вход в систему"""

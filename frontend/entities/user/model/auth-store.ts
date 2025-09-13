@@ -4,7 +4,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User, LoginRequest, AuthError } from "./types";
+import type { User, LoginRequest, RegisterRequest, AuthError } from "./types";
 import { authApi } from "../api";
 
 interface AuthState {
@@ -17,6 +17,7 @@ interface AuthState {
   error: AuthError | null;
 
   // Действия
+  register: (data: RegisterRequest) => Promise<void>;
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => void;
   refreshAccessToken: () => Promise<void>;
@@ -37,6 +38,32 @@ export const useAuthStore = create<AuthState>()(
       error: null,
 
       // Действия
+      register: async (data: RegisterRequest) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          const response = await authApi.register(data);
+          
+          set({
+            accessToken: response.access_token,
+            refreshToken: response.refresh_token,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+            user: response.user,
+          });
+        } catch (error: any) {
+          set({
+            error: {
+              message: error.message || "Ошибка регистрации",
+              status: error.status,
+            },
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
       login: async (credentials: LoginRequest) => {
         set({ isLoading: true, error: null });
 
@@ -49,10 +76,8 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
             error: null,
+            user: response.user,
           });
-
-          // Получаем информацию о пользователе
-          await get().setUser(await authApi.getCurrentUser());
         } catch (error: any) {
           set({
             error: {

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from user.exceptions import UserInactiveError
+from user.exceptions import UserInactiveError, UserAlreadyExistsError
 
 from .dependencies import get_auth_service, get_current_user
 from .exceptions import (
@@ -21,6 +21,8 @@ from .schemas import (
     LogoutRequest,
     RefreshTokenRequest,
     RefreshTokenResponse,
+    RegisterRequest,
+    RegisterResponse,
     ResetPasswordConfirmRequest,
     ResetPasswordRequest,
     SuccessResponse,
@@ -31,6 +33,23 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 # Rate limiting - используем глобальный limiter из main.py
 limiter = Limiter(key_func=get_remote_address)
+
+
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("3/minute")
+async def register(
+    request: Request,
+    register_data: RegisterRequest,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Регистрация нового пользователя"""
+    try:
+        return await auth_service.register(register_data)
+    except UserAlreadyExistsError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exists"
+        )
 
 
 @router.post("/login", response_model=LoginResponse)

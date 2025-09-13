@@ -56,6 +56,22 @@ class LogoutRequest(BaseModel):
     refresh_token: Optional[str] = None
 
 
+class RegisterRequest(BaseModel):
+    """Схема для регистрации"""
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+    full_name: str = Field(..., min_length=2, max_length=100)
+
+
+class RegisterResponse(BaseModel):
+    """Схема ответа при успешной регистрации"""
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    user: Dict[str, Any]
+
+
 class SuccessResponse(BaseModel):
     """Схема успешного ответа"""
     success: bool = True
