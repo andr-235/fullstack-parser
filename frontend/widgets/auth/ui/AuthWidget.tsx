@@ -4,6 +4,13 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { LoginForm, RegisterForm, ChangePasswordForm, ResetPasswordForm } from "@/features/auth";
 
+const TABS = [
+  { value: "login", label: "Вход", component: LoginForm },
+  { value: "register", label: "Регистрация", component: RegisterForm },
+  { value: "change-password", label: "Смена пароля", component: ChangePasswordForm },
+  { value: "reset-password", label: "Сброс пароля", component: ResetPasswordForm },
+] as const;
+
 export const AuthWidget = () => {
   const [activeTab, setActiveTab] = useState("login");
 
@@ -24,47 +31,25 @@ export const AuthWidget = () => {
         <div className="backdrop-blur-xl bg-white/10 rounded-2xl shadow-2xl border border-white/20 p-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="flex w-full bg-white/10 backdrop-blur-sm border border-white/20 gap-2 p-2 justify-between">
-              <TabsTrigger 
-                value="login" 
-                className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors rounded-md px-2 py-1 text-xs"
-              >
-                Вход
-              </TabsTrigger>
-              <TabsTrigger 
-                value="register"
-                className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors rounded-md px-2 py-1 text-xs"
-              >
-                Регистрация
-              </TabsTrigger>
-              <TabsTrigger 
-                value="change-password"
-                className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors rounded-md px-2 py-1 text-xs"
-              >
-                Смена пароля
-              </TabsTrigger>
-              <TabsTrigger 
-                value="reset-password"
-                className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors rounded-md px-2 py-1 text-xs"
-              >
-                Сброс пароля
-              </TabsTrigger>
+              {TABS.map((tab) => (
+                <TabsTrigger 
+                  key={tab.value}
+                  value={tab.value} 
+                  className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors rounded-md px-2 py-1 text-xs"
+                >
+                  {tab.label}
+                </TabsTrigger>
+              ))}
             </TabsList>
             
-            <TabsContent value="login" className="mt-10">
-              <LoginForm />
-            </TabsContent>
-            
-            <TabsContent value="register" className="mt-10">
-              <RegisterForm />
-            </TabsContent>
-            
-            <TabsContent value="change-password" className="mt-10">
-              <ChangePasswordForm />
-            </TabsContent>
-            
-            <TabsContent value="reset-password" className="mt-10">
-              <ResetPasswordForm />
-            </TabsContent>
+            {TABS.map((tab) => {
+              const Component = tab.component;
+              return (
+                <TabsContent key={tab.value} value={tab.value} className="mt-10">
+                  <Component />
+                </TabsContent>
+              );
+            })}
           </Tabs>
         </div>
       </div>
