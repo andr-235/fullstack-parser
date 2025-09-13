@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from "react";
 
 import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
+import { GlassCard } from "@/shared/ui/glass-card";
 
 interface DashboardStats {
   totalComments: number;
@@ -66,11 +67,8 @@ export default function DashboardPage() {
     icon: string;
     color: string;
   }) => (
-    <div className="group relative overflow-hidden rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 p-6 transition-all duration-300 hover:bg-white/15 hover:scale-105 hover:shadow-2xl">
-      {/* Декоративный градиент */}
-      <div className={`absolute inset-0 opacity-20 ${color} rounded-2xl`} />
-      
-      <div className="relative z-10">
+    <div className="group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+      <div className="relative z-10 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className={`p-3 rounded-xl ${color} bg-opacity-20`}>
@@ -132,93 +130,105 @@ export default function DashboardPage() {
         
         {/* Статистические карточки */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-          <StatCard
-            title="Всего комментариев"
-            value={stats.totalComments}
-            growth={stats.commentsGrowth}
-            icon="💬"
-            color="bg-blue-500"
-          />
+          <GlassCard maxWidth="sm" className="!min-h-0 !py-0">
+            <StatCard
+              title="Всего комментариев"
+              value={stats.totalComments}
+              growth={stats.commentsGrowth}
+              icon="💬"
+              color="bg-blue-500"
+            />
+          </GlassCard>
           
-          <StatCard
-            title="Активных групп"
-            value={stats.activeGroups}
-            growth={stats.groupsGrowth}
-            icon="👥"
-            color="bg-green-500"
-          />
+          <GlassCard maxWidth="sm" className="!min-h-0 !py-0">
+            <StatCard
+              title="Активных групп"
+              value={stats.activeGroups}
+              growth={stats.groupsGrowth}
+              icon="👥"
+              color="bg-green-500"
+            />
+          </GlassCard>
           
-          <StatCard
-            title="Ключевых слов"
-            value={stats.keywords}
-            growth={stats.keywordsGrowth}
-            icon="🔍"
-            color="bg-purple-500"
-          />
+          <GlassCard maxWidth="sm" className="!min-h-0 !py-0">
+            <StatCard
+              title="Ключевых слов"
+              value={stats.keywords}
+              growth={stats.keywordsGrowth}
+              icon="🔍"
+              color="bg-purple-500"
+            />
+          </GlassCard>
           
-          <StatCard
-            title="Активных парсеров"
-            value={stats.activeParsers}
-            growth={stats.parsersGrowth}
-            icon="⚙️"
-            color="bg-orange-500"
-          />
+          <GlassCard maxWidth="sm" className="!min-h-0 !py-0">
+            <StatCard
+              title="Активных парсеров"
+              value={stats.activeParsers}
+              growth={stats.parsersGrowth}
+              icon="⚙️"
+              color="bg-orange-500"
+            />
+          </GlassCard>
         </div>
 
         {/* Дополнительная информация */}
         <div className="grid gap-6 md:grid-cols-2 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
           {/* Быстрые действия */}
-          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-6">
-            <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
-              <span className="mr-2">🚀</span>
-              Быстрые действия
-            </h3>
-            <div className="space-y-3">
-              <button className="w-full text-left p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors duration-200 flex items-center justify-between group">
-                <span className="text-white/80 group-hover:text-white">Добавить новую группу</span>
-                <span className="text-white/40 group-hover:text-white/60">→</span>
-              </button>
-              <button className="w-full text-left p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors duration-200 flex items-center justify-between group">
-                <span className="text-white/80 group-hover:text-white">Настроить ключевые слова</span>
-                <span className="text-white/40 group-hover:text-white/60">→</span>
-              </button>
-              <button className="w-full text-left p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors duration-200 flex items-center justify-between group">
-                <span className="text-white/80 group-hover:text-white">Запустить парсер</span>
-                <span className="text-white/40 group-hover:text-white/60">→</span>
-              </button>
+          <GlassCard maxWidth="lg" className="!min-h-0 !py-0">
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
+                <span className="mr-2">🚀</span>
+                Быстрые действия
+              </h3>
+              <div className="space-y-3">
+                <button className="w-full text-left p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors duration-200 flex items-center justify-between group">
+                  <span className="text-white/80 group-hover:text-white">Добавить новую группу</span>
+                  <span className="text-white/40 group-hover:text-white/60">→</span>
+                </button>
+                <button className="w-full text-left p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors duration-200 flex items-center justify-between group">
+                  <span className="text-white/80 group-hover:text-white">Настроить ключевые слова</span>
+                  <span className="text-white/40 group-hover:text-white/60">→</span>
+                </button>
+                <button className="w-full text-left p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors duration-200 flex items-center justify-between group">
+                  <span className="text-white/80 group-hover:text-white">Запустить парсер</span>
+                  <span className="text-white/40 group-hover:text-white/60">→</span>
+                </button>
+              </div>
             </div>
-          </div>
+          </GlassCard>
 
           {/* Последняя активность */}
-          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-6">
-            <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
-              <span className="mr-2">📊</span>
-              Последняя активность
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/5">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <div className="flex-1">
-                  <p className="text-sm text-white/80">Парсер запущен</p>
-                  <p className="text-xs text-white/60">2 минуты назад</p>
+          <GlassCard maxWidth="lg" className="!min-h-0 !py-0">
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
+                <span className="mr-2">📊</span>
+                Последняя активность
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/5">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <div className="flex-1">
+                    <p className="text-sm text-white/80">Парсер запущен</p>
+                    <p className="text-xs text-white/60">2 минуты назад</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/5">
-                <div className="w-2 h-2 bg-blue-400 rounded-full" />
-                <div className="flex-1">
-                  <p className="text-sm text-white/80">Новые комментарии найдены</p>
-                  <p className="text-xs text-white/60">15 минут назад</p>
+                <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/5">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full" />
+                  <div className="flex-1">
+                    <p className="text-sm text-white/80">Новые комментарии найдены</p>
+                    <p className="text-xs text-white/60">15 минут назад</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/5">
-                <div className="w-2 h-2 bg-yellow-400 rounded-full" />
-                <div className="flex-1">
-                  <p className="text-sm text-white/80">Обновлены ключевые слова</p>
-                  <p className="text-xs text-white/60">1 час назад</p>
+                <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/5">
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full" />
+                  <div className="flex-1">
+                    <p className="text-sm text-white/80">Обновлены ключевые слова</p>
+                    <p className="text-xs text-white/60">1 час назад</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </GlassCard>
         </div>
       </div>
     </div>
