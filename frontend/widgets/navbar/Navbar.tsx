@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState } from 'react'
 
-import { Bell, Search } from 'lucide-react'
+import { Bell, Search, Menu, Sun, Moon, X } from 'lucide-react'
 
 interface NavbarProps {
   notificationCount?: number
@@ -28,6 +28,8 @@ const PAGE_TRANSLATIONS: Record<string, string> = {
 
 export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
   const pathname = usePathname()
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(false)
 
   const breadcrumbs = useMemo((): BreadcrumbItem[] => {
     const segments = pathname.split('/').filter(Boolean)
@@ -45,78 +47,144 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
     })
   }, [pathname])
 
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode)
+    // Здесь можно добавить логику переключения темы
+  }
+
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-      <div className="flex items-center gap-2 px-4">
-        <button 
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9 -ml-1"
-          aria-label="Toggle sidebar"
-        >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        
-        <div className="h-4 w-px bg-border mr-2" />
-        
-        <nav className="flex items-center space-x-1 text-sm">
-          {breadcrumbs.map((breadcrumb, index) => (
-            <div key={breadcrumb.href} className="flex items-center">
-              {index > 0 && (
-                <svg className="h-4 w-4 mx-1 text-muted-foreground hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              )}
-              <div className="hidden md:block">
-                {breadcrumb.isLast ? (
-                  <span className="font-medium text-foreground">{breadcrumb.label}</span>
-                ) : (
-                  <Link 
-                    href={breadcrumb.href}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {breadcrumb.label}
-                  </Link>
-                )}
+    <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Left section */}
+          <div className="flex items-center space-x-4">
+            {/* Mobile menu button */}
+            <button 
+              className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 lg:hidden"
+              aria-label="Toggle sidebar"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            
+            {/* Logo/Brand */}
+            <div className="flex items-center">
+              <div className="h-8 w-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">A</span>
+              </div>
+              <span className="ml-2 text-xl font-semibold text-gray-900 dark:text-white hidden sm:block">
+                Analytics
+              </span>
+            </div>
+            
+            {/* Breadcrumbs */}
+            <nav className="hidden lg:flex items-center space-x-1 text-sm">
+              {breadcrumbs.map((breadcrumb, index) => (
+                <div key={breadcrumb.href} className="flex items-center">
+                  {index > 0 && (
+                    <svg className="h-4 w-4 mx-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  )}
+                  {breadcrumb.isLast ? (
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {breadcrumb.label}
+                    </span>
+                  ) : (
+                    <Link 
+                      href={breadcrumb.href}
+                      className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors duration-200"
+                    >
+                      {breadcrumb.label}
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </nav>
+          </div>
+
+          {/* Right section */}
+          <div className="flex items-center space-x-2">
+            {/* Search */}
+            <div className="relative hidden md:block">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input 
+                  type="search" 
+                  placeholder="Поиск..." 
+                  className="w-64 lg:w-80 pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
               </div>
             </div>
-          ))}
-        </nav>
-      </div>
 
-      <div className="ml-auto flex items-center gap-2 px-4">
-        {/* Search */}
-        <div className="relative hidden md:block">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <input 
-            type="search" 
-            placeholder="Поиск..." 
-            className="flex h-9 w-[200px] lg:w-[300px] rounded-md border border-input bg-background px-3 py-1 pl-8 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-          />
+            {/* Mobile search button */}
+            <button 
+              className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 md:hidden"
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              aria-label="Search"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+
+            {/* Theme toggle */}
+            <button 
+              className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-colors duration-200"
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+            >
+              {isDarkMode ? (
+                <Sun className="h-5 w-5" data-testid="sun-icon" />
+              ) : (
+                <Moon className="h-5 w-5" data-testid="moon-icon" />
+              )}
+            </button>
+
+            {/* Notifications */}
+            <button 
+              className="relative p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-colors duration-200"
+              aria-label="Notifications"
+            >
+              <Bell className="h-5 w-5" />
+              {notificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-medium min-w-[20px]">
+                  {notificationCount > 99 ? '99+' : notificationCount}
+                </span>
+              )}
+            </button>
+
+            {/* User menu placeholder */}
+            <div className="ml-2">
+              <button className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200">
+                <div className="h-8 w-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">U</span>
+                </div>
+                <span className="hidden lg:block text-sm font-medium text-gray-900 dark:text-white">
+                  Пользователь
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Theme Toggle */}
-        <button 
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9"
-          aria-label="Toggle theme"
-        >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-        </button>
-
-        {/* Notifications */}
-        <button 
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 w-9 relative"
-          aria-label="Notifications"
-        >
-          <Bell className="h-4 w-4" />
-          {notificationCount > 0 && (
-            <span className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-medium">
-              {notificationCount > 99 ? '99+' : notificationCount}
-            </span>
-          )}
-        </button>
+        {/* Mobile search */}
+        {isSearchOpen && (
+          <div className="md:hidden py-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input 
+                type="search" 
+                placeholder="Поиск..." 
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoFocus
+              />
+              <button 
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                onClick={() => setIsSearchOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   )
