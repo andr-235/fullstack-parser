@@ -3,7 +3,7 @@
 import { useRouteAccess } from '@/shared/hooks/useRouteAccess'
 import { SidebarInset, SidebarProvider } from '@/shared/ui/sidebar'
 import { AppNavbar } from '../navbar/AppNavbar'
-import { AppSidebar } from '../sidebar/AppSidebar'
+import { AppSidebar } from '../sidebar'
 
 interface AppLayoutProps {
   children: React.ReactNode

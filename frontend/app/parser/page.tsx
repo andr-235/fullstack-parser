@@ -1,5 +1,4 @@
 import { ParserPage } from '@/features/parser'
-import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
 
 export default function ParserRoute() {
   return <ParserPage />

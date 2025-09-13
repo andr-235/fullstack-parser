@@ -57,7 +57,7 @@ class AuthService:
             # Создаем сессию напрямую
             session_factory = get_session_factory()
             db_session = session_factory()
-            return UserRepository(db_session)
+            return UserRepository(db_session)вс
         return self.user_repository
 
     async def register(self, request: RegisterRequest) -> RegisterResponse:

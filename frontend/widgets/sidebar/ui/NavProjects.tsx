@@ -1,17 +1,22 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-
-import { Folder, Forward, MoreHorizontal, Trash2, type LucideIcon } from 'lucide-react'
-
+import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Folder,
+  Forward,
+  MoreHorizontal,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu'
+} from "@/shared/ui/dropdown-menu";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -20,30 +25,29 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from '@/shared/ui/sidebar'
+} from "@/shared/ui/sidebar";
+import { Project } from "../model/types";
+import { useProjectActions } from "../model/useProjectActions";
 
-export function NavProjects({
-  projects,
-}: {
-  projects: {
-    name: string
-    url: string
-    icon: LucideIcon
-  }[]
-}) {
-  const { isMobile } = useSidebar()
-  const pathname = usePathname()
+export interface NavProjectsProps {
+  projects: Project[];
+}
+
+export const NavProjects: React.FC<NavProjectsProps> = ({ projects }) => {
+  const { isMobile } = useSidebar();
+  const pathname = usePathname();
+  const { handleViewProject, handleShareProject, handleDeleteProject } = useProjectActions();
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Инструменты</SidebarGroupLabel>
       <SidebarMenu>
-        {projects.map(item => (
-          <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton asChild isActive={pathname === item.url}>
-              <Link href={item.url}>
-                <item.icon />
-                <span>{item.name}</span>
+        {projects.map((project) => (
+          <SidebarMenuItem key={project.id}>
+            <SidebarMenuButton asChild isActive={pathname === project.url}>
+              <Link href={project.url}>
+                <project.icon />
+                <span>{project.name}</span>
               </Link>
             </SidebarMenuButton>
             <DropdownMenu>
@@ -55,20 +59,20 @@ export function NavProjects({
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="w-48 rounded-lg"
-                side={isMobile ? 'bottom' : 'right'}
-                align={isMobile ? 'end' : 'start'}
+                side={isMobile ? "bottom" : "right"}
+                align={isMobile ? "end" : "start"}
               >
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleViewProject(project.id)}>
                   <Folder className="text-muted-foreground" />
                   <span>Просмотреть проект</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShareProject(project.id)}>
                   <Forward className="text-muted-foreground" />
                   <span>Поделиться проектом</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleDeleteProject(project.id)}>
                   <Trash2 className="text-muted-foreground" />
                   <span>Удалить проект</span>
                 </DropdownMenuItem>
@@ -78,5 +82,5 @@ export function NavProjects({
         ))}
       </SidebarMenu>
     </SidebarGroup>
-  )
-}
+  );
+};

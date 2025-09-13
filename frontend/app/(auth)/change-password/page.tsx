@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
+
 import { ChangePasswordPage as ChangePasswordPageWidget } from "@/widgets/auth";
 
 export default function ChangePasswordPage() {

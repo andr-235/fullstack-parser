@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
+
 import { UserProfile } from "@/features/auth";
 
 // Отключаем статическую генерацию для приватных страниц

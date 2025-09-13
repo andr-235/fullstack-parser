@@ -4,6 +4,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
+
 import { CommentsPage as CommentsPageComponent } from '@/features/comments'
 
 export default function CommentsPage() {

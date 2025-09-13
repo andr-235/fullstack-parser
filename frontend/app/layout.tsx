@@ -7,6 +7,7 @@ import './globals.css'
 
 import { APP_CONFIG } from '@/shared/config'
 import { AppProviders } from '@/shared/providers/AppProviders'
+
 import { AppLayout } from '@/widgets/layout/AppLayout'
 
 const inter = Inter({ subsets: ['latin'] })

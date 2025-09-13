@@ -4,6 +4,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
+
 import { KeywordsPage as KeywordsPageComponent } from '@/features/keywords'
 
 export default function KeywordsPage() {

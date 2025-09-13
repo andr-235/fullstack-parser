@@ -17,6 +17,16 @@ services:
       redis:
         condition: service_started
     environment:
+      # Database
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-vk_parser}
+      
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+      REDIS_CACHE_URL: redis://redis:6379/0
+      REDIS_CELERY_URL: redis://redis:6379/1
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      
       # Production settings
       DEBUG: "false"
       LOG_LEVEL: "WARNING"
@@ -173,6 +183,11 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
+      # Database credentials
+      POSTGRES_DB: ${POSTGRES_DB:-vk_parser}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      
       # Production PostgreSQL settings
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C --data-checksums"
     command: >

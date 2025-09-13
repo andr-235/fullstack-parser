@@ -1,9 +1,7 @@
-'use client'
+"use client";
 
-import * as React from 'react'
-
-import { ChevronsUpDown, Plus } from 'lucide-react'
-
+import * as React from "react";
+import { ChevronsUpDown, Plus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,20 +10,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu'
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/shared/ui/sidebar'
+} from "@/shared/ui/dropdown-menu";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/shared/ui/sidebar";
+import { Team } from "../model/types";
 
-export function TeamSwitcher({
-  teams,
-}: {
-  teams: {
-    name: string
-    logo: React.ElementType
-    plan: string
-  }[]
-}) {
-  const { isMobile } = useSidebar()
-  const [activeTeam, setActiveTeam] = React.useState(teams[0]!)
+export interface TeamSwitcherProps {
+  teams: Team[];
+}
+
+export const TeamSwitcher: React.FC<TeamSwitcherProps> = ({ teams }) => {
+  const { isMobile } = useSidebar();
+  const [activeTeam, setActiveTeam] = React.useState<Team>(teams[0]!);
+
+  const handleTeamSelect = React.useCallback((team: Team) => {
+    setActiveTeam(team);
+  }, []);
 
   return (
     <SidebarMenu>
@@ -49,14 +53,16 @@ export function TeamSwitcher({
           <DropdownMenuContent
             className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
             align="start"
-            side={isMobile ? 'bottom' : 'right'}
+            side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <DropdownMenuLabel className="text-xs text-muted-foreground">Команды</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              Команды
+            </DropdownMenuLabel>
             {teams.map((team, index) => (
               <DropdownMenuItem
-                key={team.name}
-                onClick={() => setActiveTeam(team)}
+                key={team.id}
+                onClick={() => handleTeamSelect(team)}
                 className="gap-2 p-2"
               >
                 <div className="flex size-6 items-center justify-center rounded-sm border">
@@ -71,11 +77,13 @@ export function TeamSwitcher({
               <div className="flex size-6 items-center justify-center rounded-md border bg-background">
                 <Plus className="size-4" />
               </div>
-              <div className="font-medium text-muted-foreground">Добавить команду</div>
+              <div className="font-medium text-muted-foreground">
+                Добавить команду
+              </div>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  )
-}
+  );
+};
