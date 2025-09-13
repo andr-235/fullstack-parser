@@ -3,7 +3,7 @@
 # =============================================================================
 
 # Build stage - optimized for dependency installation
-FROM python:3.11-slim AS builder
+FROM python:3.13-slim AS builder
 
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -37,7 +37,7 @@ RUN poetry install --only=main --no-root \
 # =============================================================================
 # Production stage - minimal runtime image
 # =============================================================================
-FROM python:3.11-slim AS runtime
+FROM python:3.13-slim AS runtime
 
 # Install only runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
