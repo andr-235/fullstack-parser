@@ -1,9 +1,10 @@
-import { CommentsPage } from '@/features/comments'
+"use client";
 
-export default function CommentsRoute() {
-  return <CommentsPage />
+import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
+import { CommentsPage as CommentsPageComponent } from '@/features/comments'
+
+export default function CommentsPage() {
+  useRouteAccess(); // Проверяем доступ к приватной странице
+  
+  return <CommentsPageComponent />
 }
-
-// Force cache invalidation
-export const dynamic = 'force-dynamic'
-export const revalidate = 0

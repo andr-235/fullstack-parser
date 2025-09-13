@@ -1,9 +1,10 @@
-import { KeywordsPage } from '@/features/keywords'
+"use client";
 
-export default function KeywordsRoute() {
-  return <KeywordsPage />
+import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
+import { KeywordsPage as KeywordsPageComponent } from '@/features/keywords'
+
+export default function KeywordsPage() {
+  useRouteAccess(); // Проверяем доступ к приватной странице
+  
+  return <KeywordsPageComponent />
 }
-
-// Force cache invalidation
-export const dynamic = 'force-dynamic'
-export const revalidate = 0

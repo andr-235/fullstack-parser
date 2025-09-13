@@ -1,15 +1,21 @@
 "use client";
 
-import { UserProfile } from "@/features/auth";
+  useRouteAccess(); // Проверяем доступ к приватной странице
+import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
 
-import { ProtectedRoute } from "@/widgets/auth";
+import { UserProfile } from "@/features/auth";
 
 export default function ProfilePage() {
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <UserProfile />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Профиль пользователя</h1>
+        <p className="text-muted-foreground">
+          Управление настройками аккаунта
+        </p>
       </div>
-    </ProtectedRoute>
+      
+      <UserProfile />
+    </div>
   );
 }

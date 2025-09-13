@@ -1,9 +1,10 @@
-import { GroupsPage } from '@/features/groups'
+"use client";
 
-export default function GroupsRoute() {
-  return <GroupsPage />
+import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
+import { GroupsPage as GroupsPageComponent } from '@/features/groups'
+
+export default function GroupsPage() {
+  useRouteAccess(); // Проверяем доступ к приватной странице
+  
+  return <GroupsPageComponent />
 }
-
-// Force cache invalidation
-export const dynamic = 'force-dynamic'
-export const revalidate = 0

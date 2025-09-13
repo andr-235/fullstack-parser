@@ -1,27 +1,10 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
+import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
 
-
-import { useRouter } from 'next/navigation'
-
-
-
-import { useAuth } from '@/features/auth/hooks'
-
-export default function MainRoute() {
-  const router = useRouter()
-  const { isAuthenticated, isLoading } = useAuth()
-
-  useEffect(() => {
-    if (!isLoading) {
-      if (isAuthenticated) {
-        router.replace('/dashboard')
-      } else {
-        router.replace('/login')
-      }
-    }
-  }, [isAuthenticated, isLoading, router])
-
-  return null
+export default function RootPage() {
+  // useRouteAccess автоматически перенаправит на нужную страницу
+  useRouteAccess();
+  
+  return null;
 }
