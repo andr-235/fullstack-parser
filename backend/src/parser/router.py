@@ -1,7 +1,5 @@
 """
 FastAPI роутер для модуля Parser
-
-Определяет API эндпоинты для управления парсингом VK данных
 """
 
 import logging
@@ -22,9 +20,7 @@ from parser.schemas import (
     StopParseRequest,
     StopParseResponse,
 )
-from parser.service import ParserService
 
-# Настройка логирования
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
@@ -34,7 +30,6 @@ router = APIRouter(
         404: {"description": "Задача не найдена"},
         422: {"description": "Ошибка валидации данных"},
         500: {"description": "Внутренняя ошибка сервера"},
-        503: {"description": "Сервис недоступен"},
     },
 )
 
@@ -48,13 +43,10 @@ router = APIRouter(
 )
 async def start_parsing(
     request: ParseRequest,
-    service: Annotated[ParserService, Depends(get_parser_service)],
+    service: Annotated[object, Depends(get_parser_service)],
 ) -> ParseResponse:
     """Запустить парсинг комментариев из групп VK"""
-    logger.info(
-        f"Starting parsing request: group_ids={request.group_ids}, "
-        f"max_posts={request.max_posts}, max_comments_per_post={request.max_comments_per_post}"
-    )
+    logger.info(f"Starting parsing request: group_ids={request.group_ids}")
 
     try:
         task_id = await service.start_parsing(
@@ -74,16 +66,10 @@ async def start_parsing(
         )
 
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(e),
-        )
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
         logger.error(f"Failed to start parsing: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Внутренняя ошибка сервера",
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Внутренняя ошибка сервера")
 
 
 @router.get(
@@ -94,15 +80,12 @@ async def start_parsing(
 )
 async def get_task_status(
     task_id: str,
-    service: Annotated[ParserService, Depends(get_parser_service)],
+    service: Annotated[object, Depends(get_parser_service)],
 ) -> ParseStatus:
     """Получить статус задачи парсинга"""
     task = await service.get_task_status(task_id)
     if not task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Задача {task_id} не найдена",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Задача {task_id} не найдена")
 
     return ParseStatus(
         task_id=task.task_id,
@@ -128,7 +111,7 @@ async def get_task_status(
     description="Получить список всех задач парсинга",
 )
 async def get_tasks(
-    service: Annotated[ParserService, Depends(get_parser_service)],
+    service: Annotated[object, Depends(get_parser_service)],
 ) -> ParseTaskListResponse:
     """Получить список всех задач"""
     tasks = await service.get_all_tasks()
@@ -158,11 +141,10 @@ async def get_tasks(
 )
 async def stop_parsing(
     request: StopParseRequest,
-    service: Annotated[ParserService, Depends(get_parser_service)],
+    service: Annotated[object, Depends(get_parser_service)],
 ) -> StopParseResponse:
     """Остановить парсинг"""
     if request.task_id:
-        # Остановить конкретную задачу
         success = await service.stop_parsing(request.task_id)
         if success:
             return StopParseResponse(
@@ -175,7 +157,6 @@ async def stop_parsing(
                 detail=f"Задача {request.task_id} не найдена или уже завершена",
             )
     else:
-        # Остановить все задачи (не реализовано в упрощенной версии)
         return StopParseResponse(
             stopped_tasks=[],
             message="Остановка всех задач не поддерживается",
@@ -189,7 +170,7 @@ async def stop_parsing(
     description="Получить статистику работы парсера",
 )
 async def get_stats(
-    service: Annotated[ParserService, Depends(get_parser_service)],
+    service: Annotated[object, Depends(get_parser_service)],
 ) -> ParseStats:
     """Получить статистику парсера"""
     stats = await service.get_stats()
@@ -210,7 +191,7 @@ async def get_stats(
     description="Получить общее состояние парсера",
 )
 async def get_parser_state(
-    service: Annotated[ParserService, Depends(get_parser_service)],
+    service: Annotated[object, Depends(get_parser_service)],
 ) -> ParserState:
     """Получить состояние парсера"""
     stats = await service.get_stats()
@@ -219,7 +200,7 @@ async def get_parser_state(
         is_running=stats["running_tasks"] > 0,
         active_tasks=stats["running_tasks"],
         total_tasks_processed=stats["total_tasks"],
-        total_posts_found=0,  # Не реализовано в упрощенной версии
-        total_comments_found=0,  # Не реализовано в упрощенной версии
-        last_activity=None,  # Не реализовано в упрощенной версии
+        total_posts_found=0,
+        total_comments_found=0,
+        last_activity=None,
     )

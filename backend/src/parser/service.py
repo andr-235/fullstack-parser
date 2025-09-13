@@ -1,7 +1,5 @@
 """
 Сервис для работы с парсингом VK данных
-
-Упрощенный сервис с объединенными компонентами
 """
 
 import asyncio
@@ -36,14 +34,12 @@ class ParserService:
     ) -> str:
         """Запустить парсинг групп"""
         try:
-            # Валидация входных данных
             if not group_ids:
                 raise ValueError("group_ids не может быть пустым")
 
             if len(group_ids) > parser_settings.max_group_ids_per_request:
                 raise ValueError(f"Слишком много групп: {len(group_ids)} > {parser_settings.max_group_ids_per_request}")
 
-            # Создаем задачу
             task_id = str(uuid4())
             task = ParsingTask(
                 task_id=task_id,
@@ -59,8 +55,6 @@ class ParserService:
             )
 
             self.tasks[task_id] = task
-
-            # Запускаем парсинг асинхронно
             asyncio.create_task(self._run_parsing(task_id))
 
             self._logger.info(f"Started parsing task {task_id} for {len(group_ids)} groups")
@@ -99,7 +93,6 @@ class ParserService:
             return
 
         try:
-            # Обновляем статус на RUNNING
             task.status = TaskStatus.RUNNING
             task.started_at = datetime.utcnow()
 
@@ -107,26 +100,22 @@ class ParserService:
             total_comments = 0
             errors = []
 
-            # Парсим каждую группу
             for i, group_id in enumerate(task.group_ids):
                 try:
                     self._logger.info(f"Parsing group {group_id} ({i+1}/{len(task.group_ids)})")
 
-                    # Парсим группу
                     result = await self.group_parser.parse_group(
                         group_id=group_id,
                         max_posts=task.config.get("max_posts", 10),
                         max_comments_per_post=task.config.get("max_comments_per_post", 100),
                     )
 
-                    # Обновляем статистику
                     posts_found = result.get("posts_found", 0)
                     comments_found = result.get("comments_found", 0)
 
                     total_posts += posts_found
                     total_comments += comments_found
 
-                    # Обновляем прогресс
                     progress = int(((i + 1) / len(task.group_ids)) * 100)
                     task.progress = progress
                     task.groups_completed = i + 1
@@ -134,16 +123,13 @@ class ParserService:
                     task.posts_found = total_posts
                     task.comments_found = total_comments
 
-                    self._logger.info(
-                        f"Group {group_id} parsed: {posts_found} posts, {comments_found} comments"
-                    )
+                    self._logger.info(f"Group {group_id} parsed: {posts_found} posts, {comments_found} comments")
 
                 except Exception as e:
                     error_msg = f"Error parsing group {group_id}: {str(e)}"
                     errors.append(error_msg)
                     self._logger.error(error_msg)
 
-            # Завершаем задачу
             if errors:
                 task.status = TaskStatus.FAILED
                 task.errors = errors
@@ -159,9 +145,7 @@ class ParserService:
                 "errors": errors,
             }
 
-            self._logger.info(
-                f"Completed parsing task {task_id}: {total_posts} posts, {total_comments} comments"
-            )
+            self._logger.info(f"Completed parsing task {task_id}: {total_posts} posts, {total_comments} comments")
 
         except Exception as e:
             self._logger.error(f"Failed to parse task {task_id}: {str(e)}")
