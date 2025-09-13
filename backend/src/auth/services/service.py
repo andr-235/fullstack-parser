@@ -2,11 +2,16 @@
 Сервис аутентификации
 """
 
+from datetime import datetime
 from typing import Any, Optional
 
-from user.models import User
 from common.logging import get_logger
-from user.exceptions import UserNotFoundError
+from user.exceptions import (
+    UserAlreadyExistsError,
+    UserInactiveError,
+    UserNotFoundError,
+)
+from user.models import User
 
 from ..config import AuthConfig
 from ..exceptions import (
@@ -14,7 +19,6 @@ from ..exceptions import (
     InvalidTokenError,
     TokenExpiredError,
 )
-from user.exceptions import UserInactiveError
 from ..schemas import (
     ChangePasswordRequest,
     LoginRequest,
@@ -27,15 +31,25 @@ from ..schemas import (
     ResetPasswordRequest,
 )
 
+# Константы
+USER_STATUS_ACTIVE = "active"
+TOKEN_TYPE_PASSWORD_RESET = "password_reset"
+SECURITY_EVENT_USER_REGISTERED = "user_registered"
+SECURITY_EVENT_USER_LOGIN = "user_login"
+SECURITY_EVENT_PASSWORD_CHANGED = "password_changed"
+SECURITY_EVENT_PASSWORD_RESET_REQUESTED = "password_reset_requested"
+SECURITY_EVENT_PASSWORD_RESET_COMPLETED = "password_reset_completed"
+SECURITY_EVENT_USER_LOGOUT = "user_logout"
+
 
 class AuthService:
     """Сервис аутентификации"""
 
     def __init__(
         self,
-        user_repository,
-        password_service,
-        jwt_service,
+        user_repository: Any,
+        password_service: Any,
+        jwt_service: Any,
         cache_service: Optional[Any] = None,
         task_service: Optional[Any] = None,
         config: Optional[AuthConfig] = None
@@ -53,28 +67,27 @@ class AuthService:
         if self.user_repository is None:
             from common.database import get_session_factory
             from user.repository import UserRepository
-            
+
             # Создаем сессию напрямую
             session_factory = get_session_factory()
             db_session = session_factory()
-            return UserRepository(db_session)вс
+            return UserRepository(db_session)
         return self.user_repository
 
     async def register(self, request: RegisterRequest) -> RegisterResponse:
         """Регистрация нового пользователя"""
         from common.database import get_session_factory
         from user.repository import UserRepository
-        
+
         session_factory = get_session_factory()
         async with session_factory() as db_session:
             try:
                 self.logger.info(f"Starting registration for email: {request.email}")
                 user_repository = UserRepository(db_session)
-                
+
                 # Проверяем, существует ли пользователь
                 existing_user = await user_repository.get_by_email(request.email)
                 if existing_user:
-                    from user.exceptions import UserAlreadyExistsError
                     raise UserAlreadyExistsError(request.email)
 
                 # Хешируем пароль
@@ -85,12 +98,12 @@ class AuthService:
                     "email": request.email,
                     "full_name": request.full_name,
                     "hashed_password": hashed_password,
-                    "status": "active",
+                    "status": USER_STATUS_ACTIVE,
                     "is_superuser": False,
                     "email_verified": False
                 }
 
-                self.logger.info(f"Creating user with data: {user_data}")
+                self.logger.info(f"Creating user for email: {request.email}")
                 # Сохраняем в БД
                 user = await user_repository.create(user_data)
                 await db_session.commit()
@@ -117,14 +130,14 @@ class AuthService:
                     "id": user.id,
                     "email": user.email,
                     "full_name": user.full_name,
-                    "is_active": user.status == "active"
+                    "is_active": user.status == USER_STATUS_ACTIVE
                 }
                 await self.cache_service.set(cache_key, user_data)
 
             # Логируем событие
             if self.task_service:
                 await self.task_service.log_security_event(
-                    "user_registered", str(user.id), {"email": user.email}
+                    SECURITY_EVENT_USER_REGISTERED, str(user.id), {"email": user.email}
                 )
 
             return RegisterResponse(
@@ -143,7 +156,7 @@ class AuthService:
         """Вход в систему"""
         from common.database import get_session_factory
         from user.repository import UserRepository
-        
+
         # Защита от brute force
         if self.cache_service:
             attempts_key = f"login_attempts:{request.email}"
@@ -178,7 +191,7 @@ class AuthService:
                 raise InvalidCredentialsError()
 
             # Проверяем активность
-            if user.status != "active":
+            if user.status != USER_STATUS_ACTIVE:
                 raise UserInactiveError(user.id)
 
             # Сбрасываем счетчик попыток
@@ -202,12 +215,11 @@ class AuthService:
                     "id": user.id,
                     "email": user.email,
                     "full_name": user.full_name,
-                    "is_active": user.status == "active"
+                    "is_active": user.status == USER_STATUS_ACTIVE
                 }
                 await self.cache_service.set(cache_key, user_data)
 
             # Обновляем время последнего входа
-            from datetime import datetime
             user.last_login = datetime.utcnow()
             await user_repository.update(user)
             await db_session.commit()
@@ -215,7 +227,7 @@ class AuthService:
             # Логируем событие
             if self.task_service:
                 await self.task_service.log_security_event(
-                    "user_login", str(user.id), {"email": user.email}
+                    SECURITY_EVENT_USER_LOGIN, str(user.id), {"email": user.email}
                 )
 
             return LoginResponse(
@@ -247,7 +259,7 @@ class AuthService:
         """Сменить пароль"""
         from common.database import get_session_factory
         from user.repository import UserRepository
-        
+
         is_valid = await self.password_service.verify_password(
             request.current_password, user.hashed_password
         )
@@ -256,7 +268,7 @@ class AuthService:
 
         new_hashed_password = await self.password_service.hash_password(request.new_password)
         user.hashed_password = new_hashed_password
-        
+
         session_factory = get_session_factory()
         async with session_factory() as db_session:
             user_repository = UserRepository(db_session)
@@ -271,14 +283,14 @@ class AuthService:
         # Логируем событие
         if self.task_service:
             await self.task_service.log_security_event(
-                "password_changed", str(user.id), {"email": user.email}
+                SECURITY_EVENT_PASSWORD_CHANGED, str(user.id), {"email": user.email}
             )
 
     async def reset_password(self, request: ResetPasswordRequest) -> None:
         """Запросить сброс пароля"""
         from common.database import get_session_factory
         from user.repository import UserRepository
-        
+
         session_factory = get_session_factory()
         async with session_factory() as db_session:
             user_repository = UserRepository(db_session)
@@ -290,22 +302,22 @@ class AuthService:
             reset_token = await self.jwt_service.create_access_token({
                 "sub": str(user.id),
                 "email": user.email,
-                "type": "password_reset"
+                "type": TOKEN_TYPE_PASSWORD_RESET
             })
 
             if self.task_service:
                 await self.task_service.send_password_reset_email(user.email, reset_token)
                 await self.task_service.log_security_event(
-                    "password_reset_requested", str(user.id), {"email": user.email}
+                    SECURITY_EVENT_PASSWORD_RESET_REQUESTED, str(user.id), {"email": user.email}
                 )
 
     async def reset_password_confirm(self, request: ResetPasswordConfirmRequest) -> None:
         """Подтвердить сброс пароля"""
         from common.database import get_session_factory
         from user.repository import UserRepository
-        
+
         token_data = await self.jwt_service.validate_token(request.token)
-        if not token_data or token_data.get("type") != "password_reset":
+        if not token_data or token_data.get("type") != TOKEN_TYPE_PASSWORD_RESET:
             raise InvalidTokenError()
 
         user_id = token_data.get("sub")
@@ -332,7 +344,7 @@ class AuthService:
         # Логируем событие
         if self.task_service:
             await self.task_service.log_security_event(
-                "password_reset_completed", str(user.id), {"email": user.email}
+                SECURITY_EVENT_PASSWORD_RESET_COMPLETED, str(user.id), {"email": user.email}
             )
 
     async def logout(self, refresh_token: Optional[str] = None) -> None:
@@ -343,7 +355,7 @@ class AuthService:
                 token_data = await self.jwt_service.decode_token(refresh_token)
                 if token_data and self.task_service:
                     await self.task_service.log_security_event(
-                        "user_logout", token_data.get("sub", "unknown"),
+                        SECURITY_EVENT_USER_LOGOUT, token_data.get("sub", "unknown"),
                         {"email": token_data.get("email", "unknown")}
                     )
         except Exception as e:
@@ -353,7 +365,7 @@ class AuthService:
         """Валидировать токен и получить пользователя"""
         from common.database import get_session_factory
         from user.repository import UserRepository
-        
+
         try:
             token_data = await self.jwt_service.validate_token(token)
             if not token_data:
@@ -368,11 +380,21 @@ class AuthService:
                 cache_key = f"user:{user_id}"
                 cached_data = await self.cache_service.get(cache_key)
                 if cached_data:
-                    session_factory = get_session_factory()
-                    async with session_factory() as db_session:
-                        user_repository = UserRepository(db_session)
-                        user = await user_repository.get_by_id(int(user_id))
-                        return user
+                    # Возвращаем данные из кеша без обращения к БД
+                    return User(
+                        id=cached_data["id"],
+                        email=cached_data["email"],
+                        full_name=cached_data["full_name"],
+                        hashed_password="",  # Не возвращаем пароль
+                        status=cached_data["is_active"] and USER_STATUS_ACTIVE or "inactive",
+                        is_superuser=False,
+                        last_login=None,
+                        login_attempts=0,
+                        locked_until=None,
+                        email_verified=False,
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
 
             session_factory = get_session_factory()
             async with session_factory() as db_session:
