@@ -91,6 +91,7 @@ passlib = ">=1.7.4"
 python-jose = {extras = ["cryptography"], version = ">=3.5.0"}
 email-validator = ">=2.3.0"
 redis = ">=5.0.0"
+flower = ">=2.0.1"
 sentry-sdk = {extras = ["fastapi", "sqlalchemy", "redis", "celery"], version = ">=1.40.0"}
 pydantic-extra-types = {extras = ["email"], version = "^2.10.5"}
 password-validator = "^1.0"

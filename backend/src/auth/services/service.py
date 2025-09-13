@@ -5,8 +5,7 @@
 from typing import Any, Optional
 
 from common.logging import get_logger
-from user.domain.entities.user import User
-from user.domain.exceptions import UserInactiveError, UserNotFoundError
+from common.exceptions import ValidationError, NotFoundError
 
 from .config import AuthConfig
 from .exceptions import (

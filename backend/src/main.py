@@ -72,19 +72,21 @@ async def health_check():
 
 # Подключаем роутеры модулей
 try:
-    from auth.router import router as auth_router
+    # from auth.router import router as auth_router
     from authors.api import router as authors_router
     from comments.router import router as comments_router
     from groups.router import router as groups_router
     from keywords.router import router as keywords_router
     from user.routers import user_router
+    from tasks.router import router as tasks_router
 
-    app.include_router(auth_router, prefix="/api/v1", tags=["Authentication"])
+    # app.include_router(auth_router, prefix="/api/v1", tags=["Authentication"])
     app.include_router(user_router, prefix="/api/v1", tags=["Users"])
     app.include_router(comments_router, prefix="/api/v1", tags=["Comments"])
     app.include_router(groups_router, prefix="/api/v1", tags=["Groups"])
     app.include_router(keywords_router, prefix="/api/v1", tags=["Keywords Management"])
     app.include_router(authors_router, prefix="/api/v1", tags=["Authors"])
+    app.include_router(tasks_router, prefix="/api/v1", tags=["Tasks Management"])
 except ImportError as e:
     logger.warning(f"Some modules not available: {e}")
 

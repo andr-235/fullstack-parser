@@ -1,0 +1,130 @@
+# Makefile для управления Celery и Redis
+
+.PHONY: help install-deps start-redis stop-redis start-worker stop-worker start-beat stop-beat start-flower stop-flower start-all stop-all clean logs
+
+# Цвета для вывода
+GREEN=\033[0;32m
+YELLOW=\033[1;33m
+RED=\033[0;31m
+NC=\033[0m # No Color
+
+help: ## Показать справку
+	@echo "$(GREEN)Доступные команды:$(NC)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-20s$(NC) %s\n", $$1, $$2}'
+
+install-deps: ## Установить зависимости
+	@echo "$(GREEN)Устанавливаем зависимости...$(NC)"
+	poetry install
+
+start-redis: ## Запустить Redis
+	@echo "$(GREEN)Запускаем Redis...$(NC)"
+	docker-compose -f docker-compose.celery.yml up -d redis
+	@echo "$(GREEN)Redis запущен на порту 6379$(NC)"
+
+stop-redis: ## Остановить Redis
+	@echo "$(YELLOW)Останавливаем Redis...$(NC)"
+	docker-compose -f docker-compose.celery.yml stop redis
+	@echo "$(GREEN)Redis остановлен$(NC)"
+
+start-worker: ## Запустить Celery воркер
+	@echo "$(GREEN)Запускаем Celery воркер...$(NC)"
+	poetry run python scripts/start_celery_worker.py
+
+start-worker-bg: ## Запустить Celery воркер в фоне
+	@echo "$(GREEN)Запускаем Celery воркер в фоне...$(NC)"
+	nohup poetry run python scripts/start_celery_worker.py > logs/celery_worker.log 2>&1 &
+	@echo "$(GREEN)Celery воркер запущен в фоне$(NC)"
+
+stop-worker: ## Остановить Celery воркер
+	@echo "$(YELLOW)Останавливаем Celery воркер...$(NC)"
+	pkill -f "celery worker" || true
+	@echo "$(GREEN)Celery воркер остановлен$(NC)"
+
+start-beat: ## Запустить Celery Beat
+	@echo "$(GREEN)Запускаем Celery Beat...$(NC)"
+	poetry run python scripts/start_celery_beat.py
+
+start-beat-bg: ## Запустить Celery Beat в фоне
+	@echo "$(GREEN)Запускаем Celery Beat в фоне...$(NC)"
+	nohup poetry run python scripts/start_celery_beat.py > logs/celery_beat.log 2>&1 &
+	@echo "$(GREEN)Celery Beat запущен в фоне$(NC)"
+
+stop-beat: ## Остановить Celery Beat
+	@echo "$(YELLOW)Останавливаем Celery Beat...$(NC)"
+	pkill -f "celery beat" || true
+	@echo "$(GREEN)Celery Beat остановлен$(NC)"
+
+start-flower: ## Запустить Flower
+	@echo "$(GREEN)Запускаем Flower...$(NC)"
+	poetry run python scripts/start_flower.py
+
+start-flower-bg: ## Запустить Flower в фоне
+	@echo "$(GREEN)Запускаем Flower в фоне...$(NC)"
+	nohup poetry run python scripts/start_flower.py > logs/flower.log 2>&1 &
+	@echo "$(GREEN)Flower запущен в фоне на порту 5555$(NC)"
+
+stop-flower: ## Остановить Flower
+	@echo "$(YELLOW)Останавливаем Flower...$(NC)"
+	pkill -f "flower" || true
+	@echo "$(GREEN)Flower остановлен$(NC)"
+
+start-all: start-redis start-worker-bg start-beat-bg start-flower-bg ## Запустить все сервисы
+	@echo "$(GREEN)Все сервисы запущены!$(NC)"
+	@echo "$(YELLOW)Redis: localhost:6379$(NC)"
+	@echo "$(YELLOW)Flower: http://localhost:5555 (admin:admin)$(NC)"
+
+stop-all: stop-worker stop-beat stop-flower stop-redis ## Остановить все сервисы
+	@echo "$(GREEN)Все сервисы остановлены$(NC)"
+
+restart-all: stop-all start-all ## Перезапустить все сервисы
+
+status: ## Показать статус сервисов
+	@echo "$(GREEN)Статус сервисов:$(NC)"
+	@echo "$(YELLOW)Redis:$(NC)"
+	@docker-compose -f docker-compose.celery.yml ps redis || echo "$(RED)Redis не запущен$(NC)"
+	@echo "$(YELLOW)Celery воркер:$(NC)"
+	@pgrep -f "celery worker" > /dev/null && echo "$(GREEN)Запущен$(NC)" || echo "$(RED)Не запущен$(NC)"
+	@echo "$(YELLOW)Celery Beat:$(NC)"
+	@pgrep -f "celery beat" > /dev/null && echo "$(GREEN)Запущен$(NC)" || echo "$(RED)Не запущен$(NC)"
+	@echo "$(YELLOW)Flower:$(NC)"
+	@pgrep -f "flower" > /dev/null && echo "$(GREEN)Запущен$(NC)" || echo "$(RED)Не запущен$(NC)"
+
+logs: ## Показать логи
+	@echo "$(GREEN)Логи Celery воркера:$(NC)"
+	@tail -f logs/celery_worker.log 2>/dev/null || echo "$(RED)Файл логов не найден$(NC)"
+
+logs-beat: ## Показать логи Beat
+	@echo "$(GREEN)Логи Celery Beat:$(NC)"
+	@tail -f logs/celery_beat.log 2>/dev/null || echo "$(RED)Файл логов не найден$(NC)"
+
+logs-flower: ## Показать логи Flower
+	@echo "$(GREEN)Логи Flower:$(NC)"
+	@tail -f logs/flower.log 2>/dev/null || echo "$(RED)Файл логов не найден$(NC)"
+
+clean: ## Очистить логи и временные файлы
+	@echo "$(YELLOW)Очищаем логи и временные файлы...$(NC)"
+	rm -f logs/celery_*.log logs/flower.log
+	rm -f celerybeat-schedule
+	@echo "$(GREEN)Очистка завершена$(NC)"
+
+test-tasks: ## Тестировать задачи
+	@echo "$(GREEN)Тестируем задачи...$(NC)"
+	poetry run python -c "
+from src.common.tasks import health_check_task
+result = health_check_task.delay()
+print(f'Health check task ID: {result.id}')
+print(f'Result: {result.get(timeout=10)}')
+"
+
+monitor: ## Мониторинг задач
+	@echo "$(GREEN)Запускаем мониторинг...$(NC)"
+	poetry run celery -A src.common.celery_config.celery_app events
+
+purge: ## Очистить очереди
+	@echo "$(YELLOW)Очищаем очереди...$(NC)"
+	poetry run celery -A src.common.celery_config.celery_app purge -f
+	@echo "$(GREEN)Очереди очищены$(NC)"
+
+# Создаем директорию для логов
+logs:
+	mkdir -p logs
