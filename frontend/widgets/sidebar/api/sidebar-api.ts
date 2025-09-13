@@ -1,38 +1,78 @@
-// import { apiClient } from "@/shared/lib/api";
+/**
+ * API функции для sidebar
+ */
 
-// Mock API client for now
-const apiClient = {
-  get: async (url: string) => ({ data: {} }),
-  post: async (url: string, data: any) => ({ data: {} }),
-  patch: async (url: string, data: any) => ({ data: {} }),
-  delete: async (url: string) => ({ data: {} }),
-};
-import { SidebarData, SidebarStats } from "../model/types";
+import { httpClient } from "@/shared/lib/http-client";
+import type { SidebarData, SidebarStats, User, Team, Project } from "../model/types";
 
-export const fetchSidebarStats = async (): Promise<SidebarStats> => {
-  const response = await apiClient.get("/stats/sidebar");
-  return response.data;
+export const sidebarApi = {
+  /**
+   * Получить статистику для sidebar
+   */
+  async getStats(): Promise<SidebarStats> {
+    return httpClient.get<SidebarStats>("/api/v1/sidebar/stats");
+  },
+
+  /**
+   * Получить данные пользователя
+   */
+  async getUser(): Promise<User> {
+    return httpClient.get<User>("/api/v1/user/profile");
+  },
+
+  /**
+   * Получить команды пользователя
+   */
+  async getTeams(): Promise<Team[]> {
+    return httpClient.get<Team[]>("/api/v1/user/teams");
+  },
+
+  /**
+   * Получить проекты пользователя
+   */
+  async getProjects(): Promise<Project[]> {
+    return httpClient.get<Project[]>("/api/v1/user/projects");
+  },
+
+  /**
+   * Обновить профиль пользователя
+   */
+  async updateUserProfile(data: {
+    name?: string;
+    email?: string;
+    avatar?: string;
+  }): Promise<User> {
+    return httpClient.patch<User>("/api/v1/user/profile", data);
+  },
+
+  /**
+   * Переключить команду
+   */
+  async switchTeam(teamId: string): Promise<void> {
+    return httpClient.post<void>("/api/v1/user/switch-team", { teamId });
+  },
+
+  /**
+   * Создать проект
+   */
+  async createProject(data: {
+    name: string;
+    description?: string;
+  }): Promise<Project> {
+    return httpClient.post<Project>("/api/v1/projects", data);
+  },
+
+  /**
+   * Удалить проект
+   */
+  async deleteProject(projectId: string): Promise<void> {
+    return httpClient.delete<void>(`/api/v1/projects/${projectId}`);
+  },
 };
 
-export const updateUserProfile = async (data: {
-  name?: string;
-  email?: string;
-  avatar?: string;
-}): Promise<void> => {
-  await apiClient.patch("/user/profile", data);
-};
-
-export const switchTeam = async (teamId: string): Promise<void> => {
-  await apiClient.post("/user/switch-team", { teamId });
-};
-
-export const createProject = async (data: {
-  name: string;
-  description?: string;
-}): Promise<void> => {
-  await apiClient.post("/projects", data);
-};
-
-export const deleteProject = async (projectId: string): Promise<void> => {
-  await apiClient.delete(`/projects/${projectId}`);
-};
+// Экспорт для обратной совместимости
+export const fetchSidebarStats = sidebarApi.getStats;
+export const updateUserProfile = sidebarApi.updateUserProfile;
+export const switchTeam = sidebarApi.switchTeam;
+export const createProject = sidebarApi.createProject;
+export const deleteProject = sidebarApi.deleteProject;

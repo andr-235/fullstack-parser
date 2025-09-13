@@ -3,21 +3,27 @@
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
+import { useAuthStore } from "@/entities/user";
+import { useSidebarStore } from "./sidebar-store";
 
+/**
+ * Хук для действий пользователя в sidebar
+ */
 export const useUserActions = () => {
   const router = useRouter();
+  const { logout } = useAuthStore();
+  const { updateUserProfile, isLoading, error } = useSidebarStore();
 
   const handleLogout = useCallback(async () => {
     try {
-      // TODO: Implement logout API call
-      localStorage.removeItem("token");
+      await logout();
       toast.success("Вы успешно вышли из системы");
       router.push("/login");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Logout error:", error);
-      toast.error("Ошибка при выходе из системы");
+      toast.error(error.message || "Ошибка при выходе из системы");
     }
-  }, [router]);
+  }, [logout, router]);
 
   const handleUpgrade = useCallback(() => {
     toast("Функция обновления будет доступна в ближайшее время");
@@ -25,7 +31,7 @@ export const useUserActions = () => {
   }, []);
 
   const handleAccount = useCallback(() => {
-    router.push("/account");
+    router.push("/profile");
   }, [router]);
 
   const handleBilling = useCallback(() => {
@@ -36,11 +42,28 @@ export const useUserActions = () => {
     router.push("/notifications");
   }, [router]);
 
+  const handleUpdateProfile = useCallback(async (data: {
+    name?: string;
+    email?: string;
+    avatar?: string;
+  }) => {
+    try {
+      await updateUserProfile(data);
+      toast.success("Профиль успешно обновлен");
+    } catch (error: any) {
+      console.error("Update profile error:", error);
+      toast.error(error.message || "Ошибка обновления профиля");
+    }
+  }, [updateUserProfile]);
+
   return {
     handleLogout,
     handleUpgrade,
     handleAccount,
     handleBilling,
     handleNotifications,
+    handleUpdateProfile,
+    isLoading,
+    error,
   };
 };

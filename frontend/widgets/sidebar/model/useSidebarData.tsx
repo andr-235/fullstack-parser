@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   GalleryVerticalEnd,
   LayoutDashboard,
@@ -13,72 +13,87 @@ import {
 } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
 import { useNavigation } from "@/shared/contexts/NavigationContext";
-import { SidebarData, SidebarStats } from "./types";
+import { useSidebarStore } from "./sidebar-store";
+import type { SidebarData, SidebarStats } from "./types";
 
+/**
+ * Хук для работы с данными sidebar
+ */
 export const useSidebarData = (): SidebarData => {
+  const { data, isLoading, error, fetchData } = useSidebarStore();
   const { stats, activePath } = useNavigation();
 
-  const user = useMemo(
+  // Загружаем данные при монтировании
+  useEffect(() => {
+    if (!data && !isLoading) {
+      fetchData().catch(() => {
+        // Ошибка обрабатывается в store
+      });
+    }
+  }, [data, isLoading, fetchData]);
+
+  // Fallback данные для случаев ошибки или загрузки
+  const fallbackData: SidebarData = useMemo(
     () => ({
-      id: "1",
-      name: "Администратор",
-      email: "admin@vkparser.com",
-      avatar: "/avatars/admin.svg",
-      role: "admin" as const,
-      status: "active" as const,
+      user: {
+        id: "1",
+        name: "Администратор",
+        email: "admin@vkparser.com",
+        avatar: "/avatars/admin.svg",
+        role: "admin" as const,
+        status: "active" as const,
+      },
+      teams: [
+        {
+          id: "1",
+          name: "Парсер комментариев VK",
+          logo: GalleryVerticalEnd,
+          plan: "Корпоративная",
+          status: "active" as const,
+        },
+      ],
+      projects: [
+        {
+          id: "1",
+          name: "Мониторинг",
+          url: "/monitoring",
+          icon: Monitor,
+          status: "active" as const,
+          description: "Мониторинг активности групп",
+        },
+        {
+          id: "2",
+          name: "Парсер",
+          url: "/parser",
+          icon: FileText,
+          status: "active" as const,
+          description: "Парсинг комментариев",
+        },
+        {
+          id: "3",
+          name: "Настройки",
+          url: "/settings",
+          icon: Settings,
+          status: "active" as const,
+          description: "Настройки системы",
+        },
+      ],
+      navItems: [],
+      stats: {
+        comments: { new: 0, total: 0 },
+        groups: { active: 0, total: 0 },
+        keywords: { active: 0, total: 0 },
+      },
     }),
     []
   );
 
-  const teams = useMemo(
-    () => [
-      {
-        id: "1",
-        name: "Парсер комментариев VK",
-        logo: GalleryVerticalEnd,
-        plan: "Корпоративная",
-        status: "active" as const,
-      },
-    ],
-    []
-  );
+  // Используем данные из store или fallback
+  const currentData = data || fallbackData;
 
-  const projects = useMemo(
-    () => [
-      {
-        id: "1",
-        name: "Мониторинг",
-        url: "/monitoring",
-        icon: Monitor,
-        status: "active" as const,
-        description: "Мониторинг активности групп",
-      },
-      {
-        id: "2",
-        name: "Парсер",
-        url: "/parser",
-        icon: FileText,
-        status: "active" as const,
-        description: "Парсинг комментариев",
-      },
-      {
-        id: "3",
-        name: "Настройки",
-        url: "/settings",
-        icon: Settings,
-        status: "active" as const,
-        description: "Настройки системы",
-      },
-    ],
-    []
-  );
-
+  // Обновляем навигационные элементы с актуальными данными
   const navItems = useMemo(() => {
-    const statsData: SidebarStats = stats || {
-      comments: { new: 0, total: 0 },
-      groups: { active: 0, total: 0 },
-      keywords: { active: 0, total: 0 },
-    };
+    const statsData: SidebarStats = stats || currentData.stats;
 
     return [
       {
@@ -125,17 +140,11 @@ export const useSidebarData = (): SidebarData => {
         ) : undefined,
       },
     ];
-  }, [stats, activePath]);
+  }, [stats, activePath, currentData.stats]);
 
   return {
-    user,
-    teams,
-    projects,
+    ...currentData,
     navItems,
-    stats: stats || {
-      comments: { new: 0, total: 0 },
-      groups: { active: 0, total: 0 },
-      keywords: { active: 0, total: 0 },
-    },
+    stats: stats || currentData.stats,
   };
 };

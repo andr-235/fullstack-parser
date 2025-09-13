@@ -1,3 +1,4 @@
+export { sidebarApi } from "./sidebar-api";
 export {
   fetchSidebarStats,
   updateUserProfile,

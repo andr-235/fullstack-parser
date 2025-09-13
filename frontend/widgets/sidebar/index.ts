@@ -16,12 +16,16 @@ export type {
   SidebarData,
 } from "./model/types";
 
+// Store
+export { useSidebarStore } from "./model/sidebar-store";
+
 // Hooks
 export { useSidebarData } from "./model/useSidebarData";
 export { useUserActions } from "./model/useUserActions";
 export { useProjectActions } from "./model/useProjectActions";
 
 // API
+export { sidebarApi } from "./api/sidebar-api";
 export {
   fetchSidebarStats,
   updateUserProfile,

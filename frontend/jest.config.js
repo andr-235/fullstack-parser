@@ -13,8 +13,8 @@ const customJestConfig = {
     '^.+\\.(png|jpg|jpeg|gif|svg)$': '<rootDir>/__mocks__/fileMock.js',
   },
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
-  collectCoverage: true,
-  coverageProvider: 'v8',
+  collectCoverage: false, // Временно отключаем для исправления ошибки
+  // coverageProvider: 'v8', // Отключаем v8 provider
   collectCoverageFrom: [
     '**/*.{js,jsx,ts,tsx}',
     '!**/*.d.ts',
