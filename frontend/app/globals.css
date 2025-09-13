@@ -2,86 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CSS переменные для темы */
+/* Единая цветовая схема с градиентами */
 @layer base {
   :root {
-    /* Основные цвета */
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    
-    /* Primary цвета */
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    
-    /* Secondary цвета */
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    
-    /* Muted цвета */
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    
-    /* Accent цвета */
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    
-    /* Destructive цвета */
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    
-    /* Border и input */
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    
-    /* Радиус */
-    --radius: 0.5rem;
-    
-    /* Chart цвета */
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    
-    /* Sidebar цвета */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    /* Основные цвета */
+    /* Основные цвета - темная основа */
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 217.2 32.6% 17.5%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 217.2 32.6% 17.5%;
     --popover-foreground: 210 40% 98%;
     
-    /* Primary цвета */
+    /* Primary цвета - синий градиент */
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 84% 4.9%;
     
-    /* Secondary цвета */
-    --secondary: 217.2 32.6% 17.5%;
+    /* Secondary цвета - фиолетовый градиент */
+    --secondary: 262.1 83.3% 57.8%;
     --secondary-foreground: 210 40% 98%;
     
     /* Muted цвета */
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
     
-    /* Accent цвета */
-    --accent: 217.2 32.6% 17.5%;
+    /* Accent цвета - розовый градиент */
+    --accent: 330.4 81.2% 60.4%;
     --accent-foreground: 210 40% 98%;
     
     /* Destructive цвета */
@@ -91,9 +36,12 @@
     /* Border и input */
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --ring: 217.2 91.2% 59.8%;
     
-    /* Chart цвета */
+    /* Радиус */
+    --radius: 0.5rem;
+    
+    /* Chart цвета - яркие градиенты */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -108,7 +56,7 @@
     --sidebar-accent: 217.2 32.6% 17.5%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 224.3 76.3% 94.1%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -159,31 +107,26 @@
   .animate-out {
     animation: animate-out 0.2s ease-in;
   }
-}
 
-/* Анимации */
-@keyframes animate-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+  /* Градиентные утилиты */
+  .bg-gradient-main {
+    @apply bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-@keyframes animate-out {
-  from {
-    opacity: 1;
-    transform: translateY(0);
+  .bg-gradient-card {
+    @apply bg-gradient-to-br from-slate-800/80 via-slate-700/60 to-slate-900/80;
   }
-  to {
-    opacity: 0;
-    transform: translateY(-10px);
+
+  .bg-gradient-button {
+    @apply bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600;
+  }
+
+  .bg-gradient-button-hover {
+    @apply hover:from-blue-500 hover:via-purple-500 hover:to-pink-500;
   }
 }
 
+/* Простые анимации */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -196,18 +139,7 @@
 @keyframes slide-in-right {
   from {
     opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slide-in-left {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
+    transform: translateX(10px);
   }
   to {
     opacity: 1;
@@ -218,7 +150,7 @@
 @keyframes scale-in {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.98);
   }
   to {
     opacity: 1;
@@ -226,49 +158,17 @@
   }
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
-  }
-}
-
 /* Применение анимаций */
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out;
+  animation: fade-in 0.2s ease-out;
 }
 
 .animate-slide-in-right {
-  animation: slide-in-right 0.3s ease-out;
-}
-
-.animate-slide-in-left {
-  animation: slide-in-left 0.3s ease-out;
+  animation: slide-in-right 0.2s ease-out;
 }
 
 .animate-scale-in {
-  animation: scale-in 0.2s ease-out;
-}
-
-.animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s infinite;
+  animation: scale-in 0.15s ease-out;
 }
 
 /* Компоненты */
@@ -284,25 +184,29 @@
 
   /* Glass эффект */
   .glass-effect {
-    @apply bg-white/10 backdrop-blur-md border border-white/20;
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  }
-
-  .dark .glass-effect {
-    @apply bg-black/10 border-white/10;
+    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   }
 
   /* Градиенты */
   .gradient-primary {
-    @apply bg-gradient-to-r from-primary to-primary/80;
+    @apply bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500;
   }
 
   .gradient-secondary {
-    @apply bg-gradient-to-r from-secondary to-secondary/80;
+    @apply bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600;
   }
 
   .gradient-accent {
-    @apply bg-gradient-to-r from-accent to-accent/80;
+    @apply bg-gradient-to-r from-pink-500 via-red-500 to-orange-500;
+  }
+
+  .gradient-card {
+    @apply bg-gradient-to-br from-slate-800/50 via-slate-700/30 to-slate-900/50;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent;
   }
 
   /* Hover эффекты */
@@ -326,8 +230,22 @@
 
   .loading-shimmer::before {
     content: '';
-    @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent;
+    @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent;
     animation: shimmer 2s infinite;
+  }
+
+  /* Градиентные кнопки */
+  .btn-gradient {
+    @apply bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white font-medium px-6 py-3 rounded-lg transition-all duration-300;
+  }
+
+  .btn-gradient:hover {
+    @apply from-blue-500 via-purple-500 to-pink-500 shadow-lg transform scale-105;
+  }
+
+  /* Градиентные карточки */
+  .card-gradient {
+    @apply bg-gradient-to-br from-slate-800/80 via-slate-700/60 to-slate-900/80 border border-white/10 backdrop-blur-sm;
   }
 }
 
@@ -338,7 +256,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-foreground font-sans antialiased min-h-screen;
   }
 
   /* Улучшенная типографика */
