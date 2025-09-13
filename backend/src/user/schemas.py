@@ -1,14 +1,19 @@
 """
-API схемы для пользователей
-
-Содержит Pydantic схемы для работы с пользователями через API
+Pydantic схемы для пользователей
 """
 
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, validator
+from enum import Enum
 
-from user.domain.value_objects.user_status import UserStatus
+
+class UserStatus(str, Enum):
+    """Статус пользователя"""
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    LOCKED = "locked"
+    PENDING_VERIFICATION = "pending_verification"
 
 
 class UserCreateRequest(BaseModel):
@@ -18,6 +23,14 @@ class UserCreateRequest(BaseModel):
     password: str = Field(..., min_length=8, description="Пароль (минимум 8 символов)")
     full_name: str = Field(..., min_length=2, max_length=100, description="Полное имя")
     is_superuser: bool = Field(default=False, description="Является ли суперпользователем")
+
+    @validator('password')
+    def validate_password(cls, v: str) -> str:
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain uppercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain digit')
+        return v
 
 
 class UserUpdateRequest(BaseModel):
@@ -44,6 +57,15 @@ class UserResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class UserListRequest(BaseModel):
+    """Схема запроса списка пользователей"""
+    
+    limit: int = Field(default=50, ge=1, le=100, description="Лимит записей")
+    offset: int = Field(default=0, ge=0, description="Смещение")
+    status: Optional[UserStatus] = Field(None, description="Фильтр по статусу")
+    search: Optional[str] = Field(None, max_length=100, description="Поисковый запрос")
 
 
 class UserListResponse(BaseModel):

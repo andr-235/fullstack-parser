@@ -1,16 +1,14 @@
 """
-Domain исключения модуля User
-
-Содержит исключения специфичные для пользователей
+Исключения модуля пользователей
 """
 
 
-class DomainException(Exception):
-    """Базовое исключение domain слоя"""
+class UserError(Exception):
+    """Базовое исключение для пользователей"""
     pass
 
 
-class UserNotFoundError(DomainException):
+class UserNotFoundError(UserError):
     """Пользователь не найден"""
     
     def __init__(self, user_id: int):
@@ -18,7 +16,7 @@ class UserNotFoundError(DomainException):
         super().__init__(f"Пользователь с ID {user_id} не найден")
 
 
-class UserAlreadyExistsError(DomainException):
+class UserAlreadyExistsError(UserError):
     """Пользователь уже существует"""
     
     def __init__(self, email: str):
@@ -26,15 +24,15 @@ class UserAlreadyExistsError(DomainException):
         super().__init__(f"Пользователь с email {email} уже существует")
 
 
-class UserInactiveError(DomainException):
-    """Пользователь не активен"""
+class UserInactiveError(UserError):
+    """Пользователь неактивен"""
     
     def __init__(self, user_id: int):
         self.user_id = user_id
-        super().__init__(f"Пользователь {user_id} не активен")
+        super().__init__(f"Пользователь {user_id} неактивен")
 
 
-class UserLockedError(DomainException):
+class UserLockedError(UserError):
     """Пользователь заблокирован"""
     
     def __init__(self, user_id: int, unlock_time: str = None):
