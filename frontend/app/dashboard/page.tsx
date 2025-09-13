@@ -128,43 +128,35 @@ export default function DashboardPage() {
     icon: string;
     color: string;
   }) => (
-    <div className="group relative overflow-hidden rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 p-6 transition-all duration-300 hover:bg-white/15 hover:scale-105 hover:shadow-2xl">
-      {/* Декоративный градиент */}
-      <div className={`absolute inset-0 opacity-20 ${color} rounded-2xl`} />
-      
-      <div className="relative z-10">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className={`p-3 rounded-xl ${color} bg-opacity-20`}>
-              <span className="text-2xl">{icon}</span>
-            </div>
-            <h3 className="text-sm font-medium text-white/80">{title}</h3>
+    <div className="group relative overflow-hidden rounded-xl bg-white/5 border border-white/10 p-6 transition-all duration-300 hover:bg-white/10 hover:scale-105">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <div className={`p-3 rounded-xl ${color} bg-opacity-20`}>
+            <span className="text-2xl">{icon}</span>
           </div>
-          <div className={`text-xs px-2 py-1 rounded-full ${
-            growth >= 0 
-              ? 'bg-green-500/20 text-green-400' 
-              : 'bg-red-500/20 text-red-400'
-          }`}>
-            {growth >= 0 ? '+' : ''}{growth}%
-          </div>
+          <h3 className="text-sm font-medium text-white/80">{title}</h3>
         </div>
-        
-        <div className="space-y-1">
-          <div className="text-3xl font-bold text-white">
-            {loading ? (
-              <div className="h-8 w-20 bg-white/20 rounded animate-pulse" />
-            ) : (
-              value.toLocaleString()
-            )}
-          </div>
-          <p className="text-xs text-white/60">
-            {growth >= 0 ? 'рост' : 'снижение'} с прошлого месяца
-          </p>
+        <div className={`text-xs px-2 py-1 rounded-full ${
+          growth >= 0 
+            ? 'bg-green-500/20 text-green-400' 
+            : 'bg-red-500/20 text-red-400'
+        }`}>
+          {growth >= 0 ? '+' : ''}{growth}%
         </div>
       </div>
       
-      {/* Hover эффект */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+      <div className="space-y-1">
+        <div className="text-3xl font-bold text-white">
+          {loading ? (
+            <div className="h-8 w-20 bg-white/20 rounded animate-pulse" />
+          ) : (
+            value.toLocaleString()
+          )}
+        </div>
+        <p className="text-xs text-white/60">
+          {growth >= 0 ? 'рост' : 'снижение'} с прошлого месяца
+        </p>
+      </div>
     </div>
   );
 
@@ -198,7 +190,7 @@ export default function DashboardPage() {
         {/* Дополнительная информация */}
         <div className="grid gap-6 md:grid-cols-2 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
           {/* Быстрые действия */}
-          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-6">
+          <div className="bg-white/5 rounded-xl border border-white/10 p-6">
             <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
               <span className="mr-2">🚀</span>
               Быстрые действия
@@ -207,7 +199,7 @@ export default function DashboardPage() {
               {quickActions.map((action, index) => (
                 <button 
                   key={index}
-                  className="w-full text-left p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors duration-200 flex items-center justify-between group"
+                  className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors duration-200 flex items-center justify-between group"
                 >
                   <span className="text-white/80 group-hover:text-white flex items-center">
                     <span className="mr-2">{action.icon}</span>
@@ -220,14 +212,14 @@ export default function DashboardPage() {
           </div>
 
           {/* Последняя активность */}
-          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-6">
+          <div className="bg-white/5 rounded-xl border border-white/10 p-6">
             <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
               <span className="mr-2">📊</span>
               Последняя активность
             </h3>
             <div className="space-y-3">
               {recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-center space-x-3 p-3 rounded-xl bg-white/5">
+                <div key={index} className="flex items-center space-x-3 p-3 rounded-lg bg-white/5">
                   <div className={`w-2 h-2 ${activity.color} rounded-full ${activity.pulse ? 'animate-pulse' : ''}`} />
                   <div className="flex-1">
                     <p className="text-sm text-white/80">{activity.status}</p>
