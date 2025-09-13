@@ -1,149 +1,102 @@
 """
-Alembic environment configuration for VK Parser Backend.
-
-This module configures Alembic to work with our FastAPI + SQLAlchemy 2.0 setup.
-It handles both online and offline migration modes with proper async support.
+Alembic environment configuration for async SQLAlchemy
 """
 
 import asyncio
 import os
 import sys
 from logging.config import fileConfig
-from typing import Optional
 
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import pool
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import async_engine_from_config
+
 from alembic import context
 
-# Add src directory to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-# Import only the base class and specific models that should be managed by Alembic
-from src.models import Base
-from src.auth.models import UserModel
-from src.parser.models import ParsingTaskModel
-from src.authors.models import Author
+# Import all models to ensure they are registered
+from src import Base
+from authors.models import AuthorModel
+from comments.models import Comment, CommentKeywordMatch
+from posts.models import Post
 
-# Alembic Config object
+# this is the Alembic Config object, which provides
+# access to the values within the .ini file in use.
 config = context.config
 
-# Set up logging
+# Interpret the config file for Python logging.
+# This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Set target metadata for autogenerate
+# add your model's MetaData object here
+# for 'autogenerate' support
 target_metadata = Base.metadata
 
-
-# Get database URL from environment or config
-def get_database_url() -> str:
-    """Get database URL from environment variables or config file."""
-    # Try environment variables first (for different environments)
-    database_url = os.getenv("DATABASE_URL")
-
-    if not database_url:
-        # Fallback to config file
-        database_url = config.get_main_option("sqlalchemy.url")
-
-    if not database_url:
-        raise RuntimeError(
-            "DATABASE_URL environment variable or sqlalchemy.url in alembic.ini must be set"
-        )
-
-    return database_url
+# other values from the config, defined by the needs of env.py,
+# can be acquired:
+# my_important_option = config.get_main_option("my_important_option")
+# ... etc.
 
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
-    This configures the context with just a URL and not an Engine.
-    By skipping the Engine creation we don't even need a DBAPI to be available.
-    Calls to context.execute() here emit the given string to the script output.
-    """
-    url = get_database_url()
+    This configures the context with just a URL
+    and not an Engine, though an Engine is acceptable
+    here as well.  By skipping the Engine creation
+    we don't even need a DBAPI to be available.
 
+    Calls to context.execute() here emit the given string to the
+    script output.
+
+    """
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        # Enable autogenerate for better migration detection
-        compare_type=True,
-        compare_server_default=True,
-        # Include object names in migration comments
-        include_object=include_object,
-        # Process revision directives
-        process_revision_directives=process_revision_directives,
     )
 
     with context.begin_transaction():
         context.run_migrations()
 
 
-async def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
+def do_run_migrations(connection: Connection) -> None:
+    context.configure(connection=connection, target_metadata=target_metadata)
 
-    In this scenario we need to create an Engine and associate a connection with the context.
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+async def run_async_migrations() -> None:
+    """In this scenario we need to create an Engine
+    and associate a connection with the context.
+
     """
-    url = get_database_url()
 
-    # Create async engine with proper configuration
-    connectable = create_async_engine(
-        url,
-        pool_pre_ping=True,
-        pool_recycle=3600,
-        echo=False,  # Set to True for SQL debugging
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
     )
-
-    def do_run_migrations(connection):
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            # Enable autogenerate features
-            compare_type=True,
-            compare_server_default=True,
-            # Include object names in migration comments
-            include_object=include_object,
-            # Process revision directives
-            process_revision_directives=process_revision_directives,
-        )
-        with context.begin_transaction():
-            context.run_migrations()
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
+
     await connectable.dispose()
 
 
-def include_object(object, name, type_, reflected, compare_to):
-    """Filter objects to include in migrations."""
-    # Skip certain objects if needed
-    if type_ == "table" and name.startswith("alembic_version"):
-        return False
+def run_migrations_online() -> None:
+    """Run migrations in 'online' mode."""
 
-    # Include all other objects
-    return True
+    asyncio.run(run_async_migrations())
 
 
-def process_revision_directives(context, revision, directives):
-    """Process revision directives for better migration management."""
-    # Add custom processing if needed
-    pass
-
-
-# Main execution logic
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    # Run migrations online with proper error handling
-    try:
-        asyncio.run(run_migrations_online())
-    except Exception as e:
-        # Log error but don't fail during autogenerate
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.warning(f"Migration execution failed: {e}")
-
-        # Only raise if not in autogenerate mode
-        if not context.get_x_argument(as_dictionary=True).get("autogenerate"):
-            raise
+    run_migrations_online()

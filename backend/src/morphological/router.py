@@ -1,31 +1,22 @@
 """
-FastAPI роутер для модуля Morphological
-
-Определяет API эндпоинты для морфологического анализа текста
+FastAPI роутер для морфологического анализа
 """
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 
-from .dependencies import get_morphological_service
+from .service import MorphologicalService
 from .schemas import (
     WordAnalysisRequest,
     WordAnalysisResponse,
-    WordFormsRequest,
-    WordFormsResponse,
     TextAnalysisRequest,
     TextAnalysisResponse,
-    SearchPatternRequest,
-    SearchPatternResponse,
-    MorphologicalStats,
-    BatchAnalysisRequest,
-    BatchAnalysisResponse,
     KeywordExtractionRequest,
     KeywordExtractionResponse,
     LanguageDetectionRequest,
     LanguageDetectionResponse,
+    MorphologicalStats,
 )
-from .service import MorphologicalService
 
 router = APIRouter(
     prefix="/morphological",
@@ -34,9 +25,13 @@ router = APIRouter(
         400: {"description": "Bad request - invalid input"},
         422: {"description": "Validation error"},
         500: {"description": "Internal server error"},
-        503: {"description": "Service unavailable"},
     },
 )
+
+
+def get_morphological_service() -> MorphologicalService:
+    """Получить сервис морфологического анализа"""
+    return MorphologicalService()
 
 
 @router.post(
@@ -82,42 +77,6 @@ async def analyze_word_get(
 
 
 @router.post(
-    "/word-forms",
-    response_model=WordFormsResponse,
-    summary="Формы слова",
-    description="Получить все морфологические формы слова",
-)
-async def get_word_forms(
-    request: WordFormsRequest,
-    service: MorphologicalService = Depends(get_morphological_service),
-) -> WordFormsResponse:
-    """Получить формы слова"""
-    try:
-        result = await service.get_word_forms(request.word)
-        return WordFormsResponse(**result)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get(
-    "/word/{word}/forms",
-    response_model=WordFormsResponse,
-    summary="Формы слова (GET)",
-    description="Получить все морфологические формы слова",
-)
-async def get_word_forms_get(
-    word: str,
-    service: MorphologicalService = Depends(get_morphological_service),
-) -> WordFormsResponse:
-    """Получить формы слова (GET версия)"""
-    try:
-        result = await service.get_word_forms(word)
-        return WordFormsResponse(**result)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post(
     "/analyze-text",
     response_model=TextAnalysisResponse,
     summary="Анализ текста",
@@ -129,33 +88,8 @@ async def analyze_text(
 ) -> TextAnalysisResponse:
     """Анализировать текст"""
     try:
-        result = await service.analyze_text(
-            request.text, request.extract_keywords
-        )
+        result = await service.analyze_text(request.text, request.extract_keywords)
         return TextAnalysisResponse(**result)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post(
-    "/search-patterns",
-    response_model=SearchPatternResponse,
-    summary="Паттерны поиска",
-    description="Создать паттерны поиска для слова с учетом морфологии",
-)
-async def create_search_patterns(
-    request: SearchPatternRequest,
-    service: MorphologicalService = Depends(get_morphological_service),
-) -> SearchPatternResponse:
-    """Создать паттерны поиска"""
-    try:
-        result = await service.create_search_patterns(
-            request.base_word,
-            case_sensitive=request.case_sensitive,
-            whole_word=request.whole_word,
-            include_forms=request.include_forms,
-        )
-        return SearchPatternResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -179,26 +113,6 @@ async def extract_keywords(
             request.pos_filter,
         )
         return KeywordExtractionResponse(**result)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post(
-    "/batch-analyze",
-    response_model=BatchAnalysisResponse,
-    summary="Пакетный анализ",
-    description="Проанализировать несколько текстов одновременно",
-)
-async def batch_analyze(
-    request: BatchAnalysisRequest,
-    service: MorphologicalService = Depends(get_morphological_service),
-) -> BatchAnalysisResponse:
-    """Пакетный анализ текстов"""
-    try:
-        result = await service.batch_analyze(
-            request.texts, request.extract_keywords
-        )
-        return BatchAnalysisResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -249,90 +163,15 @@ async def morphological_health_check(
     """Проверка здоровья анализатора"""
     try:
         stats = await service.get_stats()
-
         return {
             "status": "healthy",
             "analyzer_available": stats["analyzer_version"] != "fallback",
             "cache_size": stats["total_words_analyzed"],
             "supported_languages": stats["supported_languages"],
-            "timestamp": "2024-01-01T00:00:00Z",  # В реальности datetime.utcnow()
         }
     except Exception as e:
         return {
             "status": "unhealthy",
             "error": str(e),
             "analyzer_available": False,
-            "timestamp": "2024-01-01T00:00:00Z",
         }
-
-
-@router.post(
-    "/test-word/{word}",
-    summary="Тестовый анализ слова",
-    description="Тестовый анализ слова без сохранения результатов",
-)
-async def test_word_analysis(
-    word: str,
-    include_details: bool = Query(
-        False, description="Включить детальную информацию"
-    ),
-    service: MorphologicalService = Depends(get_morphological_service),
-):
-    """Тестовый анализ слова"""
-    try:
-        result = await service.analyze_word(word)
-
-        if not include_details:
-            # Упрощенный ответ
-            return {
-                "word": result["word"],
-                "lemma": result["lemma"],
-                "pos": result["pos"],
-                "analysis_time": result["analysis_time"],
-            }
-
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post(
-    "/compare-words",
-    summary="Сравнение слов",
-    description="Сравнить морфологические характеристики двух слов",
-)
-async def compare_words(
-    word1: str = Query(..., description="Первое слово"),
-    word2: str = Query(..., description="Второе слово"),
-    service: MorphologicalService = Depends(get_morphological_service),
-):
-    """Сравнить два слова"""
-    try:
-        analysis1 = await service.analyze_word(word1)
-        analysis2 = await service.analyze_word(word2)
-
-        # Сравниваем характеристики
-        comparison = {
-            "word1": {
-                "word": analysis1["word"],
-                "lemma": analysis1["lemma"],
-                "pos": analysis1["pos"],
-            },
-            "word2": {
-                "word": analysis2["word"],
-                "lemma": analysis2["lemma"],
-                "pos": analysis2["pos"],
-            },
-            "same_lemma": analysis1["lemma"] == analysis2["lemma"],
-            "same_pos": analysis1["pos"] == analysis2["pos"],
-            "analysis_time": analysis1["analysis_time"]
-            + analysis2["analysis_time"],
-        }
-
-        return comparison
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-# Экспорт роутера
-__all__ = ["router"]

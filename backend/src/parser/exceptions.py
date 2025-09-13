@@ -4,7 +4,7 @@
 Содержит специфические исключения для модуля парсера
 """
 
-from ..exceptions import APIError
+from shared.presentation.exceptions import APIException as APIError
 
 
 class TaskNotFoundException(APIError):

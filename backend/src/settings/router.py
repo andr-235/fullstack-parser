@@ -5,8 +5,8 @@
 from typing import Dict, Any
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
-from .service import SettingsService
-from ..handlers import create_success_response, create_error_response
+from settings.service import SettingsService
+from handlers import create_success_response, create_error_response
 
 
 router = APIRouter(prefix="/settings", tags=["Settings"])

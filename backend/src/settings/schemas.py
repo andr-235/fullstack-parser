@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
 
-from ..pagination import PaginatedResponse
+from shared.presentation.responses.base_responses import PaginatedResponse
 
 
 class SettingsSection(BaseModel):

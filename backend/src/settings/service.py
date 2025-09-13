@@ -9,10 +9,10 @@ import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
-from ..exceptions import ValidationError, ServiceUnavailableError
-from .models import SettingsRepository
-from .config import settings_config
-from .constants import (
+from shared.presentation.exceptions import ValidationException as ValidationError, InternalServerException as ServiceUnavailableError
+from settings.models import SettingsRepository
+from settings.config import settings_config
+from settings.constants import (
     SUCCESS_SETTINGS_UPDATED,
     SUCCESS_SETTINGS_RESET,
     ERROR_SETTINGS_LOAD_FAILED,

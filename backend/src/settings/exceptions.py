@@ -4,7 +4,7 @@
 Содержит специфические исключения для модуля управления настройками
 """
 
-from ..exceptions import APIError as APIException
+from shared.presentation.exceptions import APIException
 
 
 class SettingsError(APIException):

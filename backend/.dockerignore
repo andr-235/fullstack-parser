@@ -1,9 +1,19 @@
-# Python
+# =============================================================================
+# Production-Optimized .dockerignore for FastAPI Backend
+# =============================================================================
+
+# Python bytecode and cache
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Build artifacts
 build/
 develop-eggs/
 dist/
@@ -16,10 +26,6 @@ parts/
 sdist/
 var/
 wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
 # Virtual environments
 .env
@@ -29,15 +35,18 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.python-version
 
-# IDE
+# IDE and editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.project
+.pydevproject
 
-# OS
+# OS generated files
 .DS_Store
 .DS_Store?
 ._*
@@ -45,8 +54,9 @@ venv.bak/
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Testing
+# Testing and coverage
 .pytest_cache/
 .coverage
 htmlcov/
@@ -56,33 +66,85 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
+.pytest_cache/
+.coverage.*
 
-# Logs
+# Logs and temporary files
 *.log
 logs/
+*.tmp
+*.temp
+*.pid
+*.seed
+*.pid.lock
 
 # Documentation
 docs/_build/
+docs/build/
+.readthedocs.yml
 
 # Git
 .git/
 .gitignore
+.gitattributes
 
-# Docker
-Dockerfile
+# Docker files (exclude from build context)
+Dockerfile*
 docker-compose*.yml
 .dockerignore
+# docker-entrypoint.sh - NEEDED for container startup
 
-# Node modules (if any)
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+Jenkinsfile
+
+# Node modules (if any frontend assets)
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Temporary files
-*.tmp
-*.temp
-
-# Test directories
+# Test directories and files
 test_env/
 tests/
+*_test.py
+test_*.py
+*_tests.py
 
-# Alembic
+# Alembic migration files (keep structure, exclude generated)
 alembic/versions/*.py
+
+# Development tools
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+
+# Environment files
+.env*
+!.env.example
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Security and secrets
+*.pem
+*.key
+*.crt
+*.p12
+secrets/

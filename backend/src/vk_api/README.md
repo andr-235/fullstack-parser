@@ -1,189 +1,255 @@
-# VK API Module - Только внутренние вызовы
+# VK API Module - Clean Architecture Implementation
 
-Этот модуль предоставляет высокоуровневый интерфейс для работы с VK API **только для внутренних вызовов**. HTTP API эндпоинты удалены.
+## 🎯 Обзор
+
+Модуль VK API предоставляет высокоуровневый интерфейс для работы с VK API с применением принципов Clean Architecture. Модуль полностью рефакторен в соответствии с best practices 2025 года.
+
+## 🏗️ Архитектура
+
+### Domain Layer (Доменный слой)
+- **Entities**: `VKGroup`, `VKPost`, `VKComment` - основные сущности
+- **Value Objects**: `VKGroupID`, `VKPostID`, `VKUserID` - объекты-значения
+- **Repositories**: `VKAPIRepositoryInterface` - интерфейсы репозиториев
+- **Services**: `VKAPIDomainService` - доменные сервисы
+
+### Application Layer (Слой приложения)
+- **Use Cases**: Сценарии использования для работы с VK API
+- **DTO**: Data Transfer Objects для API
+- **Interfaces**: Интерфейсы сервисов
+- **Services**: Реализации сервисов
+
+### Infrastructure Layer (Инфраструктурный слой)
+- **Repositories**: Реализации репозиториев с кешированием
+- **Clients**: HTTP клиенты для VK API
+- **Adapters**: Адаптеры внешних сервисов
+
+### Presentation Layer (Слой представления)
+- **API Routers**: REST API эндпоинты
+- **Schemas**: Pydantic схемы для валидации
+- **Dependencies**: FastAPI зависимости
 
 ## 🚀 Быстрый старт
 
-```python
-from src.vk_api.dependencies import create_vk_api_service
-
-# Создаем экземпляр
-vk_service = create_vk_api_service()
-
-# Используем
-posts = await vk_service.get_group_posts(group_id=12345, count=10)
-comments = await vk_service.get_post_comments(group_id=12345, post_id=67890)
-```
-
-## 📋 Основные возможности
-
-- ✅ Получение постов групп с пагинацией
-- ✅ Получение комментариев к постам
-- ✅ Получение информации о группах и пользователях
-- ✅ Поиск групп по запросам
-- ✅ Кеширование результатов
-- ✅ Rate limiting для защиты от перегрузки
-- ✅ Circuit breaker для отказоустойчивости
-- ✅ Автоматическое логирование
-
-## 🔧 Интеграция в другие модули
-
-### Способ 1: Простое использование
+### 1. Использование через FastAPI зависимости (рекомендуемый способ)
 
 ```python
-from src.vk_api.dependencies import create_vk_api_service
+from fastapi import Depends
+from vk_api.presentation.dependencies.vk_api_dependencies import VKAPIServiceDep
 
-class MyService:
-    def __init__(self):
-        self.vk_api = create_vk_api_service()
-
-    async def get_group_data(self, group_id: int):
-        # Получаем информацию о группе
-        group_info = await self.vk_api.get_group_info(group_id)
-
-        # Получаем посты
-        posts = await self.vk_api.get_group_posts(group_id, count=20)
-
-        return {
-            'group': group_info,
-            'posts': posts
-        }
-```
-
-### Способ 2: Внедрение зависимостей
-
-```python
-from src.vk_api.service import VKAPIService
-
-class AnalyticsService:
-    def __init__(self, vk_api_service: VKAPIService = None):
-        if vk_api_service:
-            self.vk_api = vk_api_service
-        else:
-            from src.vk_api.dependencies import create_vk_api_service
-            self.vk_api = create_vk_api_service()
-```
-
-### Способ 3: С существующим ParserService
-
-```python
-from src.parser.service import ParserService
-from src.vk_api.dependencies import create_vk_api_service
-
-# Создаем VK API сервис
-vk_service = create_vk_api_service()
-
-# Передаем в парсер
-parser = ParserService(vk_api_service=vk_service)
-
-# Парсер будет использовать VK API для получения данных
-result = await parser.start_parsing(group_ids=[12345])
-```
-
-## 📚 Доступные методы
-
-| Метод                                                       | Описание                            | Параметры                                                                         |
-| ----------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------- |
-| `get_group_posts(group_id, count, offset)`                  | Получить посты группы               | group_id: int, count: int = 20, offset: int = 0                                   |
-| `get_post_comments(group_id, post_id, count, offset, sort)` | Получить комментарии к посту        | group_id: int, post_id: int, count: int = 100, offset: int = 0, sort: str = "asc" |
-| `get_group_info(group_id)`                                  | Получить информацию о группе        | group_id: int                                                                     |
-| `get_user_info(user_ids)`                                   | Получить информацию о пользователях | user_ids: List[int]                                                               |
-| `get_post_by_id(group_id, post_id)`                         | Получить конкретный пост            | group_id: int, post_id: int                                                       |
-| `search_groups(query, count, offset, country, city)`        | Поиск групп                         | query: str, count: int = 20, offset: int = 0                                      |
-| `get_group_members(group_id, count, offset)`                | Получить участников группы          | group_id: int, count: int = 1000, offset: int = 0                                 |
-| `validate_access_token()`                                   | Валидация токена доступа            | -                                                                                 |
-| `health_check()`                                            | Проверка здоровья сервиса           | -                                                                                 |
-
-## 🎯 Примеры использования
-
-### Анализ вовлеченности группы
-
-```python
-from src.vk_api.dependencies import create_vk_api_service
-
-async def analyze_group(group_id: int):
-    vk_api = create_vk_api_service()
-
-    # Получаем последние посты
-    posts_result = await vk_api.get_group_posts(group_id, count=50)
-    posts = posts_result.get('posts', [])
-
-    # Считаем статистику
-    total_likes = sum(p.get('likes', {}).get('count', 0) for p in posts)
-    total_comments = sum(p.get('comments', {}).get('count', 0) for p in posts)
-
-    return {
-        'posts_count': len(posts),
-        'avg_likes': total_likes / max(len(posts), 1),
-        'avg_comments': total_comments / max(len(posts), 1)
-    }
-```
-
-### Мониторинг комментариев
-
-```python
-from src.vk_api.dependencies import create_vk_api_service
-
-async def monitor_comments(group_id: int, post_id: int):
-    vk_api = create_vk_api_service()
-
-    # Получаем комментарии
-    comments_result = await vk_api.get_post_comments(
-        group_id=group_id,
-        post_id=post_id,
-        count=100
+async def my_endpoint(vk_service: VKAPIServiceInterface = VKAPIServiceDep):
+    # Получить группу
+    group = await vk_service.get_group(12345)
+    
+    # Поиск групп
+    groups = await vk_service.search_groups(
+        VKSearchGroupsRequestDTO(query="python", count=10)
     )
-
-    comments = comments_result.get('comments', [])
-
-    # Анализируем активность
-    user_activity = {}
-    for comment in comments:
-        user_id = comment.get('from_id')
-        if user_id and user_id > 0:  # Только пользователи
-            user_activity[user_id] = user_activity.get(user_id, 0) + 1
-
-    return user_activity
+    
+    # Получить посты группы
+    posts = await vk_service.get_group_posts(
+        VKGetGroupPostsRequestDTO(group_id=12345, count=50)
+    )
+    
+    return {"group": group, "groups": groups, "posts": posts}
 ```
 
-## 🔧 Запуск примеров
+### 2. Подключение роутеров
+
+```python
+from fastapi import FastAPI
+from vk_api.presentation.api.vk_api_router import router as vk_api_router
+
+app = FastAPI()
+app.include_router(vk_api_router)
+```
+
+### 3. Прямое создание сервиса
+
+```python
+from vk_api.infrastructure.clients.vk_api_client_impl import VKAPIClientImpl
+from vk_api.infrastructure.repositories.vk_api_repository_impl import VKAPIRepositoryImpl
+from vk_api.application.services.vk_api_service_impl import VKAPIServiceImpl
+
+# Создание клиента
+vk_client = VKAPIClientImpl()
+
+# Создание репозитория
+repository = VKAPIRepositoryImpl(vk_client, cache)
+
+# Создание сервиса
+service = VKAPIServiceImpl(repository)
+```
+
+## 📚 API Эндпоинты
+
+### Группы
+- `GET /vk-api/groups/{group_id}` - Получить группу по ID
+- `GET /vk-api/groups/search` - Поиск групп
+- `POST /vk-api/groups/batch` - Получить группы по списку ID
+- `GET /vk-api/groups/{group_id}/analytics` - Аналитика группы
+
+### Посты
+- `GET /vk-api/posts/groups/{group_id}` - Посты группы
+- `GET /vk-api/posts/groups/{group_id}/posts/{post_id}` - Пост по ID
+- `POST /vk-api/posts/groups/{group_id}/batch` - Посты по списку ID
+- `GET /vk-api/posts/groups/{group_id}/posts/{post_id}/with-comments` - Пост с комментариями
+
+### Комментарии
+- `GET /vk-api/comments/groups/{group_id}/posts/{post_id}` - Комментарии к посту
+- `GET /vk-api/comments/groups/{group_id}/posts/{post_id}/comments/{comment_id}` - Комментарий по ID
+
+### Пользователи
+- `GET /vk-api/users/{user_id}` - Пользователь по ID
+- `POST /vk-api/users/batch` - Пользователи по списку ID
+
+## 🔧 Конфигурация
+
+### Переменные окружения
 
 ```bash
-cd /opt/app/backend/src/vk_api
-python3 usage.py
+# VK API настройки
+VK_API_ACCESS_TOKEN=your_access_token
+VK_API_VERSION=5.131
+VK_API_BASE_URL=https://api.vk.com/method
+VK_API_TIMEOUT=30.0
+VK_API_MAX_REQUESTS_PER_SECOND=2
+
+# Кеширование
+VK_API_CACHE_TTL=300  # 5 минут
 ```
 
-## ⚙️ Конфигурация
+### Настройка кеширования
 
-Сервис использует настройки из основного конфига приложения:
+```python
+from vk_api.infrastructure.repositories.vk_api_repository_impl import VKAPIRepositoryImpl
 
-- `vk_api_config.cache.*` - настройки кеширования
-- `vk_api_config.rate_limit.*` - настройки rate limiting
-- `vk_api_config.circuit_breaker.*` - настройки circuit breaker
+repository = VKAPIRepositoryImpl(
+    vk_client=vk_client,
+    cache=redis_cache,
+    cache_ttl=600  # 10 минут
+)
+```
 
-## 🛡️ Защитные механизмы
+## 🧪 Тестирование
 
-- **Rate Limiting**: Автоматическое ограничение запросов к VK API
-- **Circuit Breaker**: Защита от каскадных сбоев
-- **Timeout**: Защита от зависаний
-- **Caching**: Кеширование результатов для производительности
-- **Retry**: Повторные попытки при временных сбоях
-- **Validation**: Валидация входных данных
+### Unit тесты
+
+```python
+import pytest
+from unittest.mock import Mock
+from vk_api.application.services.vk_api_service_impl import VKAPIServiceImpl
+
+@pytest.fixture
+def mock_repository():
+    return Mock(spec=VKAPIRepositoryInterface)
+
+@pytest.fixture
+def vk_service(mock_repository):
+    return VKAPIServiceImpl(mock_repository)
+
+async def test_get_group(vk_service, mock_repository):
+    # Arrange
+    mock_repository.get_group_by_id.return_value = VKGroup(...)
+    
+    # Act
+    result = await vk_service.get_group(12345)
+    
+    # Assert
+    assert result is not None
+    mock_repository.get_group_by_id.assert_called_once()
+```
+
+### Integration тесты
+
+```python
+import pytest
+from httpx import AsyncClient
+from fastapi.testclient import TestClient
+
+@pytest.mark.asyncio
+async def test_get_group_api():
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        response = await client.get("/vk-api/groups/12345")
+        assert response.status_code == 200
+        assert "id" in response.json()
+```
+
+## 🔄 Миграция с старой версии
+
+### До (старая версия)
+```python
+from vk_api import create_vk_api_service
+
+# Создание сервиса
+vk_service = create_vk_api_service()
+
+# Использование
+posts = await vk_service.get_group_posts(12345)
+```
+
+### После (новая версия)
+```python
+from vk_api.presentation.dependencies.vk_api_dependencies import VKAPIServiceDep
+
+# Использование через DI
+async def my_endpoint(vk_service: VKAPIServiceInterface = VKAPIServiceDep):
+    posts = await vk_service.get_group_posts(
+        VKGetGroupPostsRequestDTO(group_id=12345, count=100)
+    )
+```
+
+## 🚨 Breaking Changes
+
+1. **Изменена структура модуля** - теперь используется Clean Architecture
+2. **Новые DTO** - все методы теперь принимают DTO вместо простых параметров
+3. **Dependency Injection** - рекомендуется использовать FastAPI зависимости
+4. **Новые интерфейсы** - все сервисы теперь имеют интерфейсы
+5. **Улучшенная обработка ошибок** - используется централизованная система исключений
+
+## 📈 Производительность
+
+- **Кеширование**: Автоматическое кеширование всех запросов
+- **Rate Limiting**: Встроенное ограничение частоты запросов
+- **Async/await**: Полностью асинхронная архитектура
+- **Connection Pooling**: Переиспользование HTTP соединений
+
+## 🔒 Безопасность
+
+- **Валидация входных данных**: Pydantic схемы для всех DTO
+- **Обработка ошибок**: Централизованная система исключений
+- **Логирование**: Структурированное логирование всех операций
+- **Rate Limiting**: Защита от злоупотреблений API
 
 ## 📝 Логирование
 
-Все операции автоматически логируются с использованием Winston-подобного логгера:
-
 ```python
-# Логи пишутся автоматически при каждом вызове метода
-posts = await vk_service.get_group_posts(12345)
-# В логах появится запись о вызове wall.get с параметрами
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Логирование автоматически включено для всех операций
+# Уровни: DEBUG, INFO, WARNING, ERROR, CRITICAL
 ```
 
-## 🚫 Что было удалено
+## 🤝 Вклад в разработку
 
-- ❌ HTTP API роутеры (`/api/v1/vk-api/*`)
-- ❌ FastAPI зависимости (`Depends`)
-- ❌ OpenAPI/Swagger документация эндпоинтов
+1. Следуйте принципам Clean Architecture
+2. Покрывайте код тестами (минимум 85%)
+3. Используйте type hints везде
+4. Документируйте все публичные методы
+5. Следуйте PEP 8
 
-Теперь модуль предназначен **только для внутреннего использования** в других модулях проекта.
+## 📄 Лицензия
+
+MIT License
+
+## 👥 Авторы
+
+- AI Assistant
+- Development Team
+
+## 🔗 Ссылки
+
+- [VK API Documentation](https://dev.vk.com/api)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)

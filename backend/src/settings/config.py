@@ -6,7 +6,7 @@
 
 from typing import Optional, Dict, Any
 
-from ..config import settings
+from settings.config import settings
 
 
 class SettingsConfig:

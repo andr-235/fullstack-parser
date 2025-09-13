@@ -1,5 +1,0 @@
--r base.txt
-
-# Production dependencies
-gunicorn>=21.2.0
-uvicorn[standard]>=0.35.0

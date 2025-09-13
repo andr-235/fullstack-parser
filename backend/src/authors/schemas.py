@@ -1,248 +1,112 @@
 """
-Pydantic схемы для модуля авторов VK
-
-Современные схемы с валидацией и типизацией согласно best practices 2025
+Pydantic схемы для модуля авторов
 """
 
-from __future__ import annotations
-from typing import Optional
 from datetime import datetime
+from typing import Optional, List
+from enum import Enum
+
 from pydantic import BaseModel, Field, ConfigDict, field_validator
-from pydantic.types import PositiveInt
+
+
+class AuthorStatus(str, Enum):
+    """Статус автора"""
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    SUSPENDED = "suspended"
+    DELETED = "deleted"
 
 
 class AuthorBase(BaseModel):
-    """Базовая схема автора."""
-    
-    vk_id: PositiveInt = Field(
-        description="VK ID автора",
-        examples=[123456789]
-    )
-    first_name: Optional[str] = Field(
-        default=None,
-        max_length=255,
-        description="Имя автора",
-        examples=["Иван"]
-    )
-    last_name: Optional[str] = Field(
-        default=None,
-        max_length=255,
-        description="Фамилия автора",
-        examples=["Иванов"]
-    )
-    screen_name: Optional[str] = Field(
-        default=None,
-        max_length=255,
-        description="Screen name автора",
-        examples=["ivan_ivanov"]
-    )
-    photo_url: Optional[str] = Field(
-        default=None,
-        max_length=500,
-        description="URL фото автора",
-        examples=["https://vk.com/images/camera_200.png"]
-    )
-
-    @field_validator('photo_url')
-    @classmethod
-    def validate_photo_url(cls, v: Optional[str]) -> Optional[str]:
-        """Валидация URL фото."""
-        if v is not None and not v.startswith(('http://', 'https://')):
-            raise ValueError('Photo URL must start with http:// or https://')
-        return v
-
-    model_config = ConfigDict(
-        str_max_length=500,
-        validate_assignment=True,
-        from_attributes=True
-    )
+    """Базовая схема автора"""
+    vk_id: int = Field(gt=0, description="VK ID автора")
+    first_name: Optional[str] = Field(None, max_length=255, description="Имя")
+    last_name: Optional[str] = Field(None, max_length=255, description="Фамилия")
+    screen_name: Optional[str] = Field(None, max_length=100, description="Screen name")
+    photo_url: Optional[str] = Field(None, max_length=500, description="URL фото")
+    status: AuthorStatus = Field(AuthorStatus.ACTIVE, description="Статус")
+    is_closed: bool = Field(False, description="Закрытый профиль")
+    is_verified: bool = Field(False, description="Верифицированный")
+    followers_count: int = Field(0, ge=0, description="Количество подписчиков")
+    last_activity: Optional[datetime] = Field(None, description="Последняя активность")
+    metadata: Optional[dict] = Field(None, description="Метаданные")
+    comments_count: int = Field(0, ge=0, description="Количество комментариев")
 
 
 class AuthorCreate(AuthorBase):
-    """Схема для создания автора."""
+    """Схема создания автора"""
     
-    model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [
-                {
-                    "vk_id": 123456789,
-                    "first_name": "Иван",
-                    "last_name": "Иванов",
-                    "screen_name": "ivan_ivanov",
-                    "photo_url": "https://vk.com/images/camera_200.png"
-                }
-            ]
-        }
-    )
+    @field_validator('screen_name')
+    @classmethod
+    def validate_screen_name(cls, v):
+        if v and not v.replace('_', '').replace('-', '').isalnum():
+            raise ValueError('Screen name must contain only letters, numbers, _ and -')
+        return v
+    
+    @field_validator('vk_id')
+    @classmethod
+    def validate_vk_id(cls, v):
+        if v <= 0:
+            raise ValueError('VK ID must be positive')
+        return v
 
 
 class AuthorUpdate(BaseModel):
-    """Схема для обновления автора."""
-    
-    first_name: Optional[str] = Field(
-        default=None,
-        max_length=255,
-        description="Имя автора"
-    )
-    last_name: Optional[str] = Field(
-        default=None,
-        max_length=255,
-        description="Фамилия автора"
-    )
-    screen_name: Optional[str] = Field(
-        default=None,
-        max_length=255,
-        description="Screen name автора"
-    )
-    photo_url: Optional[str] = Field(
-        default=None,
-        max_length=500,
-        description="URL фото автора"
-    )
-
-    @field_validator('photo_url')
-    @classmethod
-    def validate_photo_url(cls, v: Optional[str]) -> Optional[str]:
-        """Валидация URL фото."""
-        if v is not None and not v.startswith(('http://', 'https://')):
-            raise ValueError('Photo URL must start with http:// or https://')
-        return v
-
-    model_config = ConfigDict(
-        str_max_length=500,
-        validate_assignment=True,
-        from_attributes=True
-    )
+    """Схема обновления автора"""
+    first_name: Optional[str] = Field(None, max_length=255)
+    last_name: Optional[str] = Field(None, max_length=255)
+    screen_name: Optional[str] = Field(None, max_length=100)
+    photo_url: Optional[str] = Field(None, max_length=500)
+    status: Optional[AuthorStatus] = None
+    is_closed: Optional[bool] = None
+    is_verified: Optional[bool] = None
+    followers_count: Optional[int] = Field(None, ge=0)
+    last_activity: Optional[datetime] = None
+    metadata: Optional[dict] = None
+    comments_count: Optional[int] = Field(None, ge=0)
 
 
 class AuthorResponse(AuthorBase):
-    """Схема ответа с данными автора."""
+    """Схема ответа с автором"""
+    id: int
+    created_at: datetime
+    updated_at: datetime
     
-    id: int = Field(description="Внутренний ID автора")
-    created_at: datetime = Field(description="Дата создания записи")
-    updated_at: Optional[datetime] = Field(
-        default=None,
-        description="Дата последнего обновления"
-    )
-    comments_count: int = Field(
-        default=0,
-        description="Количество комментариев автора"
-    )
+    model_config = ConfigDict(from_attributes=True)
 
-    model_config = ConfigDict(
-        from_attributes=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat()
-        },
-        json_schema_extra={
-            "examples": [
-                {
-                    "id": 1,
-                    "vk_id": 123456789,
-                    "first_name": "Иван",
-                    "last_name": "Иванов",
-                    "screen_name": "ivan_ivanov",
-                    "photo_url": "https://vk.com/images/camera_200.png",
-                    "created_at": "2024-01-01T12:00:00Z",
-                    "updated_at": "2024-01-01T12:00:00Z",
-                    "comments_count": 15
-                }
-            ]
-        }
-    )
+
+class AuthorWithCommentsResponse(AuthorResponse):
+    """Схема автора с комментариями"""
+    comments: List[dict] = Field(default_factory=list, description="Комментарии автора")
+
+
+class AuthorFilter(BaseModel):
+    """Фильтр для списка авторов"""
+    status: Optional[AuthorStatus] = None
+    is_verified: Optional[bool] = None
+    is_closed: Optional[bool] = None
+    limit: int = Field(50, ge=1, le=1000)
+    offset: int = Field(0, ge=0)
+    order_by: str = Field("created_at", description="Поле для сортировки")
+    order_direction: str = Field("desc", description="Направление сортировки")
+
+
+class AuthorSearch(BaseModel):
+    """Поиск авторов"""
+    query: str = Field(..., min_length=1, max_length=100, description="Поисковый запрос")
+    limit: int = Field(50, ge=1, le=1000)
+    offset: int = Field(0, ge=0)
 
 
 class AuthorListResponse(BaseModel):
-    """Схема ответа со списком авторов."""
-    
-    authors: list[AuthorResponse] = Field(description="Список авторов")
-    total: int = Field(description="Общее количество авторов")
-    limit: int = Field(description="Лимит записей")
-    offset: int = Field(description="Смещение")
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [
-                {
-                    "authors": [
-                        {
-                            "id": 1,
-                            "vk_id": 123456789,
-                            "first_name": "Иван",
-                            "last_name": "Иванов",
-                            "screen_name": "ivan_ivanov",
-                            "photo_url": "https://vk.com/images/camera_200.png",
-                            "created_at": "2024-01-01T12:00:00Z",
-                            "updated_at": "2024-01-01T12:00:00Z",
-                            "comments_count": 15
-                        }
-                    ],
-                    "total": 1,
-                    "limit": 100,
-                    "offset": 0
-                }
-            ]
-        }
-    )
+    """Ответ со списком авторов"""
+    items: List[AuthorResponse]
+    total: int
+    limit: int
+    offset: int
 
 
-class AuthorUpsertRequest(AuthorBase):
-    """Схема для upsert операции автора."""
-    
-    model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [
-                {
-                    "vk_id": 123456789,
-                    "first_name": "Иван",
-                    "last_name": "Иванов",
-                    "screen_name": "ivan_ivanov",
-                    "photo_url": "https://vk.com/images/camera_200.png"
-                }
-            ]
-        }
-    )
-
-
-class AuthorGetOrCreateRequest(BaseModel):
-    """Схема для get_or_create операции."""
-    
-    vk_id: PositiveInt = Field(description="VK ID автора")
-    author_name: Optional[str] = Field(
-        default=None,
-        max_length=255,
-        description="Имя автора"
-    )
-    author_screen_name: Optional[str] = Field(
-        default=None,
-        max_length=255,
-        description="Screen name автора"
-    )
-    author_photo_url: Optional[str] = Field(
-        default=None,
-        max_length=500,
-        description="URL фото автора"
-    )
-
-    @field_validator('author_photo_url')
-    @classmethod
-    def validate_photo_url(cls, v: Optional[str]) -> Optional[str]:
-        """Валидация URL фото."""
-        if v is not None and not v.startswith(('http://', 'https://')):
-            raise ValueError('Photo URL must start with http:// or https://')
-        return v
-
-    model_config = ConfigDict(
-        str_max_length=500,
-        validate_assignment=True,
-        json_schema_extra={
-            "examples": [
-                {
-                    "vk_id": 123456789,
-                    "author_name": "Иван",
-                    "author_screen_name": "ivan_ivanov",
-                    "author_photo_url": "https://vk.com/images/camera_200.png"
-                }
-            ]
-        }
-    )
+class AuthorBulkAction(BaseModel):
+    """Массовое действие"""
+    action: str = Field(..., description="Действие: activate, suspend, delete")
+    author_ids: List[int] = Field(..., min_items=1, description="ID авторов")

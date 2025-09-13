@@ -6,8 +6,8 @@
 
 from fastapi import Depends
 
-from .service import SettingsService
-from .models import get_settings_repository
+from settings.service import SettingsService
+from settings.models import get_settings_repository
 
 
 async def get_settings_service() -> SettingsService:

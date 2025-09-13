@@ -1,143 +1,122 @@
 """
-Переделанный роутер health с новой архитектурой (DDD + Middleware)
+Роутер для модуля Health
 """
 
-from typing import Dict, Any
-from fastapi import APIRouter, Request, Depends
-from fastapi.responses import JSONResponse
-from .service import HealthService
-from ..handlers import create_success_response, create_error_response
+from typing import Optional
+from fastapi import APIRouter, Depends
+from health.service import HealthService
+from health.dependencies import get_health_service
+from health.schemas import HealthResponse, HealthCheckResult, HealthMetrics
 
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
 
-# Dependency для Health Service
-def get_health_service() -> HealthService:
-    """Получить экземпляр Health Service"""
-    return HealthService()
-
-
-@router.get(
-    "",
-    summary="Basic Health Check",
-    description="Базовая проверка состояния сервиса с новой архитектурой",
-)
+@router.get("", response_model=HealthResponse, summary="Basic Health Check")
 async def basic_health_check(
-    request: Request,
     health_service: HealthService = Depends(get_health_service),
-) -> JSONResponse:
+) -> HealthResponse:
     """Базовая проверка здоровья системы"""
-    try:
-        health_status = await health_service.perform_basic_health_check()
-        return await create_success_response(request, health_status.to_dict())
-    except Exception as e:
-        return await create_error_response(
-            request,
-            500,
-            "HEALTH_CHECK_FAILED",
-            f"Failed to perform health check: {str(e)}",
-        )
+    health_status = await health_service.perform_basic_health_check()
+    return HealthResponse(
+        status=health_status.status,
+        service=health_status.service_name,
+        version=health_status.version,
+        components=health_status.components,
+        timestamp=health_status.timestamp.isoformat(),
+        uptime_seconds=health_status.uptime_seconds,
+    )
 
 
-@router.get(
-    "/detailed",
-    summary="Detailed Health Check",
-    description="Детальная проверка состояния с проверкой всех компонентов",
-)
+@router.get("/detailed", response_model=HealthResponse, summary="Detailed Health Check")
 async def detailed_health_check(
-    request: Request,
     health_service: HealthService = Depends(get_health_service),
-) -> JSONResponse:
+) -> HealthResponse:
     """Детальная проверка здоровья системы"""
-    try:
-        health_status = await health_service.perform_detailed_health_check()
-        return await create_success_response(request, health_status.to_dict())
-    except Exception as e:
-        return await create_error_response(
-            request,
-            500,
-            "DETAILED_HEALTH_CHECK_FAILED",
-            f"Failed to perform detailed health check: {str(e)}",
-        )
+    health_status = await health_service.perform_detailed_health_check()
+    return HealthResponse(
+        status=health_status.status,
+        service=health_status.service_name,
+        version=health_status.version,
+        components=health_status.components,
+        timestamp=health_status.timestamp.isoformat(),
+        uptime_seconds=health_status.uptime_seconds,
+    )
 
 
-@router.get(
-    "/ready",
-    summary="Readiness Check",
-    description="Проверка готовности для Kubernetes/контейнерной оркестрации",
-)
+@router.get("/ready", response_model=HealthResponse, summary="Readiness Check")
 async def readiness_check(
-    request: Request,
     health_service: HealthService = Depends(get_health_service),
-) -> JSONResponse:
+) -> HealthResponse:
     """Проверка готовности системы"""
-    try:
-        health_status = await health_service.perform_readiness_check()
-        return await create_success_response(request, health_status.to_dict())
-    except Exception as e:
-        return await create_error_response(
-            request,
-            503,
-            "READINESS_CHECK_FAILED",
-            f"Service is not ready: {str(e)}",
-        )
+    health_status = await health_service.perform_readiness_check()
+    return HealthResponse(
+        status=health_status.status,
+        service=health_status.service_name,
+        version=health_status.version,
+        components=health_status.components,
+        timestamp=health_status.timestamp.isoformat(),
+        uptime_seconds=health_status.uptime_seconds,
+    )
 
 
-@router.get(
-    "/live",
-    summary="Liveness Check",
-    description="Проверка живости процесса для Kubernetes",
-)
+@router.get("/live", response_model=HealthResponse, summary="Liveness Check")
 async def liveness_check(
-    request: Request,
     health_service: HealthService = Depends(get_health_service),
-) -> JSONResponse:
+) -> HealthResponse:
     """Проверка живости процесса"""
-    try:
-        health_status = await health_service.perform_liveness_check()
-        return await create_success_response(request, health_status.to_dict())
-    except Exception as e:
-        return await create_error_response(
-            request,
-            503,
-            "LIVENESS_CHECK_FAILED",
-            f"Process is not alive: {str(e)}",
-        )
+    health_status = await health_service.perform_liveness_check()
+    return HealthResponse(
+        status=health_status.status,
+        service=health_status.service_name,
+        version=health_status.version,
+        components=health_status.components,
+        timestamp=health_status.timestamp.isoformat(),
+        uptime_seconds=health_status.uptime_seconds,
+    )
 
 
-@router.get(
-    "/status",
-    summary="System Status Overview",
-    description="Общая информация о статусе системы",
-)
-async def system_status(
-    request: Request,
+@router.get("/component/{component}", response_model=HealthCheckResult, summary="Component Health Check")
+async def check_component(
+    component: str,
     health_service: HealthService = Depends(get_health_service),
-) -> JSONResponse:
-    """Получить общую информацию о статусе системы"""
-    try:
-        # Выполняем детальную проверку
-        health_status = await health_service.perform_detailed_health_check()
+) -> HealthCheckResult:
+    """Проверить здоровье конкретного компонента"""
+    result = await health_service.check_component_health(component)
+    return HealthCheckResult(
+        component=result.component,
+        status=result.status,
+        response_time_ms=result.response_time_ms,
+        error_message=result.error_message,
+        details=result.details,
+        checked_at=result.checked_at.isoformat(),
+    )
 
-        # Добавляем дополнительную информацию
-        status_info = {
-            **health_status.to_dict(),
-            "architecture": "DDD + Middleware (v1.6.0)",
-            "features": [
-                "Domain-Driven Design",
-                "Application Services",
-                "Rate Limiting",
-                "Request Logging",
-                "Standardized Responses",
-            ],
-        }
 
-        return await create_success_response(request, status_info)
-    except Exception as e:
-        return await create_error_response(
-            request,
-            500,
-            "STATUS_CHECK_FAILED",
-            f"Failed to get system status: {str(e)}",
-        )
+@router.get("/history", summary="Health History")
+async def get_health_history(
+    component: Optional[str] = None,
+    limit: int = 50,
+    health_service: HealthService = Depends(get_health_service),
+):
+    """Получить историю проверок здоровья"""
+    history = await health_service.get_health_history(component, limit)
+    return {"history": history, "total": len(history)}
+
+
+@router.get("/metrics", response_model=HealthMetrics, summary="Health Metrics")
+async def get_health_metrics(
+    health_service: HealthService = Depends(get_health_service),
+) -> HealthMetrics:
+    """Получить метрики здоровья"""
+    metrics = await health_service.get_health_metrics()
+    return HealthMetrics(**metrics)
+
+
+@router.delete("/cache", summary="Clear Health Cache")
+async def clear_health_cache(
+    health_service: HealthService = Depends(get_health_service),
+):
+    """Очистить кеш здоровья"""
+    success = await health_service.clear_health_cache()
+    return {"success": success, "message": "Cache cleared" if success else "Failed to clear cache"}

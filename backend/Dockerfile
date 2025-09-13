@@ -1,51 +1,65 @@
 # =============================================================================
-# Optimized Production Dockerfile for FastAPI Backend with Poetry and ARQ Worker
+# Production-Ready Dockerfile for FastAPI Backend - Best Practices 2025
 # =============================================================================
 
-# Build stage
+# Build stage - optimized for dependency installation
 FROM python:3.11-slim AS builder
 
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y --no-install-recommends \
- build-essential \
- curl \
- && rm -rf /var/lib/apt/lists/*
+    build-essential \
+    curl \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Install Poetry with specific version for reproducibility
+ENV POETRY_HOME=/opt/poetry \
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
 
 # Install Poetry
-ENV POETRY_HOME=/opt/poetry \
- POETRY_VIRTUALENVS_IN_PROJECT=true \
- POETRY_NO_INTERACTION=1
-
-# Install Poetry using pip
-RUN pip install --no-cache-dir poetry==1.8.3
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir poetry==1.8.3
 
 # Set working directory
 WORKDIR /app
 
-# Copy Poetry configuration files
+# Copy dependency files first for better layer caching
 COPY pyproject.toml poetry.lock ./
 
-# Install dependencies and create virtual environment
-RUN poetry install --only=main --no-root
+# Install dependencies with optimizations
+RUN poetry install --only=main --no-root \
+    && poetry cache clear --all pypi \
+    && rm -rf /tmp/poetry_cache
 
-# Production stage
+# =============================================================================
+# Production stage - minimal runtime image
+# =============================================================================
 FROM python:3.11-slim AS runtime
 
-# Install runtime system dependencies
+# Install only runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
- curl \
- && rm -rf /var/lib/apt/lists/*
+    curl \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && apt-get autoremove -y
 
-# Create non-privileged user
+# Create non-privileged user with specific UID/GID for security
 ARG UID=10001
-RUN groupadd --gid $UID appuser \
- && useradd --uid $UID --gid $UID --create-home --shell /bin/bash appuser
+ARG GID=10001
+RUN groupadd --gid $GID appuser \
+    && useradd --uid $UID --gid $GID --create-home --shell /bin/bash appuser
 
-# Set environment variables
+# Set environment variables for production
 ENV PYTHONUNBUFFERED=1 \
- PYTHONDONTWRITEBYTECODE=1 \
- PYTHONPATH=/app/src \
- PATH="/app/.venv/bin:$PATH"
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app/src \
+    PATH="/app/.venv/bin:$PATH" \
+    PYTHONHASHSEED=random \
+    PYTHONIOENCODING=utf-8
 
 # Set working directory
 WORKDIR /app
@@ -56,7 +70,7 @@ COPY --from=builder /app/.venv /app/.venv
 # Copy application source code
 COPY src/ ./src/
 
-# Copy Alembic configuration
+# Copy configuration files
 COPY alembic.ini ./
 COPY alembic/ ./alembic/
 
@@ -64,15 +78,16 @@ COPY alembic/ ./alembic/
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Create logs directory with proper permissions
-RUN mkdir -p /app/logs && chown -R appuser:appuser /app/logs
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/logs /app/tmp \
+    && chown -R appuser:appuser /app
 
 # Switch to non-privileged user
 USER appuser
 
-# Health check for the FastAPI application
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
- CMD curl -f http://localhost:8000/health || exit 1
+# Health check with improved reliability
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Expose port
 EXPOSE 8000

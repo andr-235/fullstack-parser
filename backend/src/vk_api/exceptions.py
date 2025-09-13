@@ -6,7 +6,7 @@
 
 from typing import Optional, Dict, Any
 
-from ..exceptions import APIError
+from shared.presentation.exceptions import APIException as APIError
 
 
 class VKAPIError(APIError):

@@ -13,32 +13,66 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
-from .config import settings
-from .database import database_service
-from .exceptions import APIError
-from .responses import BaseAPIException
+from shared.config import settings
+
+# Sentry integration
+if settings.sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        integrations=[
+            FastApiIntegration(auto_enabling_instrumentations=False),
+            SqlalchemyIntegration(),
+            RedisIntegration(),
+            CeleryIntegration(),
+        ],
+        traces_sample_rate=0.1,
+        profiles_sample_rate=0.1,
+    )
+
+from shared.infrastructure.database.session import DatabaseSession
+from shared.presentation.exceptions import APIException
+from shared.presentation.responses import BaseResponse
 
 # Импорт роутеров (будут добавлены по мере миграции модулей)
-from .auth.router import router as auth_router
-from .comments.router import router as comments_router
+# Auth module - полная интеграция
+from auth import (
+    get_current_user, 
+    get_current_active_user,
+    auth_router,
+)
+from auth.infrastructure.factory import setup_auth_infrastructure
 
-from .groups.router import router as groups_router
+# User module - полная интеграция
+from user import user_router
+from user.infrastructure.factory import setup_user_infrastructure
+from comments.presentation.router import router as comments_router
 
-from .parser.router import router as parser_router
+from groups.router import router as groups_router
 
-from .morphological.router import router as morphological_router
-from .keywords.router import router as keywords_router
+from parser.router import router as parser_router
 
-from .settings.router import router as settings_router
-from .health.router import router as health_router
-from .error_reporting.router import router as error_reporting_router
+from morphological.router import router as morphological_router
+from keywords.router import router as keywords_router
+
+from settings.router import router as settings_router
+from health.router import router as health_router
+from error_reporting.router import router as error_reporting_router
+
+# Authors module - полная интеграция
+from authors import router as authors_router
 
 # Импорт middleware
-from .infrastructure.middleware.logging import RequestLoggingMiddleware
-from .infrastructure.middleware.rate_limit import SimpleRateLimitMiddleware
+from infrastructure.middleware.logging import RequestLoggingMiddleware
+from infrastructure.middleware.rate_limit import SimpleRateLimitMiddleware
 
-# Импорт handlers
-from .handlers import (
+# Импорт handlers из shared
+from shared.presentation.exceptions import (
     base_exception_handler,
     cache_exception_handler,
     database_exception_handler,
@@ -49,10 +83,10 @@ from .handlers import (
 )
 
 # Импорт Celery модуля
-from .infrastructure.celery_service import celery_service
+from infrastructure.celery_service import celery_service
 
 # Инициализация логгера
-from .infrastructure.logging import get_loguru_logger
+from infrastructure.logging import get_loguru_logger
 
 logger = get_loguru_logger("main")
 
@@ -66,20 +100,62 @@ async def lifespan(app: FastAPI):
 
     # Инициализируем базу данных
     try:
-        await database_service.init_database()
+        db_session = DatabaseSession()
+        db_session.initialize(settings.database_url)
         logger.info("📊 База данных инициализирована")
     except Exception as e:
         logger.error(f"❌ Ошибка инициализации БД: {e}")
         raise
 
+    # Инициализируем кэш
+    try:
+        from .shared.infrastructure.cache.redis_cache import cache
+        await cache.initialize()
+        logger.info("🗄️ Redis кэш инициализирован")
+    except Exception as e:
+        logger.error(f"❌ Ошибка инициализации кэша: {e}")
+        raise
+
     # Инициализируем Celery сервис
     try:
-        from .celery_app import app as celery_app
+        from .shared.infrastructure.task_queue.celery_app import celery_app
 
         await celery_service.initialize(celery_app)
         logger.info("⚡ Celery сервис инициализирован")
     except Exception as e:
         logger.error(f"❌ Ошибка инициализации Celery: {e}")
+        raise
+
+    # Инициализируем модуль Auth
+    try:
+        from .shared.infrastructure.database.session import get_async_session
+        
+        # Получаем сессию базы данных
+        async_session = get_async_session()
+        
+        # Настраиваем модуль Auth
+        auth_container = setup_auth_infrastructure(
+            session=async_session(),
+            secret_key=settings.secret_key or "default-secret-key-change-in-production",
+            redis_url=settings.redis_cache_url,
+            use_cache=True,
+            cache_ttl=300,
+            password_rounds=12,
+            access_token_expire_minutes=30,
+            refresh_token_expire_days=7
+        )
+        logger.info("🔐 Модуль Auth инициализирован")
+        
+        # Настраиваем модуль User
+        user_container = setup_user_infrastructure(
+            session=async_session(),
+            password_service=auth_container.get_password_service(),
+            cache=auth_container.get_cache() if hasattr(auth_container, 'get_cache') else None,
+            use_cache=True
+        )
+        logger.info("👤 Модуль User инициализирован")
+    except Exception as e:
+        logger.error(f"❌ Ошибка инициализации модулей Auth/User: {e}")
         raise
 
     logger.info("✅ Система готова к работе!")
@@ -89,6 +165,14 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("🛑 Остановка VK Comments Parser...")
+
+    # Закрываем кэш
+    try:
+        from .shared.infrastructure.cache.redis_cache import cache
+        await cache.close()
+        logger.info("🗄️ Redis кэш закрыт")
+    except Exception as e:
+        logger.error(f"❌ Ошибка закрытия кэша: {e}")
 
     # Закрываем Celery сервис
     try:
@@ -117,15 +201,17 @@ app = FastAPI(
     - 🏥 **Расширенные health checks** - readiness/liveness проверки
 
     ## 📚 API Endpoints:
-    - **Comments**: `/api/v1/comments` - работа с комментариями (в разработке)
-    - **Groups**: `/api/v1/groups` - управление группами VK (в разработке)
-    - **Keywords**: `/api/v1/keywords` - ключевые слова (в разработке)
-    - **Parser**: `/api/v1/parser` - парсинг данных (в разработке)
-    - **Health**: `/api/v1/health` - расширенные проверки здоровья (в разработке)
-    - **Settings**: `/api/v1/settings` - управление настройками (в разработке)
-    - **Errors**: `/api/v1/reports` - отчеты об ошибках (в разработке)
-
-    - **Morphological**: `/api/v1/morphological` - морфологический анализ (в разработке)
+    - **Auth**: `/api/v1/auth` - аутентификация и авторизация ✅
+    - **Users**: `/api/v1/users` - управление пользователями ✅
+    - **Authors**: `/api/v1/authors` - управление авторами VK ✅ (Clean Architecture)
+    - **Comments**: `/api/v1/comments` - работа с комментариями ✅
+    - **Groups**: `/api/v1/groups` - управление группами VK ✅
+    - **Keywords**: `/api/v1/keywords` - ключевые слова ✅
+    - **Parser**: `/api/v1/parser` - парсинг данных ✅
+    - **Health**: `/api/v1/health` - расширенные проверки здоровья ✅
+    - **Settings**: `/api/v1/settings` - управление настройками ✅
+    - **Errors**: `/api/v1/reports` - отчеты об ошибках ✅
+    - **Morphological**: `/api/v1/morphological` - морфологический анализ ✅
 
     ## 🔧 Enterprise-grade Улучшения:
     - **FastAPI Best Practices** - следование рекомендациям сообщества
@@ -162,8 +248,8 @@ app.add_middleware(SimpleRateLimitMiddleware)
 
 
 # Обработчики исключений
-@app.exception_handler(APIError)
-async def handle_api_exception(request: Request, exc: APIError):
+@app.exception_handler(APIException)
+async def handle_api_exception(request: Request, exc: APIException):
     """Обработчик кастомных API исключений"""
     return JSONResponse(
         status_code=exc.status_code,
@@ -240,7 +326,7 @@ async def handle_unexpected_error(request: Request, exc: Exception):
 
 # Дополнительные обработчики исключений
 # Порядок важен - более специфичные обработчики должны быть добавлены первыми
-app.add_exception_handler(BaseAPIException, base_exception_handler)
+app.add_exception_handler(BaseResponse, base_exception_handler)
 app.add_exception_handler(ValueError, validation_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 
@@ -264,6 +350,8 @@ async def api_info(request: Request):
         ],
         "modules_status": {
             "auth": "✅ Готов к работе",
+            "user": "✅ Готов к работе (отдельный модуль)",
+            "authors": "✅ Готов к работе (Clean Architecture + исправлены критические проблемы)",
             "comments": "✅ Готов к работе",
             "groups": "✅ Готов к работе",
             "parser": "✅ Готов к работе",
@@ -284,6 +372,8 @@ async def api_info(request: Request):
             "structure": "src/{module}/",
             "modules": [
                 "auth",
+                "user",
+                "authors",
                 "comments",
                 "groups",
                 "parser",
@@ -308,7 +398,9 @@ async def health_check():
 
 
 # Подключаем роутеры модулей
+# Auth module - полная интеграция
 app.include_router(auth_router, prefix="/api/v1", tags=["Authentication"])
+app.include_router(user_router, prefix="/api/v1", tags=["Users"])
 app.include_router(comments_router, prefix="/api/v1", tags=["Comments"])
 app.include_router(groups_router, prefix="/api/v1", tags=["Groups"])
 app.include_router(parser_router, prefix="/api/v1", tags=["Parser"])
@@ -326,6 +418,9 @@ app.include_router(health_router, prefix="/api/v1", tags=["Health Monitoring"])
 app.include_router(
     error_reporting_router, prefix="/api/v1", tags=["Error Reports"]
 )
+
+# Authors module - полная интеграция
+app.include_router(authors_router, prefix="/api/v1", tags=["Authors"])
 
 
 # Запуск сервера

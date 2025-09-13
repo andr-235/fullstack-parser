@@ -2,13 +2,13 @@
 VK Parser Backend
 
 FastAPI backend для парсинга комментариев VK
+Clean Architecture implementation
 """
 
-# Импортируем все модели для регистрации в metadata
-from .models import *
-from .parser.models import ParsingTaskModel
+# Базовый класс для SQLAlchemy моделей
+from sqlalchemy.orm import DeclarativeBase
 
-# Экспортируем Base для использования в других модулях
-from .models import Base
+class Base(DeclarativeBase):
+    pass
 
 __all__ = ["Base"]

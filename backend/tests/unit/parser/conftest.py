@@ -24,7 +24,7 @@ from src.parser.exceptions import (
     InvalidTaskDataException,
     ParsingException,
 )
-from src.exceptions import APIError
+from src.shared.presentation.exceptions import APIException as APIError
 
 
 @pytest.fixture

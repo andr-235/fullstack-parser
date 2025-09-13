@@ -1,61 +1,43 @@
 """
-Модуль для работы с авторами VK
+Модуль для работы с авторами VK - рефакторинг
 
-Современная архитектура с разделением на слои:
-- Domain: бизнес-логика и сущности
-- Application: use cases и сервисы
-- Infrastructure: репозитории, кэш, очереди задач
-- Presentation: FastAPI роутеры и схемы
+Упрощенная архитектура:
+- models: SQLAlchemy модели и Pydantic схемы
+- services: бизнес-логика
+- api: FastAPI роутеры
 """
 
-from .domain import AuthorNotFoundError, AuthorValidationError, AuthorEntity
-from .application import AuthorService
-from .infrastructure import Author, AuthorRepository, AuthorRedisCache, AuthorCeleryTaskQueue
+from .models import AuthorModel
 from .schemas import (
     AuthorCreate,
     AuthorUpdate,
     AuthorResponse,
     AuthorListResponse,
-    AuthorUpsertRequest,
-    AuthorGetOrCreateRequest
+    AuthorFilter,
+    AuthorSearch,
+    AuthorBulkAction,
+    AuthorStatus,
 )
-from .dependencies import (
-    get_author_repository_dependency as get_author_repository,
-    get_author_service_dependency as get_author_service,
-    get_author_cache_dependency as get_author_cache,
-    get_author_task_queue_dependency as get_author_task_queue,
-)
-from .presentation import authors_router
+
+from .services import AuthorService
+from .api import router, health_check
 
 __all__ = [
-    # Domain
-    "AuthorNotFoundError",
-    "AuthorValidationError", 
-    "AuthorEntity",
-    
-    # Application
-    "AuthorService",
-    
-    # Infrastructure
-    "Author",
-    "AuthorRepository",
-    "AuthorRedisCache",
-    "AuthorCeleryTaskQueue",
-    
-    # Schemas
+    # Models
+    "AuthorModel",
     "AuthorCreate",
-    "AuthorUpdate",
+    "AuthorUpdate", 
     "AuthorResponse",
     "AuthorListResponse",
-    "AuthorUpsertRequest",
-    "AuthorGetOrCreateRequest",
+    "AuthorFilter",
+    "AuthorSearch",
+    "AuthorBulkAction",
+    "AuthorStatus",
     
-    # Dependencies
-    "get_author_repository",
-    "get_author_service",
-    "get_author_cache",
-    "get_author_task_queue",
+    # Services
+    "AuthorService",
     
-    # Presentation
-    "authors_router",
+    # API
+    "router",
+    "health_check",
 ]

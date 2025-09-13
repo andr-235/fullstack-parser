@@ -10,8 +10,8 @@ from typing import Dict, Any, Optional
 import json
 from datetime import datetime, timedelta
 
-from ..database import get_db_session
-from .config import settings_config
+from settings.database import get_db_session
+from settings.config import settings_config
 
 
 class SettingsRepository:

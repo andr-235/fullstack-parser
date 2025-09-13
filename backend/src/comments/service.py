@@ -1,350 +1,244 @@
 """
 Сервис для работы с комментариями
-
-Содержит бизнес-логику для операций с комментариями
 """
 
+import logging
 from typing import List, Optional, Dict, Any
-from datetime import datetime
-
-from .interfaces import (
-    CommentServiceInterface,
-    CommentRepositoryInterface,
-    CacheServiceInterface,
-    LoggerInterface,
+from comments.repository import CommentRepository
+from comments.schemas import (
+    CommentCreate, CommentUpdate, CommentFilter, CommentResponse, 
+    CommentListResponse, CommentStats, KeywordMatch,
+    KeywordAnalysisRequest, KeywordAnalysisResponse, BatchKeywordAnalysisRequest,
+    BatchKeywordAnalysisResponse, KeywordSearchRequest, KeywordSearchResponse,
+    KeywordStatisticsResponse
 )
-from .mappers import CommentMapper
-from ..exceptions import CommentNotFoundError, ValidationError
+from comments.models import Comment
+
+logger = logging.getLogger(__name__)
 
 
-class CommentService(CommentServiceInterface):
-    """
-    Сервис для работы с комментариями
+class CommentService:
+    """Сервис для работы с комментариями"""
 
-    Реализует бизнес-логику для операций CRUD с комментариями
-    """
-
-    def __init__(
-        self,
-        repository: CommentRepositoryInterface,
-        cache_service: Optional[CacheServiceInterface] = None,
-        logger: Optional[LoggerInterface] = None,
-    ):
+    def __init__(self, repository: CommentRepository):
         self.repository = repository
-        self.cache_service = cache_service
-        self.logger = logger
 
-    def _get_cache_key(self, prefix: str, *args) -> str:
-        """Генерация ключа кеша"""
-        return f"{prefix}:{':'.join(map(str, args))}"
-
-    async def _get_from_cache(self, cache_key: str) -> Optional[Any]:
-        """Получить данные из кеша"""
-        if not self.cache_service:
-            return None
-
-        try:
-            return await self.cache_service.get("comment", cache_key)
-        except Exception as e:
-            if self.logger:
-                self.logger.warning(f"Ошибка получения из кеша: {e}")
-            return None
-
-    async def _set_to_cache(
-        self, cache_key: str, value: Any, ttl: int = 300
-    ) -> None:
-        """Сохранить данные в кеш"""
-        if not self.cache_service:
-            return
-
-        try:
-            await self.cache_service.set("comment", cache_key, value, ttl)
-        except Exception as e:
-            if self.logger:
-                self.logger.warning(f"Ошибка сохранения в кеш: {e}")
-
-    async def _invalidate_cache(self, cache_key: str) -> None:
-        """Инвалидировать кеш"""
-        if not self.cache_service:
-            return
-
-        try:
-            await self.cache_service.delete("comment", cache_key)
-        except Exception as e:
-            if self.logger:
-                self.logger.warning(f"Ошибка инвалидации кеша: {e}")
-
-    async def get_comment(self, comment_id: int) -> Dict[str, Any]:
+    async def get_comment(self, comment_id: int, include_author: bool = False) -> Optional[CommentResponse]:
         """Получить комментарий по ID"""
-        # Проверяем кеш
-        cache_key = self._get_cache_key("comment", comment_id)
-        cached_comment = await self._get_from_cache(cache_key)
-
-        if cached_comment:
-            if self.logger:
-                self.logger.debug(f"Comment {comment_id} found in cache")
-            return cached_comment
-
-        # Получаем из БД
-        comment = await self.repository.get_by_id(comment_id)
+        comment = await self.repository.get_by_id(comment_id, include_author)
         if not comment:
-            raise CommentNotFoundError(comment_id)
+            return None
+        
+        return self._to_response(comment, include_author)
 
-        # Формируем ответ
-        result = CommentMapper.to_response_dict(comment)
+    async def get_comment_by_vk_id(self, vk_id: int) -> Optional[CommentResponse]:
+        """Получить комментарий по VK ID"""
+        comment = await self.repository.get_by_vk_id(vk_id)
+        if not comment:
+            return None
+        
+        return self._to_response(comment)
 
-        # Сохраняем в кеш
-        await self._set_to_cache(cache_key, result)
-        if self.logger:
-            self.logger.debug(f"Comment {comment_id} cached")
-
-        return result
-
-    async def get_comments_by_group(
+    async def get_comments(
         self,
-        group_id: str,
-        limit: int = 50,
+        filters: Optional[CommentFilter] = None,
+        limit: int = 20,
         offset: int = 0,
-        search_text: Optional[str] = None,
-        is_viewed: Optional[bool] = None,
-        is_archived: Optional[bool] = None,
-        has_keywords: Optional[bool] = None,
-    ) -> List[Dict[str, Any]]:
-        """Получить комментарии группы с пагинацией"""
-        comments = await self.repository.get_by_group_id(
-            group_id=group_id,
+        include_author: bool = False,
+    ) -> CommentListResponse:
+        """Получить список комментариев"""
+        comments = await self.repository.get_list(filters, limit, offset, include_author)
+        total = await self.repository.count(filters)
+        
+        return CommentListResponse(
+            items=[self._to_response(comment, include_author) for comment in comments],
+            total=total,
             limit=limit,
             offset=offset,
-            search_text=search_text,
-            is_viewed=is_viewed,
-            is_archived=is_archived,
-            has_keywords=has_keywords,
         )
 
-        return CommentMapper.to_response_dicts(comments)
-
-    async def get_all_comments(
-        self,
-        limit: int = 50,
-        offset: int = 0,
-        search_text: Optional[str] = None,
-        is_viewed: Optional[bool] = None,
-        is_archived: Optional[bool] = None,
-        has_keywords: Optional[bool] = None,
-    ) -> List[Dict[str, Any]]:
-        """Получить все комментарии с пагинацией"""
-        comments = await self.repository.get_all_comments(
-            limit=limit,
-            offset=offset,
-            search_text=search_text,
-            is_viewed=is_viewed,
-            is_archived=is_archived,
-            has_keywords=has_keywords,
-        )
-
-        return CommentMapper.to_response_dicts(comments)
-
-    async def get_comments_by_post(
-        self,
-        post_id: str,
-        limit: int = 100,
-        offset: int = 0,
-        is_viewed: Optional[bool] = None,
-        is_archived: Optional[bool] = None,
-    ) -> List[Dict[str, Any]]:
-        """Получить комментарии к посту"""
-        comments = await self.repository.get_by_post_id(
-            post_id=post_id,
-            limit=limit,
-            offset=offset,
-            is_viewed=is_viewed,
-            is_archived=is_archived,
-        )
-
-        return CommentMapper.to_response_dicts(comments)
-
-    async def create_comment(
-        self, comment_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Создать новый комментарий"""
-        # Валидация и нормализация данных
-        try:
-            normalized_data = CommentMapper.to_create_data(comment_data)
-        except ValueError as e:
-            raise ValidationError(str(e), field="validation")
-
+    async def create_comment(self, comment_data: CommentCreate) -> CommentResponse:
+        """Создать комментарий"""
         # Проверяем, что комментарий с таким VK ID не существует
-        existing = await self.repository.get_by_vk_id(normalized_data["vk_id"])
+        existing = await self.repository.get_by_vk_id(comment_data.vk_id)
         if existing:
-            raise ValidationError(
-                "Комментарий с таким VK ID уже существует",
-                field="vk_id",
-            )
+            raise ValueError(f"Комментарий с VK ID {comment_data.vk_id} уже существует")
 
-        # Создаем комментарий
-        comment = await self.repository.create(normalized_data)
-
-        # Инвалидируем кеш
-        cache_key = self._get_cache_key("comment", comment.id)
-        await self._invalidate_cache(cache_key)
-
-        return await self.get_comment(int(comment.id))
+        comment = await self.repository.create(comment_data)
+        return self._to_response(comment)
 
     async def update_comment(
-        self, comment_id: int, update_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, comment_id: int, update_data: CommentUpdate
+    ) -> Optional[CommentResponse]:
         """Обновить комментарий"""
-        # Валидация и нормализация данных
-        try:
-            normalized_data = CommentMapper.to_update_data(update_data)
-        except ValueError as e:
-            raise ValidationError(str(e), field="validation")
-
-        if not normalized_data:
-            raise ValidationError("Нет допустимых полей для обновления")
-
-        await self.repository.update(comment_id, normalized_data)
-
-        # Инвалидируем кеш
-        cache_key = self._get_cache_key("comment", comment_id)
-        await self._invalidate_cache(cache_key)
-
-        return await self.get_comment(comment_id)
+        comment = await self.repository.update(comment_id, update_data)
+        if not comment:
+            return None
+        
+        return self._to_response(comment)
 
     async def delete_comment(self, comment_id: int) -> bool:
         """Удалить комментарий"""
-        success = await self.repository.delete(comment_id)
+        return await self.repository.delete(comment_id)
 
-        if success:
-            # Инвалидируем кеш
-            cache_key = self._get_cache_key("comment", comment_id)
-            await self._invalidate_cache(cache_key)
+    async def get_stats(self) -> CommentStats:
+        """Получить статистику комментариев"""
+        stats = await self.repository.get_stats()
+        return CommentStats(**stats)
 
-        return success
+    # Методы для анализа ключевых слов
+    async def analyze_keywords(self, request: KeywordAnalysisRequest) -> KeywordAnalysisResponse:
+        """Анализ ключевых слов в комментарии"""
+        try:
+            # Получаем комментарий
+            comment = await self.repository.get_by_id(request.comment_id)
+            if not comment:
+                raise ValueError(f"Комментарий с ID {request.comment_id} не найден")
 
-    async def mark_as_viewed(self, comment_id: int) -> Dict[str, Any]:
-        """Отметить комментарий как просмотренный"""
-        success = await self.repository.mark_as_viewed(comment_id)
-        if not success:
-            raise CommentNotFoundError(comment_id)
+            if not comment.text or len(comment.text.strip()) < 3:
+                return KeywordAnalysisResponse(
+                    comment_id=request.comment_id,
+                    keywords_found=0,
+                    keywords_created=0,
+                    keywords_updated=0,
+                    status="skipped"
+                )
 
-        # Инвалидируем кеш
-        cache_key = self._get_cache_key("comment", comment_id)
-        await self._invalidate_cache(cache_key)
+            # Простой анализ ключевых слов (можно заменить на более сложный)
+            keywords_found = 0
+            keywords_created = 0
+            keywords_updated = 0
 
-        return await self.get_comment(comment_id)
+            # Извлекаем слова из текста
+            words = comment.text.lower().split()
+            for word in words:
+                if len(word) < 3:
+                    continue
+                
+                # Проверяем существующую связь
+                existing_match = await self.repository.get_keyword_match(request.comment_id, word)
+                if existing_match:
+                    keywords_updated += 1
+                else:
+                    keywords_created += 1
+                    await self.repository.create_keyword_match(
+                        request.comment_id, word, 50  # Простая уверенность
+                    )
+                
+                keywords_found += 1
 
-    async def bulk_mark_as_viewed(
-        self, comment_ids: List[int]
-    ) -> Dict[str, Any]:
-        """Массовое отмечание комментариев как просмотренные"""
-        update_data = {"processed_at": datetime.utcnow()}
-        success_count = await self.repository.bulk_update(
-            comment_ids, update_data
-        )
-
-        # Инвалидируем кеш для всех обновленных комментариев
-        for comment_id in comment_ids:
-            cache_key = self._get_cache_key("comment", comment_id)
-            await self._invalidate_cache(cache_key)
-
-        return {
-            "success_count": success_count,
-            "total_requested": len(comment_ids),
-            "message": f"Успешно обработано {success_count} из {len(comment_ids)} комментариев",
-        }
-
-    async def get_group_stats(self, group_id: str) -> Dict[str, Any]:
-        """Получить статистику комментариев группы"""
-        total_count = await self.repository.count_by_group(group_id)
-        global_stats = await self.repository.get_stats()
-
-        return CommentMapper.to_stats_dict(global_stats, group_id)
-
-    async def search_comments(
-        self,
-        query: str,
-        group_id: Optional[str] = None,
-        limit: int = 50,
-        offset: int = 0,
-        is_viewed: Optional[bool] = None,
-        is_archived: Optional[bool] = None,
-        has_keywords: Optional[bool] = None,
-    ) -> List[Dict[str, Any]]:
-        """Поиск комментариев по тексту"""
-        if not query or len(query.strip()) < 2:
-            raise ValidationError(
-                "Запрос поиска должен содержать минимум 2 символа",
-                field="query",
+            return KeywordAnalysisResponse(
+                comment_id=request.comment_id,
+                keywords_found=keywords_found,
+                keywords_created=keywords_created,
+                keywords_updated=keywords_updated,
+                status="success"
             )
 
-        # Специальный запрос "**" означает получить все комментарии без фильтрации по тексту
-        search_text = None if query.strip() == "**" else query.strip()
+        except Exception as e:
+            logger.error(f"Ошибка анализа ключевых слов: {str(e)}")
+            raise ValueError(f"Ошибка анализа ключевых слов: {str(e)}")
 
-        if group_id:
-            return await self.get_comments_by_group(
-                group_id=group_id,
-                limit=limit,
-                offset=offset,
-                search_text=search_text,
-                is_viewed=is_viewed,
-                is_archived=is_archived,
-                has_keywords=has_keywords,
-            )
-        else:
-            # Если группа не указана, получаем все комментарии
-            return await self.get_all_comments(
-                limit=limit,
-                offset=offset,
-                search_text=search_text,
-                is_viewed=is_viewed,
-                is_archived=is_archived,
-                has_keywords=has_keywords,
-            )
+    async def analyze_batch_keywords(self, request: BatchKeywordAnalysisRequest) -> BatchKeywordAnalysisResponse:
+        """Массовый анализ ключевых слов"""
+        results = []
+        total_found = 0
+        total_created = 0
+        total_updated = 0
+        errors = 0
 
-    async def count_by_group(
-        self,
-        group_id: str,
-        search_text: Optional[str] = None,
-        is_viewed: Optional[bool] = None,
-        is_archived: Optional[bool] = None,
-    ) -> int:
-        """Подсчитать количество комментариев в группе"""
-        return await self.repository.count_by_group(
-            group_id=group_id,
-            search_text=search_text,
-            is_viewed=is_viewed,
-            is_archived=is_archived,
+        for comment_id in request.comment_ids:
+            try:
+                analysis_request = KeywordAnalysisRequest(
+                    comment_id=comment_id,
+                    min_confidence=request.min_confidence,
+                    max_keywords=request.max_keywords
+                )
+                result = await self.analyze_keywords(analysis_request)
+                results.append(result)
+                total_found += result.keywords_found
+                total_created += result.keywords_created
+                total_updated += result.keywords_updated
+            except Exception as e:
+                logger.error(f"Ошибка анализа комментария {comment_id}: {str(e)}")
+                errors += 1
+                results.append(KeywordAnalysisResponse(
+                    comment_id=comment_id,
+                    keywords_found=0,
+                    keywords_created=0,
+                    keywords_updated=0,
+                    status="error"
+                ))
+
+        return BatchKeywordAnalysisResponse(
+            total_processed=len(request.comment_ids),
+            successful=len(request.comment_ids) - errors,
+            errors=errors,
+            total_keywords_found=total_found,
+            total_keywords_created=total_created,
+            total_keywords_updated=total_updated,
+            results=results
         )
 
-    async def count_by_post(
-        self,
-        post_id: str,
-        is_viewed: Optional[bool] = None,
-        is_archived: Optional[bool] = None,
-    ) -> int:
-        """Подсчитать количество комментариев к посту"""
-        return await self.repository.count_by_post(
-            post_id=post_id,
-            is_viewed=is_viewed,
-            is_archived=is_archived,
+    async def search_by_keywords(self, request: KeywordSearchRequest) -> KeywordSearchResponse:
+        """Поиск комментариев по ключевым словам"""
+        comments = await self.repository.search_by_keywords(
+            request.keywords, request.limit, request.offset
+        )
+        total = await self.repository.count_by_keywords(request.keywords)
+
+        return KeywordSearchResponse(
+            comments=[self._to_response(comment, include_author=True) for comment in comments],
+            total=total,
+            limit=request.limit,
+            offset=request.offset,
+            keywords=request.keywords
         )
 
-    async def count_all(
-        self,
-        search_text: Optional[str] = None,
-        is_viewed: Optional[bool] = None,
-        is_archived: Optional[bool] = None,
-    ) -> int:
-        """Подсчитать общее количество комментариев"""
-        return await self.repository.count_all(
-            search_text=search_text,
-            is_viewed=is_viewed,
-            is_archived=is_archived,
+    async def get_keyword_statistics(self) -> KeywordStatisticsResponse:
+        """Получить статистику ключевых слов"""
+        # Простая реализация - можно расширить
+        return KeywordStatisticsResponse(
+            total_keywords=0,
+            total_matches=0,
+            categories={},
+            top_keywords=[]
         )
 
-
-# Экспорт
-__all__ = [
-    "CommentService",
-]
+    def _to_response(self, comment: Comment, include_author: bool = False) -> CommentResponse:
+        """Преобразовать модель в схему ответа"""
+        author_data = None
+        if include_author and comment.author:
+            author_data = {
+                "id": comment.author.id,
+                "vk_id": comment.author.vk_id,
+                "first_name": comment.author.first_name,
+                "last_name": comment.author.last_name,
+                "screen_name": comment.author.screen_name,
+                "photo_url": comment.author.photo_url,
+                "status": comment.author.status,
+                "is_verified": comment.author.is_verified,
+                "followers_count": comment.author.followers_count,
+                "created_at": comment.author.created_at,
+                "updated_at": comment.author.updated_at,
+            }
+        
+        return CommentResponse(
+            id=comment.id,
+            vk_id=comment.vk_id,
+            group_id=comment.group_id,
+            post_id=comment.post_id,
+            author_id=comment.author_id,
+            text=comment.text,
+            created_at=comment.created_at,
+            is_deleted=comment.is_deleted,
+            keyword_matches=[
+                KeywordMatch(
+                    keyword=match.keyword,
+                    confidence=match.confidence,
+                    created_at=match.created_at,
+                )
+                for match in comment.keyword_matches
+            ],
+            author=author_data,
+        )

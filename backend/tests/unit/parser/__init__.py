@@ -1,7 +1,5 @@
 """
-Пакет тестов unit для модуля parser.
+Parser unit tests
 
-Файл сохранён намеренно: структура tests как пакетов обеспечивает уникальные
-имена модулей conftest (tests.unit.parser.conftest), что исключает конфликт
-pytest-плагинов.
+Содержит unit тесты для модуля Parser
 """

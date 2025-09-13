@@ -9,7 +9,7 @@ import hashlib
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 
-from .config import (
+from vk_api.config import (
     REGEX_VK_GROUP_ID,
     REGEX_VK_USER_ID,
     REGEX_VK_POST_ID,

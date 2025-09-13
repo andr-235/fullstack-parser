@@ -1,15 +1,16 @@
 """
-Модуль аутентификации (Clean Architecture)
+Модуль аутентификации
 
 Предоставляет функциональность аутентификации и управления пользователями
-с использованием принципов Clean Architecture и SOLID
 """
 
-# Временно убираем импорт router из-за циклических импортов
-# Проблема: auth.models импортирует database, что создает циклические зависимости
+from .router import router
+from .dependencies import get_current_user, get_current_active_user
+from .services import AuthService
 
-# Для использования router в main.py используйте:
-# from auth.presentation.api.auth_router import router
-
-# Экспорт
-__all__ = []
+__all__ = [
+    "router",
+    "get_current_user", 
+    "get_current_active_user",
+    "AuthService",
+]
