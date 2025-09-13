@@ -42,10 +42,10 @@ export const LoginForm = () => {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl text-center">Вход в систему</CardTitle>
-        <CardDescription className="text-center">
+        <CardTitle className="text-2xl text-center text-white">Вход в систему</CardTitle>
+        <CardDescription className="text-center text-white/70">
           Введите email и пароль для входа
         </CardDescription>
       </CardHeader>
@@ -58,21 +58,22 @@ export const LoginForm = () => {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-white">Email</Label>
             <Input
               id="email"
               type="email"
               placeholder="example@email.com"
               {...register("email")}
               disabled={isLoading}
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
             />
             {errors.email && (
-              <p className="text-sm text-red-500">{errors.email.message}</p>
+              <p className="text-sm text-red-300">{errors.email.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Пароль</Label>
+            <Label htmlFor="password" className="text-white">Пароль</Label>
             <div className="relative">
               <Input
                 id="password"
@@ -80,12 +81,13 @@ export const LoginForm = () => {
                 placeholder="Введите пароль"
                 {...register("password")}
                 disabled={isLoading}
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 pr-10"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
               >
@@ -97,11 +99,15 @@ export const LoginForm = () => {
               </Button>
             </div>
             {errors.password && (
-              <p className="text-sm text-red-500">{errors.password.message}</p>
+              <p className="text-sm text-red-300">{errors.password.message}</p>
             )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button 
+            type="submit" 
+            className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/20 backdrop-blur-sm transition-all duration-200" 
+            disabled={isLoading}
+          >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Войти
           </Button>

@@ -72,10 +72,10 @@ export const RegisterForm = () => {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl text-center">Регистрация</CardTitle>
-        <CardDescription className="text-center">
+        <CardTitle className="text-2xl text-center text-white">Регистрация</CardTitle>
+        <CardDescription className="text-center text-white/70">
           Создайте новый аккаунт
         </CardDescription>
       </CardHeader>
@@ -88,35 +88,37 @@ export const RegisterForm = () => {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="full_name">Полное имя</Label>
+            <Label htmlFor="full_name" className="text-white">Полное имя</Label>
             <Input
               id="full_name"
               type="text"
               placeholder="Введите ваше имя"
               {...register("full_name")}
               disabled={isLoading}
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
             />
             {errors.full_name && (
-              <p className="text-sm text-red-500">{errors.full_name.message}</p>
+              <p className="text-sm text-red-300">{errors.full_name.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-white">Email</Label>
             <Input
               id="email"
               type="email"
               placeholder="example@email.com"
               {...register("email")}
               disabled={isLoading}
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
             />
             {errors.email && (
-              <p className="text-sm text-red-500">{errors.email.message}</p>
+              <p className="text-sm text-red-300">{errors.email.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Пароль</Label>
+            <Label htmlFor="password" className="text-white">Пароль</Label>
             <div className="relative">
               <Input
                 id="password"
@@ -124,12 +126,13 @@ export const RegisterForm = () => {
                 placeholder="Введите пароль"
                 {...register("password")}
                 disabled={isLoading}
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 pr-10"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
               >
@@ -141,12 +144,12 @@ export const RegisterForm = () => {
               </Button>
             </div>
             {errors.password && (
-              <p className="text-sm text-red-500">{errors.password.message}</p>
+              <p className="text-sm text-red-300">{errors.password.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirm_password">Подтвердите пароль</Label>
+            <Label htmlFor="confirm_password" className="text-white">Подтвердите пароль</Label>
             <div className="relative">
               <Input
                 id="confirm_password"
@@ -154,12 +157,13 @@ export const RegisterForm = () => {
                 placeholder="Подтвердите пароль"
                 {...register("confirm_password")}
                 disabled={isLoading}
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 pr-10"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 disabled={isLoading}
               >
@@ -171,11 +175,15 @@ export const RegisterForm = () => {
               </Button>
             </div>
             {errors.confirm_password && (
-              <p className="text-sm text-red-500">{errors.confirm_password.message}</p>
+              <p className="text-sm text-red-300">{errors.confirm_password.message}</p>
             )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button 
+            type="submit" 
+            className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/20 backdrop-blur-sm transition-all duration-200" 
+            disabled={isLoading}
+          >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Зарегистрироваться
           </Button>

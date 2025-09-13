@@ -89,10 +89,10 @@ export const ChangePasswordForm = () => {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl text-center">Смена пароля</CardTitle>
-        <CardDescription className="text-center">
+        <CardTitle className="text-2xl text-center text-white">Смена пароля</CardTitle>
+        <CardDescription className="text-center text-white/70">
           Введите текущий пароль и новый пароль
         </CardDescription>
       </CardHeader>
