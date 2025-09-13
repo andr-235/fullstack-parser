@@ -21,7 +21,7 @@ class UserRepository:
         """Создать пользователя"""
         user = User(**user_data)
         self.session.add(user)
-        await self.session.commit()
+        await self.session.flush()  # Flush to get the ID
         await self.session.refresh(user)
         return user
 

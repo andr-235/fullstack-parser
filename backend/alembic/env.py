@@ -21,6 +21,9 @@ from src import Base
 from authors.models import AuthorModel
 from comments.models import Comment, CommentKeywordMatch
 from posts.models import Post
+from user.models import User
+from groups.models import Group
+from keywords.models import Keyword
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

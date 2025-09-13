@@ -3,7 +3,7 @@ SQLAlchemy модели для модуля Posts
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -13,9 +13,12 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from common.database import Base
+
+if TYPE_CHECKING:
+    from comments.models import Comment
 
 
 class Post(Base):
@@ -41,6 +44,9 @@ class Post(Base):
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Связи
+    comments = relationship("Comment", back_populates="post", lazy="select")
 
 
 class PostRepository:

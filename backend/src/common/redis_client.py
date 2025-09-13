@@ -216,7 +216,7 @@ def get_redis_url() -> str:
     """Получить URL Redis"""
     return os.getenv(
         "REDIS_URL",
-        "redis://localhost:6379/0"
+        "redis://redis:6379/0"
     )
 
 

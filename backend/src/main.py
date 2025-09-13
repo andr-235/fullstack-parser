@@ -12,7 +12,13 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from common.logging import get_logger
+from common.logging import get_logger, setup_logging
+
+# Настраиваем логирование
+setup_logging()
+
+# Импортируем все модели для правильной инициализации SQLAlchemy relationships
+from models import *  # noqa: F401, F403
 
 logger = get_logger(__name__)
 
@@ -74,6 +80,8 @@ async def handle_http_exception(request: Request, exc: HTTPException):
 async def handle_unexpected_error(request: Request, exc: Exception):
     """Обработчик непредвиденных ошибок"""
     logger.error(f"Unexpected error: {exc}")
+    import traceback
+    logger.error(f"Traceback: {traceback.format_exc()}")
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
@@ -88,6 +96,12 @@ async def health_check():
     """Проверка здоровья"""
     return {"status": "healthy", "version": "1.7.0"}
 
+
+# Импортируем все модели для правильной инициализации relationships
+try:
+    from models import *  # noqa: F401, F403
+except ImportError as e:
+    logger.warning(f"Some models not available: {e}")
 
 # Подключаем роутеры модулей
 try:

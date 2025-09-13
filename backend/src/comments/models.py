@@ -3,6 +3,7 @@ SQLAlchemy модели для модуля Comments
 """
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -17,6 +18,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from common.database import Base
+
+if TYPE_CHECKING:
+    from authors.models import AuthorModel
 
 
 class Comment(Base):

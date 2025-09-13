@@ -3,11 +3,15 @@ SQLAlchemy модели для модуля авторов
 """
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from common.database import Base
+
+if TYPE_CHECKING:
+    from comments.models import Comment
 
 
 class AuthorModel(Base):

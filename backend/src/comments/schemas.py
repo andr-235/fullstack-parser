@@ -32,7 +32,6 @@ class CommentResponse(BaseModel):
     is_deleted: bool = False
     keyword_matches: List[KeywordMatch] = []
     author: Optional[AuthorResponse] = None
-    post: Optional["PostResponse"] = None
 
 
 class CommentCreate(BaseModel):
@@ -154,8 +153,3 @@ class KeywordStatisticsResponse(BaseModel):
     top_keywords: List[Dict[str, Any]]
 
 
-# Forward reference для PostResponse
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from posts.schemas import PostResponse
