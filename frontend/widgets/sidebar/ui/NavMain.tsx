@@ -26,8 +26,10 @@ export const NavMain: React.FC<NavMainProps> = ({ items }) => {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Платформа</SidebarGroupLabel>
-      <SidebarMenu>
+      <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
+        Платформа
+      </SidebarGroupLabel>
+      <SidebarMenu className="space-y-1">
         {items.map((item) => (
           <Collapsible
             key={item.id}
@@ -41,24 +43,29 @@ export const NavMain: React.FC<NavMainProps> = ({ items }) => {
                   asChild
                   tooltip={item.title}
                   isActive={pathname === item.url}
+                  className="group hover:bg-accent/50 transition-all duration-200 rounded-lg"
                 >
-                  <Link href={item.url}>
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
+                  <Link href={item.url} className="flex items-center gap-3">
+                    {item.icon && (
+                      <item.icon className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    )}
+                    <span className="font-medium">{item.title}</span>
                     {item.badge}
+                    <ChevronRight className="ml-auto size-4 text-muted-foreground group-data-[state=open]:rotate-90 transition-transform" />
                   </Link>
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               {item.items?.length ? (
-                <CollapsibleContent>
-                  <SidebarMenuSub>
+                <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+                  <SidebarMenuSub className="ml-4 mt-1 space-y-1">
                     {item.items?.map((subItem) => (
                       <SidebarMenuSubItem key={subItem.id}>
                         <SidebarMenuSubButton
                           asChild
                           isActive={pathname === subItem.url}
+                          className="hover:bg-accent/30 transition-colors rounded-md"
                         >
-                          <Link href={subItem.url}>
+                          <Link href={subItem.url} className="text-sm">
                             <span>{subItem.title}</span>
                           </Link>
                         </SidebarMenuSubButton>
