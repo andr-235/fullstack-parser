@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 
 import './globals.css';
 
-
 import { APP_CONFIG } from '@/shared/config';
 import { AppProviders } from '@/shared/providers/AppProviders';
 
