@@ -17,13 +17,19 @@ from alembic import context
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Import all models to ensure they are registered
-from src import Base
-from authors.models import AuthorModel
-from comments.models import Comment, CommentKeywordMatch
-from posts.models import Post
-from user.models import User
-from groups.models import Group
-from keywords.models import Keyword
+try:
+    from src import Base
+    from authors.models import AuthorModel
+    from comments.models import Comment, CommentKeywordMatch
+    from posts.models import Post
+    from user.models import User
+    from groups.models import Group
+    from keywords.models import Keyword
+except ImportError as e:
+    print(f"Warning: Could not import models: {e}")
+    # Fallback: create minimal metadata
+    from sqlalchemy import MetaData
+    Base = MetaData()
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

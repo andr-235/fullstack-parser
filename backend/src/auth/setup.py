@@ -36,7 +36,8 @@ class AuthSetup:
         self._config = config or AuthConfig(
             access_token_expire_minutes=access_token_expire_minutes,
             refresh_token_expire_days=refresh_token_expire_days,
-            password_rounds=password_rounds
+            password_rounds=password_rounds,
+            max_login_attempts=5
         )
 
         # Создаем сервисы

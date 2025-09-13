@@ -161,6 +161,7 @@ class AuthService:
         if self.cache_service:
             attempts_key = f"login_attempts:{request.email}"
             attempts = await self.cache_service.get(attempts_key) or 0
+            attempts = int(attempts) if attempts else 0
 
             if attempts >= self.config.max_login_attempts:
                 self.logger.warning(f"Too many login attempts for {request.email}")
@@ -379,7 +380,7 @@ class AuthService:
             if self.cache_service:
                 cache_key = f"user:{user_id}"
                 cached_data = await self.cache_service.get(cache_key)
-                if cached_data:
+                if cached_data and isinstance(cached_data, dict):
                     # Возвращаем данные из кеша без обращения к БД
                     return User(
                         id=cached_data["id"],

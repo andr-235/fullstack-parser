@@ -26,7 +26,7 @@ export const NavMain: React.FC<NavMainProps> = ({ items }) => {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
+      <SidebarGroupLabel className="text-xs font-semibold text-white/70 uppercase tracking-wider px-2 py-1.5">
         Платформа
       </SidebarGroupLabel>
       <SidebarMenu className="space-y-1">
@@ -43,15 +43,15 @@ export const NavMain: React.FC<NavMainProps> = ({ items }) => {
                   asChild
                   tooltip={item.title}
                   isActive={pathname === item.url}
-                  className="group hover:bg-accent/50 transition-all duration-200 rounded-lg"
+                  className="group hover:bg-white/10 transition-all duration-200 rounded-lg text-white"
                 >
                   <Link href={item.url} className="flex items-center gap-3">
                     {item.icon && (
-                      <item.icon className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                      <item.icon className="size-4 text-white/70 group-hover:text-white transition-colors" />
                     )}
                     <span className="font-medium">{item.title}</span>
                     {item.badge}
-                    <ChevronRight className="ml-auto size-4 text-muted-foreground group-data-[state=open]:rotate-90 transition-transform" />
+                    <ChevronRight className="ml-auto size-4 text-white/70 group-data-[state=open]:rotate-90 transition-transform" />
                   </Link>
                 </SidebarMenuButton>
               </CollapsibleTrigger>
@@ -63,7 +63,7 @@ export const NavMain: React.FC<NavMainProps> = ({ items }) => {
                         <SidebarMenuSubButton
                           asChild
                           isActive={pathname === subItem.url}
-                          className="hover:bg-accent/30 transition-colors rounded-md"
+                          className="hover:bg-white/10 transition-colors rounded-md text-white"
                         >
                           <Link href={subItem.url} className="text-sm">
                             <span>{subItem.title}</span>
