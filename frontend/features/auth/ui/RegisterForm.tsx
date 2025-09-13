@@ -80,14 +80,14 @@ export const RegisterForm = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error.message}</AlertDescription>
             </Alert>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="full_name" className="text-white">Полное имя</Label>
             <Input
               id="full_name"
@@ -102,7 +102,7 @@ export const RegisterForm = () => {
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="email" className="text-white">Email</Label>
             <Input
               id="email"
@@ -117,7 +117,7 @@ export const RegisterForm = () => {
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="password" className="text-white">Пароль</Label>
             <div className="relative">
               <Input
@@ -148,7 +148,7 @@ export const RegisterForm = () => {
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="confirm_password" className="text-white">Подтвердите пароль</Label>
             <div className="relative">
               <Input

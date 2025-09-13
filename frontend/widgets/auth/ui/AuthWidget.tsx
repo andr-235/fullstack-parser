@@ -23,46 +23,46 @@ export const AuthWidget = () => {
       <div className="relative w-full max-w-md">
         <div className="backdrop-blur-xl bg-white/10 rounded-2xl shadow-2xl border border-white/20 p-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-white/10 backdrop-blur-sm border border-white/20">
+            <TabsList className="grid w-full grid-cols-4 bg-white/10 backdrop-blur-sm border border-white/20 gap-1 p-1">
               <TabsTrigger 
                 value="login" 
-                className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors"
+                className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors rounded-md"
               >
                 Вход
               </TabsTrigger>
               <TabsTrigger 
                 value="register"
-                className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors"
+                className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors rounded-md"
               >
                 Регистрация
               </TabsTrigger>
               <TabsTrigger 
                 value="change-password"
-                className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors"
+                className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors rounded-md"
               >
                 Смена пароля
               </TabsTrigger>
               <TabsTrigger 
                 value="reset-password"
-                className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors"
+                className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors rounded-md"
               >
                 Сброс пароля
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="login" className="mt-6">
+            <TabsContent value="login" className="mt-8">
               <LoginForm />
             </TabsContent>
             
-            <TabsContent value="register" className="mt-6">
+            <TabsContent value="register" className="mt-8">
               <RegisterForm />
             </TabsContent>
             
-            <TabsContent value="change-password" className="mt-6">
+            <TabsContent value="change-password" className="mt-8">
               <ChangePasswordForm />
             </TabsContent>
             
-            <TabsContent value="reset-password" className="mt-6">
+            <TabsContent value="reset-password" className="mt-8">
               <ResetPasswordForm />
             </TabsContent>
           </Tabs>

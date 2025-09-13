@@ -132,14 +132,14 @@ export const ResetPasswordForm = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmitRequest(onRequestSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmitRequest(onRequestSubmit)} className="space-y-6">
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label htmlFor="email" className="text-white">Email</Label>
               <Input
                 id="email"
@@ -190,7 +190,7 @@ export const ResetPasswordForm = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmitConfirm(onConfirmSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmitConfirm(onConfirmSubmit)} className="space-y-6">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -206,7 +206,7 @@ export const ResetPasswordForm = () => {
             </Alert>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="token" className="text-white">Код подтверждения</Label>
             <Input
               id="token"
@@ -221,7 +221,7 @@ export const ResetPasswordForm = () => {
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="new_password" className="text-white">Новый пароль</Label>
             <Input
               id="new_password"
@@ -236,7 +236,7 @@ export const ResetPasswordForm = () => {
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="confirm_password" className="text-white">Подтвердите пароль</Label>
             <Input
               id="confirm_password"

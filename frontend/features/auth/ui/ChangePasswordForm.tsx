@@ -97,14 +97,14 @@ export const ChangePasswordForm = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="current_password">Текущий пароль</Label>
             <div className="relative">
               <Input
@@ -134,7 +134,7 @@ export const ChangePasswordForm = () => {
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="new_password">Новый пароль</Label>
             <div className="relative">
               <Input
@@ -164,7 +164,7 @@ export const ChangePasswordForm = () => {
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="confirm_password">Подтвердите пароль</Label>
             <div className="relative">
               <Input
