@@ -93,7 +93,7 @@ export const NavUser: React.FC<NavUserProps> = ({ user }) => {
                 onClick={handleUpgrade}
                 className="gap-3 p-2 rounded-lg hover:bg-blue-600/20 transition-all cursor-pointer text-white"
               >
-                <Sparkles className="size-4 text-blue-300" />
+                <Sparkles className="size-4 text-white" />
                 <span className="font-medium">Обновить до Pro</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>

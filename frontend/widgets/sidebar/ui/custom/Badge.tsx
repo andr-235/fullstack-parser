@@ -14,7 +14,7 @@ export const Badge = ({
   className = "" 
 }: BadgeProps) => {
   const variantClasses = {
-    default: "bg-blue-600/20 text-blue-300 border border-blue-500/30",
+    default: "bg-blue-600/20 text-white border border-blue-500/30",
     secondary: "bg-white/10 text-white/70 border border-white/20",
     destructive: "bg-red-600/20 text-red-300 border border-red-500/30",
     outline: "border border-white/20 text-white/70"
