@@ -4,16 +4,16 @@ SQLAlchemy модели для пользователей
 
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, Integer, Boolean, DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.ext.declarative import declarative_base
 
-Base = declarative_base()
+from sqlalchemy import Boolean, DateTime, Integer, String, func
+from sqlalchemy.orm import Mapped, mapped_column
+
+from common.database import Base
 
 
 class User(Base):
     """SQLAlchemy модель пользователя"""
-    
+
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)

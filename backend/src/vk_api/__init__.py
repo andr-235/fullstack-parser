@@ -5,11 +5,11 @@ VK API Module - Simplified Implementation
 """
 
 from .client import VKAPIClient
-from .service import VKAPIService
 from .exceptions import VKAPIError
+from .service import VKAPIService
 
 __all__ = [
     "VKAPIClient",
-    "VKAPIService", 
+    "VKAPIService",
     "VKAPIError",
 ]

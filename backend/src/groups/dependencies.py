@@ -5,7 +5,8 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from shared.infrastructure.database.session import get_db_session
+from common.database import get_db_session
+
 from .service import GroupService
 
 

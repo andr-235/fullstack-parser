@@ -3,22 +3,22 @@
 """
 
 from .models import Keyword, KeywordsRepository
-from .service import KeywordsService
+from .router import router
 from .schemas import (
     KeywordCreate,
-    KeywordUpdate,
     KeywordResponse,
     KeywordsListResponse,
     KeywordStats,
+    KeywordUpdate,
 )
-from .router import router
+from .service import KeywordsService
 
 __all__ = [
     "Keyword",
-    "KeywordsRepository", 
+    "KeywordsRepository",
     "KeywordsService",
     "KeywordCreate",
-    "KeywordUpdate", 
+    "KeywordUpdate",
     "KeywordResponse",
     "KeywordsListResponse",
     "KeywordStats",

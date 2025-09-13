@@ -2,21 +2,20 @@
 FastAPI роутер для морфологического анализа
 """
 
-from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 
-from .service import MorphologicalService
 from .schemas import (
-    WordAnalysisRequest,
-    WordAnalysisResponse,
-    TextAnalysisRequest,
-    TextAnalysisResponse,
     KeywordExtractionRequest,
     KeywordExtractionResponse,
     LanguageDetectionRequest,
     LanguageDetectionResponse,
     MorphologicalStats,
+    TextAnalysisRequest,
+    TextAnalysisResponse,
+    WordAnalysisRequest,
+    WordAnalysisResponse,
 )
+from .service import MorphologicalService
 
 router = APIRouter(
     prefix="/morphological",

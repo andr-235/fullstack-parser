@@ -2,13 +2,13 @@
 Модели для модуля Health
 """
 
-from typing import Dict, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, Optional
 
 
 class HealthStatus:
     """Статус здоровья системы"""
-    
+
     def __init__(
         self,
         status: str = "healthy",
@@ -32,7 +32,7 @@ class HealthStatus:
     def update_overall_status(self) -> None:
         """Обновить общий статус на основе компонентов"""
         unhealthy = [s for s in self.components.values() if s not in ["healthy", "ready", "alive"]]
-        
+
         if not unhealthy:
             self.status = "healthy"
         elif len(unhealthy) == len(self.components):
@@ -54,7 +54,7 @@ class HealthStatus:
 
 class HealthCheckResult:
     """Результат проверки компонента"""
-    
+
     def __init__(
         self,
         component: str,
@@ -88,7 +88,7 @@ class HealthCheckResult:
 
 class HealthRepository:
     """Репозиторий для работы с данными здоровья"""
-    
+
     def __init__(self):
         self._cache = {}
         self._history = []
@@ -105,7 +105,7 @@ class HealthRepository:
         cached_data = self._cache.get("system_health")
         if not cached_data:
             return None
-            
+
         status_data = cached_data["status"]
         return HealthStatus(
             status=status_data["status"],
@@ -124,23 +124,23 @@ class HealthRepository:
     async def get_check_history(self, component: Optional[str] = None, limit: int = 50) -> list:
         """Получить историю проверок"""
         history = self._history[::-1]
-        
+
         if component:
             history = [item for item in history if item["component"] == component]
-            
+
         return history[:limit]
 
     async def get_health_metrics(self) -> Dict[str, Any]:
         """Получить метрики здоровья"""
         total_checks = len(self._history)
         successful_checks = sum(
-            1 for check in self._history 
+            1 for check in self._history
             if check["status"] in ["healthy", "ready", "alive"]
         )
         failed_checks = total_checks - successful_checks
 
         response_times = [
-            check["response_time_ms"] for check in self._history 
+            check["response_time_ms"] for check in self._history
             if check["response_time_ms"] is not None
         ]
         avg_response_time = sum(response_times) / len(response_times) if response_times else 0

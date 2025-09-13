@@ -3,10 +3,10 @@ Pydantic схемы для модуля авторов
 """
 
 from datetime import datetime
-from typing import Optional, List
 from enum import Enum
+from typing import List, Optional
 
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AuthorStatus(str, Enum):
@@ -35,14 +35,14 @@ class AuthorBase(BaseModel):
 
 class AuthorCreate(AuthorBase):
     """Схема создания автора"""
-    
+
     @field_validator('screen_name')
     @classmethod
     def validate_screen_name(cls, v):
         if v and not v.replace('_', '').replace('-', '').isalnum():
             raise ValueError('Screen name must contain only letters, numbers, _ and -')
         return v
-    
+
     @field_validator('vk_id')
     @classmethod
     def validate_vk_id(cls, v):
@@ -71,7 +71,7 @@ class AuthorResponse(AuthorBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 

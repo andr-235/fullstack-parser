@@ -6,37 +6,37 @@
 
 # Основные компоненты
 from parser.config import ParserSettings, parser_settings
-from parser.service import ParserService
-from parser.models import TaskStatus, TaskPriority, ParsingTaskModel
-from parser.schemas import (
-    ParseRequest,
-    ParseResponse,
-    ParseStatus,
-    ParserState,
-    StopParseRequest,
-    StopParseResponse,
-    VKGroupInfo,
-    VKPostInfo,
-    VKCommentInfo,
-    ParseResult,
-    ParseTask,
-    ParseTaskListResponse,
-    ParseStats,
-    VKAPIError,
-)
+from parser.dependencies import get_parser_service
 from parser.exceptions import (
-    TaskNotFoundException,
     InvalidTaskDataException,
-    ParsingException,
-    VKAPITimeoutException,
-    VKAPILimitExceededException,
     ParserConfigurationException,
     ParserDataValidationException,
     ParserServiceUnavailableException,
+    ParsingException,
+    TaskNotFoundException,
+    VKAPILimitExceededException,
+    VKAPITimeoutException,
 )
-from parser.dependencies import get_parser_service
-from parser.router import router as parser_router
 from parser.group_parser import GroupParser, VKAPIServiceProtocol
+from parser.models import ParsingTaskModel, TaskPriority, TaskStatus
+from parser.router import router as parser_router
+from parser.schemas import (
+    ParseRequest,
+    ParseResponse,
+    ParseResult,
+    ParserState,
+    ParseStats,
+    ParseStatus,
+    ParseTask,
+    ParseTaskListResponse,
+    StopParseRequest,
+    StopParseResponse,
+    VKAPIError,
+    VKCommentInfo,
+    VKGroupInfo,
+    VKPostInfo,
+)
+from parser.service import ParserService
 
 # Версия модуля
 __version__ = "2.0.0"

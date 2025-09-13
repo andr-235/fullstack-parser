@@ -3,16 +3,26 @@
 """
 
 import logging
-from typing import List, Optional, Dict, Any
+from typing import Optional
+
+from comments.models import Comment
 from comments.repository import CommentRepository
 from comments.schemas import (
-    CommentCreate, CommentUpdate, CommentFilter, CommentResponse, 
-    CommentListResponse, CommentStats, KeywordMatch,
-    KeywordAnalysisRequest, KeywordAnalysisResponse, BatchKeywordAnalysisRequest,
-    BatchKeywordAnalysisResponse, KeywordSearchRequest, KeywordSearchResponse,
-    KeywordStatisticsResponse
+    BatchKeywordAnalysisRequest,
+    BatchKeywordAnalysisResponse,
+    CommentCreate,
+    CommentFilter,
+    CommentListResponse,
+    CommentResponse,
+    CommentStats,
+    CommentUpdate,
+    KeywordAnalysisRequest,
+    KeywordAnalysisResponse,
+    KeywordMatch,
+    KeywordSearchRequest,
+    KeywordSearchResponse,
+    KeywordStatisticsResponse,
 )
-from comments.models import Comment
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +38,7 @@ class CommentService:
         comment = await self.repository.get_by_id(comment_id, include_author)
         if not comment:
             return None
-        
+
         return self._to_response(comment, include_author)
 
     async def get_comment_by_vk_id(self, vk_id: int) -> Optional[CommentResponse]:
@@ -36,7 +46,7 @@ class CommentService:
         comment = await self.repository.get_by_vk_id(vk_id)
         if not comment:
             return None
-        
+
         return self._to_response(comment)
 
     async def get_comments(
@@ -49,7 +59,7 @@ class CommentService:
         """Получить список комментариев"""
         comments = await self.repository.get_list(filters, limit, offset, include_author)
         total = await self.repository.count(filters)
-        
+
         return CommentListResponse(
             items=[self._to_response(comment, include_author) for comment in comments],
             total=total,
@@ -74,7 +84,7 @@ class CommentService:
         comment = await self.repository.update(comment_id, update_data)
         if not comment:
             return None
-        
+
         return self._to_response(comment)
 
     async def delete_comment(self, comment_id: int) -> bool:
@@ -114,7 +124,7 @@ class CommentService:
             for word in words:
                 if len(word) < 3:
                     continue
-                
+
                 # Проверяем существующую связь
                 existing_match = await self.repository.get_keyword_match(request.comment_id, word)
                 if existing_match:
@@ -124,7 +134,7 @@ class CommentService:
                     await self.repository.create_keyword_match(
                         request.comment_id, word, 50  # Простая уверенность
                     )
-                
+
                 keywords_found += 1
 
             return KeywordAnalysisResponse(
@@ -222,7 +232,7 @@ class CommentService:
                 "created_at": comment.author.created_at,
                 "updated_at": comment.author.updated_at,
             }
-        
+
         return CommentResponse(
             id=comment.id,
             vk_id=comment.vk_id,

@@ -4,7 +4,6 @@
 Определяет FastAPI зависимости для работы с парсером
 """
 
-from fastapi import Depends
 from vk_api.dependencies import create_vk_api_service
 
 # Глобальный экземпляр сервиса парсера для сохранения состояния задач
@@ -23,8 +22,8 @@ async def get_parser_service():
     # Создаем экземпляр только один раз
     if _parser_service_instance is None:
         # Импорт здесь для избежания циклических зависимостей
-        from .service import ParserService
         from .group_parser import GroupParser
+        from .service import ParserService
 
         vk_api_service = await create_vk_api_service()
         group_parser = GroupParser(vk_api_service)

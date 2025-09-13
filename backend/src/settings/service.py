@@ -4,23 +4,23 @@
 Содержит бизнес-логику для управления настройками системы
 """
 
-import time
 import logging
-from typing import Dict, Any, Optional, List
 from datetime import datetime
+from typing import Any, Dict, Optional
 
-from shared.presentation.exceptions import ValidationException as ValidationError, InternalServerException as ServiceUnavailableError
-from settings.models import SettingsRepository
+from common.exceptions import (
+    InternalServerException as ServiceUnavailableError,
+)
+from common.exceptions import ValidationException as ValidationError
 from settings.config import settings_config
 from settings.constants import (
-    SUCCESS_SETTINGS_UPDATED,
-    SUCCESS_SETTINGS_RESET,
+    ERROR_INVALID_SETTINGS_SECTION,
+    ERROR_SETTING_NOT_FOUND,
     ERROR_SETTINGS_LOAD_FAILED,
     ERROR_SETTINGS_UPDATE_FAILED,
     ERROR_SETTINGS_VALIDATION_FAILED,
-    ERROR_INVALID_SETTINGS_SECTION,
-    ERROR_SETTING_NOT_FOUND,
 )
+from settings.models import SettingsRepository
 
 
 class SettingsService:

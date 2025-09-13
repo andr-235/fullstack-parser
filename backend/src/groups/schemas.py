@@ -4,9 +4,14 @@ Pydantic схемы для модуля Groups
 
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict
 
-from shared.presentation.responses.base_responses import PaginatedResponse
+from pydantic import BaseModel, ConfigDict, Field
+
+
+# Упрощенная пагинация без shared модуля
+class PaginatedResponse:
+    """Базовый класс для пагинированных ответов"""
+    pass
 
 
 class GroupCreate(BaseModel):
@@ -28,7 +33,7 @@ class GroupUpdate(BaseModel):
 class GroupResponse(BaseModel):
     """Схема ответа с информацией о группе"""
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int = Field(..., description="ID в базе данных")
     vk_id: int = Field(..., description="ID группы в VK")
     screen_name: str = Field(..., description="Короткое имя группы")
@@ -59,7 +64,7 @@ class GroupBulkResponse(BaseModel):
 
 __all__ = [
     "GroupCreate",
-    "GroupUpdate", 
+    "GroupUpdate",
     "GroupResponse",
     "GroupListResponse",
     "GroupBulkAction",

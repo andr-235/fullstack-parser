@@ -1,60 +1,33 @@
 """
-Исключения модуля Health
+Исключения модуля Health - упрощенная версия
 """
 
-from shared.presentation.exceptions import APIException
+from common.exceptions import APIException, NotFoundException
 
 
 class HealthError(APIException):
     """Общая ошибка модуля Health"""
-    
-    def __init__(self, message: str, error_code: str = "HEALTH_ERROR"):
-        super().__init__(
-            status_code=500,
-            detail=message,
-            error_code=error_code,
-        )
+    pass
 
 
 class HealthCheckFailedError(APIException):
     """Ошибка выполнения проверки здоровья"""
-    
+
     def __init__(self, component: str, message: str = "Health check failed"):
         super().__init__(
+            message=f"{message}: {component}",
             status_code=503,
-            detail=f"{message}: {component}",
-            error_code="HEALTH_CHECK_FAILED",
-            extra_data={"component": component},
+            details={"component": component},
         )
 
 
-class HealthComponentNotFoundError(APIException):
+class HealthComponentNotFoundError(NotFoundException):
     """Компонент здоровья не найден"""
-    
-    def __init__(self, component: str):
-        super().__init__(
-            status_code=404,
-            detail=f"Health component not found: {component}",
-            error_code="HEALTH_COMPONENT_NOT_FOUND",
-            extra_data={"component": component},
-        )
-
-
-class HealthCheckTimeoutError(APIException):
-    """Превышено время ожидания проверки здоровья"""
-    
-    def __init__(self, component: str, timeout: float):
-        super().__init__(
-            status_code=504,
-            detail=f"Health check timeout for {component}: {timeout}s",
-            error_code="HEALTH_CHECK_TIMEOUT",
-            extra_data={"component": component, "timeout": timeout},
-        )
+    pass
 
 
 __all__ = [
     "HealthError",
-    "HealthCheckFailedError", 
+    "HealthCheckFailedError",
     "HealthComponentNotFoundError",
-    "HealthCheckTimeoutError",
 ]

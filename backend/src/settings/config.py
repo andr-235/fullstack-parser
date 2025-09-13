@@ -4,9 +4,7 @@
 Содержит настройки специфичные для модуля управления настройками
 """
 
-from typing import Optional, Dict, Any
-
-from settings.config import settings
+from typing import Any, Dict
 
 
 class SettingsConfig:

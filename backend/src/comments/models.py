@@ -2,18 +2,28 @@
 SQLAlchemy модели для модуля Comments
 """
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Index
-from sqlalchemy.orm import relationship
 from datetime import datetime
 
-from src import Base
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy.orm import relationship
+
+from common.database import Base
 
 
 class Comment(Base):
     """SQLAlchemy модель комментария"""
-    
+
     __tablename__ = "comments"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     vk_id = Column(Integer, unique=True, index=True, nullable=False)
     group_id = Column(Integer, nullable=False, index=True)
@@ -22,7 +32,7 @@ class Comment(Base):
     text = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     is_deleted = Column(Boolean, default=False, index=True)
-    
+
     # Связи
     post = relationship("Post", back_populates="comments", lazy="select")
     author = relationship("AuthorModel", back_populates="comments", lazy="select")
@@ -31,18 +41,18 @@ class Comment(Base):
 
 class CommentKeywordMatch(Base):
     """SQLAlchemy модель совпадения ключевых слов"""
-    
+
     __tablename__ = "comment_keyword_matches"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     comment_id = Column(Integer, ForeignKey("comments.id"), nullable=False, index=True)
     keyword = Column(String(255), nullable=False, index=True)
     confidence = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     # Связи
     comment = relationship("Comment", back_populates="keyword_matches")
-    
+
     # Индексы
     __table_args__ = (
         Index('ix_comment_keyword', 'comment_id', 'keyword'),

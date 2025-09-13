@@ -3,30 +3,31 @@ FastAPI роутеры для пользователей
 """
 
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
 
-from .schemas import (
-    UserCreateRequest,
-    UserUpdateRequest,
-    UserResponse,
-    UserListRequest,
-    UserListResponse,
-    UserStatsResponse,
-)
-from .services import UserService
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from common.logging import get_logger
+
 from .dependencies import (
-    get_user_service,
-    get_current_user,
     get_current_active_user,
     get_current_superuser,
+    get_current_user,
+    get_user_service,
 )
 from .exceptions import (
-    UserNotFoundError,
     UserAlreadyExistsError,
-    UserInactiveError,
+    UserNotFoundError,
 )
 from .models import User
-from shared.infrastructure.logging import get_logger
+from .schemas import (
+    UserCreateRequest,
+    UserListRequest,
+    UserListResponse,
+    UserResponse,
+    UserStatsResponse,
+    UserUpdateRequest,
+)
+from .services import UserService
 
 # Роутер
 user_router = APIRouter(prefix="/users", tags=["Users"])
@@ -39,7 +40,7 @@ async def create_user(
 ):
     """Создать пользователя"""
     logger = get_logger()
-    
+
     try:
         return await user_service.create_user(user_data)
     except UserAlreadyExistsError as e:
@@ -62,7 +63,7 @@ async def get_user(
 ):
     """Получить пользователя по ID"""
     logger = get_logger()
-    
+
     try:
         return await user_service.get_user_by_id(user_id)
     except UserNotFoundError as e:
@@ -104,7 +105,7 @@ async def update_current_user(
 ):
     """Обновить профиль текущего пользователя"""
     logger = get_logger()
-    
+
     try:
         return await user_service.update_user(current_user.id, user_data)
     except UserAlreadyExistsError as e:
@@ -131,7 +132,7 @@ async def get_users_list(
 ):
     """Получить список пользователей (только для суперпользователей)"""
     logger = get_logger()
-    
+
     try:
         request = UserListRequest(
             limit=limit,
@@ -155,7 +156,7 @@ async def get_user_stats(
 ):
     """Получить статистику пользователей (только для суперпользователей)"""
     logger = get_logger()
-    
+
     try:
         return await user_service.get_user_stats()
     except Exception as e:
@@ -174,7 +175,7 @@ async def delete_user(
 ):
     """Удалить пользователя (только для суперпользователей)"""
     logger = get_logger()
-    
+
     try:
         deleted = await user_service.delete_user(user_id)
         if not deleted:

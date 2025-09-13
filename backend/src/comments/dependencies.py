@@ -4,7 +4,6 @@
 
 from comments.repository import CommentRepository
 from comments.service import CommentService
-from shared.infrastructure.database.dependencies import get_db_session
 
 
 def get_comments_repository(db = None) -> CommentRepository:

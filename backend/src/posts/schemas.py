@@ -3,7 +3,8 @@ Pydantic схемы для модуля Posts
 """
 
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field, validator
 
 
@@ -24,14 +25,14 @@ class PostCreate(BaseModel):
     hashtags: List[str] = Field(default_factory=list, description="Хештеги")
     mentions: List[str] = Field(default_factory=list, description="Упоминания")
     post_metadata: Dict[str, Any] = Field(default_factory=dict, description="Метаданные")
-    
+
     @validator("status")
     def validate_status(cls, v):
         valid_statuses = ["published", "draft", "archived", "deleted"]
         if v not in valid_statuses:
             raise ValueError(f"Status must be one of: {valid_statuses}")
         return v
-    
+
     @validator("post_type")
     def validate_post_type(cls, v):
         valid_types = ["text", "photo", "video", "audio", "document", "link", "poll", "mixed"]
@@ -54,7 +55,7 @@ class PostUpdate(BaseModel):
     hashtags: Optional[List[str]] = Field(None, description="Хештеги")
     mentions: Optional[List[str]] = Field(None, description="Упоминания")
     post_metadata: Optional[Dict[str, Any]] = Field(None, description="Метаданные")
-    
+
     @validator("status")
     def validate_status(cls, v):
         if v is not None:
@@ -62,7 +63,7 @@ class PostUpdate(BaseModel):
             if v not in valid_statuses:
                 raise ValueError(f"Status must be one of: {valid_statuses}")
         return v
-    
+
     @validator("post_type")
     def validate_post_type(cls, v):
         if v is not None:
@@ -95,7 +96,7 @@ class PostResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     comments: Optional[List["CommentResponse"]] = None
-    
+
     class Config:
         from_attributes = True
 
@@ -111,7 +112,7 @@ class PostFilter(BaseModel):
     offset: int = Field(default=0, ge=0, description="Смещение")
     order_by: str = Field(default="created_at", description="Поле для сортировки")
     order_direction: str = Field(default="desc", description="Направление сортировки")
-    
+
     @validator("status")
     def validate_status(cls, v):
         if v is not None:
@@ -119,7 +120,7 @@ class PostFilter(BaseModel):
             if v not in valid_statuses:
                 raise ValueError(f"Status must be one of: {valid_statuses}")
         return v
-    
+
     @validator("post_type")
     def validate_post_type(cls, v):
         if v is not None:
@@ -152,5 +153,6 @@ class PostBulkUpdate(BaseModel):
 
 # Forward reference для CommentResponse
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from comments.schemas import CommentResponse

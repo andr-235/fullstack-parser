@@ -2,12 +2,12 @@
 Сервис морфологического анализа текста
 """
 
-import time
 import re
-from typing import List, Optional, Dict, Any
+import time
 from collections import Counter
+from typing import Any, Dict, List, Optional
 
-from shared.presentation.exceptions import ValidationException, InternalServerException
+from common.exceptions import InternalServerException, ValidationException
 
 
 class MorphologicalService:
@@ -67,7 +67,7 @@ class MorphologicalService:
 
         try:
             parses = self.analyzer.parse(word)
-            
+
             if not parses:
                 result = {
                     "word": word,
@@ -92,7 +92,7 @@ class MorphologicalService:
                         "tense": "Tense", "person": "Person", "aspect": "Aspect",
                         "voice": "Voice", "mood": "Mood",
                     }
-                    
+
                     for our_key, pymorphy_key in feature_mapping.items():
                         if hasattr(tag, pymorphy_key):
                             value = getattr(tag, pymorphy_key)
@@ -134,7 +134,7 @@ class MorphologicalService:
         try:
             # Разбиваем текст на предложения
             sentences = self._split_into_sentences(text)
-            
+
             # Анализируем каждое предложение
             analyzed_sentences = []
             all_words = []
@@ -144,7 +144,7 @@ class MorphologicalService:
             for sentence_text in sentences:
                 sentence_analysis = await self._analyze_sentence(sentence_text, extract_keywords)
                 analyzed_sentences.append(sentence_analysis)
-                
+
                 all_words.extend(sentence_analysis["words"])
                 all_lemmas.extend(sentence_analysis["lemmas"])
                 all_keywords.extend(sentence_analysis["keywords"])
@@ -179,7 +179,7 @@ class MorphologicalService:
     ) -> Dict[str, Any]:
         """Извлечь ключевые слова из текста"""
         text_analysis = await self.analyze_text(text, extract_keywords=True)
-        
+
         # Фильтруем слова по критериям
         candidate_keywords = []
         for word_info in text_analysis["words"]:
@@ -296,7 +296,7 @@ class MorphologicalService:
         try:
             forms = set()
             parses = self.analyzer.parse(word)
-            
+
             if parses:
                 for parse in parses[:3]:  # Берем первые 3 разбора
                     if hasattr(parse, "lexeme"):
@@ -305,7 +305,7 @@ class MorphologicalService:
                                 forms.add(lexeme.word.lower())
 
             forms.add(lemma.lower())
-            
+
             if not forms:
                 forms = {word.lower(), lemma.lower()}
 

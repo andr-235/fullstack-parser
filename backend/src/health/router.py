@@ -3,11 +3,12 @@
 """
 
 from typing import Optional
-from fastapi import APIRouter, Depends
-from health.service import HealthService
-from health.dependencies import get_health_service
-from health.schemas import HealthResponse, HealthCheckResult, HealthMetrics
 
+from fastapi import APIRouter, Depends
+
+from health.dependencies import get_health_service
+from health.schemas import HealthCheckResult, HealthMetrics, HealthResponse
+from health.service import HealthService
 
 router = APIRouter(prefix="/health", tags=["Health"])
 

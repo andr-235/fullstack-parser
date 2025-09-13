@@ -2,9 +2,8 @@
 Вспомогательные функции модуля Health
 """
 
-import json
-from typing import Dict, Any, List, Optional
 from datetime import datetime
+from typing import Any, Dict, Optional
 
 
 def calculate_health_score(health_status: Dict[str, Any]) -> float:
@@ -23,21 +22,21 @@ def calculate_health_score(health_status: Dict[str, Any]) -> float:
 def format_health_for_prometheus(health_data: Dict[str, Any]) -> str:
     """Форматировать данные здоровья для Prometheus"""
     lines = []
-    
+
     # Общий статус
     status_value = 1 if health_data.get("status") == "healthy" else 0
     lines.append(f'health_status{{service="{health_data.get("service", "unknown")}"}} {status_value}')
-    
+
     # Компоненты
     components = health_data.get("components", {})
     for component, status in components.items():
         status_value = 1 if status == "healthy" else 0
         lines.append(f'health_component_status{{component="{component}"}} {status_value}')
-    
+
     # Uptime
     uptime = health_data.get("uptime_seconds", 0)
     lines.append(f'health_uptime_seconds{{service="{health_data.get("service", "unknown")}"}} {uptime}')
-    
+
     return "\n".join(lines)
 
 
@@ -68,7 +67,7 @@ def create_health_alert(
 def sanitize_health_details(details: Dict[str, Any]) -> Dict[str, Any]:
     """Очистить детали здоровья от чувствительной информации"""
     sanitized = {}
-    
+
     for key, value in details.items():
         if key.lower() in ["password", "token", "secret", "key"]:
             sanitized[key] = "***"
@@ -81,7 +80,7 @@ def sanitize_health_details(details: Dict[str, Any]) -> Dict[str, Any]:
             ]
         else:
             sanitized[key] = value
-    
+
     return sanitized
 
 

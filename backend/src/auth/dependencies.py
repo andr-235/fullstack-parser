@@ -3,13 +3,18 @@
 """
 
 from typing import Optional
+
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+from common.logging import get_logger_with_correlation
 from user.domain.entities.user import User
-from user.domain.exceptions import UserInactiveError
+
+from .exceptions import (
+    InvalidTokenError,
+    TokenExpiredError,
+)
 from .services import AuthService
-from .exceptions import InvalidCredentialsError, InvalidTokenError, TokenExpiredError
-from shared.infrastructure.logging import get_logger_with_correlation
 
 security = HTTPBearer()
 

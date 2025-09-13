@@ -3,10 +3,15 @@ Pydantic схемы для API модуля Keywords
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any, Literal
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Any, Dict, List, Literal, Optional
 
-from shared.presentation.responses.base_responses import PaginatedResponse
+from pydantic import BaseModel, ConfigDict, Field
+
+
+# Упрощенная пагинация без shared модуля
+class PaginatedResponse:
+    """Базовый класс для пагинированных ответов"""
+    pass
 
 
 class KeywordCategory(BaseModel):
@@ -42,7 +47,7 @@ class KeywordUpdate(BaseModel):
 class KeywordResponse(BaseModel):
     """Схема ответа с ключевым словом"""
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
     word: str
     description: Optional[str]

@@ -3,23 +3,23 @@
 """
 
 import time
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 class VKAPIMetrics:
     """Простая система метрик"""
-    
+
     def __init__(self):
         self._requests = 0
         self._errors = 0
         self._start_time = time.time()
-    
+
     def record_request(self, success: bool = True) -> None:
         """Записать запрос"""
         self._requests += 1
         if not success:
             self._errors += 1
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Получить статистику"""
         uptime = time.time() - self._start_time

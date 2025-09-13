@@ -5,9 +5,9 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from keywords.service import KeywordsService
+from common.database import get_db_session
 from keywords.models import KeywordsRepository
-from shared.infrastructure.database.session import get_db_session
+from keywords.service import KeywordsService
 
 
 async def get_keywords_repository(

@@ -3,12 +3,13 @@
 """
 
 from typing import List, Optional
-from sqlalchemy import select, func, and_, delete
+
+from sqlalchemy import and_, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from comments.models import Comment, CommentKeywordMatch
-from comments.schemas import CommentCreate, CommentUpdate, CommentFilter
+from comments.schemas import CommentCreate, CommentFilter, CommentUpdate
 
 
 class CommentRepository:
@@ -20,7 +21,7 @@ class CommentRepository:
     async def get_by_id(self, comment_id: int, include_author: bool = False) -> Optional[Comment]:
         """Получить комментарий по ID"""
         query = select(Comment).where(Comment.id == comment_id)
-        
+
         if include_author:
             query = query.options(
                 selectinload(Comment.keyword_matches),
@@ -28,7 +29,7 @@ class CommentRepository:
             )
         else:
             query = query.options(selectinload(Comment.keyword_matches))
-            
+
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
@@ -51,7 +52,7 @@ class CommentRepository:
     ) -> List[Comment]:
         """Получить список комментариев с фильтрацией"""
         query = select(Comment)
-        
+
         if include_author:
             query = query.options(
                 selectinload(Comment.keyword_matches),
@@ -71,19 +72,19 @@ class CommentRepository:
         """Применить фильтры к запросу"""
         if filters.group_id is not None:
             query = query.where(Comment.group_id == filters.group_id)
-        
+
         if filters.post_id is not None:
             query = query.where(Comment.post_id == filters.post_id)
-        
+
         if filters.author_id is not None:
             query = query.where(Comment.author_id == filters.author_id)
-        
+
         if filters.search_text:
             query = query.where(Comment.text.ilike(f"%{filters.search_text}%"))
-        
+
         if filters.is_deleted is not None:
             query = query.where(Comment.is_deleted == filters.is_deleted)
-        
+
         return query
 
     async def create(self, comment_data: CommentCreate) -> Comment:
@@ -95,7 +96,7 @@ class CommentRepository:
             author_id=comment_data.author_id,
             text=comment_data.text,
         )
-        
+
         self.db.add(comment)
         await self.db.commit()
         await self.db.refresh(comment)
@@ -128,10 +129,10 @@ class CommentRepository:
     async def count(self, filters: Optional[CommentFilter] = None) -> int:
         """Подсчитать количество комментариев"""
         query = select(func.count(Comment.id))
-        
+
         if filters:
             query = self._apply_filters(query, filters)
-        
+
         result = await self.db.execute(query)
         return result.scalar()
 
@@ -160,7 +161,7 @@ class CommentRepository:
 
         # Среднее по группам
         avg_per_group = (
-            total_comments / len(comments_by_group) 
+            total_comments / len(comments_by_group)
             if comments_by_group else 0
         )
 
@@ -172,15 +173,15 @@ class CommentRepository:
         }
 
     async def search_by_keywords(
-        self, 
-        keywords: List[str], 
-        limit: int = 20, 
+        self,
+        keywords: List[str],
+        limit: int = 20,
         offset: int = 0
     ) -> List[Comment]:
         """Поиск комментариев по ключевым словам"""
         if not keywords:
             return []
-        
+
         query = (
             select(Comment)
             .join(CommentKeywordMatch, Comment.id == CommentKeywordMatch.comment_id)
@@ -194,7 +195,7 @@ class CommentRepository:
             .offset(offset)
             .limit(limit)
         )
-        
+
         result = await self.db.execute(query)
         return result.scalars().all()
 
@@ -202,19 +203,19 @@ class CommentRepository:
         """Подсчитать количество комментариев по ключевым словам"""
         if not keywords:
             return 0
-        
+
         query = (
             select(func.count(Comment.id.distinct()))
             .join(CommentKeywordMatch, Comment.id == CommentKeywordMatch.comment_id)
             .where(CommentKeywordMatch.keyword.in_(keywords))
         )
-        
+
         result = await self.db.execute(query)
         return result.scalar()
 
     async def get_keyword_match(
-        self, 
-        comment_id: int, 
+        self,
+        comment_id: int,
         keyword: str
     ) -> Optional[CommentKeywordMatch]:
         """Получить связь комментария с ключевым словом"""
@@ -227,14 +228,14 @@ class CommentRepository:
                 )
             )
         )
-        
+
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
     async def create_keyword_match(
-        self, 
-        comment_id: int, 
-        keyword: str, 
+        self,
+        comment_id: int,
+        keyword: str,
         confidence: int
     ) -> CommentKeywordMatch:
         """Создать связь комментария с ключевым словом"""
@@ -243,23 +244,23 @@ class CommentRepository:
             keyword=keyword,
             confidence=confidence
         )
-        
+
         self.db.add(match)
         await self.db.commit()
         await self.db.refresh(match)
         return match
 
     async def update_keyword_match(
-        self, 
-        comment_id: int, 
-        keyword: str, 
+        self,
+        comment_id: int,
+        keyword: str,
         confidence: int
     ) -> bool:
         """Обновить уверенность связи комментария с ключевым словом"""
         match = await self.get_keyword_match(comment_id, keyword)
         if not match:
             return False
-        
+
         match.confidence = confidence
         await self.db.commit()
         return True
@@ -269,7 +270,7 @@ class CommentRepository:
         query = delete(CommentKeywordMatch).where(
             CommentKeywordMatch.comment_id == comment_id
         )
-        
+
         await self.db.execute(query)
         await self.db.commit()
         return True

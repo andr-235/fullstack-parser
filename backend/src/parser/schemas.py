@@ -5,19 +5,19 @@ Pydantic схемы для модуля Parser
 """
 
 from __future__ import annotations
+
 from datetime import datetime
-from typing import List, Optional, Annotated, Literal
+from typing import Annotated, List, Optional
+
 from pydantic import (
     BaseModel,
-    Field,
     ConfigDict,
-    field_validator,
-    model_validator,
+    Field,
     computed_field,
+    field_validator,
 )
-from enum import Enum
 
-from parser.models import TaskStatus, TaskPriority
+from parser.models import TaskPriority, TaskStatus
 
 
 class BaseParserModel(BaseModel):
@@ -251,7 +251,7 @@ class VKAPIError(BaseParserModel):
 __all__ = [
     "BaseParserModel",
     "ParseRequest",
-    "ParseResponse", 
+    "ParseResponse",
     "ParseStatus",
     "ParserState",
     "StopParseRequest",

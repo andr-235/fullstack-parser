@@ -5,23 +5,24 @@ FastAPI роутер для модуля Parser
 """
 
 import logging
-from typing import Annotated, Optional
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from parser.dependencies import get_parser_service
+from parser.models import TaskStatus
 from parser.schemas import (
     ParseRequest,
     ParseResponse,
-    ParseStatus,
     ParserState,
+    ParseStats,
+    ParseStatus,
+    ParseTask,
+    ParseTaskListResponse,
     StopParseRequest,
     StopParseResponse,
-    ParseTaskListResponse,
-    ParseStats,
-    ParseTask,
 )
 from parser.service import ParserService
-from parser.models import TaskStatus
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
@@ -131,7 +132,7 @@ async def get_tasks(
 ) -> ParseTaskListResponse:
     """Получить список всех задач"""
     tasks = await service.get_all_tasks()
-    
+
     task_list = [
         ParseTask(
             task_id=task.task_id,
@@ -192,7 +193,7 @@ async def get_stats(
 ) -> ParseStats:
     """Получить статистику парсера"""
     stats = await service.get_stats()
-    
+
     return ParseStats(
         total_tasks=stats["total_tasks"],
         completed_tasks=stats["completed_tasks"],
@@ -213,7 +214,7 @@ async def get_parser_state(
 ) -> ParserState:
     """Получить состояние парсера"""
     stats = await service.get_stats()
-    
+
     return ParserState(
         is_running=stats["running_tasks"] > 0,
         active_tasks=stats["running_tasks"],

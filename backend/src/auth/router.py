@@ -2,21 +2,30 @@
 Роутер аутентификации
 """
 
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from .schemas import (
-    LoginRequest, LoginResponse, RefreshTokenRequest, RefreshTokenResponse,
-    ChangePasswordRequest, ResetPasswordRequest, ResetPasswordConfirmRequest,
-    LogoutRequest, SuccessResponse
-)
-from .dependencies import get_current_user, get_auth_service
-from .services import AuthService
-from .exceptions import InvalidCredentialsError, InvalidTokenError, TokenExpiredError
 from user.domain.exceptions import UserInactiveError
-from shared.infrastructure.logging import get_logger_with_correlation
+
+from .dependencies import get_auth_service, get_current_user
+from .exceptions import (
+    InvalidCredentialsError,
+    InvalidTokenError,
+    TokenExpiredError,
+)
+from .schemas import (
+    ChangePasswordRequest,
+    LoginRequest,
+    LoginResponse,
+    LogoutRequest,
+    RefreshTokenRequest,
+    RefreshTokenResponse,
+    ResetPasswordConfirmRequest,
+    ResetPasswordRequest,
+    SuccessResponse,
+)
+from .services import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

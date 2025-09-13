@@ -2,23 +2,23 @@
 FastAPI зависимости для пользователей
 """
 
-from typing import Optional
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from common.database import get_db_session
+from common.logging import get_logger
+
+from .exceptions import UserNotFoundError
 from .models import User
 from .repository import UserRepository
 from .services import UserService
-from .exceptions import UserNotFoundError, UserInactiveError
-from shared.infrastructure.database.session import get_async_session
-from shared.infrastructure.logging import get_logger
 
 # Security scheme
 security = HTTPBearer()
 
 
-def get_user_repository(session: AsyncSession = Depends(get_async_session)) -> UserRepository:
+def get_user_repository(session: AsyncSession = Depends(get_db_session)) -> UserRepository:
     """Получить репозиторий пользователей"""
     return UserRepository(session)
 
@@ -54,16 +54,17 @@ async def get_current_user(
         HTTPException: Если токен невалидный или пользователь не найден
     """
     logger = get_logger()
-    
+
     try:
         # TODO: Реализовать JWT сервис
         # Пока возвращаем заглушку для тестирования
         if credentials.credentials == "test_token":
             # Создаем тестового пользователя
+            from datetime import datetime
+
             from .models import User
             from .schemas import UserStatus
-            from datetime import datetime
-            
+
             return User(
                 id=1,
                 email="test@example.com",
@@ -75,12 +76,12 @@ async def get_current_user(
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow()
             )
-        
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token"
         )
-        
+
     except UserNotFoundError:
         logger.warning("User not found for token")
         raise HTTPException(

@@ -4,21 +4,21 @@
 Простой и эффективный модуль для анализа русских текстов с использованием pymorphy2
 """
 
-from .service import MorphologicalService
+from .router import router
 from .schemas import (
-    WordAnalysisRequest,
-    WordAnalysisResponse,
-    TextAnalysisRequest,
-    TextAnalysisResponse,
     KeywordExtractionRequest,
     KeywordExtractionResponse,
+    TextAnalysisRequest,
+    TextAnalysisResponse,
+    WordAnalysisRequest,
+    WordAnalysisResponse,
 )
-from .router import router
+from .service import MorphologicalService
 
 __all__ = [
     "MorphologicalService",
     "WordAnalysisRequest",
-    "WordAnalysisResponse", 
+    "WordAnalysisResponse",
     "TextAnalysisRequest",
     "TextAnalysisResponse",
     "KeywordExtractionRequest",

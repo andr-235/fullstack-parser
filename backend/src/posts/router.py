@@ -2,23 +2,26 @@
 FastAPI роутер для модуля Posts
 """
 
-from typing import List, Any, Generic, TypeVar
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Generic, TypeVar
+
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 T = TypeVar('T')
 
 from .schemas import (
+    PostBulkUpdate,
     PostCreate,
-    PostUpdate,
-    PostResponse,
     PostFilter,
     PostListResponse,
+    PostResponse,
     PostStats,
-    PostBulkUpdate
+    PostUpdate,
 )
 from .service import PostService
+
+
 # Простые классы для ответов
 class SuccessResponse(BaseModel, Generic[T]):
     data: T
@@ -137,9 +140,9 @@ async def list_posts(
         order_by=order_by,
         order_direction=order_direction
     )
-    
+
     posts, total = await service.list_posts(filters)
-    
+
     return SuccessResponse(
         data=PostListResponse(
             posts=[PostResponse.from_orm(post) for post in posts],
@@ -189,7 +192,7 @@ async def delete_post(
     success = await service.delete_post(post_id)
     if not success:
         raise HTTPException(status_code=404, detail="Post not found")
-    
+
     return SuccessResponse(
         data={"deleted": True},
         message="Post deleted successfully"
@@ -269,7 +272,7 @@ async def search_posts(
 ):
     """Поиск постов"""
     posts, total = await service.search_posts(q, limit, offset)
-    
+
     return SuccessResponse(
         data=PostListResponse(
             posts=[PostResponse.from_orm(post) for post in posts],
@@ -295,7 +298,7 @@ async def get_posts_by_hashtag(
 ):
     """Получить посты по хештегу"""
     posts, total = await service.get_posts_by_hashtag(hashtag, limit, offset)
-    
+
     return SuccessResponse(
         data=PostListResponse(
             posts=[PostResponse.from_orm(post) for post in posts],
@@ -321,7 +324,7 @@ async def mark_post_as_parsed(
     success = await service.mark_as_parsed(post_id)
     if not success:
         raise HTTPException(status_code=404, detail="Post not found")
-    
+
     return SuccessResponse(
         data={"marked_as_parsed": True},
         message="Post marked as parsed"
@@ -342,7 +345,7 @@ async def get_post_with_comments(
     post = await service.get_by_id_with_comments(post_id)
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-    
+
     return SuccessResponse(
         data=PostResponse.from_orm(post),
         message="Post with comments retrieved successfully"

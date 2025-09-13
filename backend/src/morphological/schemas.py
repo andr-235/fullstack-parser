@@ -2,8 +2,9 @@
 Pydantic схемы для морфологического анализа
 """
 
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, ConfigDict
+from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class WordFeatures(BaseModel):
@@ -21,7 +22,7 @@ class WordFeatures(BaseModel):
 class WordInfo(BaseModel):
     """Информация о слове"""
     model_config = ConfigDict(from_attributes=True)
-    
+
     word: str = Field(..., description="Исходное слово")
     lemma: str = Field(..., description="Лемма (начальная форма)")
     pos: str = Field(..., description="Часть речи")

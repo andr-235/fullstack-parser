@@ -5,45 +5,36 @@
 """
 
 from __future__ import annotations
-from typing import List, Optional, Dict, Any, Union, Self, Annotated
+
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
-
-from sqlalchemy import (
-    String,
-    Boolean,
-    DateTime,
-    Integer,
-    Text,
-    ForeignKey,
-    JSON,
-    func,
-    Index,
-    CheckConstraint,
-)
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.dialects.postgresql import UUID
 
 from pydantic import (
     BaseModel,
-    Field,
     ConfigDict,
-    model_validator,
+    Field,
     computed_field,
-    field_validator,
 )
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    Integer,
+    String,
+    func,
+)
+from sqlalchemy.orm import Mapped, mapped_column
 
 from parser.constants import (
-    TASK_STATUS_PENDING,
-    TASK_STATUS_RUNNING,
-    TASK_STATUS_COMPLETED,
-    TASK_STATUS_FAILED,
-    TASK_STATUS_STOPPED,
+    TASK_PRIORITY_HIGH,
     TASK_PRIORITY_LOW,
     TASK_PRIORITY_NORMAL,
-    TASK_PRIORITY_HIGH,
+    TASK_STATUS_COMPLETED,
+    TASK_STATUS_FAILED,
+    TASK_STATUS_PENDING,
+    TASK_STATUS_RUNNING,
+    TASK_STATUS_STOPPED,
 )
 
 
@@ -67,6 +58,8 @@ class TaskPriority(str, Enum):
 
 
 # SQLAlchemy модель
+from common.database import Base
+
 class ParsingTaskModel(Base):
     """SQLAlchemy модель задачи парсинга"""
 
@@ -225,7 +218,7 @@ class ParsingTask(BaseModel):
 # Экспорт
 __all__ = [
     "TaskStatus",
-    "TaskPriority", 
+    "TaskPriority",
     "ParsingTaskModel",
     "ParsingTask",
 ]

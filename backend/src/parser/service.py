@@ -5,15 +5,15 @@
 """
 
 import asyncio
-import time
-from typing import List, Optional, Dict, Any, Protocol
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from parser.config import parser_settings
-from parser.models import TaskStatus, TaskPriority, ParsingTask
-from parser.group_parser import GroupParser, VKAPIServiceProtocol
 from infrastructure.logging import get_loguru_logger
+
+from parser.config import parser_settings
+from parser.group_parser import GroupParser
+from parser.models import ParsingTask, TaskPriority, TaskStatus
 
 logger = get_loguru_logger("parser-service")
 
@@ -39,7 +39,7 @@ class ParserService:
             # Валидация входных данных
             if not group_ids:
                 raise ValueError("group_ids не может быть пустым")
-            
+
             if len(group_ids) > parser_settings.max_group_ids_per_request:
                 raise ValueError(f"Слишком много групп: {len(group_ids)} > {parser_settings.max_group_ids_per_request}")
 
@@ -111,7 +111,7 @@ class ParserService:
             for i, group_id in enumerate(task.group_ids):
                 try:
                     self._logger.info(f"Parsing group {group_id} ({i+1}/{len(task.group_ids)})")
-                    
+
                     # Парсим группу
                     result = await self.group_parser.parse_group(
                         group_id=group_id,
@@ -122,7 +122,7 @@ class ParserService:
                     # Обновляем статистику
                     posts_found = result.get("posts_found", 0)
                     comments_found = result.get("comments_found", 0)
-                    
+
                     total_posts += posts_found
                     total_comments += comments_found
 

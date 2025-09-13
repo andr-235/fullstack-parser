@@ -4,12 +4,11 @@
 Отвечает за парсинг конкретных групп VK
 """
 
-import asyncio
 import time
-from typing import Dict, Any, List, Optional, Protocol
-from datetime import datetime
+from typing import Any, Dict, List, Optional, Protocol
 
 from infrastructure.logging import get_loguru_logger
+
 from parser.config import parser_settings
 from parser.utils import retry_with_backoff, validate_vk_group_id
 

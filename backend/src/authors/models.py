@@ -3,18 +3,17 @@ SQLAlchemy модели для модуля авторов
 """
 
 from datetime import datetime
-from typing import List
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, Index
+from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from src import Base
+from common.database import Base
 
 
 class AuthorModel(Base):
     """SQLAlchemy модель автора"""
     __tablename__ = "authors"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     vk_id = Column(Integer, unique=True, index=True, nullable=False)
     first_name = Column(String(255), nullable=True)
@@ -30,10 +29,10 @@ class AuthorModel(Base):
     comments_count = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
+
     # Связи
     comments = relationship("Comment", back_populates="author", lazy="select")
-    
+
     # Индексы
     __table_args__ = (
         Index('idx_authors_vk_id', 'vk_id'),

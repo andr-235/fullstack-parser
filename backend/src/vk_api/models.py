@@ -3,13 +3,14 @@
 """
 
 from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel
 
 
 class VKGroup(BaseModel):
     """Группа VK"""
-    
+
     id: int
     name: str
     screen_name: str
@@ -24,7 +25,7 @@ class VKGroup(BaseModel):
 
 class VKPost(BaseModel):
     """Пост VK"""
-    
+
     id: int
     owner_id: int
     from_id: Optional[int] = None
@@ -39,7 +40,7 @@ class VKPost(BaseModel):
 
 class VKComment(BaseModel):
     """Комментарий VK"""
-    
+
     id: int
     from_id: int
     post_id: int
@@ -52,7 +53,7 @@ class VKComment(BaseModel):
 
 class VKUser(BaseModel):
     """Пользователь VK"""
-    
+
     id: int
     first_name: str
     last_name: str
@@ -65,7 +66,7 @@ class VKUser(BaseModel):
 
 __all__ = [
     "VKGroup",
-    "VKPost", 
+    "VKPost",
     "VKComment",
     "VKUser",
 ]

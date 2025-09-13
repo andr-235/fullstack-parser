@@ -2,24 +2,24 @@
 Сервис VK API
 """
 
-from typing import Optional, Dict, Any, List
+from typing import List, Optional
 
 from .client import VKAPIClient
-from .models import VKGroup, VKPost, VKComment, VKUser
-from .schemas import (
-    VKSearchGroupsRequest,
-    VKGetGroupPostsRequest, 
-    VKGetPostCommentsRequest
-)
 from .exceptions import VKAPIError
+from .models import VKComment, VKGroup, VKPost, VKUser
+from .schemas import (
+    VKGetGroupPostsRequest,
+    VKGetPostCommentsRequest,
+    VKSearchGroupsRequest,
+)
 
 
 class VKAPIService:
     """Сервис для работы с VK API"""
-    
+
     def __init__(self, access_token: Optional[str] = None):
         self.client = VKAPIClient(access_token)
-    
+
     async def get_group(self, group_id: int) -> Optional[VKGroup]:
         """Получить группу по ID"""
         try:
@@ -30,21 +30,21 @@ class VKAPIService:
         except VKAPIError:
             pass
         return None
-    
+
     async def search_groups(self, request: VKSearchGroupsRequest) -> List[VKGroup]:
         """Поиск групп"""
         try:
             async with self.client as client:
                 data = await client.search_groups(
-                    request.query, 
-                    request.count, 
+                    request.query,
+                    request.count,
                     request.offset
                 )
                 return [VKGroup(**item) for item in data.get("items", [])]
         except VKAPIError:
             pass
         return []
-    
+
     async def get_group_posts(self, request: VKGetGroupPostsRequest) -> List[VKPost]:
         """Получить посты группы"""
         try:
@@ -58,7 +58,7 @@ class VKAPIService:
         except VKAPIError:
             pass
         return []
-    
+
     async def get_post_comments(self, request: VKGetPostCommentsRequest) -> List[VKComment]:
         """Получить комментарии к посту"""
         try:
@@ -73,7 +73,7 @@ class VKAPIService:
         except VKAPIError:
             pass
         return []
-    
+
     async def get_user(self, user_id: int) -> Optional[VKUser]:
         """Получить пользователя по ID"""
         try:

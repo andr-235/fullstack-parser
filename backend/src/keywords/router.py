@@ -2,504 +2,190 @@
 FastAPI роутер для модуля Keywords
 """
 
-import json
-import csv
-import io
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, HTTPException, status, UploadFile, File, Form
 
-from keywords.dependencies import get_keywords_service
-from shared.presentation.exceptions import ValidationException as ValidationError
-from keywords.schemas import (
-    KeywordCreate,
-    KeywordUpdate,
-    KeywordResponse,
-    KeywordsListResponse,
-    KeywordsSearchRequest,
-    KeywordsFilterRequest,
-    KeywordBulkAction,
-    KeywordBulkCreate,
-    KeywordBulkResponse,
-    KeywordStats,
-    KeywordCategoriesResponse,
-    KeywordImportRequest,
-    KeywordExportRequest,
-    KeywordExportResponse,
-    KeywordValidationRequest,
-    KeywordValidationResponse,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from common.database import get_db_session
+from common.exceptions import ValidationError
+from keywords.models import KeywordsRepository
 from keywords.service import KeywordsService
 
-router = APIRouter(
-    prefix="/keywords",
-    tags=["Keywords Management"],
-    responses={
-        400: {"description": "Bad request - invalid input"},
-        404: {"description": "Keyword not found"},
-        422: {"description": "Validation error"},
-        500: {"description": "Internal server error"},
-    },
-)
+router = APIRouter(prefix="/keywords", tags=["Keywords Management"])
 
 
-@router.post(
-    "/",
-    response_model=KeywordResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Создать ключевое слово",
-)
+def get_keywords_service(db: AsyncSession = Depends(get_db_session)) -> KeywordsService:
+    """Получить сервис ключевых слов"""
+    repository = KeywordsRepository(db)
+    return KeywordsService(repository)
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_keyword(
-    request: KeywordCreate,
+    word: str,
+    description: str = None,
+    category_name: str = None,
+    priority: int = 5,
+    group_id: int = None,
     service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordResponse:
+):
     """Создать ключевое слово"""
     try:
-        keyword_data = request.model_dump()
-        keyword = await service.create_keyword(keyword_data)
-        return KeywordResponse(**keyword)
+        keyword = await service.create_keyword(
+            word=word,
+            description=description,
+            category_name=category_name,
+            priority=priority,
+            group_id=group_id
+        )
+        return {
+            "id": keyword.id,
+            "word": keyword.word,
+            "description": keyword.description,
+            "category_name": keyword.category_name,
+            "priority": keyword.priority,
+            "is_active": keyword.is_active,
+            "created_at": keyword.created_at
+        }
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get(
-    "/",
-    response_model=KeywordsListResponse,
-    summary="Получить ключевые слова",
-)
+@router.get("/")
 async def get_keywords(
-    active_only: bool = Query(True, description="Только активные ключевые слова"),
-    category: Optional[str] = Query(None, description="Фильтр по категории"),
-    search: Optional[str] = Query(None, description="Поисковый запрос"),
-    page: int = Query(1, ge=1, description="Номер страницы"),
-    size: int = Query(50, ge=1, le=100, description="Размер страницы"),
+    active_only: bool = Query(True),
+    category: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordsListResponse:
-    """Получить ключевые слова с фильтрами"""
+):
+    """Получить ключевые слова"""
     try:
-        limit = size
-        offset = (page - 1) * size
-        
-        result = await service.get_keywords(
+        keywords = await service.get_keywords(
             active_only=active_only,
             category=category,
             search=search,
             limit=limit,
-            offset=offset,
+            offset=offset
         )
-        return KeywordsListResponse(**result)
+        return [
+            {
+                "id": kw.id,
+                "word": kw.word,
+                "description": kw.description,
+                "category_name": kw.category_name,
+                "priority": kw.priority,
+                "is_active": kw.is_active,
+                "is_archived": kw.is_archived,
+                "match_count": kw.match_count,
+                "created_at": kw.created_at
+            }
+            for kw in keywords
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get(
-    "/{keyword_id}",
-    response_model=KeywordResponse,
-    summary="Получить ключевое слово",
-)
+@router.get("/{keyword_id}")
 async def get_keyword(
     keyword_id: int,
     service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordResponse:
+):
     """Получить ключевое слово по ID"""
-    try:
-        keyword = await service.get_keyword(keyword_id)
-        if not keyword:
-            raise HTTPException(status_code=404, detail="Ключевое слово не найдено")
-        return KeywordResponse(**keyword)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    keyword = await service.get_keyword(keyword_id)
+    if not keyword:
+        raise HTTPException(status_code=404, detail="Ключевое слово не найдено")
+    
+    return {
+        "id": keyword.id,
+        "word": keyword.word,
+        "description": keyword.description,
+        "category_name": keyword.category_name,
+        "priority": keyword.priority,
+        "is_active": keyword.is_active,
+        "is_archived": keyword.is_archived,
+        "match_count": keyword.match_count,
+        "created_at": keyword.created_at
+    }
 
 
-@router.put(
-    "/{keyword_id}",
-    response_model=KeywordResponse,
-    summary="Обновить ключевое слово",
-)
+@router.put("/{keyword_id}")
 async def update_keyword(
     keyword_id: int,
-    request: KeywordUpdate,
+    word: str = None,
+    description: str = None,
+    category_name: str = None,
+    priority: int = None,
     service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordResponse:
+):
     """Обновить ключевое слово"""
     try:
-        update_data = request.model_dump(exclude_unset=True)
-        keyword = await service.update_keyword(keyword_id, update_data)
-        if not keyword:
+        update_data = {}
+        if word is not None:
+            update_data["word"] = word
+        if description is not None:
+            update_data["description"] = description
+        if category_name is not None:
+            update_data["category_name"] = category_name
+        if priority is not None:
+            update_data["priority"] = priority
+
+        success = await service.update_keyword(keyword_id, **update_data)
+        if not success:
             raise HTTPException(status_code=404, detail="Ключевое слово не найдено")
-        return KeywordResponse(**keyword)
-    except HTTPException:
-        raise
+        
+        return {"message": "Ключевое слово обновлено"}
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete(
-    "/{keyword_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Удалить ключевое слово",
-)
+@router.delete("/{keyword_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_keyword(
     keyword_id: int,
     service: KeywordsService = Depends(get_keywords_service),
 ):
     """Удалить ключевое слово"""
-    try:
-        success = await service.delete_keyword(keyword_id)
-        if not success:
-            raise HTTPException(status_code=404, detail="Ключевое слово не найдено")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    success = await service.delete_keyword(keyword_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Ключевое слово не найдено")
 
 
-@router.patch(
-    "/{keyword_id}/activate",
-    response_model=KeywordResponse,
-    summary="Активировать ключевое слово",
-)
+@router.patch("/{keyword_id}/activate")
 async def activate_keyword(
     keyword_id: int,
     service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordResponse:
+):
     """Активировать ключевое слово"""
     try:
-        keyword = await service.activate_keyword(keyword_id)
-        if not keyword:
+        success = await service.activate_keyword(keyword_id)
+        if not success:
             raise HTTPException(status_code=404, detail="Ключевое слово не найдено")
-        return KeywordResponse(**keyword)
-    except HTTPException:
-        raise
+        return {"message": "Ключевое слово активировано"}
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.patch(
-    "/{keyword_id}/deactivate",
-    response_model=KeywordResponse,
-    summary="Деактивировать ключевое слово",
-)
+@router.patch("/{keyword_id}/deactivate")
 async def deactivate_keyword(
     keyword_id: int,
     service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordResponse:
+):
     """Деактивировать ключевое слово"""
-    try:
-        keyword = await service.deactivate_keyword(keyword_id)
-        if not keyword:
-            raise HTTPException(status_code=404, detail="Ключевое слово не найдено")
-        return KeywordResponse(**keyword)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    success = await service.deactivate_keyword(keyword_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Ключевое слово не найдено")
+    return {"message": "Ключевое слово деактивировано"}
 
 
-@router.patch(
-    "/{keyword_id}/archive",
-    response_model=KeywordResponse,
-    summary="Архивировать ключевое слово",
-)
+@router.patch("/{keyword_id}/archive")
 async def archive_keyword(
     keyword_id: int,
     service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordResponse:
-    """Архивировать ключевое слово"""
-    try:
-        keyword = await service.archive_keyword(keyword_id)
-        if not keyword:
-            raise HTTPException(status_code=404, detail="Ключевое слово не найдено")
-        return KeywordResponse(**keyword)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post(
-    "/search",
-    response_model=KeywordsListResponse,
-    summary="Поиск ключевых слов",
-)
-async def search_keywords(
-    request: KeywordsSearchRequest,
-    service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordsListResponse:
-    """Поиск ключевых слов"""
-    try:
-        keywords = await service.search_keywords(
-            query=request.query,
-            active_only=request.active_only,
-            category=request.category,
-            limit=request.limit,
-            offset=request.offset,
-        )
-        
-        total = len(keywords)
-        size = request.limit
-        page = (request.offset // size) + 1 if size > 0 else 1
-        pages = (total + size - 1) // size if size > 0 else 0
-        
-        return KeywordsListResponse(
-            items=keywords,
-            total=total,
-            page=page,
-            size=size,
-            pages=pages,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post(
-    "/filter",
-    response_model=KeywordsListResponse,
-    summary="Фильтрация ключевых слов",
-)
-async def filter_keywords(
-    request: KeywordsFilterRequest,
-    service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordsListResponse:
-    """Фильтрация ключевых слов"""
-    try:
-        result = await service.get_keywords(
-            active_only=request.active_only,
-            category=request.category,
-            limit=request.limit,
-            offset=request.offset,
-            priority_min=request.priority_min,
-            priority_max=request.priority_max,
-            match_count_min=request.match_count_min,
-            match_count_max=request.match_count_max,
-        )
-        return KeywordsListResponse(**result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post(
-    "/bulk-create",
-    response_model=KeywordBulkResponse,
-    summary="Массовое создание",
-)
-async def bulk_create_keywords(
-    request: KeywordBulkCreate,
-    service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordBulkResponse:
-    """Массовая загрузка ключевых слов"""
-    try:
-        keywords_data = [kw.model_dump() for kw in request.keywords]
-        result = await service.bulk_create_keywords(keywords_data)
-        return KeywordBulkResponse(**result)
-    except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post(
-    "/bulk-action",
-    response_model=KeywordBulkResponse,
-    summary="Массовые действия",
-)
-async def bulk_action_keywords(
-    request: KeywordBulkAction,
-    service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordBulkResponse:
-    """Массовая операция с ключевыми словами"""
-    try:
-        result = await service.bulk_action(request.keyword_ids, request.action)
-        return KeywordBulkResponse(**result)
-    except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get(
-    "/categories/list",
-    summary="Список категорий",
-)
-async def get_categories(
-    service: KeywordsService = Depends(get_keywords_service),
-) -> dict:
-    """Получить список категорий"""
-    try:
-        categories = await service.get_categories()
-        return {"categories": categories, "count": len(categories)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get(
-    "/categories/stats",
-    response_model=KeywordCategoriesResponse,
-    summary="Статистика категорий",
-)
-async def get_categories_with_stats(
-    service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordCategoriesResponse:
-    """Получить категории со статистикой"""
-    try:
-        categories = await service.get_categories()
-        categories_with_stats = await service.get_categories_with_stats()
-        return KeywordCategoriesResponse(
-            categories=categories,
-            categories_with_stats=categories_with_stats
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get(
-    "/stats",
-    response_model=KeywordStats,
-    summary="Статистика ключевых слов",
-)
-async def get_keywords_stats(
-    service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordStats:
-    """Получить статистику"""
-    try:
-        stats = await service.get_stats()
-        return KeywordStats(**stats)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post(
-    "/export",
-    response_model=KeywordExportResponse,
-    summary="Экспорт ключевых слов",
-)
-async def export_keywords(
-    request: KeywordExportRequest,
-    service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordExportResponse:
-    """Экспорт ключевых слов"""
-    try:
-        result = await service.export_keywords(
-            format_type=request.format,
-            active_only=request.active_only,
-            category=request.category,
-        )
-        return KeywordExportResponse(**result)
-    except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post(
-    "/import",
-    summary="Импорт ключевых слов",
-)
-async def import_keywords(
-    request: KeywordImportRequest,
-    service: KeywordsService = Depends(get_keywords_service),
-) -> dict:
-    """Импорт ключевых слов"""
-    try:
-        result = await service.import_keywords(
-            import_data=request.keywords_data,
-            update_existing=request.update_existing,
-        )
-        return result
-    except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post(
-    "/upload",
-    summary="Загрузка ключевых слов из файла",
-)
-async def upload_keywords(
-    file: UploadFile = File(...),
-    is_active: bool = Form(True),
-    is_case_sensitive: bool = Form(False),
-    is_whole_word: bool = Form(False),
-    service: KeywordsService = Depends(get_keywords_service),
-) -> dict:
-    """Загрузка ключевых слов из файла"""
-    try:
-        content = await file.read()
-        file_content = content.decode("utf-8")
-        
-        file_extension = file.filename.split(".")[-1].lower() if file.filename else "txt"
-        
-        if file_extension == "json":
-            keywords_data = json.loads(file_content)
-        elif file_extension == "csv":
-            keywords_data = service.parse_csv_keywords(file_content)
-        else:  # txt
-            keywords_data = service.parse_txt_keywords(file_content)
-        
-        for keyword in keywords_data:
-            keyword["is_active"] = is_active
-            keyword["is_case_sensitive"] = is_case_sensitive
-            keyword["is_whole_word"] = is_whole_word
-        
-        result = await service.import_keywords(
-            import_data=json.dumps(keywords_data),
-            update_existing=False,
-        )
-        
-        return {
-            "success": result["successful"],
-            "failed": result["failed"],
-            "errors": [str(error) for error in result["errors"]],
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post(
-    "/validate",
-    response_model=KeywordValidationResponse,
-    summary="Валидация слов",
-)
-async def validate_keywords(
-    request: KeywordValidationRequest,
-    service: KeywordsService = Depends(get_keywords_service),
-) -> KeywordValidationResponse:
-    """Валидация слов"""
-    try:
-        result = await service.validate_keywords(request.words)
-        return KeywordValidationResponse(**result)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get(
-    "/health",
-    summary="Проверка здоровья",
-)
-async def keywords_health_check(
-    service: KeywordsService = Depends(get_keywords_service),
 ):
-    """Проверка здоровья модуля"""
-    try:
-        stats = await service.get_stats()
-        return {
-            "status": "healthy",
-            "total_keywords": stats["total_keywords"],
-            "active_keywords": stats["active_keywords"],
-            "categories_count": stats["total_categories"],
-            "timestamp": datetime.utcnow().isoformat(),
-        }
-    except Exception as e:
-        return {
-            "status": "unhealthy",
-            "error": str(e),
-            "timestamp": datetime.utcnow().isoformat(),
-        }
+    """Архивировать ключевое слово"""
+    success = await service.archive_keyword(keyword_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Ключевое слово не найдено")
+    return {"message": "Ключевое слово архивировано"}

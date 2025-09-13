@@ -3,25 +3,21 @@ FastAPI роутер для модуля Groups
 """
 
 from typing import Optional
-from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from .dependencies import get_group_service
 from .schemas import (
-    GroupResponse,
-    GroupListResponse,
-    GroupCreate,
-    GroupUpdate,
     GroupBulkAction,
     GroupBulkResponse,
+    GroupCreate,
+    GroupListResponse,
+    GroupResponse,
+    GroupUpdate,
 )
 from .service import GroupService
-from .dependencies import get_group_service
-from shared.presentation.responses.response_utils import (
-    PageParam,
-    SizeParam,
-    SearchParam,
-    PaginationParams,
-)
+
+# Упрощенные параметры пагинации
 
 router = APIRouter(prefix="/groups", tags=["Groups"])
 
@@ -36,16 +32,16 @@ async def get_groups(
 ) -> GroupListResponse:
     """Получить список групп с фильтрацией и пагинацией"""
     pagination = PaginationParams(page=page, size=size, search=search)
-    
+
     groups = await service.get_groups(
         is_active=is_active,
         search=pagination.search,
         limit=pagination.limit,
         offset=pagination.offset,
     )
-    
+
     total = await service.count_groups(is_active=is_active, search=pagination.search)
-    
+
     return GroupListResponse(
         items=[GroupResponse.model_validate(g) for g in groups],
         total=total,
@@ -166,7 +162,7 @@ async def bulk_activate_groups(
     try:
         if action_data.action != "activate":
             raise HTTPException(status_code=400, detail="Поддерживается только действие 'activate'")
-        
+
         result = await service.bulk_activate(action_data.group_ids)
         return GroupBulkResponse(
             success_count=result["success_count"],
@@ -185,7 +181,7 @@ async def bulk_deactivate_groups(
     try:
         if action_data.action != "deactivate":
             raise HTTPException(status_code=400, detail="Поддерживается только действие 'deactivate'")
-        
+
         result = await service.bulk_deactivate(action_data.group_ids)
         return GroupBulkResponse(
             success_count=result["success_count"],

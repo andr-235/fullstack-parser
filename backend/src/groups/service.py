@@ -2,13 +2,15 @@
 Сервис для работы с группами VK
 """
 
-from typing import List, Optional
 from datetime import datetime
-from sqlalchemy import select, or_, desc, func, update
+from typing import List, Optional
+
+from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from common.exceptions import NotFoundException, ValidationException
+
 from .models import Group
-from shared.presentation.exceptions import NotFoundException, ValidationException
 
 
 class GroupService:
@@ -81,7 +83,7 @@ class GroupService:
     async def update_group(self, group_id: int, update_data: dict) -> Group:
         """Обновить группу"""
         group = await self.get_group(group_id)
-        
+
         # Проверка уникальности screen_name при обновлении
         if "screen_name" in update_data:
             existing = await self._get_by_screen_name(update_data["screen_name"])

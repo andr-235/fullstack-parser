@@ -2,12 +2,13 @@
 Переделанный роутер settings с новой архитектурой (DDD + Middleware)
 """
 
-from typing import Dict, Any
-from fastapi import APIRouter, Request, Depends
-from fastapi.responses import JSONResponse
-from settings.service import SettingsService
-from handlers import create_success_response, create_error_response
+from typing import Any, Dict
 
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import JSONResponse
+from handlers import create_error_response, create_success_response
+
+from settings.service import SettingsService
 
 router = APIRouter(prefix="/settings", tags=["Settings"])
 

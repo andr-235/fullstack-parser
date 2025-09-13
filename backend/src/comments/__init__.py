@@ -4,16 +4,26 @@
 Простой и эффективный модуль для работы с комментариями VK
 """
 
-from comments.router import router
-from comments.service import CommentService
-from comments.repository import CommentRepository
 from comments.models import Comment, CommentKeywordMatch
+from comments.repository import CommentRepository
+from comments.router import router
 from comments.schemas import (
-    CommentResponse, CommentListResponse, CommentCreate, CommentUpdate,
-    CommentFilter, CommentStats, KeywordMatch, KeywordAnalysisRequest,
-    KeywordAnalysisResponse, BatchKeywordAnalysisRequest, BatchKeywordAnalysisResponse,
-    KeywordSearchRequest, KeywordSearchResponse, KeywordStatisticsResponse
+    BatchKeywordAnalysisRequest,
+    BatchKeywordAnalysisResponse,
+    CommentCreate,
+    CommentFilter,
+    CommentListResponse,
+    CommentResponse,
+    CommentStats,
+    CommentUpdate,
+    KeywordAnalysisRequest,
+    KeywordAnalysisResponse,
+    KeywordMatch,
+    KeywordSearchRequest,
+    KeywordSearchResponse,
+    KeywordStatisticsResponse,
 )
+from comments.service import CommentService
 
 __all__ = [
     # Роутер

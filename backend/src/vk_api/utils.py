@@ -2,22 +2,22 @@
 Утилиты для VK API
 """
 
-from typing import Tuple
 from datetime import datetime
+from typing import Tuple
 
 
 def validate_vk_id(id_value: str, id_type: str = "group") -> Tuple[bool, str]:
     """Валидировать ID VK"""
     if not id_value or not id_value.strip():
         return False, f"ID {id_type} не может быть пустым"
-    
+
     try:
         id_num = int(id_value.strip())
         if id_num <= 0:
             return False, f"ID {id_type} должен быть положительным числом"
     except ValueError:
         return False, f"ID {id_type} должен быть числом"
-    
+
     return True, ""
 
 

@@ -6,12 +6,12 @@ from sqlalchemy.orm import relationship, backref
 Определяет модели данных для управления настройками системы
 """
 
-from typing import Dict, Any, Optional
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
+from typing import Any, Dict, Optional
 
-from settings.database import get_db_session
 from settings.config import settings_config
+from settings.database import get_db_session
 
 
 class SettingsRepository:

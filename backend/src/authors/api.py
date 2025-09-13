@@ -8,13 +8,18 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# TODO: Заменить на реальную зависимость
-async def get_db_session():
-    """Заглушка для get_db_session - должна быть реализована в shared модуле"""
-    pass
+from common.database import get_db_session
+
 from .schemas import (
-    AuthorCreate, AuthorUpdate, AuthorResponse, AuthorWithCommentsResponse, AuthorListResponse,
-    AuthorFilter, AuthorSearch, AuthorBulkAction, AuthorStatus
+    AuthorBulkAction,
+    AuthorCreate,
+    AuthorFilter,
+    AuthorListResponse,
+    AuthorResponse,
+    AuthorSearch,
+    AuthorStatus,
+    AuthorUpdate,
+    AuthorWithCommentsResponse,
 )
 from .services import AuthorService
 

@@ -4,10 +4,10 @@
 Содержит утилиты для работы с настройками системы
 """
 
-import json
 import hashlib
-from typing import Dict, Any, Optional, Tuple
+import json
 from datetime import datetime
+from typing import Any, Dict, Tuple
 
 
 def validate_settings_section_name(section_name: str) -> Tuple[bool, str]:

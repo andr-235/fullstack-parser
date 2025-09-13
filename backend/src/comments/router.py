@@ -3,27 +3,33 @@ FastAPI роутер для модуля Comments
 """
 
 from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from comments.service import CommentService
 from comments.repository import CommentRepository
 from comments.schemas import (
-    CommentResponse, CommentListResponse, CommentCreate, CommentUpdate, 
-    CommentFilter, CommentStats, KeywordAnalysisRequest, KeywordAnalysisResponse,
-    BatchKeywordAnalysisRequest, BatchKeywordAnalysisResponse, KeywordSearchRequest,
-    KeywordSearchResponse, KeywordStatisticsResponse
+    BatchKeywordAnalysisRequest,
+    BatchKeywordAnalysisResponse,
+    CommentCreate,
+    CommentFilter,
+    CommentListResponse,
+    CommentResponse,
+    CommentStats,
+    CommentUpdate,
+    KeywordAnalysisRequest,
+    KeywordAnalysisResponse,
+    KeywordSearchRequest,
+    KeywordSearchResponse,
+    KeywordStatisticsResponse,
 )
-# TODO: Заменить на реальную зависимость
-async def get_db_session():
-    """Заглушка для get_db_session - должна быть реализована в shared модуле"""
-    pass
-
+from comments.service import CommentService
+from common.database import get_db_session
 
 router = APIRouter(prefix="/comments", tags=["comments"])
 
 
-async def get_comment_service(db: AsyncSession = Depends(get_db_session)) -> CommentService:
+def get_comment_service(db: AsyncSession = Depends(get_db_session)) -> CommentService:
     """Получить сервис комментариев"""
     repository = CommentRepository(db)
     return CommentService(repository)
