@@ -44,10 +44,3 @@ export interface QuickAction {
   label: string;
   icon: string;
 }
-
-export interface RecentActivity {
-  status: string;
-  time: string;
-  color: string;
-  pulse: boolean;
-}
