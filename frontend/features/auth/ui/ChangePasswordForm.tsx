@@ -105,7 +105,7 @@ export const ChangePasswordForm = () => {
           )}
 
           <div className="space-y-3">
-            <Label htmlFor="current_password">Текущий пароль</Label>
+            <Label htmlFor="current_password" className="text-white">Текущий пароль</Label>
             <div className="relative">
               <Input
                 id="current_password"
@@ -113,12 +113,13 @@ export const ChangePasswordForm = () => {
                 placeholder="Введите текущий пароль"
                 {...register("current_password")}
                 disabled={isLoading}
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 pr-10"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                 disabled={isLoading}
               >
@@ -130,12 +131,12 @@ export const ChangePasswordForm = () => {
               </Button>
             </div>
             {errors.current_password && (
-              <p className="text-sm text-red-500">{errors.current_password.message}</p>
+              <p className="text-sm text-red-300">{errors.current_password.message}</p>
             )}
           </div>
 
           <div className="space-y-3">
-            <Label htmlFor="new_password">Новый пароль</Label>
+            <Label htmlFor="new_password" className="text-white">Новый пароль</Label>
             <div className="relative">
               <Input
                 id="new_password"
@@ -143,12 +144,13 @@ export const ChangePasswordForm = () => {
                 placeholder="Введите новый пароль"
                 {...register("new_password")}
                 disabled={isLoading}
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 pr-10"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
                 onClick={() => setShowNewPassword(!showNewPassword)}
                 disabled={isLoading}
               >
@@ -160,12 +162,12 @@ export const ChangePasswordForm = () => {
               </Button>
             </div>
             {errors.new_password && (
-              <p className="text-sm text-red-500">{errors.new_password.message}</p>
+              <p className="text-sm text-red-300">{errors.new_password.message}</p>
             )}
           </div>
 
           <div className="space-y-3">
-            <Label htmlFor="confirm_password">Подтвердите пароль</Label>
+            <Label htmlFor="confirm_password" className="text-white">Подтвердите пароль</Label>
             <div className="relative">
               <Input
                 id="confirm_password"
@@ -173,12 +175,13 @@ export const ChangePasswordForm = () => {
                 placeholder="Подтвердите новый пароль"
                 {...register("confirm_password")}
                 disabled={isLoading}
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 pr-10"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 disabled={isLoading}
               >
@@ -190,11 +193,15 @@ export const ChangePasswordForm = () => {
               </Button>
             </div>
             {errors.confirm_password && (
-              <p className="text-sm text-red-500">{errors.confirm_password.message}</p>
+              <p className="text-sm text-red-300">{errors.confirm_password.message}</p>
             )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button 
+            type="submit" 
+            className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/20 backdrop-blur-sm transition-all duration-200" 
+            disabled={isLoading}
+          >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Изменить пароль
           </Button>
