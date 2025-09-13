@@ -1,0 +1,32 @@
+"use client";
+
+import { ReactNode } from "react";
+
+interface GlassSidebarProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export const GlassSidebar = ({ 
+  children, 
+  className = ""
+}: GlassSidebarProps) => {
+  return (
+    <div className={`relative ${className}`}>
+      {/* Красивый градиентный фон */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900" />
+      
+      {/* Размытые декоративные элементы */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-600 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" />
+        <div className="absolute top-40 left-1/2 w-60 h-60 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" />
+      </div>
+      
+      {/* Основной контент с размытием */}
+      <div className="relative backdrop-blur-xl bg-white/10 rounded-2xl shadow-2xl border border-white/20">
+        {children}
+      </div>
+    </div>
+  );
+};

@@ -8,6 +8,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/shared/ui/sidebar";
+import { GlassSidebar } from "@/shared/ui/glass-card/GlassSidebar";
 import { NavMain } from "./NavMain";
 import { NavUser } from "./NavUser";
 import { useSidebarData } from "../model/useSidebarData";
@@ -18,18 +19,20 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ ...props }) => {
   const { user, navItems } = useSidebarData();
 
   return (
-    <Sidebar 
-      collapsible="icon" 
-      className="border-r border-white/20 bg-transparent backdrop-blur-sm"
-      {...props}
-    >
-      <SidebarContent className="gap-2 p-2">
-        <NavMain items={navItems} />
-      </SidebarContent>
-      <SidebarFooter className="border-t border-white/20 bg-transparent backdrop-blur-sm">
-        <NavUser user={user} />
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+    <GlassSidebar className="min-h-screen w-64">
+      <Sidebar 
+        collapsible="icon" 
+        className="border-r border-white/20 bg-transparent backdrop-blur-sm w-full"
+        {...props}
+      >
+        <SidebarContent className="gap-2 p-2">
+          <NavMain items={navItems} />
+        </SidebarContent>
+        <SidebarFooter className="border-t border-white/20 bg-transparent backdrop-blur-sm">
+          <NavUser user={user} />
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+    </GlassSidebar>
   );
 };
