@@ -2,130 +2,122 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { memo, useMemo } from 'react'
 
 import { Bell, Search } from 'lucide-react'
-
-import { Badge } from '@/shared/ui/badge'
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/shared/ui/breadcrumb'
-import { Button } from '@/shared/ui/button'
-import { Input } from '@/shared/ui/input'
-import { Separator } from '@/shared/ui/separator'
-import { SidebarTrigger } from '@/shared/ui/sidebar'
-import { ThemeToggle } from '@/shared/ui/theme-toggle'
 
 interface NavbarProps {
   notificationCount?: number
 }
 
-export function Navbar({ notificationCount = 0 }: NavbarProps) {
+interface BreadcrumbItem {
+  label: string
+  href: string
+  isLast: boolean
+}
+
+const PAGE_TRANSLATIONS: Record<string, string> = {
+  dashboard: 'Панель управления',
+  comments: 'Комментарии',
+  groups: 'Группы',
+  keywords: 'Ключевые слова',
+  monitoring: 'Мониторинг',
+  parser: 'Парсер',
+  settings: 'Настройки',
+} as const
+
+export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
   const pathname = usePathname()
 
-  // Generate breadcrumbs from pathname
-  const generateBreadcrumbs = () => {
+  const breadcrumbs = useMemo((): BreadcrumbItem[] => {
     const segments = pathname.split('/').filter(Boolean)
-    const breadcrumbs = []
+    
+    return segments.map((segment, index) => {
+      const href = '/' + segments.slice(0, index + 1).join('/')
+      const label = PAGE_TRANSLATIONS[segment.toLowerCase()] || 
+        segment.charAt(0).toUpperCase() + segment.slice(1)
 
-    for (let i = 0; i < segments.length; i++) {
-      const segment = segments[i]
-      if (!segment) continue
-
-      const href = '/' + segments.slice(0, i + 1).join('/')
-      let label = segment.charAt(0).toUpperCase() + segment.slice(1)
-
-      // Translate common page names
-      switch (segment.toLowerCase()) {
-        case 'dashboard':
-          label = 'Панель управления'
-          break
-        case 'comments':
-          label = 'Комментарии'
-          break
-        case 'groups':
-          label = 'Группы'
-          break
-        case 'keywords':
-          label = 'Ключевые слова'
-          break
-        case 'monitoring':
-          label = 'Мониторинг'
-          break
-        case 'parser':
-          label = 'Парсер'
-          break
-        case 'settings':
-          label = 'Настройки'
-          break
-        default:
-          break
-      }
-
-      breadcrumbs.push({
+      return {
         label,
         href,
-        isLast: i === segments.length - 1,
-      })
-    }
-
-    return breadcrumbs
-  }
-
-  const breadcrumbs = generateBreadcrumbs()
+        isLast: index === segments.length - 1,
+      }
+    })
+  }, [pathname])
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
       <div className="flex items-center gap-2 px-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-        <Breadcrumb>
-          <BreadcrumbList>
-            {breadcrumbs.map((breadcrumb, index) => (
-              <div key={breadcrumb.href} className="flex items-center">
-                {index > 0 && <BreadcrumbSeparator className="hidden md:block" />}
-                <BreadcrumbItem className="hidden md:block">
-                  {breadcrumb.isLast ? (
-                    <BreadcrumbPage>{breadcrumb.label}</BreadcrumbPage>
-                  ) : (
-                    <BreadcrumbLink asChild>
-                      <Link href={breadcrumb.href}>{breadcrumb.label}</Link>
-                    </BreadcrumbLink>
-                  )}
-                </BreadcrumbItem>
+        <button 
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9 -ml-1"
+          aria-label="Toggle sidebar"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        
+        <div className="h-4 w-px bg-border mr-2" />
+        
+        <nav className="flex items-center space-x-1 text-sm">
+          {breadcrumbs.map((breadcrumb, index) => (
+            <div key={breadcrumb.href} className="flex items-center">
+              {index > 0 && (
+                <svg className="h-4 w-4 mx-1 text-muted-foreground hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              )}
+              <div className="hidden md:block">
+                {breadcrumb.isLast ? (
+                  <span className="font-medium text-foreground">{breadcrumb.label}</span>
+                ) : (
+                  <Link 
+                    href={breadcrumb.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {breadcrumb.label}
+                  </Link>
+                )}
               </div>
-            ))}
-          </BreadcrumbList>
-        </Breadcrumb>
+            </div>
+          ))}
+        </nav>
       </div>
 
       <div className="ml-auto flex items-center gap-2 px-4">
         {/* Search */}
         <div className="relative hidden md:block">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input type="search" placeholder="Поиск..." className="w-[200px] pl-8 lg:w-[300px]" />
+          <input 
+            type="search" 
+            placeholder="Поиск..." 
+            className="flex h-9 w-[200px] lg:w-[300px] rounded-md border border-input bg-background px-3 py-1 pl-8 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          />
         </div>
 
         {/* Theme Toggle */}
-        <ThemeToggle />
+        <button 
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9"
+          aria-label="Toggle theme"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </button>
 
         {/* Notifications */}
-        <Button variant="outline" size="icon" className="relative">
+        <button 
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 w-9 relative"
+          aria-label="Notifications"
+        >
           <Bell className="h-4 w-4" />
           {notificationCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
-            >
+            <span className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-medium">
               {notificationCount > 99 ? '99+' : notificationCount}
-            </Badge>
+            </span>
           )}
-        </Button>
+        </button>
       </div>
     </header>
   )
-}
+})

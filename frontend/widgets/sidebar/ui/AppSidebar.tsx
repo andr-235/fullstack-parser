@@ -22,13 +22,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ ...props }) => {
     <GlassSidebar className="min-h-screen w-64">
       <Sidebar 
         collapsible="icon" 
-        className="border-r border-white/20 bg-transparent backdrop-blur-sm w-full"
+        className="border-r border-white/20 bg-transparent backdrop-blur-sm w-full flex flex-col"
         {...props}
       >
-        <SidebarContent className="gap-2 p-2">
+        <SidebarContent className="flex-1 gap-2 p-2">
           <NavMain items={navItems} />
         </SidebarContent>
-        <SidebarFooter className="border-t border-white/20 bg-transparent backdrop-blur-sm">
+        <SidebarFooter className="flex-shrink-0 border-t border-white/20 bg-transparent backdrop-blur-sm">
           <NavUser user={user} />
         </SidebarFooter>
         <SidebarRail />

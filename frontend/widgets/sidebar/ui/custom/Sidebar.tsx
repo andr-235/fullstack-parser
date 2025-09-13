@@ -10,7 +10,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ children, collapsible = "off", className = "" }: SidebarProps) => {
   return (
-    <aside className={`flex flex-col h-full ${className}`}>
+    <aside className={`flex flex-col h-full min-h-screen ${className}`}>
       {children}
     </aside>
   );
