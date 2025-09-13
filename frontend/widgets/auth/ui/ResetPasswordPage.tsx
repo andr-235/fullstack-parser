@@ -10,7 +10,7 @@ export const ResetPasswordPage = () => {
   return (
     <GlassCard>
       <div className="mb-6">
-        <Link href="/login">
+        <Link href="/(auth)/login">
           <Button
             variant="ghost"
             size="sm"
