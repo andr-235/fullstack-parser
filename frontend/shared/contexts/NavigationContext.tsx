@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 
 import { apiClient } from '@/shared/lib'
+import { getRoutePath, PARSER_ROUTES, DASHBOARD_ROUTES } from '@/shared/config/routes'
 
 interface GlobalStatsResponse {
   total_comments: number
@@ -53,8 +54,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
       // Получаем данные параллельно для лучшей производительности
       const [globalStats, dashboardStats] = await Promise.all([
-        apiClient.get<GlobalStatsResponse>('/api/parser/global-stats').catch(() => null),
-        apiClient.get<DashboardStatsResponse>('/api/dashboard/stats').catch(() => null),
+        apiClient.get<GlobalStatsResponse>(getRoutePath(PARSER_ROUTES.GLOBAL_STATS)).catch(() => null),
+        apiClient.get<DashboardStatsResponse>(getRoutePath(DASHBOARD_ROUTES.STATS)).catch(() => null),
       ])
 
       if (globalStats && dashboardStats) {

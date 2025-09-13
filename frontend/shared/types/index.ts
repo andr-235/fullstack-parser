@@ -12,11 +12,29 @@ export interface PaginationParams {
   limit: number
 }
 
-export interface PaginatedResponse<T = any> extends ApiResponse<T[]> {
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  }
+export interface PaginatedResponse<T = any> {
+  items: T[]
+  total: number
+  page: number
+  size: number
+  pages: number
+}
+
+// Common authentication types
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
+export interface AuthTokens {
+  access_token: string
+  refresh_token: string
+  token_type: string
+  expires_in: number
+}
+
+export interface BaseUser {
+  id: ID
+  email: string
+  is_active: boolean
 }

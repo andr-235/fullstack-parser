@@ -3,6 +3,7 @@
  */
 
 import { httpClient } from '@/shared/lib/http-client'
+import { getRoutePath, GROUPS_ROUTES } from '@/shared/config/routes'
 import type {
   VKGroup,
   GroupsResponse,
@@ -34,7 +35,7 @@ export const groupsApi = {
     if (params?.page !== undefined) queryParams.page = params.page
     if (params?.size !== undefined) queryParams.size = params.size
 
-    return httpClient.get('/api/v1/groups', queryParams)
+    return httpClient.get(getRoutePath(GROUPS_ROUTES.LIST), queryParams)
   },
 
   async createGroup(groupData: CreateGroupRequest): Promise<VKGroup> {

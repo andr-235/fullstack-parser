@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios'
 import { config } from '@/shared/config'
+import { AuthStorage } from '@/shared/lib/auth-storage'
 
 // Создаем базовый экземпляр axios
 const apiClient: AxiosInstance = axios.create({
@@ -13,8 +14,8 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor - добавляем токен авторизации
 apiClient.interceptors.request.use(
   config => {
-    // Получаем токен из localStorage
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+    // Получаем токен через сервис
+    const token = AuthStorage.getToken()
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -35,8 +36,8 @@ apiClient.interceptors.response.use(
   error => {
     // Обработка 401 ошибки - редирект на логин
     if (error.response?.status === 401) {
+      AuthStorage.removeToken()
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token')
         window.location.href = '/login'
       }
     }
