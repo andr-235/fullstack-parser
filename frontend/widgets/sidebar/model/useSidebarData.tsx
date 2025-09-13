@@ -10,6 +10,8 @@ import {
   Monitor,
   FileText,
   Settings,
+  User,
+  LogOut,
 } from "lucide-react";
 import { Badge } from "../ui/custom/Badge";
 import { useNavigation } from "@/shared/contexts/NavigationContext";
@@ -91,55 +93,48 @@ export const useSidebarData = (): SidebarData => {
   // Используем данные из store или fallback
   const currentData = data || fallbackData;
 
+  // Конфигурация навигационных элементов
+  const navConfig = [
+    { id: "dashboard", title: "Панель управления", url: "/dashboard", icon: LayoutDashboard },
+    { id: "comments", title: "Комментарии", url: "/comments", icon: MessageSquare, hasBadge: true, badgeVariant: "destructive" as const, badgeKey: "comments.new" },
+    { id: "groups", title: "Группы", url: "/groups", icon: Users, hasBadge: true, badgeVariant: "secondary" as const, badgeKey: "groups.active" },
+    { id: "keywords", title: "Ключевые слова", url: "/keywords", icon: Hash, hasBadge: true, badgeVariant: "outline" as const, badgeKey: "keywords.active" },
+    { id: "monitoring", title: "Мониторинг", url: "/monitoring", icon: Monitor },
+    { id: "parser", title: "Парсер", url: "/parser", icon: FileText },
+    { id: "settings", title: "Настройки", url: "/settings", icon: Settings },
+    { id: "profile", title: "Профиль", url: "/profile", icon: User },
+  ];
+
   // Обновляем навигационные элементы с актуальными данными
   const navItems = useMemo(() => {
     const statsData: SidebarStats = stats || currentData.stats;
 
-    return [
-      {
-        id: "dashboard",
-        title: "Панель управления",
-        url: "/dashboard",
-        icon: LayoutDashboard,
-        isActive: activePath === "/dashboard",
-      },
-      {
-        id: "comments",
-        title: "Комментарии",
-        url: "/comments",
-        icon: MessageSquare,
-        isActive: activePath === "/comments",
-        badge: statsData.comments.new ? (
-          <Badge variant="destructive" className="ml-auto">
-            {statsData.comments.new}
-          </Badge>
-        ) : undefined,
-      },
-      {
-        id: "groups",
-        title: "Группы",
-        url: "/groups",
-        icon: Users,
-        isActive: activePath === "/groups",
-        badge: statsData.groups.active ? (
-          <Badge variant="secondary" className="ml-auto">
-            {statsData.groups.active}
-          </Badge>
-        ) : undefined,
-      },
-      {
-        id: "keywords",
-        title: "Ключевые слова",
-        url: "/keywords",
-        icon: Hash,
-        isActive: activePath === "/keywords",
-        badge: statsData.keywords.active ? (
-          <Badge variant="outline" className="ml-auto">
-            {statsData.keywords.active}
-          </Badge>
-        ) : undefined,
-      },
-    ];
+    return navConfig.map((item) => {
+      const baseItem = {
+        id: item.id,
+        title: item.title,
+        url: item.url,
+        icon: item.icon,
+        isActive: activePath === item.url,
+      };
+
+      // Добавляем badge если нужно
+      if (item.hasBadge && item.badgeKey) {
+        const badgeValue = item.badgeKey.split('.').reduce((obj, key) => obj?.[key], statsData as any);
+        if (badgeValue) {
+          return {
+            ...baseItem,
+            badge: (
+              <Badge variant={item.badgeVariant} className="ml-auto">
+                {badgeValue}
+              </Badge>
+            ),
+          };
+        }
+      }
+
+      return baseItem;
+    });
   }, [stats, activePath, currentData.stats]);
 
   return {
