@@ -43,21 +43,21 @@ export const LoginForm = () => {
 
   return (
     <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
-      <CardHeader className="space-y-1">
+      <CardHeader className="space-y-3">
         <CardTitle className="text-2xl text-center text-white">Вход в систему</CardTitle>
         <CardDescription className="text-center text-white/70">
           Введите email и пароль для входа
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error.message}</AlertDescription>
             </Alert>
           )}
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <Label htmlFor="email" className="text-white">Email</Label>
             <Input
               id="email"
@@ -72,7 +72,7 @@ export const LoginForm = () => {
             )}
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <Label htmlFor="password" className="text-white">Пароль</Label>
             <div className="relative">
               <Input

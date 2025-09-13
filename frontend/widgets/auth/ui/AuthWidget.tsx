@@ -23,7 +23,7 @@ export const AuthWidget = () => {
       <div className="relative w-full max-w-md">
         <div className="backdrop-blur-xl bg-white/10 rounded-2xl shadow-2xl border border-white/20 p-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-white/10 backdrop-blur-sm border border-white/20 gap-1 p-1">
+            <TabsList className="grid w-full grid-cols-4 bg-white/10 backdrop-blur-sm border border-white/20 gap-2 p-2">
               <TabsTrigger 
                 value="login" 
                 className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80 hover:text-white transition-colors rounded-md"
@@ -50,19 +50,19 @@ export const AuthWidget = () => {
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="login" className="mt-8">
+            <TabsContent value="login" className="mt-10">
               <LoginForm />
             </TabsContent>
             
-            <TabsContent value="register" className="mt-8">
+            <TabsContent value="register" className="mt-10">
               <RegisterForm />
             </TabsContent>
             
-            <TabsContent value="change-password" className="mt-8">
+            <TabsContent value="change-password" className="mt-10">
               <ChangePasswordForm />
             </TabsContent>
             
-            <TabsContent value="reset-password" className="mt-8">
+            <TabsContent value="reset-password" className="mt-10">
               <ResetPasswordForm />
             </TabsContent>
           </Tabs>

@@ -90,21 +90,21 @@ export const ChangePasswordForm = () => {
 
   return (
     <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
-      <CardHeader className="space-y-1">
+      <CardHeader className="space-y-3">
         <CardTitle className="text-2xl text-center text-white">Смена пароля</CardTitle>
         <CardDescription className="text-center text-white/70">
           Введите текущий пароль и новый пароль
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <Label htmlFor="current_password" className="text-white">Текущий пароль</Label>
             <div className="relative">
               <Input
@@ -135,7 +135,7 @@ export const ChangePasswordForm = () => {
             )}
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <Label htmlFor="new_password" className="text-white">Новый пароль</Label>
             <div className="relative">
               <Input
@@ -166,7 +166,7 @@ export const ChangePasswordForm = () => {
             )}
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <Label htmlFor="confirm_password" className="text-white">Подтвердите пароль</Label>
             <div className="relative">
               <Input
