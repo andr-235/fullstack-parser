@@ -161,8 +161,8 @@ export default function DashboardPage() {
   );
 
   return (
-    <GlassCard maxWidth="2xl" className="!min-h-screen !py-0">
-      <div className="p-6 space-y-8">
+    <GlassCard className="!min-h-screen !py-0 !max-w-none !w-full !items-start !justify-start">
+      <div className="p-6 space-y-8 w-full">
         {/* Заголовок */}
         <div className="text-center space-y-4 animate-fade-in-up">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text text-transparent">
