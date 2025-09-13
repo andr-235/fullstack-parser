@@ -128,8 +128,11 @@ export default function DashboardPage() {
     icon: string;
     color: string;
   }) => (
-    <div className="group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-      <div className="relative z-10 p-6">
+    <div className="group relative overflow-hidden rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 p-6 transition-all duration-300 hover:bg-white/15 hover:scale-105 hover:shadow-2xl">
+      {/* Декоративный градиент */}
+      <div className={`absolute inset-0 opacity-20 ${color} rounded-2xl`} />
+      
+      <div className="relative z-10">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className={`p-3 rounded-xl ${color} bg-opacity-20`}>
@@ -166,19 +169,8 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="min-h-screen relative">
-      {/* Фоновый градиент */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900" />
-      
-      {/* Декоративные элементы */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-600 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-500 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse" />
-        <div className="absolute top-40 left-1/2 w-60 h-60 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse" />
-      </div>
-
-      {/* Основной контент */}
-      <div className="relative z-10 p-6 space-y-8">
+    <GlassCard maxWidth="2xl" className="!min-h-screen !py-0">
+      <div className="p-6 space-y-8">
         {/* Заголовок */}
         <div className="text-center space-y-4 animate-fade-in-up">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text text-transparent">
@@ -192,66 +184,61 @@ export default function DashboardPage() {
         {/* Статистические карточки */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
           {statsConfig.map((config) => (
-            <GlassCard key={config.key} maxWidth="sm" className="!min-h-0 !py-0">
-              <StatCard
-                title={config.title}
-                value={stats[config.key] as number}
-                growth={stats[config.growthKey] as number}
-                icon={config.icon}
-                color={config.color}
-              />
-            </GlassCard>
+            <StatCard
+              key={config.key}
+              title={config.title}
+              value={stats[config.key] as number}
+              growth={stats[config.growthKey] as number}
+              icon={config.icon}
+              color={config.color}
+            />
           ))}
         </div>
 
         {/* Дополнительная информация */}
         <div className="grid gap-6 md:grid-cols-2 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
           {/* Быстрые действия */}
-          <GlassCard maxWidth="lg" className="!min-h-0 !py-0">
-            <div className="p-6">
-              <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
-                <span className="mr-2">🚀</span>
-                Быстрые действия
-              </h3>
-              <div className="space-y-3">
-                {quickActions.map((action, index) => (
-                  <button 
-                    key={index}
-                    className="w-full text-left p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors duration-200 flex items-center justify-between group"
-                  >
-                    <span className="text-white/80 group-hover:text-white flex items-center">
-                      <span className="mr-2">{action.icon}</span>
-                      {action.label}
-                    </span>
-                    <span className="text-white/40 group-hover:text-white/60">→</span>
-                  </button>
-                ))}
-              </div>
+          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-6">
+            <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
+              <span className="mr-2">🚀</span>
+              Быстрые действия
+            </h3>
+            <div className="space-y-3">
+              {quickActions.map((action, index) => (
+                <button 
+                  key={index}
+                  className="w-full text-left p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors duration-200 flex items-center justify-between group"
+                >
+                  <span className="text-white/80 group-hover:text-white flex items-center">
+                    <span className="mr-2">{action.icon}</span>
+                    {action.label}
+                  </span>
+                  <span className="text-white/40 group-hover:text-white/60">→</span>
+                </button>
+              ))}
             </div>
-          </GlassCard>
+          </div>
 
           {/* Последняя активность */}
-          <GlassCard maxWidth="lg" className="!min-h-0 !py-0">
-            <div className="p-6">
-              <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
-                <span className="mr-2">📊</span>
-                Последняя активность
-              </h3>
-              <div className="space-y-3">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-center space-x-3 p-3 rounded-xl bg-white/5">
-                    <div className={`w-2 h-2 ${activity.color} rounded-full ${activity.pulse ? 'animate-pulse' : ''}`} />
-                    <div className="flex-1">
-                      <p className="text-sm text-white/80">{activity.status}</p>
-                      <p className="text-xs text-white/60">{activity.time}</p>
-                    </div>
+          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-6">
+            <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
+              <span className="mr-2">📊</span>
+              Последняя активность
+            </h3>
+            <div className="space-y-3">
+              {recentActivity.map((activity, index) => (
+                <div key={index} className="flex items-center space-x-3 p-3 rounded-xl bg-white/5">
+                  <div className={`w-2 h-2 ${activity.color} rounded-full ${activity.pulse ? 'animate-pulse' : ''}`} />
+                  <div className="flex-1">
+                    <p className="text-sm text-white/80">{activity.status}</p>
+                    <p className="text-xs text-white/60">{activity.time}</p>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          </GlassCard>
+          </div>
         </div>
       </div>
-    </div>
+    </GlassCard>
   );
 }
