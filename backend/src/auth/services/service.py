@@ -4,16 +4,18 @@
 
 from typing import Any, Optional
 
+from user.models import User
 from common.logging import get_logger
-from common.exceptions import ValidationError, NotFoundError
+from user.exceptions import UserNotFoundError
 
-from .config import AuthConfig
-from .exceptions import (
+from ..config import AuthConfig
+from ..exceptions import (
     InvalidCredentialsError,
     InvalidTokenError,
     TokenExpiredError,
 )
-from .schemas import (
+from user.exceptions import UserInactiveError
+from ..schemas import (
     ChangePasswordRequest,
     LoginRequest,
     LoginResponse,
@@ -44,6 +46,16 @@ class AuthService:
         self.config = config or AuthConfig()
         self.logger = get_logger()
 
+    async def _get_user_repository(self):
+        """Получить репозиторий пользователей"""
+        if self.user_repository is None:
+            from common.database import get_db_session
+            from user.repository import UserRepository
+            
+            async for db_session in get_db_session():
+                return UserRepository(db_session)
+        return self.user_repository
+
     async def login(self, request: LoginRequest) -> LoginResponse:
         """Вход в систему"""
         # Защита от brute force
@@ -56,7 +68,8 @@ class AuthService:
                 raise InvalidCredentialsError()
 
         # Получаем пользователя
-        user = await self.user_repository.get_by_email(request.email)
+        user_repository = await self._get_user_repository()
+        user = await user_repository.get_by_email(request.email)
 
         # Защита от timing attacks
         if not user:
@@ -69,7 +82,7 @@ class AuthService:
 
         # Проверяем пароль
         is_valid = await self.password_service.verify_password(
-            request.password, user.hashed_password.value
+            request.password, user.hashed_password
         )
         if not is_valid:
             if self.cache_service:
@@ -77,8 +90,8 @@ class AuthService:
             raise InvalidCredentialsError()
 
         # Проверяем активность
-        if not user.can_login():
-            raise UserInactiveError(user.id.value)
+        if user.status != "active":
+            raise UserInactiveError(user.id)
 
         # Сбрасываем счетчик попыток
         if self.cache_service:
@@ -86,8 +99,8 @@ class AuthService:
 
         # Создаем токены
         token_data = {
-            "sub": str(user.id.value),
-            "email": user.email.value,
+            "sub": str(user.id),
+            "email": user.email,
             "is_superuser": user.is_superuser
         }
 
@@ -96,23 +109,25 @@ class AuthService:
 
         # Кэшируем данные пользователя
         if self.cache_service:
-            cache_key = f"user:{user.id.value}"
+            cache_key = f"user:{user.id}"
             user_data = {
-                "id": user.id.value,
-                "email": user.email.value,
+                "id": user.id,
+                "email": user.email,
                 "full_name": user.full_name,
-                "is_active": user.is_active
+                "is_active": user.status == "active"
             }
             await self.cache_service.set(cache_key, user_data, ttl=self.config.user_cache_ttl_seconds)
 
         # Обновляем время последнего входа
-        updated_user = user.update_login_time()
-        await self.user_repository.update(updated_user)
+        from datetime import datetime
+        user.last_login = datetime.utcnow()
+        user_repository = await self._get_user_repository()
+        await user_repository.update(user)
 
         # Логируем событие
         if self.task_service:
             await self.task_service.log_security_event(
-                "user_login", str(user.id.value), {"email": user.email.value}
+                "user_login", str(user.id), {"email": user.email}
             )
 
         return LoginResponse(
@@ -120,8 +135,8 @@ class AuthService:
             refresh_token=refresh_token,
             expires_in=self.config.access_token_expire_minutes * 60,
             user={
-                "id": user.id.value,
-                "email": user.email.value,
+                "id": user.id,
+                "email": user.email,
                 "full_name": user.full_name,
                 "is_superuser": user.is_superuser
             }
@@ -143,43 +158,45 @@ class AuthService:
     async def change_password(self, user: User, request: ChangePasswordRequest) -> None:
         """Сменить пароль"""
         is_valid = await self.password_service.verify_password(
-            request.current_password, user.hashed_password.value
+            request.current_password, user.hashed_password
         )
         if not is_valid:
             raise InvalidCredentialsError()
 
         new_hashed_password = await self.password_service.hash_password(request.new_password)
-        updated_user = user.change_password(new_hashed_password)
-        await self.user_repository.update(updated_user)
+        user.hashed_password = new_hashed_password
+        user_repository = await self._get_user_repository()
+        await user_repository.update(user)
 
         # Инвалидируем кэш
         if self.cache_service:
-            cache_key = f"user:{user.id.value}"
+            cache_key = f"user:{user.id}"
             await self.cache_service.delete(cache_key)
 
         # Логируем событие
         if self.task_service:
             await self.task_service.log_security_event(
-                "password_changed", str(user.id.value), {"email": user.email.value}
+                "password_changed", str(user.id), {"email": user.email}
             )
 
     async def reset_password(self, request: ResetPasswordRequest) -> None:
         """Запросить сброс пароля"""
-        user = await self.user_repository.get_by_email(request.email)
+        user_repository = await self._get_user_repository()
+        user = await user_repository.get_by_email(request.email)
         if not user:
             # Не раскрываем информацию о существовании пользователя
             return
 
         reset_token = await self.jwt_service.create_access_token({
-            "sub": str(user.id.value),
-            "email": user.email.value,
+            "sub": str(user.id),
+            "email": user.email,
             "type": "password_reset"
         })
 
         if self.task_service:
-            await self.task_service.send_password_reset_email(user.email.value, reset_token)
+            await self.task_service.send_password_reset_email(user.email, reset_token)
             await self.task_service.log_security_event(
-                "password_reset_requested", str(user.id.value), {"email": user.email.value}
+                "password_reset_requested", str(user.id), {"email": user.email}
             )
 
     async def reset_password_confirm(self, request: ResetPasswordConfirmRequest) -> None:
@@ -192,23 +209,24 @@ class AuthService:
         if not user_id:
             raise InvalidTokenError()
 
-        user = await self.user_repository.get_by_id(int(user_id))
+        user_repository = await self._get_user_repository()
+        user = await user_repository.get_by_id(int(user_id))
         if not user:
             raise UserNotFoundError()
 
         new_hashed_password = await self.password_service.hash_password(request.new_password)
-        updated_user = user.change_password(new_hashed_password)
-        await self.user_repository.update(updated_user)
+        user.hashed_password = new_hashed_password
+        await user_repository.update(user)
 
         # Инвалидируем кэш
         if self.cache_service:
-            cache_key = f"user:{user.id.value}"
+            cache_key = f"user:{user.id}"
             await self.cache_service.delete(cache_key)
 
         # Логируем событие
         if self.task_service:
             await self.task_service.log_security_event(
-                "password_reset_completed", str(user.id.value), {"email": user.email.value}
+                "password_reset_completed", str(user.id), {"email": user.email}
             )
 
     async def logout(self, refresh_token: Optional[str] = None) -> None:
@@ -241,19 +259,21 @@ class AuthService:
                 cache_key = f"user:{user_id}"
                 cached_data = await self.cache_service.get(cache_key)
                 if cached_data:
-                    user = await self.user_repository.get_by_id(int(user_id))
+                    user_repository = await self._get_user_repository()
+                    user = await user_repository.get_by_id(int(user_id))
                     return user
 
-            user = await self.user_repository.get_by_id(int(user_id))
+            user_repository = await self._get_user_repository()
+            user = await user_repository.get_by_id(int(user_id))
 
             # Кэшируем
             if self.cache_service and user:
                 cache_key = f"user:{user_id}"
                 user_data = {
-                    "id": user.id.value,
-                    "email": user.email.value,
+                    "id": user.id,
+                    "email": user.email,
                     "full_name": user.full_name,
-                    "is_active": user.is_active
+                    "is_active": user.status == "active"
                 }
                 await self.cache_service.set(cache_key, user_data, ttl=self.config.user_cache_ttl_seconds)
 

@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 from common.exceptions import (
     InternalServerException as ServiceUnavailableError,
 )
-from common.exceptions import ValidationException as ValidationError
+from common.exceptions import ValidationError
 from settings.config import settings_config
 from settings.constants import (
     ERROR_INVALID_SETTINGS_SECTION,

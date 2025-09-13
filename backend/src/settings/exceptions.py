@@ -4,8 +4,8 @@
 
 from common.exceptions import (
     APIException,
-    NotFoundException,
-    ValidationException,
+    NotFoundError,
+    ValidationError,
 )
 
 
@@ -14,12 +14,12 @@ class SettingsError(APIException):
     pass
 
 
-class SettingsNotFoundError(NotFoundException):
+class SettingsNotFoundError(NotFoundError):
     """Настройка не найдена"""
     pass
 
 
-class SettingsValidationError(ValidationException):
+class SettingsValidationError(ValidationError):
     """Ошибка валидации настроек"""
     pass
 

@@ -8,6 +8,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from common.logging import get_logger
+from user.models import User
 
 from .exceptions import (
     InvalidTokenError,
@@ -45,7 +46,7 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     except Exception as e:
-        logger = get_logger_with_correlation()
+        logger = get_logger()
         logger.error(f"Unexpected error in get_current_user: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -57,7 +58,7 @@ async def get_current_active_user(
     current_user: User = Depends(get_current_user)
 ) -> User:
     """Получить активного пользователя"""
-    if not current_user.is_active:
+    if current_user.status != "active":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user"

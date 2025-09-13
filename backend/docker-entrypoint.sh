@@ -47,7 +47,7 @@ run_migrations() {
     local attempt=1
     
     while [ $attempt -le $max_attempts ]; do
-        if alembic -c /app/alembic.ini current >/dev/null 2>&1; then
+        if timeout 5 bash -c "</dev/tcp/postgres/5432" >/dev/null 2>&1; then
             echo "✅ Database connection established"
             break
         else

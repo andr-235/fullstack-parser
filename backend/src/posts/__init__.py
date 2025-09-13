@@ -4,7 +4,7 @@ Posts module
 Упрощенный модуль для работы с постами VK
 """
 
-from .models import Post, PostRepository, get_post_repository
+from .models import Post, PostRepository
 from .router import router as posts_router
 from .schemas import (
     PostBulkUpdate,
@@ -21,7 +21,6 @@ __all__ = [
     # Models
     "Post",
     "PostRepository",
-    "get_post_repository",
 
     # Schemas
     "PostCreate",

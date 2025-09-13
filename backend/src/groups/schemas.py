@@ -3,15 +3,19 @@ Pydantic схемы для модуля Groups
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 # Упрощенная пагинация без shared модуля
-class PaginatedResponse:
+class PaginatedResponse(BaseModel):
     """Базовый класс для пагинированных ответов"""
-    pass
+    page: int = Field(..., description="Номер страницы")
+    size: int = Field(..., description="Размер страницы")
+    total: int = Field(..., description="Общее количество элементов")
+    pages: int = Field(..., description="Общее количество страниц")
+    items: List[Any] = Field(..., description="Элементы страницы")
 
 
 class GroupCreate(BaseModel):
@@ -45,9 +49,9 @@ class GroupResponse(BaseModel):
     updated_at: datetime = Field(..., description="Время последнего обновления")
 
 
-class GroupListResponse(PaginatedResponse[GroupResponse]):
+class GroupListResponse(PaginatedResponse):
     """Схема ответа со списком групп"""
-    pass
+    items: List[GroupResponse] = Field(..., description="Список групп")
 
 
 class GroupBulkAction(BaseModel):

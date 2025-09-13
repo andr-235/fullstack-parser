@@ -18,6 +18,17 @@ from .schemas import (
 from .service import GroupService
 
 # Упрощенные параметры пагинации
+from typing import Annotated
+
+PageParam = Annotated[int, Query(ge=1, description="Номер страницы")]
+SizeParam = Annotated[int, Query(ge=1, le=100, description="Размер страницы")]
+SearchParam = Annotated[Optional[str], Query(description="Поисковый запрос")]
+
+class PaginationParams:
+    def __init__(self, page: int, size: int, search: Optional[str] = None):
+        self.page = page
+        self.size = size
+        self.search = search
 
 router = APIRouter(prefix="/groups", tags=["Groups"])
 

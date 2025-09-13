@@ -8,7 +8,7 @@ from typing import List, Optional
 from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from common.exceptions import NotFoundException, ValidationException
+from common.exceptions import NotFoundError, ValidationError
 
 from .models import Group
 
@@ -25,7 +25,7 @@ class GroupService:
         result = await self.db.execute(query)
         group = result.scalar_one_or_none()
         if not group:
-            raise NotFoundException(f"Группа с ID {group_id} не найдена")
+            raise NotFoundError(f"Группа с ID {group_id} не найдена")
         return group
 
     async def get_groups(
@@ -61,17 +61,17 @@ class GroupService:
         required_fields = ["vk_id", "screen_name", "name"]
         for field in required_fields:
             if field not in group_data or not group_data[field]:
-                raise ValidationException(f"Обязательное поле '{field}' не заполнено")
+                raise ValidationError(f"Обязательное поле '{field}' не заполнено")
 
         # Проверка уникальности VK ID
         existing = await self._get_by_vk_id(group_data["vk_id"])
         if existing:
-            raise ValidationException("Группа с таким VK ID уже существует")
+            raise ValidationError("Группа с таким VK ID уже существует")
 
         # Проверка уникальности screen_name
         existing_screen = await self._get_by_screen_name(group_data["screen_name"])
         if existing_screen:
-            raise ValidationException("Группа с таким screen_name уже существует")
+            raise ValidationError("Группа с таким screen_name уже существует")
 
         # Создание группы
         group = Group(**group_data)
@@ -88,7 +88,7 @@ class GroupService:
         if "screen_name" in update_data:
             existing = await self._get_by_screen_name(update_data["screen_name"])
             if existing and existing.id != group_id:
-                raise ValidationException("Группа с таким screen_name уже существует")
+                raise ValidationError("Группа с таким screen_name уже существует")
 
         # Обновление полей
         for key, value in update_data.items():

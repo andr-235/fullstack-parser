@@ -25,7 +25,7 @@ class AuthSetup:
 
     def setup(
         self,
-        user_repository,
+        user_repository=None,
         redis_url: str = "redis://localhost:6379/0",
         secret_key: str = "your-secret-key",
         algorithm: str = "HS256",
@@ -101,7 +101,7 @@ _auth_setup = AuthSetup()
 
 
 def setup_auth(
-    user_repository,
+    user_repository=None,
     redis_url: str = "redis://localhost:6379/0",
     secret_key: str = "your-secret-key",
     algorithm: str = "HS256",

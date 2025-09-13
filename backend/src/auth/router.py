@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from user.domain.exceptions import UserInactiveError
+from user.exceptions import UserInactiveError
 
 from .dependencies import get_auth_service, get_current_user
 from .exceptions import (
@@ -29,7 +29,7 @@ from .services import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# Rate limiting
+# Rate limiting - используем глобальный limiter из main.py
 limiter = Limiter(key_func=get_remote_address)
 
 
@@ -129,9 +129,9 @@ async def get_current_user_info(
 ):
     """Получить информацию о текущем пользователе"""
     return {
-        "id": current_user.id.value,
-        "email": current_user.email.value,
+        "id": current_user.id,
+        "email": current_user.email,
         "full_name": current_user.full_name,
-        "is_active": current_user.is_active,
+        "is_active": current_user.status == "active",
         "is_superuser": current_user.is_superuser
     }

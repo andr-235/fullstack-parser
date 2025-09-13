@@ -21,7 +21,7 @@ ENV POETRY_HOME=/opt/poetry \
 
 # Install Poetry
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir poetry==1.8.3
+    && pip install --no-cache-dir poetry==2.1.3
 
 # Set working directory
 WORKDIR /app

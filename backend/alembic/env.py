@@ -9,7 +9,7 @@ from logging.config import fileConfig
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
+from sqlalchemy.ext.asyncio import async_engine_from_config, create_async_engine
 
 from alembic import context
 
@@ -77,10 +77,23 @@ async def run_async_migrations() -> None:
     and associate a connection with the context.
 
     """
-
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    import os
+    
+    # Get database URL from environment or config
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        # Fallback to config file
+        config_dict = config.get_section(config.config_ini_section, {})
+        database_url = config_dict.get("sqlalchemy.url")
+    
+    # Ensure asyncpg URL for Alembic
+    if database_url and "postgresql://" in database_url and "postgresql+asyncpg://" not in database_url:
+        database_url = database_url.replace("postgresql://", "postgresql+asyncpg://")
+    
+    print(f"Using database URL: {database_url}")
+    
+    connectable = create_async_engine(
+        database_url,
         poolclass=pool.NullPool,
     )
 

@@ -7,7 +7,7 @@ import time
 from collections import Counter
 from typing import Any, Dict, List, Optional
 
-from common.exceptions import InternalServerException, ValidationException
+from common.exceptions import InternalServerException, ValidationError
 
 
 class MorphologicalService:
@@ -50,11 +50,11 @@ class MorphologicalService:
     async def analyze_word(self, word: str) -> Dict[str, Any]:
         """Анализировать слово морфологически"""
         if not word or not word.strip():
-            raise ValidationException("Слово не может быть пустым", field="word")
+            raise ValidationError("Слово не может быть пустым")
 
         word = word.strip()
         if len(word) > 100:
-            raise ValidationException("Слово слишком длинное (макс 100 символов)", field="word")
+            raise ValidationError("Слово слишком длинное (макс 100 символов)")
 
         # Проверяем кеш
         cache_key = f"word:{word.lower()}"
@@ -123,11 +123,11 @@ class MorphologicalService:
     async def analyze_text(self, text: str, extract_keywords: bool = True) -> Dict[str, Any]:
         """Анализировать текст морфологически"""
         if not text or not text.strip():
-            raise ValidationException("Текст не может быть пустым", field="text")
+            raise ValidationError("Текст не может быть пустым")
 
         text = text.strip()
         if len(text) > 10000:
-            raise ValidationException("Текст слишком длинный (макс 10000 символов)", field="text")
+            raise ValidationError("Текст слишком длинный (макс 10000 символов)")
 
         start_time = time.time()
 

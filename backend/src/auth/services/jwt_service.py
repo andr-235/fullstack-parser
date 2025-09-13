@@ -9,7 +9,7 @@ import jwt
 
 from common.logging import get_logger
 
-from .exceptions import InvalidTokenError, TokenExpiredError
+from ..exceptions import InvalidTokenError, TokenExpiredError
 
 
 class JWTService:

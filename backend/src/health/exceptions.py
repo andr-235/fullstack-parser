@@ -2,7 +2,7 @@
 Исключения модуля Health - упрощенная версия
 """
 
-from common.exceptions import APIException, NotFoundException
+from common.exceptions import APIException, NotFoundError
 
 
 class HealthError(APIException):
@@ -21,7 +21,7 @@ class HealthCheckFailedError(APIException):
         )
 
 
-class HealthComponentNotFoundError(NotFoundException):
+class HealthComponentNotFoundError(NotFoundError):
     """Компонент здоровья не найден"""
     pass
 

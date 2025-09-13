@@ -95,6 +95,8 @@ flower = ">=2.0.1"
 sentry-sdk = {extras = ["fastapi", "sqlalchemy", "redis", "celery"], version = ">=1.40.0"}
 pydantic-extra-types = {extras = ["email"], version = "^2.10.5"}
 password-validator = "^1.0"
+slowapi = ">=0.1.9"
+bcrypt = ">=4.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.4.1"

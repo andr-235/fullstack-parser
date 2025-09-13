@@ -2,7 +2,7 @@
 Исключения модуля Parser - упрощенная версия
 """
 
-from common.exceptions import APIException, NotFoundException
+from common.exceptions import APIException, NotFoundError
 
 
 class ParserError(APIException):
@@ -10,7 +10,7 @@ class ParserError(APIException):
     pass
 
 
-class TaskNotFoundException(NotFoundException):
+class TaskNotFoundException(NotFoundError):
     """Задача не найдена"""
     pass
 
@@ -31,7 +31,7 @@ class VKAPILimitExceededException(APIException):
         )
 
 
-class GroupNotFoundException(NotFoundException):
+class GroupNotFoundException(NotFoundError):
     """Группа VK не найдена"""
     pass
 
