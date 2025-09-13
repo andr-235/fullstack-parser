@@ -52,19 +52,19 @@ export const NavUser: React.FC<NavUserProps> = ({ user }) => {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="group data-[state=open]:bg-white/10 data-[state=open]:text-white hover:bg-white/10 transition-all duration-200 text-white"
+              className="group data-[state=open]:bg-white/10 data-[state=open]:text-white hover:bg-white/10 transition-all duration-200 text-white p-3"
             >
-              <Avatar className="h-8 w-8 rounded-xl ring-2 ring-white/20 group-hover:ring-white/40 transition-all duration-200">
+              <Avatar className="h-10 w-10 rounded-xl ring-2 ring-white/20 group-hover:ring-white/40 transition-all duration-200 flex-shrink-0">
                 <AvatarImage src={user.avatar} alt={user.name} />
                 <AvatarFallback className="rounded-xl bg-gradient-to-br from-blue-600/20 to-blue-600/10 text-white font-semibold border border-white/20">
                   {userInitials}
                 </AvatarFallback>
               </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
+              <div className="grid flex-1 text-left text-sm leading-tight min-w-0">
                 <span className="truncate font-semibold text-white">{user.name}</span>
                 <span className="truncate text-xs text-white/70">{user.email}</span>
               </div>
-              <ChevronsUpDown className="ml-auto size-4 text-white/70 group-hover:text-white transition-colors" />
+              <ChevronsUpDown className="ml-auto size-4 text-white/70 group-hover:text-white transition-colors flex-shrink-0" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent

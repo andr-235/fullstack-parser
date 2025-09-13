@@ -43,7 +43,7 @@ export const SidebarMenuButton = ({
   const sizeClasses = {
     sm: "h-8 px-2 text-sm",
     md: "h-10 px-3 text-sm",
-    lg: "h-12 px-4 text-base"
+    lg: "h-14 px-4 text-base"
   };
 
   const baseClasses = "flex items-center gap-3 w-full rounded-lg transition-all duration-200 cursor-pointer";
