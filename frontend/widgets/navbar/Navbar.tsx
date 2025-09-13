@@ -51,14 +51,20 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
 
 
   return (
-    <header className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 border-b border-white/20 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="relative backdrop-blur-xl bg-white/10 border-b border-white/20 shadow-lg">
+      {/* Декоративные элементы как в GlassCard */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-600 rounded-full mix-blend-multiply filter blur-xl opacity-30" />
+        <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-cyan-500 rounded-full mix-blend-multiply filter blur-xl opacity-30" />
+      </div>
+      
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left section */}
           <div className="flex items-center space-x-4">
             {/* Mobile menu button */}
             <button 
-              className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 lg:hidden"
+              className="p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/20 transition-all duration-200 backdrop-blur-sm lg:hidden"
               aria-label="Toggle sidebar"
             >
               <Menu className="h-5 w-5" />
@@ -66,10 +72,10 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
             
             {/* Logo/Brand */}
             <div className="flex items-center">
-              <div className="h-8 w-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <div className="h-8 w-8 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-sm">A</span>
               </div>
-              <span className="ml-2 text-xl font-semibold text-white hidden sm:block">
+              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text text-transparent hidden sm:block">
                 Analytics
               </span>
             </div>
@@ -83,18 +89,18 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   )}
-                  {breadcrumb.isLast ? (
-                    <span className="font-medium text-white">
-                      {breadcrumb.label}
-                    </span>
-                  ) : (
-                    <Link 
-                      href={breadcrumb.href}
-                      className="text-white/70 hover:text-white transition-colors duration-200"
-                    >
-                      {breadcrumb.label}
-                    </Link>
-                  )}
+                    {breadcrumb.isLast ? (
+                      <span className="font-semibold text-white">
+                        {breadcrumb.label}
+                      </span>
+                    ) : (
+                      <Link 
+                        href={breadcrumb.href}
+                        className="text-white/80 hover:text-white transition-colors duration-200 hover:bg-white/10 px-2 py-1 rounded-md"
+                      >
+                        {breadcrumb.label}
+                      </Link>
+                    )}
                 </div>
               ))}
             </nav>
@@ -105,18 +111,18 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
             {/* Search */}
             <div className="relative hidden md:block">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
                 <input 
                   type="search" 
                   placeholder="Поиск..." 
-                  className="w-64 lg:w-80 pl-10 pr-4 py-2 border border-white/20 rounded-lg bg-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm"
+                  className="w-64 lg:w-80 pl-10 pr-4 py-2 border border-white/30 rounded-xl bg-white/15 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400/50 transition-all duration-200 backdrop-blur-sm shadow-lg"
                 />
               </div>
             </div>
 
             {/* Mobile search button */}
             <button 
-              className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 md:hidden"
+              className="p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/20 transition-all duration-200 backdrop-blur-sm md:hidden"
               onClick={() => setIsSearchOpen(!isSearchOpen)}
               aria-label="Search"
             >
@@ -126,12 +132,12 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
 
             {/* Notifications */}
             <button 
-              className="relative p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors duration-200"
+              className="relative p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/20 transition-all duration-200 backdrop-blur-sm"
               aria-label="Notifications"
             >
               <Bell className="h-5 w-5" />
               {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-medium min-w-[20px]">
+                <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold min-w-[20px] shadow-lg">
                   {notificationCount > 99 ? '99+' : notificationCount}
                 </span>
               )}
@@ -146,12 +152,12 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
               <div className="ml-2">
                 <Link 
                   href="/login"
-                  className="flex items-center space-x-2 px-3 py-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors duration-200"
+                  className="flex items-center space-x-2 px-3 py-2 rounded-xl text-white/90 hover:text-white hover:bg-white/20 transition-all duration-200 backdrop-blur-sm border border-white/20"
                 >
-                  <div className="h-8 w-8 bg-white/20 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-white">U</span>
+                  <div className="h-8 w-8 bg-gradient-to-r from-blue-500/30 to-cyan-400/30 rounded-full flex items-center justify-center border border-white/30">
+                    <span className="text-sm font-bold text-white">U</span>
                   </div>
-                  <span className="hidden lg:block text-sm font-medium">
+                  <span className="hidden lg:block text-sm font-semibold">
                     Войти
                   </span>
                 </Link>
@@ -164,15 +170,15 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
         {isSearchOpen && (
           <div className="md:hidden py-4 border-t border-white/20">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
               <input 
                 type="search" 
                 placeholder="Поиск..." 
-                className="w-full pl-10 pr-4 py-2 border border-white/20 rounded-lg bg-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm"
+                className="w-full pl-10 pr-4 py-2 border border-white/30 rounded-xl bg-white/15 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400/50 backdrop-blur-sm shadow-lg"
                 autoFocus
               />
               <button 
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors duration-200"
                 onClick={() => setIsSearchOpen(false)}
               >
                 <X className="h-4 w-4" />
