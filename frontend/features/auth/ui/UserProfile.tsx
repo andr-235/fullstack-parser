@@ -65,7 +65,7 @@ export const UserProfile = () => {
         <Separator />
 
         <div className="space-y-3">
-          <Link href="/(auth)/change-password">
+          <Link href="/change-password">
             <Button
               variant="outline"
               className="w-full"
