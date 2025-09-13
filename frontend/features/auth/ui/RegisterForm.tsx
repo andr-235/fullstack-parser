@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useRouter } from "next/navigation";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
-import { Loader2, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuthStore } from "@/entities/user";
 import type { RegisterRequest } from "@/entities/user";
 
@@ -28,8 +29,8 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export const RegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const { register: registerUser, isLoading, error, clearError } = useAuthStore();
+  const { register: registerUser, isLoading, error, clearError, isAuthenticated } = useAuthStore();
+  const router = useRouter();
 
   const {
     register,
@@ -38,6 +39,13 @@ export const RegisterForm = () => {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
+
+  // Перенаправляем после успешной регистрации
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/dashboard");
+    }
+  }, [isAuthenticated, router]);
 
   const onSubmit = async (data: RegisterFormData) => {
     clearError();
@@ -49,27 +57,12 @@ export const RegisterForm = () => {
       };
 
       await registerUser(requestData);
-      setSuccess(true);
+      // Перенаправление произойдет автоматически через useEffect
     } catch (error) {
       // Ошибка обрабатывается в store
     }
   };
 
-  if (success) {
-    return (
-      <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
-        <CardContent className="pt-6">
-          <div className="flex flex-col items-center space-y-4">
-            <CheckCircle className="h-12 w-12 text-blue-400" />
-            <h3 className="text-lg font-semibold text-white">Регистрация успешна!</h3>
-            <p className="text-sm text-white/70 text-center">
-              Добро пожаловать! Вы успешно зарегистрированы и авторизованы.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
