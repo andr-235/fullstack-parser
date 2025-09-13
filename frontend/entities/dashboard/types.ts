@@ -44,13 +44,9 @@ export interface Group {
   updated_at: string
 }
 
-export interface GroupsResponse {
-  items: Group[]
-  total: number
-  page: number
-  size: number
-  pages: number
-}
+import { PaginatedResponse } from '@/shared/types'
+
+export type GroupsResponse = PaginatedResponse<Group>
 
 export interface Keyword {
   id: number
@@ -63,13 +59,7 @@ export interface Keyword {
   updated_at: string
 }
 
-export interface KeywordsResponse {
-  items: Keyword[]
-  total: number
-  page: number
-  size: number
-  pages: number
-}
+export type KeywordsResponse = PaginatedResponse<Keyword>
 
 export interface RecentActivityItem {
   id: string

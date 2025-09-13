@@ -1,5 +1,7 @@
 import { ID } from '@/shared/types'
 
+export type PostStatus = 'draft' | 'published' | 'archived'
+
 export interface Post {
   id: ID
   title: string
@@ -7,7 +9,7 @@ export interface Post {
   authorId: ID
   groupId?: ID
   keywordIds: ID[]
-  status: 'draft' | 'published' | 'archived'
+  status: PostStatus
   createdAt: string
   updatedAt: string
   publishedAt?: string
@@ -18,7 +20,7 @@ export interface CreatePostRequest {
   content: string
   groupId?: ID
   keywordIds?: ID[]
-  status?: Post['status']
+  status?: PostStatus
 }
 
 export interface UpdatePostRequest {
@@ -26,5 +28,5 @@ export interface UpdatePostRequest {
   content?: string
   groupId?: ID
   keywordIds?: ID[]
-  status?: Post['status']
+  status?: PostStatus
 }

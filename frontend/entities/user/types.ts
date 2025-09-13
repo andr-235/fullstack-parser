@@ -1,14 +1,15 @@
-import { ID } from '@/shared/types'
+import { ID, LoginRequest, BaseUser } from '@/shared/types'
 
-export interface User {
-  id: ID
-  email: string
+export type { LoginRequest }
+
+export type UserRole = 'admin' | 'moderator' | 'user'
+
+export interface User extends BaseUser {
   username: string
   firstName: string
   lastName: string
   avatar?: string
-  role: 'admin' | 'moderator' | 'user'
-  isActive: boolean
+  role: UserRole
   createdAt: string
   updatedAt: string
 }
@@ -19,20 +20,15 @@ export interface CreateUserRequest {
   firstName: string
   lastName: string
   password: string
-  role?: User['role']
+  role?: UserRole
 }
 
 export interface UpdateUserRequest {
   firstName?: string
   lastName?: string
   avatar?: string
-  role?: User['role']
+  role?: UserRole
   isActive?: boolean
-}
-
-export interface LoginRequest {
-  email: string
-  password: string
 }
 
 export interface AuthResponse {

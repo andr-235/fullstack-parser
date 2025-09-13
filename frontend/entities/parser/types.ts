@@ -1,9 +1,11 @@
+export type ParserPriority = 'low' | 'normal' | 'high'
+
 export interface ParseTaskCreate {
   group_ids: number[]
   max_posts?: number
   max_comments_per_post?: number
   force_reparse?: boolean
-  priority?: 'low' | 'normal' | 'high'
+  priority?: ParserPriority
 }
 
 export interface ParseTaskResponse {
@@ -43,9 +45,7 @@ export interface ParserStats {
   max_users_per_request: number
 }
 
-export interface ParserGlobalStats extends ParserStats {
-  // Наследует все поля из ParserStats
-}
+export type ParserGlobalStats = ParserStats
 
 export interface ParserTasksResponse {
   items: ParseTask[]
@@ -63,11 +63,13 @@ export interface ParserHistoryResponse {
   pages: number
 }
 
+export type ParserSessionStatus = 'active' | 'paused' | 'completed'
+
 export interface ParserSession {
   session_id: string
   group_id: number
   keywords: string[]
-  status: 'active' | 'paused' | 'completed'
+  status: ParserSessionStatus
   created_at: string
   updated_at: string
 }
@@ -122,11 +124,9 @@ export interface StartBulkParserForm {
   max_posts?: number
   max_comments_per_post?: number
   force_reparse?: boolean
-  priority?: 'low' | 'normal' | 'high'
+  priority?: ParserPriority
 }
 
-export interface BulkParseResponse extends ParseTaskResponse {
-  // Наследует все поля из ParseTaskResponse
-}
+export type BulkParseResponse = ParseTaskResponse
 
 // Типы уже экспортированы выше как интерфейсы

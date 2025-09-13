@@ -2,24 +2,16 @@
  * Типы для пользователя и аутентификации
  */
 
-export interface User {
-  id: string;
-  email: string;
+import { ID, LoginRequest, BaseUser, AuthTokens } from '@/shared/types'
+
+export type { LoginRequest }
+
+export interface User extends BaseUser {
   full_name: string;
-  is_active: boolean;
   is_superuser: boolean;
 }
 
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in: number;
+export interface LoginResponse extends AuthTokens {
   user: User;
 }
 
@@ -29,11 +21,7 @@ export interface RegisterRequest {
   full_name: string;
 }
 
-export interface RegisterResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in: number;
+export interface RegisterResponse extends AuthTokens {
   user: User;
 }
 

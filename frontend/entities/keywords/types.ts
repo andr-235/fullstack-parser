@@ -66,13 +66,9 @@ export interface KeywordsSearchRequest {
   offset?: number
 }
 
-export interface KeywordsResponse {
-  items: Keyword[]
-  total: number
-  page: number
-  size: number
-  pages: number
-}
+import { PaginatedResponse } from '@/shared/types'
+
+export type KeywordsResponse = PaginatedResponse<Keyword>
 
 export interface CreateKeywordRequest {
   word: string

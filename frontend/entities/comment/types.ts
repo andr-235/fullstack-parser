@@ -9,12 +9,16 @@ export interface Comment {
   vk_id?: string
   post_vk_id?: string
   group_id: number
-  group?: any
+  group?: {
+    id: number
+    name: string
+    screen_name: string
+  }
   date: string
   published_at?: string
   is_viewed: boolean
   is_archived?: boolean
-  sentiment?: string
+  sentiment?: 'positive' | 'negative' | 'neutral'
   keywords?: string[]
   matched_keywords?: string[]
   matched_keywords_count: number

@@ -27,13 +27,9 @@ export interface GroupsFilters {
   size?: number
 }
 
-export interface GroupsResponse {
-  items: VKGroup[]
-  total: number
-  page: number
-  size: number
-  pages: number
-}
+import { PaginatedResponse } from '@/shared/types'
+
+export type GroupsResponse = PaginatedResponse<VKGroup>
 
 export interface CreateGroupRequest {
   vk_id: number
