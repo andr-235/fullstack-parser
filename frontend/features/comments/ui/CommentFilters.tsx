@@ -28,9 +28,6 @@ export function CommentFilters({ filters, onFiltersChange }: CommentFiltersProps
   const clearFilters = () => {
     onFiltersChange({
       search_text: '',
-      group_id: undefined,
-      post_id: undefined,
-      author_id: undefined,
       is_deleted: false,
     })
   }

@@ -1,15 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-
 import { Play, Settings } from 'lucide-react'
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui'
-import { Button } from '@/shared/ui'
-import { Input } from '@/shared/ui'
-import { Label } from '@/shared/ui'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui'
-import { Switch } from '@/shared/ui'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+} from '@/shared/ui'
 
 import type { VKGroup } from '@/entities/groups'
 import type { ParserStats } from '@/entities/parser'
@@ -47,8 +56,6 @@ export function ParserModal({
       return
     }
 
-    // Лимиты групп убраны - можно парсить любое количество групп
-
     onStartParsing({
       groupId: parseAllGroups ? undefined : Number(selectedGroupId),
       parseAllGroups,
@@ -56,7 +63,6 @@ export function ParserModal({
       forceReparse,
     })
 
-    // Сбросить форму и закрыть модальное окно
     setSelectedGroupId('')
     setParseAllGroups(false)
     onOpenChange?.(false)
@@ -76,7 +82,6 @@ export function ParserModal({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Режим парсинга */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
@@ -95,14 +100,13 @@ export function ParserModal({
                   onCheckedChange={checked => {
                     setParseAllGroups(checked)
                     if (checked) {
-                      setSelectedGroupId('') // Очищаем выбор группы
+                      setSelectedGroupId('')
                     }
                   }}
                 />
               </div>
             </div>
 
-            {/* Выбор группы */}
             <div className="space-y-2">
               <Label htmlFor="group-select-modal" className="text-base font-medium">
                 Группа для парсинга
@@ -135,14 +139,11 @@ export function ParserModal({
                   <p className="text-sm text-blue-800 dark:text-blue-200">
                     📊 Будет запущен парсинг <strong>{activeGroups.length} активных групп</strong>
                   </p>
-                  {/* Лимиты групп убраны - можно парсить любое количество групп */}
-                  {/* Лимиты групп убраны - можно парсить любое количество групп */}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Настройки парсинга */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="max-posts-modal" className="text-base font-medium">
@@ -176,7 +177,6 @@ export function ParserModal({
             </div>
           </div>
 
-          {/* Информация о настройках */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-base font-medium">Комментариев за запрос</Label>
@@ -196,7 +196,6 @@ export function ParserModal({
             </div>
           </div>
 
-          {/* Кнопка запуска */}
           <div className="pt-4 border-t">
             <Button
               onClick={handleStartParsing}
@@ -211,7 +210,6 @@ export function ParserModal({
             </Button>
           </div>
 
-          {/* Информация о группах */}
           {activeGroups.length > 0 && (
             <div className="text-sm text-muted-foreground">
               <p>Доступно групп для парсинга: {activeGroups.length}</p>
