@@ -18,9 +18,6 @@ import {
 export function CommentsPage() {
   const [filters, setFilters] = useState<CommentFilter>({
     search_text: '',
-    group_id: undefined,
-    post_id: undefined,
-    author_id: undefined,
     is_deleted: false,
   })
 

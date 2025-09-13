@@ -1,15 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-
 import { formatDistanceToNow, differenceInSeconds } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { Clock, Zap, FileText, Users, TrendingUp, Activity } from 'lucide-react'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { Badge } from '@/shared/ui'
-import { Progress } from '@/shared/ui'
-
+import { Card, CardContent, CardHeader, CardTitle, Badge, Progress } from '@/shared/ui'
 import type { ParserState } from '@/entities/parser'
 
 interface ParserProgressProps {
@@ -21,7 +17,6 @@ export function ParserProgress({ state, isRunning }: ParserProgressProps) {
   const [elapsedTime, setElapsedTime] = useState(0)
   const [animatedProgress, setAnimatedProgress] = useState(0)
 
-  // Обновляем время выполнения каждую секунду
   useEffect(() => {
     if (!isRunning || !state?.started_at) {
       setElapsedTime(0)
@@ -29,7 +24,6 @@ export function ParserProgress({ state, isRunning }: ParserProgressProps) {
     }
 
     const interval = setInterval(() => {
-      // Используем started_at для корректного времени начала парсинга
       if (state.started_at) {
         const startTime = new Date(state.started_at)
         const now = new Date()
@@ -40,17 +34,15 @@ export function ParserProgress({ state, isRunning }: ParserProgressProps) {
     return () => clearInterval(interval)
   }, [isRunning, state?.started_at])
 
-  // Анимируем прогресс для плавного обновления
   useEffect(() => {
     const targetProgress = state?.overall_progress || 0
 
-    // Если разница небольшая, обновляем сразу без анимации
     if (Math.abs(animatedProgress - targetProgress) < 0.1) {
       setAnimatedProgress(targetProgress)
       return
     }
 
-    const duration = 400 // Уменьшаем время анимации
+    const duration = 400
     const startTime = Date.now()
     const startProgress = animatedProgress
 
@@ -71,7 +63,7 @@ export function ParserProgress({ state, isRunning }: ParserProgressProps) {
     if (startProgress !== targetProgress) {
       requestAnimationFrame(animate)
     }
-  }, [state?.overall_progress, animatedProgress]) // Включаем animatedProgress в зависимости
+  }, [state?.overall_progress, animatedProgress])
 
   const formatElapsedTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600)
@@ -86,14 +78,12 @@ export function ParserProgress({ state, isRunning }: ParserProgressProps) {
 
   const calculateSpeed = () => {
     if (!state?.total_posts_found || elapsedTime === 0) return 0
-    // Используем uptime_seconds для более точного расчета скорости
     const timeInMinutes = elapsedTime / 60
     if (timeInMinutes === 0) return 0
-    return Math.round(state.total_posts_found / timeInMinutes) // постов в минуту
+    return Math.round(state.total_posts_found / timeInMinutes)
   }
 
   const getEstimatedTimeRemaining = () => {
-    // В новом API нет информации о прогрессе, возвращаем null
     return null
   }
 

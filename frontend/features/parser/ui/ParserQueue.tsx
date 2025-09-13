@@ -14,11 +14,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { Badge } from '@/shared/ui'
-import { Progress } from '@/shared/ui'
-import { Skeleton } from '@/shared/ui'
-
+import { Card, CardContent, CardHeader, CardTitle, Badge, Progress, Skeleton } from '@/shared/ui'
 import type { ParserTasksResponse, ParseTaskResponse, ParseTask } from '@/entities/parser'
 
 interface ParserQueueProps {
@@ -78,7 +74,7 @@ export function ParserQueue({ tasks, loading, currentTaskId }: ParserQueueProps)
     if (task.status === 'running') return 'current'
     if (task.status === 'completed') return 'completed'
     if (task.status === 'failed') return 'failed'
-    if (index < 3) return 'queued' // Показываем первые 3 как в очереди
+    if (index < 3) return 'queued'
     return 'pending'
   }
 
