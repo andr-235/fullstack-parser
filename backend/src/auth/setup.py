@@ -4,8 +4,6 @@
 
 from typing import Any, Optional
 
-import redis.asyncio as redis
-
 from common.logging import get_logger
 
 from .config import AuthConfig
@@ -26,7 +24,7 @@ class AuthSetup:
     def setup(
         self,
         user_repository=None,
-        redis_url: str = "redis://localhost:6379/0",
+        redis_client=None,
         secret_key: str = "your-secret-key",
         algorithm: str = "HS256",
         access_token_expire_minutes: int = 30,
@@ -52,9 +50,8 @@ class AuthSetup:
             cache_service=self._cache_service
         )
 
-        # Настраиваем Redis если нужно
-        if redis_url:
-            self._cache_service = redis.from_url(redis_url)
+        # Настраиваем Redis если передан клиент
+        self._cache_service = redis_client
 
         # Создаем основной сервис
         self._auth_service = AuthService(
@@ -102,7 +99,7 @@ _auth_setup = AuthSetup()
 
 def setup_auth(
     user_repository=None,
-    redis_url: str = "redis://localhost:6379/0",
+    redis_client=None,
     secret_key: str = "your-secret-key",
     algorithm: str = "HS256",
     access_token_expire_minutes: int = 30,
@@ -113,7 +110,7 @@ def setup_auth(
     """Настроить модуль Auth"""
     _auth_setup.setup(
         user_repository=user_repository,
-        redis_url=redis_url,
+        redis_client=redis_client,
         secret_key=secret_key,
         algorithm=algorithm,
         access_token_expire_minutes=access_token_expire_minutes,
