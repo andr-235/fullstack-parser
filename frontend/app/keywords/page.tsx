@@ -1,14 +1,9 @@
 "use client";
 
-// Отключаем статическую генерацию для приватных страниц
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic';
 
-import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
+import { KeywordsPage } from '@/features/keywords';
 
-import { KeywordsPage as KeywordsPageComponent } from '@/features/keywords'
-
-export default function KeywordsPage() {
-  useRouteAccess(); // Проверяем доступ к приватной странице
-  
-  return <KeywordsPageComponent />
+export default function KeywordsPageRoute() {
+  return <KeywordsPage />;
 }
