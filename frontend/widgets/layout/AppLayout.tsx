@@ -2,6 +2,7 @@
 
 import { useRouteAccess } from '@/shared/hooks/useRouteAccess'
 import { SidebarInset, SidebarProvider } from '@/shared/ui/sidebar'
+import { GlassLayout } from '@/shared/ui/glass-layout'
 import { AppNavbar } from '../navbar/AppNavbar'
 import { AppSidebar } from '../sidebar'
 
@@ -14,34 +15,38 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Загрузка...</p>
+      <GlassLayout variant="minimal">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-white/50 border-t-transparent" />
+            <p className="text-sm text-white/70">Загрузка...</p>
+          </div>
         </div>
-      </div>
+      </GlassLayout>
     )
   }
 
   if (isAuthenticated) {
     // Приватный layout с sidebar и navbar
     return (
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          <AppNavbar />
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-            {children}
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+      <GlassLayout variant="content">
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
+            <AppNavbar />
+            <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+              {children}
+            </div>
+          </SidebarInset>
+        </SidebarProvider>
+      </GlassLayout>
     )
   }
 
   // Публичный layout без sidebar и navbar
   return (
-    <div className="min-h-screen bg-gray-50">
+    <GlassLayout variant="minimal">
       {children}
-    </div>
+    </GlassLayout>
   )
 }
