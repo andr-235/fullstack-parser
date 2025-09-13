@@ -5,21 +5,55 @@ import { useDashboard } from "../model";
 import { StatCard } from "./StatCard";
 
 export const DashboardWidget = () => {
-  const { stats, loading, statsConfig, quickActions, recentActivity } = useDashboard();
+  const { stats, loading, error, statsConfig, quickActions, recentActivity, refetch } = useDashboard();
 
   return (
     <GlassCard className="!min-h-screen !py-0 !max-w-none !w-full !items-start !justify-start">
       <div className="p-6 space-y-8 w-full">
         {/* Заголовок */}
         <div className="text-center space-y-4 animate-fade-in-up">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text text-transparent">
-            Панель управления
-          </h1>
+          <div className="flex items-center justify-center space-x-4">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text text-transparent">
+              Панель управления
+            </h1>
+            <button
+              onClick={refetch}
+              disabled={loading}
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Обновить данные"
+            >
+              <span className={`text-white text-xl ${loading ? 'animate-spin' : ''}`}>
+                🔄
+              </span>
+            </button>
+          </div>
           <p className="text-xl text-white/70 max-w-2xl mx-auto">
             Добро пожаловать в систему управления парсером комментариев
           </p>
         </div>
         
+        {/* Ошибка загрузки */}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 animate-fade-in-up">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <span className="text-red-400 text-xl">⚠️</span>
+                <div>
+                  <h3 className="text-red-400 font-semibold">Ошибка загрузки данных</h3>
+                  <p className="text-red-300/80 text-sm">{error}</p>
+                </div>
+              </div>
+              <button
+                onClick={refetch}
+                disabled={loading}
+                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Загрузка...' : 'Повторить'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Статистические карточки */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
           {statsConfig.map((config) => (

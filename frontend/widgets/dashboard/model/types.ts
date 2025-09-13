@@ -9,6 +9,29 @@ export interface DashboardStats {
   parsersGrowth: number;
 }
 
+export interface DashboardMetrics {
+  comments: {
+    total: number;
+    growth_percentage: number;
+    trend: string;
+  };
+  groups: {
+    active: number;
+    growth_percentage: number;
+    trend: string;
+  };
+  keywords: {
+    total: number;
+    growth_percentage: number;
+    trend: string;
+  };
+  parsers: {
+    active: number;
+    growth_percentage: number;
+    trend: string;
+  };
+}
+
 export interface StatCardConfig {
   key: keyof DashboardStats;
   growthKey: keyof DashboardStats;

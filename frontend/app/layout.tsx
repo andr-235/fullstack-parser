@@ -1,3 +1,4 @@
+/* eslint-disable import/order */
 import { Inter } from 'next/font/google';
 import type { Metadata } from 'next';
 

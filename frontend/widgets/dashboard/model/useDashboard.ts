@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import type { DashboardStats, StatCardConfig, QuickAction, RecentActivity } from "./types";
+import type { DashboardStats, StatCardConfig, QuickAction, RecentActivity, DashboardMetrics } from "./types";
+import { getDashboardMetrics } from "../api";
 
 export const useDashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
@@ -14,6 +15,7 @@ export const useDashboard = () => {
   });
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Конфигурация статистических карточек
   const statsConfig: StatCardConfig[] = [
@@ -76,30 +78,60 @@ export const useDashboard = () => {
     },
   ];
 
-  useEffect(() => {
-    // Симуляция загрузки данных
-    const timer = setTimeout(() => {
-      setStats({
-        totalComments: 1247,
-        activeGroups: 23,
-        keywords: 156,
-        activeParsers: 8,
-        commentsGrowth: 12.5,
-        groupsGrowth: 8.2,
-        keywordsGrowth: 15.3,
-        parsersGrowth: -2.1,
-      });
-      setLoading(false);
-    }, 1000);
+  // Функция для преобразования API данных в формат компонента
+  const transformMetricsToStats = (metrics: DashboardMetrics): DashboardStats => {
+    return {
+      totalComments: metrics.comments.total,
+      activeGroups: metrics.groups.active,
+      keywords: metrics.keywords.total,
+      activeParsers: metrics.parsers.active,
+      commentsGrowth: metrics.comments.growth_percentage,
+      groupsGrowth: metrics.groups.growth_percentage,
+      keywordsGrowth: metrics.keywords.growth_percentage,
+      parsersGrowth: metrics.parsers.growth_percentage,
+    };
+  };
 
-    return () => clearTimeout(timer);
+  const fetchMetrics = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const metrics = await getDashboardMetrics();
+      const transformedStats = transformMetricsToStats(metrics);
+      
+      setStats(transformedStats);
+    } catch (err) {
+      console.error('Ошибка загрузки метрик:', err);
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки данных');
+      
+      // Fallback к нулевым данным при ошибке
+      setStats({
+        totalComments: 0,
+        activeGroups: 0,
+        keywords: 0,
+        activeParsers: 0,
+        commentsGrowth: 0,
+        groupsGrowth: 0,
+        keywordsGrowth: 0,
+        parsersGrowth: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMetrics();
   }, []);
 
   return {
     stats,
     loading,
+    error,
     statsConfig,
     quickActions,
     recentActivity,
+    refetch: fetchMetrics,
   };
 };
