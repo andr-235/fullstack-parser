@@ -1,4 +1,5 @@
 import { apiClient } from '@/shared/api/client'
+import { getRoutePath, DASHBOARD_ROUTES, COMMENTS_ROUTES, GROUPS_ROUTES, KEYWORDS_ROUTES } from '@/shared/config/routes'
 
 export interface DashboardMetricsResponse {
   comments: {
@@ -43,33 +44,33 @@ export interface KeywordsMetricsResponse {
 }
 
 /**
- * Получить общие метрики дашборда
- */
+  * Получить общие метрики дашборда
+  */
 export const getDashboardMetrics = async (): Promise<DashboardMetricsResponse> => {
-  const response = await apiClient.get('/api/v1/metrics/dashboard')
+  const response = await apiClient.get(getRoutePath(DASHBOARD_ROUTES.METRICS))
   return response.data
 }
 
 /**
- * Получить метрики комментариев
- */
+  * Получить метрики комментариев
+  */
 export const getCommentsMetrics = async (): Promise<CommentsMetricsResponse> => {
-  const response = await apiClient.get('/api/v1/comments/metrics')
+  const response = await apiClient.get(getRoutePath(COMMENTS_ROUTES.METRICS))
   return response.data
 }
 
 /**
- * Получить метрики групп
- */
+  * Получить метрики групп
+  */
 export const getGroupsMetrics = async (): Promise<GroupsMetricsResponse> => {
-  const response = await apiClient.get('/api/v1/groups/metrics')
+  const response = await apiClient.get(getRoutePath(GROUPS_ROUTES.METRICS))
   return response.data
 }
 
 /**
- * Получить метрики ключевых слов
- */
+  * Получить метрики ключевых слов
+  */
 export const getKeywordsMetrics = async (): Promise<KeywordsMetricsResponse> => {
-  const response = await apiClient.get('/api/v1/keywords/metrics')
+  const response = await apiClient.get(getRoutePath(KEYWORDS_ROUTES.METRICS))
   return response.data
 }
