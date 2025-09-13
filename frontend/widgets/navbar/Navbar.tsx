@@ -51,14 +51,14 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
 
 
   return (
-    <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+    <header className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 border-b border-white/20 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left section */}
           <div className="flex items-center space-x-4">
             {/* Mobile menu button */}
             <button 
-              className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 lg:hidden"
+              className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 lg:hidden"
               aria-label="Toggle sidebar"
             >
               <Menu className="h-5 w-5" />
@@ -69,7 +69,7 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
               <div className="h-8 w-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">A</span>
               </div>
-              <span className="ml-2 text-xl font-semibold text-gray-900 dark:text-white hidden sm:block">
+              <span className="ml-2 text-xl font-semibold text-white hidden sm:block">
                 Analytics
               </span>
             </div>
@@ -79,18 +79,18 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
               {breadcrumbs.map((breadcrumb, index) => (
                 <div key={breadcrumb.href} className="flex items-center">
                   {index > 0 && (
-                    <svg className="h-4 w-4 mx-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-4 w-4 mx-2 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   )}
                   {breadcrumb.isLast ? (
-                    <span className="font-medium text-gray-900 dark:text-white">
+                    <span className="font-medium text-white">
                       {breadcrumb.label}
                     </span>
                   ) : (
                     <Link 
                       href={breadcrumb.href}
-                      className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors duration-200"
+                      className="text-white/70 hover:text-white transition-colors duration-200"
                     >
                       {breadcrumb.label}
                     </Link>
@@ -105,18 +105,18 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
             {/* Search */}
             <div className="relative hidden md:block">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
                 <input 
                   type="search" 
                   placeholder="Поиск..." 
-                  className="w-64 lg:w-80 pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  className="w-64 lg:w-80 pl-10 pr-4 py-2 border border-white/20 rounded-lg bg-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm"
                 />
               </div>
             </div>
 
             {/* Mobile search button */}
             <button 
-              className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 md:hidden"
+              className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 md:hidden"
               onClick={() => setIsSearchOpen(!isSearchOpen)}
               aria-label="Search"
             >
@@ -126,7 +126,7 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
 
             {/* Notifications */}
             <button 
-              className="relative p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-colors duration-200"
+              className="relative p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors duration-200"
               aria-label="Notifications"
             >
               <Bell className="h-5 w-5" />
@@ -146,10 +146,10 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
               <div className="ml-2">
                 <Link 
                   href="/login"
-                  className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors duration-200"
                 >
-                  <div className="h-8 w-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium">U</span>
+                  <div className="h-8 w-8 bg-white/20 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-medium text-white">U</span>
                   </div>
                   <span className="hidden lg:block text-sm font-medium">
                     Войти
@@ -162,17 +162,17 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
 
         {/* Mobile search */}
         {isSearchOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="md:hidden py-4 border-t border-white/20">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
               <input 
                 type="search" 
                 placeholder="Поиск..." 
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-white/20 rounded-lg bg-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm"
                 autoFocus
               />
               <button 
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
                 onClick={() => setIsSearchOpen(false)}
               >
                 <X className="h-4 w-4" />

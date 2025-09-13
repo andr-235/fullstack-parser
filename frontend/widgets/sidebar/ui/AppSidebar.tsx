@@ -23,7 +23,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ ...props }) => {
         className="border-r border-white/20 bg-transparent backdrop-blur-sm w-full flex flex-col"
         {...props}
       >
-        <SidebarContent className="flex-1 gap-2 p-2">
+        <SidebarContent className="flex-1 gap-2 p-4">
           <NavMain items={navItems} />
         </SidebarContent>
         <SidebarRail />

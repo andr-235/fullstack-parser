@@ -61,3 +61,8 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
         except Exception:
             await session.rollback()
             raise
+
+
+def get_async_session():
+    """Получить сессию БД как контекстный менеджер"""
+    return get_session_factory()()

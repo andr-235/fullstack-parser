@@ -24,7 +24,7 @@ export const GlassSidebar = ({
       </div>
       
       {/* Основной контент с размытием */}
-      <div className="relative backdrop-blur-xl bg-white/10 rounded-2xl shadow-2xl border border-white/20">
+      <div className="relative backdrop-blur-xl bg-white/10 rounded-lg shadow-2xl border border-white/20 m-2">
         {children}
       </div>
     </div>
