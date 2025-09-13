@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import Link from "next/link";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -111,6 +112,15 @@ export const LoginForm = () => {
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Войти
           </Button>
+
+          <div className="text-center">
+            <Link 
+              href="/reset-password" 
+              className="text-sm text-blue-300 hover:text-blue-200 transition-colors underline"
+            >
+              Забыли пароль?
+            </Link>
+          </div>
         </form>
       </CardContent>
     </Card>

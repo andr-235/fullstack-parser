@@ -7,8 +7,6 @@ import { LoginForm, RegisterForm, ChangePasswordForm, ResetPasswordForm } from "
 const TABS = [
   { value: "login", label: "Вход", component: LoginForm },
   { value: "register", label: "Регистрация", component: RegisterForm },
-  { value: "change-password", label: "Смена пароля", component: ChangePasswordForm },
-  { value: "reset-password", label: "Сброс пароля", component: ResetPasswordForm },
 ] as const;
 
 export const AuthWidget = () => {
@@ -30,7 +28,7 @@ export const AuthWidget = () => {
       <div className="relative w-full max-w-md">
         <div className="backdrop-blur-xl bg-white/10 rounded-2xl shadow-2xl border border-white/20 p-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="flex w-full bg-white/10 backdrop-blur-sm border border-white/20 gap-2 p-2 justify-between">
+            <TabsList className="grid w-full grid-cols-2 bg-white/10 backdrop-blur-sm border border-white/20 gap-2 p-2">
               {TABS.map((tab) => (
                 <TabsTrigger 
                   key={tab.value}

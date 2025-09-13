@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import { Separator } from "@/shared/ui/separator";
-import { LogOut, User, Mail, Shield, Calendar } from "lucide-react";
+import { LogOut, User, Mail, Shield, Calendar, Key } from "lucide-react";
 import { useAuthStore } from "@/entities/user";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -63,15 +64,27 @@ export const UserProfile = () => {
 
         <Separator />
 
-        <Button
-          onClick={handleLogout}
-          variant="outline"
-          className="w-full"
-          disabled={isLoggingOut}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          {isLoggingOut ? "Выход..." : "Выйти из системы"}
-        </Button>
+        <div className="space-y-3">
+          <Link href="/change-password">
+            <Button
+              variant="outline"
+              className="w-full"
+            >
+              <Key className="mr-2 h-4 w-4" />
+              Изменить пароль
+            </Button>
+          </Link>
+
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            className="w-full"
+            disabled={isLoggingOut}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            {isLoggingOut ? "Выход..." : "Выйти из системы"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
