@@ -1,19 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-
 import { Plus, RefreshCw } from 'lucide-react'
-
-import { Button } from '@/shared/ui'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui'
-import { FileUploadModal } from '@/shared/ui'
-import { Alert, AlertDescription } from '@/shared/ui'
-import { Pagination } from '@/shared/ui'
-
+import { Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, FileUploadModal, Alert, AlertDescription, Pagination } from '@/shared/ui'
 import { GroupsFilters as GroupsFiltersType, UpdateGroupRequest } from '@/entities/groups'
 import { useGroups } from '@/entities/groups'
-
 import { GroupForm } from '@/features/groups/ui/GroupForm'
 import { GroupsFilters } from '@/features/groups/ui/GroupsFilters'
 import { GroupsList } from '@/features/groups/ui/GroupsList'
@@ -38,33 +29,20 @@ export function GroupsPage() {
     refetch,
   } = useGroups(filters)
 
-  const handleCreateGroup = async (data: {
-    vk_id_or_screen_name: string
-    name?: string | undefined
-    screen_name?: string | undefined
-    description?: string | undefined
-    is_active?: boolean | undefined
-    max_posts_to_check?: number | undefined
-  }) => {
+  const handleCreateGroup = async (data: any) => {
     try {
-      // Преобразуем данные формы в CreateGroupRequest
       const vkId = parseInt(data.vk_id_or_screen_name)
-      if (isNaN(vkId)) {
-        throw new Error('VK ID должен быть числом')
-      }
+      if (isNaN(vkId)) throw new Error('VK ID должен быть числом')
 
-      const createData = {
+      await createGroup({
         vk_id: vkId,
         name: data.name || '',
         screen_name: data.screen_name || '',
         ...(data.description && { description: data.description }),
-      }
-
-      await createGroup(createData)
+      })
       setShowCreateForm(false)
       refetch()
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to create group:', err)
       throw err
     }
@@ -75,7 +53,6 @@ export function GroupsPage() {
       await updateGroup(id, updates)
       refetch()
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to update group:', err)
       throw err
     }
@@ -86,7 +63,6 @@ export function GroupsPage() {
       await deleteGroup(id)
       refetch()
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to delete group:', err)
       throw err
     }
@@ -97,27 +73,13 @@ export function GroupsPage() {
       await toggleGroupStatus(id, isActive)
       refetch()
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to toggle group status:', err)
       throw err
     }
   }
 
-  const handleFiltersChange = (newFilters: GroupsFiltersType) => {
-    setFilters({ ...newFilters, page: 1 }) // Сбрасываем на первую страницу при изменении фильтров
-  }
-
-  const handlePageChange = (page: number) => {
-    setFilters(prev => ({ ...prev, page }))
-  }
-
-  const handleRefresh = () => {
-    refetch()
-  }
-
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Группы VK</h1>
@@ -127,7 +89,7 @@ export function GroupsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleRefresh}>
+          <Button variant="outline" onClick={() => refetch()}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Обновить
           </Button>
@@ -135,7 +97,7 @@ export function GroupsPage() {
           <FileUploadModal
             type="groups"
             triggerText="Загрузить из файла"
-            onSuccess={handleRefresh}
+            onSuccess={() => refetch()}
             apiParams={{
               is_active: true,
               max_posts_to_check: 10,
@@ -159,29 +121,29 @@ export function GroupsPage() {
         </div>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Фильтры</CardTitle>
         </CardHeader>
         <CardContent>
-          <GroupsFilters filters={filters} onFiltersChange={handleFiltersChange} />
+          <GroupsFilters 
+            filters={filters} 
+            onFiltersChange={(newFilters: GroupsFiltersType) => setFilters({ ...newFilters, page: 1 })} 
+          />
         </CardContent>
       </Card>
 
-      {/* Error State */}
       {error && (
         <Alert className="border-destructive">
           <AlertDescription>
             Ошибка загрузки групп: {error}
-            <Button variant="outline" size="sm" onClick={handleRefresh} className="ml-4">
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="ml-4">
               Попробовать снова
             </Button>
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Groups List */}
       <GroupsList
         groups={groups}
         loading={loading}
@@ -192,7 +154,6 @@ export function GroupsPage() {
         onToggleStatus={handleToggleStatus}
       />
 
-      {/* Pagination */}
       {pagination.pages > 1 && (
         <div className="mt-6">
           <Pagination
@@ -200,7 +161,7 @@ export function GroupsPage() {
             totalPages={pagination.pages}
             totalItems={pagination.total}
             itemsPerPage={pagination.size}
-            onPageChange={handlePageChange}
+            onPageChange={(page) => setFilters(prev => ({ ...prev, page }))}
           />
         </div>
       )}
