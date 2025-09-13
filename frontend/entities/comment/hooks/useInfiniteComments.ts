@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 
-import { apiClient } from '@/shared/lib'
+import { httpClient } from '@/shared/lib'
 
 import { Comment, CommentFilters, CommentsResponse } from '../types'
 
@@ -85,7 +85,7 @@ export const useInfiniteComments = (filters?: CommentFilters) => {
           params.text = '**' // Специальный запрос для получения всех комментариев
         }
 
-        const response: CommentsResponse = await apiClient.getComments(params)
+        const response: CommentsResponse = await httpClient.get('/api/comments', { params })
 
         if (reset) {
           setComments(response.items)

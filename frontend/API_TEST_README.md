@@ -2,14 +2,7 @@
 
 ## Проблема
 
-Были ошибки 404 при запросах к API:
-
-```
-GET http://localhost/api/v1//api/v1/stats/global 404 (Not Found)
-GET http://localhost/api/v1/groups?active_only=true 404 (Not Found)
-```
-
-**Причина:** Дублирование `/api/v1/` в URL из-за неправильной environment переменной `NEXT_PUBLIC_API_URL=http://localhost/api/v1/`
+Были ошибки 404 при запросах к API из-за дублирования `/api/v1/` в URL.
 
 ## Решение
 
@@ -18,7 +11,6 @@ GET http://localhost/api/v1/groups?active_only=true 404 (Not Found)
 3. **Обновлена nginx конфигурация** - проксирование `/api/v1/*` → `http://backend:8000/api/v1/*`
 4. **Унифицированы запросы** - все хуки используют apiClient с относительными URL
 5. **Добавлены заглушки** - для нереализованных endpoints (комментарии)
-6. **Создан аватар администратора** - добавлен `admin.svg` вместо отсутствующего `admin.jpg`
 
 ## Как проверить
 

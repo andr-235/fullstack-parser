@@ -8,8 +8,5 @@
   "bracketSpacing": true,
   "bracketSameLine": false,
   "arrowParens": "avoid",
-  "endOfLine": "lf",
-  "quoteProps": "as-needed",
-  "jsxSingleQuote": true,
-  "embeddedLanguageFormatting": "auto"
+  "endOfLine": "lf"
 }

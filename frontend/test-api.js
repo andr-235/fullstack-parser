@@ -56,34 +56,14 @@ async function testAPI() {
       console.log('❌ Получение комментариев: FAILED')
     }
 
-    // Тест 6: Состояние парсера
-    console.log('\n6. Получение состояния парсера...')
-    const parserStateResponse = await fetch(`${API_BASE}/parser/state`)
-    if (parserStateResponse.ok) {
-      const parserState = await parserStateResponse.json()
-      console.log('✅ Состояние парсера:', parserState)
-    } else {
-      console.log('❌ Получение состояния парсера: FAILED')
-    }
-
-    // Тест 7: Статистика парсера
-    console.log('\n7. Получение статистики парсера...')
+    // Тест 6: Статистика парсера
+    console.log('\n6. Получение статистики парсера...')
     const parserStatsResponse = await fetch(`${API_BASE}/parser/stats`)
     if (parserStatsResponse.ok) {
       const parserStats = await parserStatsResponse.json()
       console.log('✅ Статистика парсера:', parserStats)
     } else {
       console.log('❌ Получение статистики парсера: FAILED')
-    }
-
-    // Тест 8: Системный статус
-    console.log('\n8. Получение системного статуса...')
-    const systemStatusResponse = await fetch(`${API_BASE}/health/status`)
-    if (systemStatusResponse.ok) {
-      const systemStatus = await systemStatusResponse.json()
-      console.log('✅ Системный статус:', systemStatus)
-    } else {
-      console.log('❌ Получение системного статуса: FAILED')
     }
   } catch (error) {
     console.error('❌ Ошибка подключения:', error.message)

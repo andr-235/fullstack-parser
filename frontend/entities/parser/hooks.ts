@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 
-import { apiClient } from '@/shared/lib'
+import { httpClient } from '@/shared/lib'
 
 import {
   ParseTaskCreate,
@@ -14,6 +14,8 @@ import {
   BulkParseResponse,
   ParseStatus,
   StopParseRequest,
+  ParseTask,
+  StopParseResponse,
 } from './types'
 
 // Хук для управления состоянием парсера
@@ -26,7 +28,7 @@ export const useParserState = (autoFetch: boolean = true) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient.getParserState()
+      const data: ParserState = await httpClient.get('/api/parser/state')
       setState(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch parser state')
@@ -59,7 +61,7 @@ export const useParserStats = (autoFetch: boolean = true) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient.getParserStats()
+      const data: ParserStats = await httpClient.get('/api/parser/stats')
       setStats(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch parser stats')
@@ -92,7 +94,7 @@ export const useParserGlobalStats = (autoFetch: boolean = true) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient.getParserGlobalStats()
+      const data: ParserGlobalStats = await httpClient.get('/api/parser/global-stats')
       setStats(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch parser global stats')
@@ -125,7 +127,7 @@ export const useParserTasks = (filters?: ParserTaskFilters, autoFetch: boolean =
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient.getParserTasks(filters)
+      const data: ParserTasksResponse = await httpClient.get('/api/parser/tasks', { params: filters })
       setTasks(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch parser tasks')
@@ -160,7 +162,7 @@ export const useParserTask = (taskId: string) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient.getParserTask(taskId)
+      const data: ParseStatus = await httpClient.get(`/api/parser/tasks/${taskId}`)
       setTask(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch parser task')
@@ -191,7 +193,7 @@ export const useParserHistory = (page = 1, size = 10) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient.getParserHistory(page, size)
+      const data: ParserHistoryResponse = await httpClient.get('/api/parser/history', { params: { page, size } })
       setHistory(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch parser history')
@@ -221,7 +223,7 @@ export const useStartParser = () => {
     setStarting(true)
     setError(null)
     try {
-      const result = await apiClient.startParser(taskData)
+      const result: ParseTask = await httpClient.post('/api/parser/start', taskData)
       return result
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start parser'
@@ -237,7 +239,7 @@ export const useStartParser = () => {
       setStarting(true)
       setError(null)
       try {
-        const result = await apiClient.startBulkParser(bulkData)
+        const result: BulkParseResponse = await httpClient.post('/api/parser/bulk-start', bulkData)
         return result
       } catch (err) {
         // Улучшенная обработка ошибок
@@ -302,7 +304,7 @@ export const useStopParser = () => {
     setStopping(true)
     setError(null)
     try {
-      const result = await apiClient.stopParser(request)
+      const result: StopParseResponse = await httpClient.post('/api/parser/stop', request)
       console.log('Hook: stopParser result:', result)
       return result
     } catch (err) {

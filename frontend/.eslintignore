@@ -6,7 +6,6 @@ dist/
 *.config.js
 *.config.ts
 coverage/
-.next/
 public/
 __mocks__/
 *.d.ts

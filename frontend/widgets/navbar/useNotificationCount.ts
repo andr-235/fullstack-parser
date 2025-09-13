@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 
-import { apiClient } from '@/shared/lib'
+import { httpClient } from '@/shared/lib'
+
+interface DashboardStatsResponse {
+  today_comments: number
+}
 
 export function useNotificationCount() {
   const [count, setCount] = useState(0)
@@ -10,8 +14,8 @@ export function useNotificationCount() {
       try {
         // Получаем статистику для определения количества уведомлений
         const [globalStats, dashboardStats] = await Promise.all([
-          apiClient.getGlobalStats().catch(() => null),
-          apiClient.getDashboardStats().catch(() => null),
+          httpClient.get('/api/stats/global').catch(() => null),
+          httpClient.get<DashboardStatsResponse>('/api/stats/dashboard').catch(() => null),
         ])
 
         let notificationCount = 0

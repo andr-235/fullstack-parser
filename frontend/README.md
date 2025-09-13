@@ -152,8 +152,8 @@ NEXT_PUBLIC_APP_URL=https://parser.mysite.ru
 import { useAppStore } from '@/shared/store'
 
 // Использование
-const theme = useAppStore((state) => state.ui.theme)
-const setTheme = useAppStore((state) => state.setTheme)
+const theme = useAppStore(state => state.ui.theme)
+const setTheme = useAppStore(state => state.setTheme)
 ```
 
 ### Кеширование данных (React Query)

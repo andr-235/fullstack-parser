@@ -1,274 +1,235 @@
 # =============================================================================
-# Full Stack Parser - Makefile
+# Production-Ready Makefile for VK Parser API
+# Docker Compose + Nginx Management
 # =============================================================================
 
-.PHONY: help install-frontend install-backend install-all \
-        lint-frontend lint-backend lint-all \
-        format-frontend format-backend format-all \
-        test-frontend test-backend test-all \
-        build-frontend build-backend build-all \
-        docker-build docker-up docker-down docker-logs \
-        clean-frontend clean-backend clean-all \
-        dev-frontend dev-backend dev-all \
-        deploy-staging deploy-production \
-        security-scan quality-check ci
+.PHONY: help build up down restart logs status health backup restore clean deploy
 
 # Default target
+.DEFAULT_GOAL := help
+
+# Configuration
+COMPOSE_FILE = docker-compose.yml
+PROD_COMPOSE_FILE = docker-compose.prod.yml
+ENV_FILE = .env
+
+# Colors
+GREEN = \033[0;32m
+YELLOW = \033[1;33m
+BLUE = \033[0;34m
+NC = \033[0m # No Color
+
+# Help target
 help: ## Show this help message
-	@echo "Full Stack Parser - Development and CI/CD Commands"
+	@echo "$(BLUE)VK Parser API - Docker Management$(NC)"
+	@echo "=================================="
 	@echo ""
-	@echo "Available commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo "$(YELLOW)Available commands:$(NC)"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo ""
+	@echo "$(YELLOW)Examples:$(NC)"
+	@echo "  make up          # Start development environment"
+	@echo "  make deploy      # Deploy to production"
+	@echo "  make logs        # View application logs"
+	@echo "  make backup      # Create database backup"
 
-# =============================================================================
-# Installation Commands
-# =============================================================================
+# Development commands
+build: ## Build all Docker images
+	@echo "$(BLUE)Building Docker images...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) build --no-cache
 
-install-frontend: ## Install frontend dependencies
-	@echo "Installing frontend dependencies..."
-	cd frontend && bun install
+up: ## Start development environment
+	@echo "$(BLUE)Starting development environment...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) up -d
+	@echo "$(GREEN)✅ Development environment started$(NC)"
+	@echo "$(YELLOW)API: http://localhost:8000$(NC)"
+	@echo "$(YELLOW)Health: http://localhost/health$(NC)"
 
-install-backend: ## Install backend dependencies
-	@echo "Installing backend dependencies..."
-	cd backend && poetry install
+down: ## Stop all services
+	@echo "$(BLUE)Stopping all services...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) down
+	@echo "$(GREEN)✅ All services stopped$(NC)"
 
-install-all: install-frontend install-backend ## Install all dependencies
+restart: ## Restart all services
+	@echo "$(BLUE)Restarting all services...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) restart
+	@echo "$(GREEN)✅ All services restarted$(NC)"
 
-# =============================================================================
-# Linting Commands
-# =============================================================================
+# Production commands
+deploy: ## Deploy to production with zero-downtime
+	@echo "$(BLUE)Deploying to production...$(NC)"
+	./scripts/deploy.sh
+	@echo "$(GREEN)✅ Production deployment completed$(NC)"
 
-lint-frontend: ## Run frontend linting
-	@echo "Running frontend linting..."
-	cd frontend && bun run lint
+prod-up: ## Start production environment
+	@echo "$(BLUE)Starting production environment...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) -f $(PROD_COMPOSE_FILE) up -d
+	@echo "$(GREEN)✅ Production environment started$(NC)"
 
-lint-backend: ## Run backend linting
-	@echo "Running backend linting..."
-	cd backend && poetry run ruff check .
+prod-down: ## Stop production environment
+	@echo "$(BLUE)Stopping production environment...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) -f $(PROD_COMPOSE_FILE) down
+	@echo "$(GREEN)✅ Production environment stopped$(NC)"
 
-lint-all: lint-frontend lint-backend ## Run all linting
+# Monitoring commands
+logs: ## View application logs
+	@echo "$(BLUE)Showing application logs...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) logs -f
 
-# =============================================================================
-# Code Formatting Commands
-# =============================================================================
+logs-api: ## View API logs only
+	@echo "$(BLUE)Showing API logs...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) logs -f api
 
-format-frontend: ## Format frontend code
-	@echo "Formatting frontend code..."
-	cd frontend && bun run format
+logs-db: ## View database logs only
+	@echo "$(BLUE)Showing database logs...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) logs -f postgres
 
-format-backend: ## Format backend code
-	@echo "Formatting backend code..."
-	cd backend && poetry run black . && poetry run isort .
+logs-nginx: ## View Nginx logs only
+	@echo "$(BLUE)Showing Nginx logs...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) logs -f nginx
 
-format-all: format-frontend format-backend ## Format all code
+status: ## Show service status
+	@echo "$(BLUE)Service status:$(NC)"
+	docker-compose -f $(COMPOSE_FILE) ps
 
-# =============================================================================
-# Testing Commands
-# =============================================================================
+health: ## Check service health
+	@echo "$(BLUE)Checking service health...$(NC)"
+	./scripts/deploy.sh health
 
-test-frontend: ## Run frontend tests
-	@echo "Running frontend tests..."
-	cd frontend && bun run test -- --watchAll=false --passWithNoTests
+# Database commands
+backup: ## Create database backup
+	@echo "$(BLUE)Creating database backup...$(NC)"
+	./scripts/backup-db.sh
+	@echo "$(GREEN)✅ Database backup completed$(NC)"
 
-test-backend: ## Run backend tests
-	@echo "Running backend tests..."
-	cd backend && poetry run pytest
+backup-list: ## List available backups
+	@echo "$(BLUE)Available backups:$(NC)"
+	./scripts/backup-db.sh list
 
-test-all: test-frontend test-backend ## Run all tests
-
-# =============================================================================
-# Building Commands
-# =============================================================================
-
-build-frontend: ## Build frontend application
-	@echo "Building frontend..."
-	cd frontend && bun run build
-
-build-backend: ## Build backend application (if needed)
-	@echo "Building backend..."
-	# Backend is built via Docker, no separate build step needed
-
-build-all: build-frontend build-backend ## Build all applications
-
-# =============================================================================
-# Docker Commands
-# =============================================================================
-
-docker-build: ## Build all Docker images
-	@echo "Building Docker images..."
-	docker-compose -f docker-compose.prod.yml build
-
-docker-up: ## Start all Docker services
-	@echo "Starting Docker services..."
-	docker-compose -f docker-compose.prod.yml up -d
-
-docker-down: ## Stop all Docker services
-	@echo "Stopping Docker services..."
-	docker-compose -f docker-compose.prod.yml down
-
-docker-logs: ## Show Docker logs
-	@echo "Showing Docker logs..."
-	docker-compose -f docker-compose.prod.yml logs -f
-
-docker-clean: ## Clean Docker resources
-	@echo "Cleaning Docker resources..."
-	docker system prune -f
-	docker volume prune -f
-
-# =============================================================================
-# Development Commands
-# =============================================================================
-
-dev-frontend: ## Start frontend development server
-	@echo "Starting frontend development server..."
-	cd frontend && bun run dev
-
-dev-backend: ## Start backend development server
-	@echo "Starting backend development server..."
-	cd backend && poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-dev-all: ## Start all development servers
-	@echo "Starting all development servers..."
-	make -j2 dev-frontend dev-backend
-
-# =============================================================================
-# Database Commands
-# =============================================================================
-
-db-migrate: ## Run database migrations
-	@echo "Running database migrations..."
-	docker-compose -f docker-compose.prod.yml exec backend alembic upgrade head
-
-db-create-migration: ## Create new database migration
-	@echo "Creating database migration..."
-	@if [ -z "$(name)" ]; then \
-		echo "Usage: make db-create-migration name='migration_name'"; \
+backup-restore: ## Restore database from backup (usage: make backup-restore FILE=backup.sql.gz)
+	@echo "$(BLUE)Restoring database from backup...$(NC)"
+	@if [ -z "$(FILE)" ]; then \
+		echo "$(YELLOW)Usage: make backup-restore FILE=backup.sql.gz$(NC)"; \
 		exit 1; \
 	fi
-	docker-compose -f docker-compose.prod.yml exec backend alembic revision --autogenerate -m "$(name)"
+	./scripts/backup-db.sh restore $(FILE)
+	@echo "$(GREEN)✅ Database restored$(NC)"
 
-db-reset: ## Reset database (WARNING: This will delete all data)
-	@echo "Resetting database..."
-	docker-compose -f docker-compose.prod.yml down -v
-	docker-compose -f docker-compose.prod.yml up -d postgres redis
-	sleep 10
-	make db-migrate
+migrate: ## Run database migrations
+	@echo "$(BLUE)Running database migrations...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) exec api alembic upgrade head
+	@echo "$(GREEN)✅ Migrations completed$(NC)"
 
-# =============================================================================
-# Deployment Commands
-# =============================================================================
+# Maintenance commands
+clean-docker: ## Clean up unused Docker resources
+	@echo "$(BLUE)Cleaning up Docker resources...$(NC)"
+	docker system prune -f
+	docker volume prune -f
+	@echo "$(GREEN)✅ Docker cleanup completed$(NC)"
 
-deploy-production: ## Deploy to production environment
-	@echo "Deploying to production..."
-	@echo "Pulling latest changes..."
-	git pull origin main
-	@echo "Building and deploying..."
-	docker-compose -f docker-compose.prod.yml down
-	docker-compose -f docker-compose.prod.yml pull
-	docker-compose -f docker-compose.prod.yml up -d --build
-	@echo "Running migrations..."
-	make db-migrate
+# Setup commands
+setup: ## Initial setup (copy env file, create directories)
+	@echo "$(BLUE)Setting up project...$(NC)"
+	@if [ ! -f $(ENV_FILE) ]; then \
+		cp env.example $(ENV_FILE); \
+		echo "$(YELLOW)⚠️  Please edit $(ENV_FILE) with your configuration$(NC)"; \
+	fi
+	mkdir -p logs backups
+	@echo "$(GREEN)✅ Project setup completed$(NC)"
 
-# =============================================================================
-# Security and Quality Commands
-# =============================================================================
+# Development helpers
+shell-api: ## Open shell in API container
+	@echo "$(BLUE)Opening shell in API container...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) exec api bash
 
-security-scan: ## Run security vulnerability scans
-	@echo "Running security scans..."
-	@echo "Frontend security scan..."
-	cd frontend && npm audit --audit-level moderate
-	@echo "Backend security scan..."
-	cd backend && poetry run bandit -r src/
-	cd backend && poetry run pip-audit
+shell-db: ## Open PostgreSQL shell
+	@echo "$(BLUE)Opening PostgreSQL shell...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) exec postgres psql -U postgres -d vk_parser
 
-quality-check: ## Run all quality checks
-	@echo "Running quality checks..."
-	make lint-all
-	make test-all
-	make security-scan
+shell-redis: ## Open Redis shell
+	@echo "$(BLUE)Opening Redis shell...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) exec redis redis-cli
 
-# =============================================================================
-# Cleanup Commands
-# =============================================================================
+# Testing commands
+test: ## Run tests
+	@echo "$(BLUE)Running tests...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) exec api python -m pytest
+	@echo "$(GREEN)✅ Tests completed$(NC)"
 
-clean-frontend: ## Clean frontend build artifacts
-	@echo "Cleaning frontend..."
-	cd frontend && rm -rf .next node_modules/.cache out
+test-coverage: ## Run tests with coverage
+	@echo "$(BLUE)Running tests with coverage...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) exec api python -m pytest --cov=src
+	@echo "$(GREEN)✅ Test coverage completed$(NC)"
 
-clean-backend: ## Clean backend build artifacts
-	@echo "Cleaning backend..."
-	cd backend && rm -rf __pycache__ .pytest_cache .mypy_cache *.pyc *.pyo
+# Security commands
+security-scan: ## Run security scan on images
+	@echo "$(BLUE)Running security scan...$(NC)"
+	@if command -v trivy >/dev/null 2>&1; then \
+		trivy image vk_parser_api:latest; \
+	else \
+		echo "$(YELLOW)⚠️  Trivy not installed. Install with: https://aquasecurity.github.io/trivy/$(NC)"; \
+	fi
 
-clean-all: clean-frontend clean-backend ## Clean all build artifacts
+# Information commands
+info: ## Show project information
+	@echo "$(BLUE)VK Parser API - Project Information$(NC)"
+	@echo "======================================"
+	@echo ""
+	@echo "$(YELLOW)Services:$(NC)"
+	@echo "  API:      http://localhost:8000"
+	@echo "  Nginx:    http://localhost:80"
+	@echo "  Health:   http://localhost/health"
+	@echo ""
+	@echo "$(YELLOW)Database:$(NC)"
+	@echo "  Host:     localhost"
+	@echo "  Port:     5432"
+	@echo "  Database: vk_parser"
+	@echo "  User:     postgres"
+	@echo ""
+	@echo "$(YELLOW)Redis:$(NC)"
+	@echo "  Host:     localhost"
+	@echo "  Port:     6379"
+	@echo ""
+	@echo "$(YELLOW)Logs:$(NC)"
+	@echo "  Location: ./logs/"
+	@echo "  View:     make logs"
+	@echo ""
+	@echo "$(YELLOW)Backups:$(NC)"
+	@echo "  Location: ./backups/"
+	@echo "  Create:   make backup"
+	@echo "  List:     make backup-list"
 
-# =============================================================================
-# CI/CD Commands
-# =============================================================================
+# Cleanup commands
+clean: ## Clean project from temporary files and caches
+	@echo "$(BLUE)Cleaning project...$(NC)"
+	@./cleanup.sh
+	@echo "$(GREEN)✅ Project cleaned successfully$(NC)"
 
-ci: ## Run full CI pipeline locally
-	@echo "Running CI pipeline..."
-	make install-all
-	make quality-check
-	make build-all
-	make test-all
+clean-docker-new: ## Clean Docker images, containers and volumes
+	@echo "$(BLUE)Cleaning Docker artifacts...$(NC)"
+	docker system prune -f
+	docker volume prune -f
+	docker image prune -f
+	@echo "$(GREEN)✅ Docker cleaned successfully$(NC)"
 
-# =============================================================================
-# Utility Commands
-# =============================================================================
+clean-all: clean clean-docker-new ## Clean everything (project + Docker)
+	@echo "$(GREEN)✅ Complete cleanup finished$(NC)"
 
-update-deps: ## Update all dependencies
-	@echo "Updating dependencies..."
-	cd frontend && bun update
-	cd backend && poetry update
-
-health-check: ## Check health of all services
-	@echo "Checking service health..."
-	@echo "Frontend health:"
-	curl -f http://localhost:3000/api/health || echo "Frontend not healthy"
-	@echo "Backend health:"
-	curl -f http://localhost:8000/health || echo "Backend not healthy"
-	@echo "Nginx health:"
-	curl -f http://localhost/health || echo "Nginx not healthy"
-
-logs: ## Show all service logs
-	@echo "Showing service logs..."
-	docker-compose -f docker-compose.prod.yml logs -f --tail=100
-
-# =============================================================================
-# Environment Setup
-# =============================================================================
-
-setup-dev: ## Setup development environment
-	@echo "Setting up development environment..."
-	make install-all
-	@echo "Development environment setup complete!"
-	@echo "Run 'make dev-all' to start all services"
-
-setup-prod: ## Setup production environment
-	@echo "Setting up production environment..."
-	make docker-build
-	make docker-up
-	@echo "Waiting for services to be ready..."
-	sleep 30
-	make db-migrate
-	@echo "Production environment setup complete!"
-
-# =============================================================================
-# Help for specific targets
-# =============================================================================
-
-help-dev: ## Show development-related commands
-	@echo "Development Commands:"
-	@echo "  make dev-all           - Start all development servers"
-	@echo "  make dev-frontend      - Start frontend dev server"
-	@echo "  make dev-backend       - Start backend dev server"
-	@echo "  make test-all          - Run all tests"
-	@echo "  make lint-all          - Run all linters"
-	@echo "  make format-all        - Format all code"
-
-help-deploy: ## Show deployment-related commands
-	@echo "Deployment Commands:"
-	@echo "  make deploy-production - Deploy to production"
-	@echo "  make docker-up         - Start production services"
-	@echo "  make docker-down       - Stop production services"
-	@echo "  make db-migrate        - Run database migrations"
+# Maintenance commands
+maintenance: ## Show maintenance commands
+	@echo "$(BLUE)Maintenance Commands$(NC)"
+	@echo "====================="
+	@echo ""
+	@echo "$(YELLOW)Cleanup:$(NC)"
+	@echo "  make clean        # Clean project files"
+	@echo "  make clean-docker # Clean Docker artifacts"
+	@echo "  make clean-all    # Clean everything"
+	@echo ""
+	@echo "$(YELLOW)Health:$(NC)"
+	@echo "  make health       # Check service health"
+	@echo "  make logs         # View logs"
+	@echo "  make status       # Show service status"
+	@echo ""
+	@echo "$(YELLOW)Backup:$(NC)"
+	@echo "  make backup       # Create backup"
+	@echo "  make backup-list  # List backups"

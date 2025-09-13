@@ -28,12 +28,10 @@ export const useKeywords = () => {
         body: JSON.stringify(keywordData),
       })
       const newKeyword = await response.json()
-      setKeywords((prev) => [...prev, newKeyword])
+      setKeywords(prev => [...prev, newKeyword])
       return newKeyword
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to create keyword'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to create keyword')
     }
   }
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { apiClient } from '@/shared/lib'
+import { httpClient } from '@/shared/lib'
 
 import {
   VKGroup,
@@ -40,7 +40,7 @@ export const useGroups = (filters?: GroupsFilters, autoFetch: boolean = true) =>
   } = useQuery({
     queryKey: groupsKeys.list(filters),
     queryFn: async (): Promise<GroupsResponse> => {
-      return apiClient.getGroups(filters)
+      return httpClient.get('/api/groups', { params: filters })
     },
     enabled: autoFetch,
     staleTime: 5 * 60 * 1000, // 5 минут
@@ -52,7 +52,7 @@ export const useGroups = (filters?: GroupsFilters, autoFetch: boolean = true) =>
   // Мутация для создания группы
   const createGroupMutation = useMutation({
     mutationFn: async (groupData: CreateGroupRequest): Promise<VKGroup> => {
-      return apiClient.createGroup(groupData)
+      return httpClient.post('/api/groups', groupData)
     },
     onSuccess: () => {
       // Инвалидируем список групп после создания
@@ -69,7 +69,7 @@ export const useGroups = (filters?: GroupsFilters, autoFetch: boolean = true) =>
       id: number
       updates: UpdateGroupRequest
     }): Promise<VKGroup> => {
-      return apiClient.updateGroup(id, updates)
+      return httpClient.put(`/api/groups/${id}`, updates)
     },
     onSuccess: (data: VKGroup) => {
       // Инвалидируем список групп и детали группы
@@ -81,7 +81,7 @@ export const useGroups = (filters?: GroupsFilters, autoFetch: boolean = true) =>
   // Мутация для удаления группы
   const deleteGroupMutation = useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      return apiClient.deleteGroup(id)
+      return httpClient.delete(`/api/groups/${id}`)
     },
     onSuccess: () => {
       // Инвалидируем список групп
@@ -92,7 +92,7 @@ export const useGroups = (filters?: GroupsFilters, autoFetch: boolean = true) =>
   // Мутация для переключения статуса группы
   const toggleGroupStatusMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }): Promise<VKGroup> => {
-      return apiClient.updateGroup(id, { is_active: isActive })
+      return httpClient.put(`/api/groups/${id}`, { is_active: isActive })
     },
     onSuccess: (data: VKGroup) => {
       // Инвалидируем список групп и детали группы
@@ -145,7 +145,7 @@ export const useGroup = (id: number) => {
   } = useQuery({
     queryKey: groupsKeys.detail(id),
     queryFn: async (): Promise<VKGroup> => {
-      return apiClient.getGroup(id)
+      return httpClient.get(`/api/groups/${id}`)
     },
     enabled: !!id,
     staleTime: 10 * 60 * 1000, // 10 минут
@@ -170,7 +170,7 @@ export const useGroupStats = (id: number) => {
   } = useQuery({
     queryKey: [...groupsKeys.stats(), id],
     queryFn: async (): Promise<GroupStats> => {
-      return apiClient.getGroupStats(id)
+      return httpClient.get(`/api/groups/${id}/stats`)
     },
     enabled: !!id,
     staleTime: 2 * 60 * 1000, // 2 минуты
@@ -205,7 +205,7 @@ export const useUploadGroups = () => {
       formData.append('is_active', isActive.toString())
       formData.append('max_posts_to_check', maxPostsToCheck.toString())
 
-      const result: UploadGroupsResponse = await apiClient.uploadGroups(formData)
+      const result: UploadGroupsResponse = await httpClient.post('/api/groups/upload', formData)
       return result
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload groups')
@@ -218,7 +218,7 @@ export const useUploadGroups = () => {
   const getUploadProgress = async (_uploadId: string): Promise<UploadProgress> => {
     try {
       // TODO: Implement upload progress tracking
-      // const progress: UploadProgress = await apiClient.getGroupsUploadProgress(uploadId)
+      // const progress: UploadProgress = await httpClient.getGroupsUploadProgress(uploadId)
       const progress: UploadProgress = {
         loaded: 1,
         total: 1,
@@ -259,7 +259,7 @@ export const useGroupsStats = () => {
   } = useQuery({
     queryKey: groupsKeys.overviewStats(),
     queryFn: async (): Promise<GroupsStats> => {
-      return apiClient.getGroupsOverviewStats()
+      return httpClient.get('/api/groups/overview-stats')
     },
     staleTime: 2 * 60 * 1000, // 2 минуты
     gcTime: 5 * 60 * 1000, // 5 минут
@@ -279,7 +279,7 @@ export const useGroupBulkOperations = () => {
 
   const activateGroupsMutation = useMutation({
     mutationFn: async (actionData: GroupBulkAction): Promise<GroupBulkResponse> => {
-      return apiClient.bulkActivateGroups(actionData)
+      return httpClient.post('/api/groups/bulk-activate', actionData)
     },
     onSuccess: () => {
       // Инвалидируем список групп после массовой активации
@@ -289,7 +289,7 @@ export const useGroupBulkOperations = () => {
 
   const deactivateGroupsMutation = useMutation({
     mutationFn: async (actionData: GroupBulkAction): Promise<GroupBulkResponse> => {
-      return apiClient.bulkDeactivateGroups(actionData)
+      return httpClient.post('/api/groups/bulk-deactivate', actionData)
     },
     onSuccess: () => {
       // Инвалидируем список групп после массовой деактивации
@@ -318,7 +318,7 @@ export const useGroupActions = (id: number) => {
 
   const activateGroupMutation = useMutation({
     mutationFn: async (): Promise<VKGroup> => {
-      return apiClient.activateGroup(id)
+      return httpClient.put(`/api/groups/${id}/activate`)
     },
     onSuccess: (data: VKGroup) => {
       // Инвалидируем список групп и детали группы
@@ -329,7 +329,7 @@ export const useGroupActions = (id: number) => {
 
   const deactivateGroupMutation = useMutation({
     mutationFn: async (): Promise<VKGroup> => {
-      return apiClient.deactivateGroup(id)
+      return httpClient.put(`/api/groups/${id}/deactivate`)
     },
     onSuccess: (data: VKGroup) => {
       // Инвалидируем список групп и детали группы
@@ -340,13 +340,13 @@ export const useGroupActions = (id: number) => {
 
   const getGroupByVkIdMutation = useMutation({
     mutationFn: async (vkId: number): Promise<VKGroup> => {
-      return apiClient.getGroupByVkId(vkId)
+      return httpClient.get(`/api/groups/vk/${vkId}`)
     },
   })
 
   const getGroupByScreenNameMutation = useMutation({
     mutationFn: async (screenName: string): Promise<VKGroup> => {
-      return apiClient.getGroupByScreenName(screenName)
+      return httpClient.get(`/api/groups/screen/${screenName}`)
     },
   })
 
@@ -358,7 +358,7 @@ export const useGroupActions = (id: number) => {
       q: string
       filters?: GroupsFilters
     }): Promise<GroupsResponse> => {
-      return apiClient.searchGroups(q, filters)
+      return httpClient.get('/api/groups/search', { params: { q, ...filters } })
     },
   })
 

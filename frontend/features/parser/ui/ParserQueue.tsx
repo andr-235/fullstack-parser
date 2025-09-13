@@ -11,7 +11,7 @@ import {
   Pause,
   Users,
   FileText,
-  ArrowRight
+  ArrowRight,
 } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
@@ -180,12 +180,13 @@ export function ParserQueue({ tasks, loading, currentTaskId }: ParserQueueProps)
               return (
                 <div
                   key={task.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${queueStatus === 'current'
-                    ? 'border-blue-200 bg-blue-50/50 shadow-sm'
-                    : queueStatus === 'queued'
-                      ? 'border-orange-200 bg-orange-50/50'
-                      : 'hover:bg-muted/30'
-                    }`}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                    queueStatus === 'current'
+                      ? 'border-blue-200 bg-blue-50/50 shadow-sm'
+                      : queueStatus === 'queued'
+                        ? 'border-orange-200 bg-orange-50/50'
+                        : 'hover:bg-muted/30'
+                  }`}
                 >
                   {/* Статус и позиция в очереди */}
                   <div className="flex flex-col items-center gap-1">
@@ -206,10 +207,7 @@ export function ParserQueue({ tasks, loading, currentTaskId }: ParserQueueProps)
                       <p className="text-sm font-medium truncate">
                         {`Задача #${task.id.slice(-8)}`}
                       </p>
-                      <Badge
-                        variant={getStatusBadgeVariant(task.status)}
-                        className="text-xs"
-                      >
+                      <Badge variant={getStatusBadgeVariant(task.status)} className="text-xs">
                         {getStatusText(task.status)}
                       </Badge>
                     </div>
@@ -223,7 +221,7 @@ export function ParserQueue({ tasks, loading, currentTaskId }: ParserQueueProps)
                         <Clock className="h-3 w-3" />
                         {formatDistanceToNow(new Date(task.started_at || task.created_at), {
                           addSuffix: true,
-                          locale: ru
+                          locale: ru,
                         })}
                       </div>
                     </div>
@@ -244,12 +242,16 @@ export function ParserQueue({ tasks, loading, currentTaskId }: ParserQueueProps)
                       <div className="flex items-center gap-3 mt-2 text-xs">
                         <div className="flex items-center gap-1">
                           <FileText className="h-3 w-3 text-green-500" />
-                          <span className="text-green-600">{(task.result as any).posts_saved || 0} постов</span>
+                          <span className="text-green-600">
+                            {(task.result as any).posts_saved || 0} постов
+                          </span>
                         </div>
                         {((task.result as any).comments_saved || 0) > 0 && (
                           <div className="flex items-center gap-1">
                             <CheckCircle className="h-3 w-3 text-blue-500" />
-                            <span className="text-blue-600">{(task.result as any).comments_saved || 0} комментариев</span>
+                            <span className="text-blue-600">
+                              {(task.result as any).comments_saved || 0} комментариев
+                            </span>
                           </div>
                         )}
                       </div>

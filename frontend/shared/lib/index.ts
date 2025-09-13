@@ -1,3 +1,6 @@
 // Re-export all utilities and API functions
 export { cn } from './utils'
-export { apiClient } from './api'
+export { httpClient } from './http-client'
+export * from '../api'
+export * from '../hooks'
+export * from '../providers'

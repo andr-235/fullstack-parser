@@ -1,127 +1,335 @@
-# Fullstack Parser
+# VK Parser API - Production-Ready Docker Setup
 
-Полнофункциональное приложение для парсинга и мониторинга контента VK с FastAPI backend и Next.js frontend.
+🚀 **Production-ready FastAPI backend with Docker Compose + Nginx (HTTP-only)**
 
-## Быстрый старт
+## 📋 Overview
 
-### Переключение между режимами
+This project provides a complete production-ready setup for a FastAPI backend application with:
+- **FastAPI** - Modern Python web framework
+- **PostgreSQL** - Primary database
+- **Redis** - Caching and message broker
+- **Celery** - Background task processing
+- **Nginx** - Reverse proxy and load balancer
+- **Docker Compose** - Container orchestration
 
-Проект поддерживает два режима работы:
+## 🏗️ Architecture
 
-#### Development Mode (HTTP)
-```bash
-# Запуск в режиме разработки (только HTTP)
-./scripts/switch-env.sh dev
-
-# Доступ: http://localhost
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│     Nginx       │    │   FastAPI API   │    │   PostgreSQL    │
+│  (Port 80)      │───▶│   (Port 8000)   │───▶│   (Port 5432)   │
+│  Reverse Proxy  │    │   Backend       │    │   Database      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                       ┌─────────────────┐    ┌─────────────────┐
+                       │  Celery Worker  │    │     Redis       │
+                       │  Background     │───▶│   (Port 6379)   │
+                       │  Tasks          │    │  Cache & Queue  │
+                       └─────────────────┘    └─────────────────┘
 ```
 
-#### Production Mode (HTTPS с редиректом)
-```bash
-# Запуск в продакшен режиме (HTTP → HTTPS редирект)
-./scripts/switch-env.sh prod
+## 🚀 Quick Start
 
-# Доступ: https://localhost (HTTP автоматически редиректится)
+### 1. Prerequisites
+
+- Docker and Docker Compose installed
+- Git (for cloning the repository)
+- At least 2GB RAM and 1 CPU core
+
+### 2. Setup Environment
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd vk-parser-api
+
+# Copy environment template
+cp env.example .env
+
+# Edit environment variables
+nano .env
 ```
 
-#### Проверка статуса
+### 3. Configure Environment
+
+Edit `.env` file with your settings:
+
 ```bash
-# Проверить текущий статус окружения
-./scripts/switch-env.sh status
+# Database
+POSTGRES_DB=vk_parser
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your-secure-password
+
+# Security
+SECRET_KEY=your-super-secret-key-change-in-production
+
+# CORS (add your frontend URLs)
+CORS_ORIGINS=http://localhost:3000,http://localhost:8080
 ```
 
-### Ручной запуск
+### 4. Deploy
 
-#### Development
 ```bash
-docker-compose -f docker-compose.dev.yml up -d
-```
-
-#### Production
-```bash
+# Development deployment
 docker-compose up -d
+
+# Production deployment
+./scripts/deploy.sh
 ```
 
-## Архитектура
-
-- **Backend**: FastAPI + SQLAlchemy + PostgreSQL + Redis
-- **Frontend**: Next.js 14 + TypeScript + TailwindCSS
-- **Infrastructure**: Docker + Nginx + Docker Compose
-- **CI/CD**: GitHub Actions + автоматическое развертывание
-
-## Документация
-
-Подробная документация находится в папке [docs/](docs/):
-
-- [Environment Switching Guide](docs/ENVIRONMENT_SWITCHING.md) - Подробное руководство по переключению режимов
-- [Getting Started](docs/GETTING_STARTED.md) - Начало работы
-- [Production Setup](docs/PRODUCTION_SETUP.md) - Настройка продакшена
-- [Deployment Guide](docs/GITHUB_ACTIONS_DEPLOYMENT.md) - Руководство по развертыванию
-
-## Особенности
-
-### Development Mode
-- HTTP только (порт 80)
-- Горячая перезагрузка для разработки
-- Отладочная информация
-- Менее строгие security headers
-
-### Production Mode
-- HTTP автоматически редиректится на HTTPS
-- SSL/TLS сертификаты
-- Строгие security headers
-- HSTS включен
-- Rate limiting
-- Оптимизированная производительность
-
-## Структура проекта
+## 📁 Project Structure
 
 ```
-├── backend/           # FastAPI приложение
-├── frontend/          # Next.js приложение
-├── nginx/            # Nginx конфигурации
-├── scripts/          # Скрипты развертывания
-├── docs/             # Документация
-├── docker-compose.yml           # Production конфигурация
-├── docker-compose.dev.yml       # Development конфигурация
-└── env.example       # Шаблон переменных окружения
+project/
+├── backend/                 # FastAPI backend
+│   ├── src/                # Source code
+│   ├── Dockerfile          # Optimized production Dockerfile
+│   ├── docker-entrypoint.sh # Production entrypoint script
+│   └── .dockerignore       # Docker ignore file
+├── nginx/                  # Nginx configuration
+│   ├── nginx.conf          # Main nginx config
+│   └── conf.d/             # Additional configs
+├── scripts/                # Deployment scripts
+│   ├── deploy.sh           # Zero-downtime deployment
+│   └── backup-db.sh        # Database backup
+├── docker-compose.yml      # Main compose file
+├── docker-compose.prod.yml # Production overrides
+├── env.example            # Environment template
+└── README.md              # This file
 ```
 
-## Переменные окружения
+## 🔧 Management Commands
 
-Скопируйте `env.example` в `.env.prod` и настройте переменные:
+### Deployment
 
 ```bash
-cp env.example .env.prod
-# Отредактируйте .env.prod с вашими настройками
+# Deploy application
+./scripts/deploy.sh
+
+# Check deployment status
+./scripts/deploy.sh status
+
+# Check service health
+./scripts/deploy.sh health
+
+# View logs
+./scripts/deploy.sh logs
 ```
 
-## Мониторинг
+### Database Backup
 
-### Health Checks
-- **Development**: http://localhost/health
-- **Production**: https://localhost/health
-
-### Логи
 ```bash
-# Логи nginx
-docker logs fullstack_dev_nginx
+# Create backup
+./scripts/backup-db.sh
 
-# Логи frontend
-docker logs fullstack_dev_frontend
+# List backups
+./scripts/backup-db.sh list
 
-# Логи backend
-docker logs fullstack_dev_backend
+# Restore from backup
+./scripts/backup-db.sh restore ./backups/db_backup_20240101_120000.sql.gz
+
+# Clean old backups
+./scripts/backup-db.sh cleanup
 ```
 
-## Безопасность
+### Docker Compose
 
-- Все секреты хранятся в переменных окружения
-- SSL/TLS в продакшене
-- Rate limiting для API
-- CORS настройки
-- Security headers
+```bash
+# Start all services
+docker-compose up -d
 
-## Поддержка
+# Start with production settings
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
-Для получения помощи обратитесь к документации в папке [docs/](docs/) или создайте issue в репозитории.
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+
+# Rebuild and restart
+docker-compose up -d --build
+```
+
+## 🔍 Monitoring & Health Checks
+
+### Health Endpoints
+
+- **Application Health**: `http://localhost/health`
+- **API Health**: `http://localhost/api/health`
+
+### Service Status
+
+```bash
+# Check all services
+docker-compose ps
+
+# Check specific service logs
+docker-compose logs api
+docker-compose logs postgres
+docker-compose logs redis
+docker-compose logs nginx
+```
+
+### Logs
+
+Logs are stored in `./logs/` directory:
+- `logs/api/` - FastAPI application logs
+- `logs/celery/` - Celery worker logs
+- `logs/nginx/` - Nginx access and error logs
+
+## 🔒 Security Features
+
+### HTTP Security Headers (No SSL Required)
+
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `X-XSS-Protection: 1; mode=block`
+- `Referrer-Policy: no-referrer-when-downgrade`
+- `Content-Security-Policy`
+- `Permissions-Policy`
+
+### Rate Limiting
+
+- **API endpoints**: 10 requests/second per IP
+- **General endpoints**: 30 requests/second per IP
+
+### Access Control
+
+- Admin/debug routes restricted to localhost and private networks
+- Non-root user in containers
+- Minimal base images (Alpine Linux)
+
+## 📊 Performance Optimizations
+
+### Nginx
+
+- Gzip compression enabled
+- Connection keep-alive
+- Upstream connection pooling
+- Static file caching
+
+### Database
+
+- Connection pooling configured
+- Optimized PostgreSQL settings for production
+- Automated backups with retention policy
+
+### Application
+
+- Multi-stage Docker build
+- Optimized layer caching
+- Health checks for zero-downtime deployments
+- Graceful shutdown handling
+
+## 🛠️ Development
+
+### Adding New Services
+
+1. Add service to `docker-compose.yml`
+2. Configure health checks
+3. Add to network: `app-network`
+4. Update dependencies if needed
+
+### Environment Variables
+
+All configuration is done through environment variables in `.env` file. See `env.example` for all available options.
+
+### Database Migrations
+
+Migrations run automatically on container startup. For manual migration:
+
+```bash
+# Run migrations
+docker-compose exec api alembic upgrade head
+
+# Create new migration
+docker-compose exec api alembic revision --autogenerate -m "description"
+```
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+1. **Port conflicts**: Check if ports 80, 5432, 6379, 8000 are available
+2. **Permission issues**: Ensure scripts are executable (`chmod +x scripts/*.sh`)
+3. **Database connection**: Check PostgreSQL container is healthy
+4. **Memory issues**: Increase Docker memory limits
+
+### Debug Commands
+
+```bash
+# Check container health
+docker-compose ps
+
+# View detailed logs
+docker-compose logs --tail=100 -f
+
+# Execute commands in container
+docker-compose exec api bash
+docker-compose exec postgres psql -U postgres -d vk_parser
+
+# Check resource usage
+docker stats
+```
+
+## 📈 Scaling
+
+### Horizontal Scaling
+
+To scale API instances:
+
+```yaml
+# In docker-compose.yml
+api:
+  deploy:
+    replicas: 3
+```
+
+### Vertical Scaling
+
+Adjust resource limits in `docker-compose.prod.yml`:
+
+```yaml
+api:
+  deploy:
+    resources:
+      limits:
+        memory: 2G
+        cpus: '2.0'
+```
+
+## 🔄 CI/CD Integration
+
+### GitHub Actions Example
+
+```yaml
+name: Deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy
+        run: |
+          ssh user@server "cd /path/to/project && ./scripts/deploy.sh"
+```
+
+## 📞 Support
+
+For issues and questions:
+1. Check the logs: `./scripts/deploy.sh logs`
+2. Verify health: `./scripts/deploy.sh health`
+3. Check service status: `docker-compose ps`
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+**Built with ❤️ using Docker Compose + Nginx (HTTP-only) - Production Ready 2025**

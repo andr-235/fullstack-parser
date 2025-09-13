@@ -4,7 +4,7 @@ import { Navbar } from './Navbar'
 import { useNotificationCount } from './useNotificationCount'
 
 export function AppNavbar() {
- const notificationCount = useNotificationCount()
+  const notificationCount = useNotificationCount()
 
- return <Navbar notificationCount={notificationCount} />
+  return <Navbar notificationCount={notificationCount} />
 }

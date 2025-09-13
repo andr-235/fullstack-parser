@@ -8,7 +8,7 @@
  *   guarantees consistent resolution for imports of "@/shared/lib".
  *
  * Usage:
- * import { cn, apiClient } from '@/shared/lib'
+ * import { cn, httpClient } from '@/shared/lib'
  */
 export { cn } from './lib/utils'
-export { apiClient } from './lib/api'
+export { httpClient } from './lib/http-client'

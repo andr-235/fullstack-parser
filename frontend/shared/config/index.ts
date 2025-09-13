@@ -1,7 +1,6 @@
 // Конфигурация приложения
 export const config = {
   api: {
-    // В Docker окружении используем пустой baseUrl - запросы пойдут через Nginx
     baseUrl: process.env.NEXT_PUBLIC_API_URL || '',
     timeout: 10000,
   },

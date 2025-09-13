@@ -106,7 +106,7 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {activities.slice(0, 8).map((activity) => {
+          {activities.slice(0, 8).map(activity => {
             const Icon = getActivityIcon(activity.type)
             const badge = getActivityBadge(activity.type)
 
@@ -116,9 +116,7 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
                   <Icon className="h-4 w-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground">
-                    {activity.message}
-                  </p>
+                  <p className="text-sm text-foreground">{activity.message}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant={badge.variant} className="text-xs">
                       {badge.label}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 
-import { apiClient } from '@/shared/lib'
+import { httpClient } from '@/shared/lib'
 
 import {
   Keyword,
@@ -109,7 +109,7 @@ export const useKeywords = (filters?: KeywordsFilters) => {
           params.q = filters.search
         }
 
-        const response: KeywordsResponse = await apiClient.getKeywords(params)
+        const response: KeywordsResponse = await httpClient.get('/api/keywords', { params })
         setKeywords(response.items)
 
         // Сохраняем в кэш
@@ -129,7 +129,7 @@ export const useKeywords = (filters?: KeywordsFilters) => {
 
   const createKeyword = async (keywordData: CreateKeywordRequest): Promise<Keyword> => {
     try {
-      const newKeyword: Keyword = await apiClient.createKeyword(keywordData)
+      const newKeyword: Keyword = await httpClient.post('/api/keywords', keywordData)
       const updatedKeywords = [newKeyword, ...keywords]
       setKeywords(updatedKeywords)
 
@@ -144,7 +144,7 @@ export const useKeywords = (filters?: KeywordsFilters) => {
 
   const updateKeyword = async (id: number, updates: UpdateKeywordRequest): Promise<Keyword> => {
     try {
-      const updatedKeyword: Keyword = await apiClient.updateKeyword(id, updates)
+      const updatedKeyword: Keyword = await httpClient.put(`/api/keywords/${id}`, updates)
       const updatedKeywords = keywords.map(keyword =>
         keyword.id === id ? updatedKeyword : keyword
       )
@@ -161,7 +161,7 @@ export const useKeywords = (filters?: KeywordsFilters) => {
 
   const deleteKeyword = async (id: number): Promise<void> => {
     try {
-      await apiClient.deleteKeyword(id)
+      await httpClient.delete(`/api/keywords/${id}`)
       const updatedKeywords = keywords.filter(keyword => keyword.id !== id)
       setKeywords(updatedKeywords)
 
@@ -199,7 +199,7 @@ export const useKeyword = (id: number) => {
     setLoading(true)
     setError(null)
     try {
-      const data: Keyword = await apiClient.getKeyword(id)
+      const data: Keyword = await httpClient.get(`/api/keywords/${id}`)
       setKeyword(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch keyword')
@@ -231,7 +231,7 @@ export const useKeywordStats = (id: number) => {
     setLoading(true)
     setError(null)
     try {
-      const data: KeywordStats = await apiClient.getKeywordStats(id)
+      const data: KeywordStats = await httpClient.get(`/api/keywords/${id}/stats`)
       setStats(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch keyword stats')
@@ -268,7 +268,7 @@ export const useUploadKeywords = () => {
         formData.append('category', category)
       }
 
-      const result: UploadKeywordsResponse = await apiClient.uploadKeywords(formData)
+      const result: UploadKeywordsResponse = await httpClient.post('/api/keywords/upload', formData)
       return result
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload keywords')
@@ -280,7 +280,7 @@ export const useUploadKeywords = () => {
 
   const getUploadProgress = async (uploadId: string): Promise<UploadProgress> => {
     try {
-      const progress = await apiClient.getKeywordsUploadProgress(uploadId)
+      const progress: UploadProgress = await httpClient.get(`/api/keywords/upload-progress/${uploadId}`)
       setUploadProgress(progress)
       return progress
     } catch (err) {

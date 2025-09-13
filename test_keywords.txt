@@ -1,3 +1,0 @@
-test_keyword1
-test_keyword2
-test_keyword3

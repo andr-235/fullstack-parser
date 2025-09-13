@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 
-import { apiClient } from '@/shared/lib'
+import { httpClient } from '@/shared/lib'
 
 import {
   GlobalStats,
@@ -20,7 +20,7 @@ export const useGlobalStats = () => {
     setLoading(true)
     setError(null)
     try {
-      const data: GlobalStats = await apiClient.getGlobalStats()
+      const data: GlobalStats = await httpClient.get('/api/stats/global')
       setStats(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch global stats')
@@ -50,7 +50,7 @@ export const useDashboardStats = () => {
     setLoading(true)
     setError(null)
     try {
-      const data: DashboardStats = await apiClient.getDashboardStats()
+      const data: DashboardStats = await httpClient.get('/api/stats/dashboard')
       setStats(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch dashboard stats')
@@ -99,7 +99,7 @@ export const useGroups = (params?: {
         apiParams.search = params.search
       }
 
-      const data: GroupsResponse = await apiClient.getGroups(apiParams)
+      const data: GroupsResponse = await httpClient.get('/api/groups', { params: apiParams })
       setGroups(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch groups')
@@ -129,7 +129,7 @@ export const useKeywords = (params?: { page?: number; size?: number; is_active?:
     setLoading(true)
     setError(null)
     try {
-      const data: KeywordsResponse = await apiClient.getKeywords(params)
+      const data: KeywordsResponse = await httpClient.get('/api/keywords', { params })
       setKeywords(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch keywords')

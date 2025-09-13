@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 
-import { apiClient } from '@/shared/lib'
+import { httpClient } from '@/shared/lib'
 
 import {
   Comment,
@@ -67,7 +67,7 @@ export const useComments = (filters?: CommentFilters) => {
         params.text = '**' // Специальный запрос для получения всех комментариев
       }
 
-      const response: CommentsResponse = await apiClient.getComments(params)
+      const response: CommentsResponse = await httpClient.get('/api/comments', { params })
       setComments(response.items)
     } catch (err) {
       const errorMessage = getErrorMessage(err, 'Failed to fetch comments')
@@ -99,7 +99,7 @@ export const useComments = (filters?: CommentFilters) => {
 
   const updateComment = async (id: string, updates: UpdateCommentRequest) => {
     try {
-      const updatedComment = await apiClient.updateComment(parseInt(id), updates)
+      const updatedComment: Comment = await httpClient.put(`/api/comments/${id}`, updates)
       setComments(prev =>
         prev.map(comment => (comment.id === parseInt(id) ? updatedComment : comment))
       )
@@ -112,7 +112,7 @@ export const useComments = (filters?: CommentFilters) => {
 
   const deleteComment = async (id: string) => {
     try {
-      await apiClient.deleteComment(parseInt(id))
+      await httpClient.delete(`/api/comments/${id}`)
       setComments(prev => prev.filter(comment => comment.id !== parseInt(id)))
     } catch (err) {
       const errorMessage = getErrorMessage(err, 'Failed to delete comment')
@@ -122,7 +122,7 @@ export const useComments = (filters?: CommentFilters) => {
 
   const markAsViewed = async (id: string) => {
     try {
-      await apiClient.markCommentViewed(parseInt(id))
+      await httpClient.put(`/api/comments/${id}/viewed`)
       setComments(prev =>
         prev.map(comment =>
           comment.id === parseInt(id) ? { ...comment, is_viewed: true } : comment

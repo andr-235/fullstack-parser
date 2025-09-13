@@ -1,12 +1,6 @@
 import { useState, useEffect } from 'react'
-
-import {
-  User,
-  CreateUserRequest,
-  UpdateUserRequest,
-  LoginRequest,
-  AuthResponse,
-} from './types'
+import { httpClient } from '@/shared/lib/http-client'
+import { User, CreateUserRequest, UpdateUserRequest, LoginRequest, AuthResponse } from './types'
 
 export const useUser = () => {
   const [user, setUser] = useState<User | null>(null)
@@ -17,17 +11,7 @@ export const useUser = () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
-      })
-
-      if (!response.ok) {
-        throw new Error('Invalid credentials')
-      }
-
-      const data: AuthResponse = await response.json()
+      const data = await httpClient.post<AuthResponse>('/api/auth/login', credentials)
       setUser(data.user)
       localStorage.setItem('token', data.token)
       return data
@@ -51,16 +35,10 @@ export const useUser = () => {
 
     setLoading(true)
     try {
-      const response = await fetch('/api/auth/me', {
+      const userData = await httpClient.get<User>('/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
       })
-
-      if (response.ok) {
-        const userData: User = await response.json()
-        setUser(userData)
-      } else {
-        logout() // Invalid token
-      }
+      setUser(userData)
     } catch (err) {
       logout()
     } finally {
@@ -91,8 +69,7 @@ export const useUsers = () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch('/api/users')
-      const data = await response.json()
+      const data = await httpClient.get<User[]>('/api/users')
       setUsers(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch users')
@@ -103,37 +80,21 @@ export const useUsers = () => {
 
   const createUser = async (userData: CreateUserRequest) => {
     try {
-      const response = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-      })
-      const newUser = await response.json()
-      setUsers((prev) => [...prev, newUser])
+      const newUser = await httpClient.post<User>('/api/users', userData)
+      setUsers(prev => [...prev, newUser])
       return newUser
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to create user'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to create user')
     }
   }
 
   const updateUser = async (id: string, updates: UpdateUserRequest) => {
     try {
-      const response = await fetch(`/api/users/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      })
-      const updatedUser = await response.json()
-      setUsers((prev) =>
-        prev.map((user) => (user.id === id ? updatedUser : user))
-      )
+      const updatedUser = await httpClient.patch<User>(`/api/users/${id}`, updates)
+      setUsers(prev => prev.map(user => (user.id === id ? updatedUser : user)))
       return updatedUser
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to update user'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to update user')
     }
   }
 

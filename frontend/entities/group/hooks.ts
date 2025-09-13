@@ -28,12 +28,10 @@ export const useGroups = () => {
         body: JSON.stringify(groupData),
       })
       const newGroup = await response.json()
-      setGroups((prev) => [...prev, newGroup])
+      setGroups(prev => [...prev, newGroup])
       return newGroup
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to create group'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to create group')
     }
   }
 

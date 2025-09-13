@@ -28,12 +28,10 @@ export const usePosts = () => {
         body: JSON.stringify(postData),
       })
       const newPost = await response.json()
-      setPosts((prev) => [...prev, newPost])
+      setPosts(prev => [...prev, newPost])
       return newPost
     } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : 'Failed to create post'
-      )
+      throw new Error(err instanceof Error ? err.message : 'Failed to create post')
     }
   }
 

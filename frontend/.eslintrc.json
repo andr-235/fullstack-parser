@@ -81,29 +81,6 @@
       }
     ],
     "import/no-cycle": ["error", { "maxDepth": 1 }],
-    "import/no-restricted-paths": [
-      "error",
-      {
-        "zones": [
-          {
-            "target": "./**/ui",
-            "from": "./**/model"
-          },
-          {
-            "target": "./**/ui",
-            "from": "./**/api"
-          },
-          {
-            "target": "./**/ui",
-            "from": "./**/lib"
-          },
-          {
-            "target": "./**/ui",
-            "from": "./**/config"
-          }
-        ]
-      }
-    ],
     "@typescript-eslint/no-unused-vars": [
       "error",
       {
