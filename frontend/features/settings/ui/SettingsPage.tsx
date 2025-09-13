@@ -4,9 +4,10 @@ import { useState } from 'react'
 
 import { Save, RefreshCw } from 'lucide-react'
 
-import { Button } from '@/shared/ui'
+import { GlassButton } from '@/shared/ui/glass-button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui'
 import { Alert, AlertDescription } from '@/shared/ui'
+import { GlassLayout } from '@/shared/ui/glass-layout'
 
 import { SettingsApi } from './SettingsApi'
 import { SettingsAppearance } from './SettingsAppearance'
@@ -51,43 +52,44 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Настройки</h1>
-          <p className="text-muted-foreground">Управление настройками и конфигурацией приложения</p>
+    <GlassLayout>
+      <div className="container mx-auto py-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white">Настройки</h1>
+            <p className="text-white/70">Управление настройками и конфигурацией приложения</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <GlassButton
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Обновить
+            </GlassButton>
+            <GlassButton onClick={handleSave} disabled={isSaving} className="gap-2">
+              <Save className="h-4 w-4" />
+              {isSaving ? 'Сохранение...' : 'Сохранить изменения'}
+            </GlassButton>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Обновить
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving} className="gap-2">
-            <Save className="h-4 w-4" />
-            {isSaving ? 'Сохранение...' : 'Сохранить изменения'}
-          </Button>
-        </div>
-      </div>
-
-      {/* Error State */}
-      {error && (
-        <Alert className="border-destructive">
-          <RefreshCw className="h-4 w-4" />
-          <AlertDescription>
-            {error}
-            <Button variant="outline" size="sm" onClick={() => setError(null)} className="ml-4">
-              Закрыть
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
+        {/* Error State */}
+        {error && (
+          <Alert className="border-red-400/30 bg-red-500/10">
+            <RefreshCw className="h-4 w-4 text-red-300" />
+            <AlertDescription className="text-red-200">
+              {error}
+              <GlassButton variant="outline" size="sm" onClick={() => setError(null)} className="ml-4">
+                Закрыть
+              </GlassButton>
+            </AlertDescription>
+          </Alert>
+        )}
 
       {/* Filters */}
       <SettingsFilters filters={filters} onFiltersChange={setFilters} />
@@ -125,6 +127,7 @@ export function SettingsPage() {
           <SettingsAppearance />
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </GlassLayout>
   )
 }

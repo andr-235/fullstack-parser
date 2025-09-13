@@ -4,11 +4,12 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
+import { GlassButton } from "@/shared/ui/glass-button";
+import { GlassInput } from "@/shared/ui/glass-input";
 import { Label } from "@/shared/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { GlassCard, GlassCardContent, GlassCardDescription, GlassCardHeader, GlassCardTitle } from "@/shared/ui/glass-card";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
+import { GlassLayout } from "@/shared/ui/glass-layout";
 import { Loader2, Eye, EyeOff, CheckCircle } from "lucide-react";
 import { useAuthStore } from "@/entities/user";
 import { authApi } from "@/entities/user/api";
@@ -67,146 +68,150 @@ export const ChangePasswordForm = () => {
 
   if (success) {
     return (
-      <Card className="w-full max-w-md mx-auto">
-        <CardContent className="pt-6">
-          <div className="flex flex-col items-center space-y-4">
-            <CheckCircle className="h-12 w-12 text-green-500" />
-            <h3 className="text-lg font-semibold">Пароль успешно изменен</h3>
-            <p className="text-sm text-muted-foreground text-center">
-              Ваш пароль был успешно обновлен
-            </p>
-            <Button
-              onClick={() => setSuccess(false)}
-              variant="outline"
-              className="w-full"
-            >
-              Изменить еще раз
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <GlassLayout>
+        <GlassCard className="w-full max-w-md mx-auto">
+          <GlassCardContent className="pt-6">
+            <div className="flex flex-col items-center space-y-4">
+              <CheckCircle className="h-12 w-12 text-green-400" />
+              <h3 className="text-lg font-semibold text-white">Пароль успешно изменен</h3>
+              <p className="text-sm text-white/70 text-center">
+                Ваш пароль был успешно обновлен
+              </p>
+              <GlassButton
+                onClick={() => setSuccess(false)}
+                variant="outline"
+                className="w-full"
+              >
+                Изменить еще раз
+              </GlassButton>
+            </div>
+          </GlassCardContent>
+        </GlassCard>
+      </GlassLayout>
     );
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
-      <CardHeader className="space-y-3">
-        <CardTitle className="text-2xl text-center text-white">Смена пароля</CardTitle>
-        <CardDescription className="text-center text-white/70">
-          Введите текущий пароль и новый пароль
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <div className="space-y-4">
-            <Label htmlFor="current_password" className="text-white">Текущий пароль</Label>
-            <div className="relative">
-              <Input
-                id="current_password"
-                type={showCurrentPassword ? "text" : "password"}
-                placeholder="Введите текущий пароль"
-                {...register("current_password")}
-                disabled={isLoading}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
-                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                disabled={isLoading}
-              >
-                {showCurrentPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            {errors.current_password && (
-              <p className="text-sm text-red-300">{errors.current_password.message}</p>
+    <GlassLayout>
+      <GlassCard className="w-full max-w-md mx-auto">
+        <GlassCardHeader className="space-y-3">
+          <GlassCardTitle className="text-2xl text-center text-white">Смена пароля</GlassCardTitle>
+          <GlassCardDescription className="text-center text-white/70">
+            Введите текущий пароль и новый пароль
+          </GlassCardDescription>
+        </GlassCardHeader>
+        <GlassCardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            {error && (
+              <Alert variant="destructive" className="border-red-400/30 bg-red-500/10">
+                <AlertDescription className="text-red-200">{error}</AlertDescription>
+              </Alert>
             )}
-          </div>
 
-          <div className="space-y-4">
-            <Label htmlFor="new_password" className="text-white">Новый пароль</Label>
-            <div className="relative">
-              <Input
-                id="new_password"
-                type={showNewPassword ? "text" : "password"}
-                placeholder="Введите новый пароль"
-                {...register("new_password")}
-                disabled={isLoading}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
-                onClick={() => setShowNewPassword(!showNewPassword)}
-                disabled={isLoading}
-              >
-                {showNewPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </Button>
+            <div className="space-y-4">
+              <Label htmlFor="current_password" className="text-white">Текущий пароль</Label>
+              <div className="relative">
+                <GlassInput
+                  id="current_password"
+                  type={showCurrentPassword ? "text" : "password"}
+                  placeholder="Введите текущий пароль"
+                  {...register("current_password")}
+                  disabled={isLoading}
+                  className="pr-10"
+                />
+                <GlassButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  disabled={isLoading}
+                >
+                  {showCurrentPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </GlassButton>
+              </div>
+              {errors.current_password && (
+                <p className="text-sm text-red-300">{errors.current_password.message}</p>
+              )}
             </div>
-            {errors.new_password && (
-              <p className="text-sm text-red-300">{errors.new_password.message}</p>
-            )}
-          </div>
 
-          <div className="space-y-4">
-            <Label htmlFor="confirm_password" className="text-white">Подтвердите пароль</Label>
-            <div className="relative">
-              <Input
-                id="confirm_password"
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Подтвердите новый пароль"
-                {...register("confirm_password")}
-                disabled={isLoading}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                disabled={isLoading}
-              >
-                {showConfirmPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </Button>
+            <div className="space-y-4">
+              <Label htmlFor="new_password" className="text-white">Новый пароль</Label>
+              <div className="relative">
+                <GlassInput
+                  id="new_password"
+                  type={showNewPassword ? "text" : "password"}
+                  placeholder="Введите новый пароль"
+                  {...register("new_password")}
+                  disabled={isLoading}
+                  className="pr-10"
+                />
+                <GlassButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  disabled={isLoading}
+                >
+                  {showNewPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </GlassButton>
+              </div>
+              {errors.new_password && (
+                <p className="text-sm text-red-300">{errors.new_password.message}</p>
+              )}
             </div>
-            {errors.confirm_password && (
-              <p className="text-sm text-red-300">{errors.confirm_password.message}</p>
-            )}
-          </div>
 
-          <Button 
-            type="submit" 
-            className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-white border border-blue-500/30 backdrop-blur-sm transition-all duration-200" 
-            disabled={isLoading}
-          >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Изменить пароль
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            <div className="space-y-4">
+              <Label htmlFor="confirm_password" className="text-white">Подтвердите пароль</Label>
+              <div className="relative">
+                <GlassInput
+                  id="confirm_password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Подтвердите новый пароль"
+                  {...register("confirm_password")}
+                  disabled={isLoading}
+                  className="pr-10"
+                />
+                <GlassButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={isLoading}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </GlassButton>
+              </div>
+              {errors.confirm_password && (
+                <p className="text-sm text-red-300">{errors.confirm_password.message}</p>
+              )}
+            </div>
+
+            <GlassButton
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Изменить пароль
+            </GlassButton>
+          </form>
+        </GlassCardContent>
+      </GlassCard>
+    </GlassLayout>
   );
 };

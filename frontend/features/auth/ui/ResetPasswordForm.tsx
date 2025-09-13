@@ -4,11 +4,12 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
+import { GlassButton } from "@/shared/ui/glass-button";
+import { GlassInput } from "@/shared/ui/glass-input";
 import { Label } from "@/shared/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { GlassCard, GlassCardContent, GlassCardDescription, GlassCardHeader, GlassCardTitle } from "@/shared/ui/glass-card";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
+import { GlassLayout } from "@/shared/ui/glass-layout";
 import { Loader2, CheckCircle, ArrowLeft } from "lucide-react";
 import { authApi } from "@/entities/user/api";
 import type { ResetPasswordRequest, ResetPasswordConfirmRequest } from "@/entities/user";
@@ -99,168 +100,170 @@ export const ResetPasswordForm = () => {
 
   if (success && step === "confirm") {
     return (
-      <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
-        <CardContent className="pt-6">
-          <div className="flex flex-col items-center space-y-4">
-            <CheckCircle className="h-12 w-12 text-blue-400" />
-            <h3 className="text-lg font-semibold text-white">Пароль успешно сброшен</h3>
-            <p className="text-sm text-white/70 text-center">
-              Ваш пароль был успешно обновлен. Теперь вы можете войти в систему с новым паролем.
-            </p>
-            <Button
-              onClick={() => {
-                setStep("request");
-                setSuccess(false);
-              }}
-              className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-white border border-blue-500/30 backdrop-blur-sm transition-all duration-200"
-            >
-              Сбросить пароль еще раз
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <GlassLayout>
+        <GlassCard className="w-full max-w-md mx-auto">
+          <GlassCardContent className="pt-6">
+            <div className="flex flex-col items-center space-y-4">
+              <CheckCircle className="h-12 w-12 text-blue-400" />
+              <h3 className="text-lg font-semibold text-white">Пароль успешно сброшен</h3>
+              <p className="text-sm text-white/70 text-center">
+                Ваш пароль был успешно обновлен. Теперь вы можете войти в систему с новым паролем.
+              </p>
+              <GlassButton
+                onClick={() => {
+                  setStep("request");
+                  setSuccess(false);
+                }}
+                className="w-full"
+              >
+                Сбросить пароль еще раз
+              </GlassButton>
+            </div>
+          </GlassCardContent>
+        </GlassCard>
+      </GlassLayout>
     );
   }
 
   if (step === "request") {
     return (
-      <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <CardTitle className="text-2xl text-center text-white">Сброс пароля</CardTitle>
-          <CardDescription className="text-center text-white/70">
-            Введите email для получения инструкций по сбросу пароля
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmitRequest(onRequestSubmit)} className="space-y-8">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="space-y-4">
-              <Label htmlFor="email" className="text-white">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="example@email.com"
-                {...registerRequest("email")}
-                disabled={isLoading}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
-              />
-              {requestErrors.email && (
-                <p className="text-sm text-red-300">{requestErrors.email.message}</p>
+      <GlassLayout>
+        <GlassCard className="w-full max-w-md mx-auto">
+          <GlassCardHeader className="space-y-3">
+            <GlassCardTitle className="text-2xl text-center text-white">Сброс пароля</GlassCardTitle>
+            <GlassCardDescription className="text-center text-white/70">
+              Введите email для получения инструкций по сбросу пароля
+            </GlassCardDescription>
+          </GlassCardHeader>
+          <GlassCardContent>
+            <form onSubmit={handleSubmitRequest(onRequestSubmit)} className="space-y-8">
+              {error && (
+                <Alert variant="destructive" className="border-red-400/30 bg-red-500/10">
+                  <AlertDescription className="text-red-200">{error}</AlertDescription>
+                </Alert>
               )}
-            </div>
 
-            <Button 
-              type="submit" 
-              className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-white border border-blue-500/30 backdrop-blur-sm transition-all duration-200" 
-              disabled={isLoading}
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Отправить инструкции
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <div className="space-y-4">
+                <Label htmlFor="email" className="text-white">Email</Label>
+                <GlassInput
+                  id="email"
+                  type="email"
+                  placeholder="example@email.com"
+                  {...registerRequest("email")}
+                  disabled={isLoading}
+                />
+                {requestErrors.email && (
+                  <p className="text-sm text-red-300">{requestErrors.email.message}</p>
+                )}
+              </div>
+
+              <GlassButton
+                type="submit"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Отправить инструкции
+              </GlassButton>
+            </form>
+          </GlassCardContent>
+        </GlassCard>
+      </GlassLayout>
     );
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
-      <CardHeader className="space-y-1">
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleBack}
-            disabled={isLoading}
-            className="text-white/70 hover:text-white hover:bg-white/10"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <CardTitle className="text-2xl text-white">Подтверждение сброса</CardTitle>
-            <CardDescription className="text-white/70">
-              Введите код подтверждения и новый пароль
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmitConfirm(onConfirmSubmit)} className="space-y-8">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {success && (
-            <Alert className="bg-blue-500/20 border-blue-500/30">
-              <CheckCircle className="h-4 w-4 text-blue-400" />
-              <AlertDescription className="text-blue-200">
-                Инструкции отправлены на {email}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="space-y-4">
-            <Label htmlFor="token" className="text-white">Код подтверждения</Label>
-            <Input
-              id="token"
-              type="text"
-              placeholder="Введите код из письма"
-              {...registerConfirm("token")}
+    <GlassLayout>
+      <GlassCard className="w-full max-w-md mx-auto">
+        <GlassCardHeader className="space-y-1">
+          <div className="flex items-center space-x-2">
+            <GlassButton
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
               disabled={isLoading}
-              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
-            />
-            {confirmErrors.token && (
-              <p className="text-sm text-red-300">{confirmErrors.token.message}</p>
-            )}
+              className="text-white/70 hover:text-white hover:bg-white/10"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </GlassButton>
+            <div>
+              <GlassCardTitle className="text-2xl text-white">Подтверждение сброса</GlassCardTitle>
+              <GlassCardDescription className="text-white/70">
+                Введите код подтверждения и новый пароль
+              </GlassCardDescription>
+            </div>
           </div>
+        </GlassCardHeader>
+        <GlassCardContent>
+          <form onSubmit={handleSubmitConfirm(onConfirmSubmit)} className="space-y-8">
+            {error && (
+              <Alert variant="destructive" className="border-red-400/30 bg-red-500/10">
+                <AlertDescription className="text-red-200">{error}</AlertDescription>
+              </Alert>
+            )}
 
-          <div className="space-y-4">
-            <Label htmlFor="new_password" className="text-white">Новый пароль</Label>
-            <Input
-              id="new_password"
-              type="password"
-              placeholder="Введите новый пароль"
-              {...registerConfirm("new_password")}
+            {success && (
+              <Alert className="bg-blue-500/20 border-blue-500/30">
+                <CheckCircle className="h-4 w-4 text-blue-400" />
+                <AlertDescription className="text-blue-200">
+                  Инструкции отправлены на {email}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-4">
+              <Label htmlFor="token" className="text-white">Код подтверждения</Label>
+              <GlassInput
+                id="token"
+                type="text"
+                placeholder="Введите код из письма"
+                {...registerConfirm("token")}
+                disabled={isLoading}
+              />
+              {confirmErrors.token && (
+                <p className="text-sm text-red-300">{confirmErrors.token.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <Label htmlFor="new_password" className="text-white">Новый пароль</Label>
+              <GlassInput
+                id="new_password"
+                type="password"
+                placeholder="Введите новый пароль"
+                {...registerConfirm("new_password")}
+                disabled={isLoading}
+              />
+              {confirmErrors.new_password && (
+                <p className="text-sm text-red-300">{confirmErrors.new_password.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <Label htmlFor="confirm_password" className="text-white">Подтвердите пароль</Label>
+              <GlassInput
+                id="confirm_password"
+                type="password"
+                placeholder="Подтвердите новый пароль"
+                {...registerConfirm("confirm_password")}
+                disabled={isLoading}
+              />
+              {confirmErrors.confirm_password && (
+                <p className="text-sm text-red-300">{confirmErrors.confirm_password.message}</p>
+              )}
+            </div>
+
+            <GlassButton
+              type="submit"
+              className="w-full"
               disabled={isLoading}
-              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
-            />
-            {confirmErrors.new_password && (
-              <p className="text-sm text-red-300">{confirmErrors.new_password.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <Label htmlFor="confirm_password" className="text-white">Подтвердите пароль</Label>
-            <Input
-              id="confirm_password"
-              type="password"
-              placeholder="Подтвердите новый пароль"
-              {...registerConfirm("confirm_password")}
-              disabled={isLoading}
-              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
-            />
-            {confirmErrors.confirm_password && (
-              <p className="text-sm text-red-300">{confirmErrors.confirm_password.message}</p>
-            )}
-          </div>
-
-          <Button 
-            type="submit" 
-            className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-white border border-blue-500/30 backdrop-blur-sm transition-all duration-200" 
-            disabled={isLoading}
-          >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Сбросить пароль
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Сбросить пароль
+            </GlassButton>
+          </form>
+        </GlassCardContent>
+      </GlassCard>
+    </GlassLayout>
   );
 };

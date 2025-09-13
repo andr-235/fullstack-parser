@@ -5,11 +5,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from "next/link";
-import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
+import { GlassButton } from "@/shared/ui/glass-button";
+import { GlassInput } from "@/shared/ui/glass-input";
 import { Label } from "@/shared/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { GlassCard, GlassCardContent, GlassCardDescription, GlassCardHeader, GlassCardTitle } from "@/shared/ui/glass-card";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
+import { GlassLayout } from "@/shared/ui/glass-layout";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuthStore } from "@/entities/user";
 import type { LoginRequest } from "@/entities/user";
@@ -43,86 +44,87 @@ export const LoginForm = () => {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
-      <CardHeader className="space-y-3">
-        <CardTitle className="text-2xl text-center text-white">Вход в систему</CardTitle>
-        <CardDescription className="text-center text-white/70">
-          Введите email и пароль для входа
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error.message}</AlertDescription>
-            </Alert>
-          )}
-
-          <div className="space-y-4">
-            <Label htmlFor="email" className="text-white">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="example@email.com"
-              {...register("email")}
-              disabled={isLoading}
-              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
-            />
-            {errors.email && (
-              <p className="text-sm text-red-300">{errors.email.message}</p>
+    <GlassLayout>
+      <GlassCard className="w-full max-w-md mx-auto">
+        <GlassCardHeader className="space-y-3">
+          <GlassCardTitle className="text-2xl text-center text-white">Вход в систему</GlassCardTitle>
+          <GlassCardDescription className="text-center text-white/70">
+            Введите email и пароль для входа
+          </GlassCardDescription>
+        </GlassCardHeader>
+        <GlassCardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            {error && (
+              <Alert variant="destructive" className="border-red-400/30 bg-red-500/10">
+                <AlertDescription className="text-red-200">{error.message}</AlertDescription>
+              </Alert>
             )}
-          </div>
 
-          <div className="space-y-4">
-            <Label htmlFor="password" className="text-white">Пароль</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Введите пароль"
-                {...register("password")}
+            <div className="space-y-4">
+              <Label htmlFor="email" className="text-white">Email</Label>
+              <GlassInput
+                id="email"
+                type="email"
+                placeholder="example@email.com"
+                {...register("email")}
                 disabled={isLoading}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20 pr-10"
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </Button>
+              {errors.email && (
+                <p className="text-sm text-red-300">{errors.email.message}</p>
+              )}
             </div>
-            {errors.password && (
-              <p className="text-sm text-red-300">{errors.password.message}</p>
-            )}
-          </div>
 
-          <Button 
-            type="submit" 
-            className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-white border border-blue-500/30 backdrop-blur-sm transition-all duration-200" 
-            disabled={isLoading}
-          >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Войти
-          </Button>
+            <div className="space-y-4">
+              <Label htmlFor="password" className="text-white">Пароль</Label>
+              <div className="relative">
+                <GlassInput
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Введите пароль"
+                  {...register("password")}
+                  disabled={isLoading}
+                  className="pr-10"
+                />
+                <GlassButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/70 hover:text-white"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </GlassButton>
+              </div>
+              {errors.password && (
+                <p className="text-sm text-red-300">{errors.password.message}</p>
+              )}
+            </div>
 
-          <div className="text-center">
-            <Link 
-              href="/reset-password" 
-              className="inline-flex items-center text-sm text-blue-300 hover:text-blue-200 transition-colors hover:underline"
+            <GlassButton
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
             >
-              Забыли пароль?
-            </Link>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Войти
+            </GlassButton>
+
+            <div className="text-center">
+              <Link
+                href="/reset-password"
+                className="inline-flex items-center text-sm text-blue-300 hover:text-blue-200 transition-colors hover:underline"
+              >
+                Забыли пароль?
+              </Link>
+            </div>
+          </form>
+        </GlassCardContent>
+      </GlassCard>
+    </GlassLayout>
   );
 };

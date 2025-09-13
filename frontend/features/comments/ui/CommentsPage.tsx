@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 
-import { Button } from '@/shared/ui'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
+import { GlassButton } from '@/shared/ui/glass-button'
+import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle } from '@/shared/ui/glass-card'
+import { GlassLayout } from '@/shared/ui/glass-layout'
 import { InfiniteScroll } from '@/shared/ui'
 
 import { CommentFilters } from '@/features/comments/ui/CommentFilters'
@@ -55,51 +56,52 @@ export function CommentsPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Комментарии VK</h1>
-          <p className="text-muted-foreground">
-            Мониторинг и управление комментариями из групп VK
-            {data?.total && ` • ${data.total} комментариев`}
-            {filters.search_text && (
-              <span className="ml-2 text-blue-600 font-medium">(поиск: "{filters.search_text}")</span>
-            )}
-          </p>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Фильтры</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <CommentFilters filters={filters} onFiltersChange={handleFiltersChange} />
-        </CardContent>
-      </Card>
-
-      {/* Error State */}
-      {error && (
-        <Card className="border-destructive">
-          <CardContent className="py-4">
-            <p className="text-destructive">
-              Ошибка:{' '}
-              {typeof error === 'string'
-                ? error
-                : typeof error === 'object' && error !== null
-                  ? (error as { message?: string; detail?: string }).message ||
-                    (error as { message?: string; detail?: string }).detail ||
-                    JSON.stringify(error)
-                  : String(error)}
+    <GlassLayout>
+      <div className="container mx-auto py-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white">Комментарии VK</h1>
+            <p className="text-white/70">
+              Мониторинг и управление комментариями из групп VK
+              {data?.total && ` • ${data.total} комментариев`}
+              {filters.search_text && (
+                <span className="ml-2 text-blue-300 font-medium">(поиск: "{filters.search_text}")</span>
+              )}
             </p>
-            <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-2">
-              Попробовать снова
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </div>
+
+        {/* Filters */}
+        <GlassCard>
+          <GlassCardHeader>
+            <GlassCardTitle className="text-lg">Фильтры</GlassCardTitle>
+          </GlassCardHeader>
+          <GlassCardContent>
+            <CommentFilters filters={filters} onFiltersChange={handleFiltersChange} />
+          </GlassCardContent>
+        </GlassCard>
+
+        {/* Error State */}
+        {error && (
+          <GlassCard className="border-red-400/30">
+            <GlassCardContent className="py-4">
+              <p className="text-red-300">
+                Ошибка:{' '}
+                {typeof error === 'string'
+                  ? error
+                  : typeof error === 'object' && error !== null
+                    ? (error as { message?: string; detail?: string }).message ||
+                      (error as { message?: string; detail?: string }).detail ||
+                      JSON.stringify(error)
+                    : String(error)}
+              </p>
+              <GlassButton variant="outline" size="sm" onClick={() => refetch()} className="mt-2">
+                Попробовать снова
+              </GlassButton>
+            </GlassCardContent>
+          </GlassCard>
+        )}
 
       {/* Comments List */}
       <CommentsList
@@ -108,6 +110,7 @@ export function CommentsPage() {
         onMarkViewed={handleMarkAsViewed}
         onDelete={handleDeleteComment}
       />
-    </div>
+      </div>
+    </GlassLayout>
   )
 }

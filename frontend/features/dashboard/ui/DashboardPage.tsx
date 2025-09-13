@@ -3,16 +3,14 @@
 import { RefreshCw } from 'lucide-react'
 
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   Alert,
   AlertDescription,
   Skeleton,
-  Button,
-  StatCard,
 } from '@/shared/ui'
+import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle } from '@/shared/ui/glass-card'
+import { GlassButton } from '@/shared/ui/glass-button'
+import { GlassLayout } from '@/shared/ui/glass-layout'
+import { StatCard } from '@/shared/ui'
 import { useGlobalStats, useDashboardStats } from '@/entities/dashboard'
 import {
   ActivityFeed,
@@ -46,62 +44,67 @@ export function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <Skeleton className="h-8 w-48 mb-2" />
-            <Skeleton className="h-4 w-64" />
+      <GlassLayout>
+        <div className="container mx-auto py-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <Skeleton className="h-8 w-48 mb-2" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <Skeleton className="h-10 w-24" />
           </div>
-          <Skeleton className="h-10 w-24" />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <GlassCard key={i}>
+                <GlassCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-4" />
+                </GlassCardHeader>
+                <GlassCardContent>
+                  <Skeleton className="h-8 w-16 mb-1" />
+                  <Skeleton className="h-3 w-32" />
+                </GlassCardContent>
+              </GlassCard>
+            ))}
+          </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16 mb-1" />
-                <Skeleton className="h-3 w-32" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      </GlassLayout>
     )
   }
 
   if (hasError) {
     return (
-      <div className="container mx-auto py-6">
-        <Alert className="border-destructive">
-          <AlertDescription>
-            Ошибка загрузки данных дашборда: {globalError || dashboardError}
-            <Button variant="outline" size="sm" onClick={handleRefresh} className="ml-4">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Попробовать снова
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </div>
+      <GlassLayout>
+        <div className="container mx-auto py-6">
+          <Alert className="border-destructive">
+            <AlertDescription>
+              Ошибка загрузки данных дашборда: {globalError || dashboardError}
+              <GlassButton variant="outline" size="sm" onClick={handleRefresh} className="ml-4">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Попробовать снова
+              </GlassButton>
+            </AlertDescription>
+          </Alert>
+        </div>
+      </GlassLayout>
     )
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Панель управления</h1>
-          <p className="text-muted-foreground">
-            Мониторинг и аналитика вашего парсера комментариев VK
-          </p>
+    <GlassLayout>
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white">Панель управления</h1>
+            <p className="text-white/70">
+              Мониторинг и аналитика вашего парсера комментариев VK
+            </p>
+          </div>
+          <GlassButton variant="outline" onClick={handleRefresh} disabled={isLoading} className="gap-2">
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Обновление...' : 'Обновить'}
+          </GlassButton>
         </div>
-        <Button variant="outline" onClick={handleRefresh} disabled={isLoading} className="gap-2">
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          {isLoading ? 'Обновление...' : 'Обновить'}
-        </Button>
-      </div>
 
       {globalStats && <StatsCards stats={globalStats} />}
 
@@ -162,6 +165,6 @@ export function DashboardPage() {
           )}
         </div>
       </div>
-    </div>
+    </GlassLayout>
   )
 }
