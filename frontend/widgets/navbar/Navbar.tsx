@@ -4,7 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { memo, useMemo, useState } from 'react'
 
-import { Bell, Search, Menu, Sun, Moon, X } from 'lucide-react'
+import { Bell, Search, Menu, X } from 'lucide-react'
+import { useAuthStore } from '@/entities/user/model/auth-store'
+import { UserMenu } from '@/widgets/auth/ui/UserMenu'
 
 interface NavbarProps {
   notificationCount?: number
@@ -29,7 +31,7 @@ const PAGE_TRANSLATIONS: Record<string, string> = {
 export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
   const pathname = usePathname()
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const { user, isAuthenticated } = useAuthStore()
 
   const breadcrumbs = useMemo((): BreadcrumbItem[] => {
     const segments = pathname.split('/').filter(Boolean)
@@ -47,10 +49,6 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
     })
   }, [pathname])
 
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode)
-    // Здесь можно добавить логику переключения темы
-  }
 
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
@@ -125,18 +123,6 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
               <Search className="h-5 w-5" />
             </button>
 
-            {/* Theme toggle */}
-            <button 
-              className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-colors duration-200"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-            >
-              {isDarkMode ? (
-                <Sun className="h-5 w-5" data-testid="sun-icon" />
-              ) : (
-                <Moon className="h-5 w-5" data-testid="moon-icon" />
-              )}
-            </button>
 
             {/* Notifications */}
             <button 
@@ -151,17 +137,26 @@ export const Navbar = memo(({ notificationCount = 0 }: NavbarProps) => {
               )}
             </button>
 
-            {/* User menu placeholder */}
-            <div className="ml-2">
-              <button className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200">
-                <div className="h-8 w-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">U</span>
-                </div>
-                <span className="hidden lg:block text-sm font-medium text-gray-900 dark:text-white">
-                  Пользователь
-                </span>
-              </button>
-            </div>
+            {/* User menu */}
+            {isAuthenticated && user ? (
+              <div className="ml-2">
+                <UserMenu />
+              </div>
+            ) : (
+              <div className="ml-2">
+                <Link 
+                  href="/login"
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+                >
+                  <div className="h-8 w-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-medium">U</span>
+                  </div>
+                  <span className="hidden lg:block text-sm font-medium">
+                    Войти
+                  </span>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 
