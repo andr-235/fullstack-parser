@@ -11,6 +11,7 @@ import {
   AlertDescription,
   Skeleton,
   Button,
+  StatCard,
 } from '@/shared/ui'
 import { useGlobalStats, useDashboardStats } from '@/entities/dashboard'
 import {
@@ -104,52 +105,41 @@ export function DashboardPage() {
 
       {globalStats && <StatsCards stats={globalStats} />}
 
-      {dashboardStats && (
+      {dashboardStats && globalStats && (
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Сегодня</p>
-                <p className="text-2xl font-bold">{dashboardStats.today_comments}</p>
-                <p className="text-xs text-muted-foreground">
-                  комментариев • {dashboardStats.today_matches} совпадений
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <RefreshCw className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">За неделю</p>
-                <p className="text-2xl font-bold">{dashboardStats.week_comments}</p>
-                <p className="text-xs text-muted-foreground">
-                  комментариев • {dashboardStats.week_matches} совпадений
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                <RefreshCw className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Активность</p>
-                <p className="text-2xl font-bold">{globalStats?.active_groups || 0}</p>
-                <p className="text-xs text-muted-foreground">
-                  групп • {globalStats?.active_keywords || 0} слов
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
-                <RefreshCw className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </Card>
+          {[
+            {
+              title: 'Сегодня',
+              value: dashboardStats.today_comments,
+              description: `комментариев • ${dashboardStats.today_matches} совпадений`,
+              icon: RefreshCw,
+              iconColor: 'text-blue-600',
+            },
+            {
+              title: 'За неделю',
+              value: dashboardStats.week_comments,
+              description: `комментариев • ${dashboardStats.week_matches} совпадений`,
+              icon: RefreshCw,
+              iconColor: 'text-green-600',
+            },
+            {
+              title: 'Активность',
+              value: globalStats.active_groups || 0,
+              description: `групп • ${globalStats.active_keywords || 0} слов`,
+              icon: RefreshCw,
+              iconColor: 'text-purple-600',
+            },
+          ].map((card, index) => (
+            <StatCard
+              key={index}
+              title={card.title}
+              value={card.value}
+              description={card.description}
+              icon={card.icon}
+              iconColor={card.iconColor}
+              className="p-4"
+            />
+          ))}
         </div>
       )}
 

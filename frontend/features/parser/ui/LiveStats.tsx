@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-
 import {
   BarChart3,
   TrendingUp,
@@ -28,10 +27,7 @@ import {
   AreaChart,
 } from 'recharts'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { Badge } from '@/shared/ui'
-import { Skeleton } from '@/shared/ui'
-
+import { Card, CardContent, CardHeader, CardTitle, Badge, Skeleton } from '@/shared/ui'
 import type { ParserStats, ParserGlobalStats, ParserState } from '@/entities/parser'
 
 interface LiveStatsProps {
@@ -50,7 +46,6 @@ export function LiveStats({ stats, globalStats, state, loading, isRunning }: Liv
     avgDuration: 0,
   })
 
-  // Анимируем значения при изменении
   useEffect(() => {
     if (!stats) return
 
@@ -84,18 +79,16 @@ export function LiveStats({ stats, globalStats, state, loading, isRunning }: Liv
           clearInterval(interval)
           setAnimatedValues(prev => ({ ...prev, [key]: end }))
         }
-      }, 30) // Более частое обновление для плавности
+      }, 30)
     }
 
-    // Анимируем каждое значение только если есть значительные изменения
     Object.entries(targetValues).forEach(([key, target]) => {
       const current = animatedValues[key as keyof typeof animatedValues]
       if (Math.abs(current - target) > 0.1) {
-        // Только если разница больше 0.1
         animateValue(key as keyof typeof animatedValues, current, target)
       }
     })
-  }, [stats, globalStats, animatedValues]) // Включаем animatedValues в зависимости
+  }, [stats, globalStats, animatedValues])
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
@@ -109,7 +102,6 @@ export function LiveStats({ stats, globalStats, state, loading, isRunning }: Liv
     return `${Math.round(seconds / 3600)} ч`
   }
 
-  // Данные для графиков
   const chartData = [
     {
       name: 'Комментарии',
@@ -123,7 +115,7 @@ export function LiveStats({ stats, globalStats, state, loading, isRunning }: Liv
     },
     {
       name: 'Ключевые слова',
-      value: globalStats?.total_comments_found || 0, // В новом API нет comments_with_keywords
+      value: globalStats?.total_comments_found || 0,
       color: '#f59e0b',
     },
   ]

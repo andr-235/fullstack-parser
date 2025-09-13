@@ -94,7 +94,7 @@ export function CommentsPage() {
                     JSON.stringify(error)
                   : String(error)}
             </p>
-            <Button variant="outline" size="sm" onClick={refetch} className="mt-2">
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-2">
               Попробовать снова
             </Button>
           </CardContent>
