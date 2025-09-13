@@ -35,6 +35,67 @@ export default function DashboardPage() {
 
   const [loading, setLoading] = useState(true);
 
+  // Конфигурация статистических карточек
+  const statsConfig = [
+    {
+      key: 'totalComments' as keyof DashboardStats,
+      growthKey: 'commentsGrowth' as keyof DashboardStats,
+      title: 'Всего комментариев',
+      icon: '💬',
+      color: 'bg-blue-500',
+    },
+    {
+      key: 'activeGroups' as keyof DashboardStats,
+      growthKey: 'groupsGrowth' as keyof DashboardStats,
+      title: 'Активных групп',
+      icon: '👥',
+      color: 'bg-green-500',
+    },
+    {
+      key: 'keywords' as keyof DashboardStats,
+      growthKey: 'keywordsGrowth' as keyof DashboardStats,
+      title: 'Ключевых слов',
+      icon: '🔍',
+      color: 'bg-purple-500',
+    },
+    {
+      key: 'activeParsers' as keyof DashboardStats,
+      growthKey: 'parsersGrowth' as keyof DashboardStats,
+      title: 'Активных парсеров',
+      icon: '⚙️',
+      color: 'bg-orange-500',
+    },
+  ];
+
+  // Конфигурация быстрых действий
+  const quickActions = [
+    { label: 'Добавить новую группу', icon: '➕' },
+    { label: 'Настроить ключевые слова', icon: '🔧' },
+    { label: 'Запустить парсер', icon: '▶️' },
+  ];
+
+  // Конфигурация последней активности
+  const recentActivity = [
+    {
+      status: 'Парсер запущен',
+      time: '2 минуты назад',
+      color: 'bg-green-400',
+      pulse: true,
+    },
+    {
+      status: 'Новые комментарии найдены',
+      time: '15 минут назад',
+      color: 'bg-blue-400',
+      pulse: false,
+    },
+    {
+      status: 'Обновлены ключевые слова',
+      time: '1 час назад',
+      color: 'bg-yellow-400',
+      pulse: false,
+    },
+  ];
+
   useEffect(() => {
     // Симуляция загрузки данных
     const timer = setTimeout(() => {
@@ -130,45 +191,17 @@ export default function DashboardPage() {
         
         {/* Статистические карточки */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-          <GlassCard maxWidth="sm" className="!min-h-0 !py-0">
-            <StatCard
-              title="Всего комментариев"
-              value={stats.totalComments}
-              growth={stats.commentsGrowth}
-              icon="💬"
-              color="bg-blue-500"
-            />
-          </GlassCard>
-          
-          <GlassCard maxWidth="sm" className="!min-h-0 !py-0">
-            <StatCard
-              title="Активных групп"
-              value={stats.activeGroups}
-              growth={stats.groupsGrowth}
-              icon="👥"
-              color="bg-green-500"
-            />
-          </GlassCard>
-          
-          <GlassCard maxWidth="sm" className="!min-h-0 !py-0">
-            <StatCard
-              title="Ключевых слов"
-              value={stats.keywords}
-              growth={stats.keywordsGrowth}
-              icon="🔍"
-              color="bg-purple-500"
-            />
-          </GlassCard>
-          
-          <GlassCard maxWidth="sm" className="!min-h-0 !py-0">
-            <StatCard
-              title="Активных парсеров"
-              value={stats.activeParsers}
-              growth={stats.parsersGrowth}
-              icon="⚙️"
-              color="bg-orange-500"
-            />
-          </GlassCard>
+          {statsConfig.map((config) => (
+            <GlassCard key={config.key} maxWidth="sm" className="!min-h-0 !py-0">
+              <StatCard
+                title={config.title}
+                value={stats[config.key] as number}
+                growth={stats[config.growthKey] as number}
+                icon={config.icon}
+                color={config.color}
+              />
+            </GlassCard>
+          ))}
         </div>
 
         {/* Дополнительная информация */}
@@ -181,18 +214,18 @@ export default function DashboardPage() {
                 Быстрые действия
               </h3>
               <div className="space-y-3">
-                <button className="w-full text-left p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors duration-200 flex items-center justify-between group">
-                  <span className="text-white/80 group-hover:text-white">Добавить новую группу</span>
-                  <span className="text-white/40 group-hover:text-white/60">→</span>
-                </button>
-                <button className="w-full text-left p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors duration-200 flex items-center justify-between group">
-                  <span className="text-white/80 group-hover:text-white">Настроить ключевые слова</span>
-                  <span className="text-white/40 group-hover:text-white/60">→</span>
-                </button>
-                <button className="w-full text-left p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors duration-200 flex items-center justify-between group">
-                  <span className="text-white/80 group-hover:text-white">Запустить парсер</span>
-                  <span className="text-white/40 group-hover:text-white/60">→</span>
-                </button>
+                {quickActions.map((action, index) => (
+                  <button 
+                    key={index}
+                    className="w-full text-left p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors duration-200 flex items-center justify-between group"
+                  >
+                    <span className="text-white/80 group-hover:text-white flex items-center">
+                      <span className="mr-2">{action.icon}</span>
+                      {action.label}
+                    </span>
+                    <span className="text-white/40 group-hover:text-white/60">→</span>
+                  </button>
+                ))}
               </div>
             </div>
           </GlassCard>
@@ -205,27 +238,15 @@ export default function DashboardPage() {
                 Последняя активность
               </h3>
               <div className="space-y-3">
-                <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/5">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <div className="flex-1">
-                    <p className="text-sm text-white/80">Парсер запущен</p>
-                    <p className="text-xs text-white/60">2 минуты назад</p>
+                {recentActivity.map((activity, index) => (
+                  <div key={index} className="flex items-center space-x-3 p-3 rounded-xl bg-white/5">
+                    <div className={`w-2 h-2 ${activity.color} rounded-full ${activity.pulse ? 'animate-pulse' : ''}`} />
+                    <div className="flex-1">
+                      <p className="text-sm text-white/80">{activity.status}</p>
+                      <p className="text-xs text-white/60">{activity.time}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/5">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full" />
-                  <div className="flex-1">
-                    <p className="text-sm text-white/80">Новые комментарии найдены</p>
-                    <p className="text-xs text-white/60">15 минут назад</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/5">
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full" />
-                  <div className="flex-1">
-                    <p className="text-sm text-white/80">Обновлены ключевые слова</p>
-                    <p className="text-xs text-white/60">1 час назад</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </GlassCard>

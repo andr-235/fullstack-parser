@@ -1,6 +1,8 @@
 import { Inter } from 'next/font/google';
 import type { Metadata } from 'next';
 
+
+
 import './globals.css';
 
 import { APP_CONFIG } from '@/shared/config';
