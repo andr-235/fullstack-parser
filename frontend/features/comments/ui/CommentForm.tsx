@@ -12,22 +12,23 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/shared/ui'
 import { Textarea } from '@/shared/ui'
 
+import { CommentCreate } from '@/features/comments'
+
 const commentSchema = z.object({
-  content: z
+  vk_id: z.number().min(1, 'VK ID обязателен'),
+  post_id: z.number().min(1, 'ID поста обязателен'),
+  author_id: z.number().min(1, 'ID автора обязателен'),
+  text: z
     .string()
     .min(1, 'Содержание комментария обязательно')
     .max(1000, 'Комментарий слишком длинный'),
-  postId: z.string().min(1, 'ID поста обязателен'),
 })
 
 type CommentFormData = z.infer<typeof commentSchema>
 
 interface CommentFormProps {
-  initialData?: {
-    content?: string
-    postId?: string
-  }
-  onSubmit: (data: CommentFormData) => Promise<void>
+  initialData?: Partial<CommentCreate>
+  onSubmit: (data: CommentCreate) => Promise<void>
   onCancel: () => void
   submitLabel?: string
 }
@@ -43,8 +44,10 @@ export function CommentForm({
   const form = useForm<CommentFormData>({
     resolver: zodResolver(commentSchema),
     defaultValues: {
-      content: initialData?.content || '',
-      postId: initialData?.postId || '',
+      vk_id: initialData?.vk_id || 0,
+      post_id: initialData?.post_id || 0,
+      author_id: initialData?.author_id || 0,
+      text: initialData?.text || '',
     },
   })
 
@@ -65,12 +68,17 @@ export function CommentForm({
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="postId"
+          name="vk_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>ID поста</FormLabel>
+              <FormLabel>VK ID</FormLabel>
               <FormControl>
-                <Input placeholder="Введите ID поста..." {...field} />
+                <Input 
+                  type="number"
+                  placeholder="Введите VK ID комментария..." 
+                  {...field}
+                  onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -79,7 +87,45 @@ export function CommentForm({
 
         <FormField
           control={form.control}
-          name="content"
+          name="post_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>ID поста</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number"
+                  placeholder="Введите ID поста..." 
+                  {...field}
+                  onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="author_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>ID автора</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number"
+                  placeholder="Введите ID автора..." 
+                  {...field}
+                  onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="text"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Содержание комментария</FormLabel>

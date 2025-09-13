@@ -6,42 +6,54 @@ import { Button } from '@/shared/ui'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { InfiniteScroll } from '@/shared/ui'
 
-import { useInfiniteComments } from '@/entities/comment'
-import { CommentFilters as CommentFiltersType } from '@/entities/comment'
-
 import { CommentFilters } from '@/features/comments/ui/CommentFilters'
 import { CommentsList } from '@/features/comments/ui/CommentsList'
+import { 
+  useComments, 
+  useDeleteComment, 
+  useUpdateComment,
+  type CommentFilter 
+} from '@/features/comments'
 
 export function CommentsPage() {
-  const [filters, setFilters] = useState<CommentFiltersType>({
-    has_keywords: true, // По умолчанию показываем только комментарии с ключевыми словами
+  const [filters, setFilters] = useState<CommentFilter>({
+    search_text: '',
+    group_id: undefined,
+    post_id: undefined,
+    author_id: undefined,
+    is_deleted: false,
   })
 
-  const { comments, loading, loadingMore, error, hasMore, totalCount, loadMore, refetch } =
-    useInfiniteComments(filters)
+  const { data, isLoading, error, refetch } = useComments({
+    ...filters,
+    include_author: true,
+    limit: 20,
+    offset: 0,
+  })
+
+  const deleteCommentMutation = useDeleteComment()
+  const updateCommentMutation = useUpdateComment()
 
   const handleMarkAsViewed = async (id: string) => {
     try {
-      // Обновляем локально для быстрого отклика
-      // В реальном приложении здесь должен быть API вызов
-      console.log('Mark as viewed:', id)
-      refetch()
+      await updateCommentMutation.mutateAsync({
+        commentId: parseInt(id),
+        data: { is_deleted: false }
+      })
     } catch (err) {
-      throw err
+      console.error('Error marking comment as viewed:', err)
     }
   }
 
   const handleDeleteComment = async (id: string) => {
     try {
-      // В реальном приложении здесь должен быть API вызов
-      console.log('Delete comment:', id)
-      refetch()
+      await deleteCommentMutation.mutateAsync(parseInt(id))
     } catch (err) {
-      throw err
+      console.error('Error deleting comment:', err)
     }
   }
 
-  const handleFiltersChange = (newFilters: CommentFiltersType) => {
+  const handleFiltersChange = (newFilters: CommentFilter) => {
     setFilters(newFilters)
   }
 
@@ -53,9 +65,9 @@ export function CommentsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Комментарии VK</h1>
           <p className="text-muted-foreground">
             Мониторинг и управление комментариями из групп VK
-            {totalCount > 0 && ` • ${totalCount} комментариев`}
-            {filters.has_keywords && (
-              <span className="ml-2 text-blue-600 font-medium">(только с ключевыми словами)</span>
+            {data?.total && ` • ${data.total} комментариев`}
+            {filters.search_text && (
+              <span className="ml-2 text-blue-600 font-medium">(поиск: "{filters.search_text}")</span>
             )}
           </p>
         </div>
@@ -92,15 +104,13 @@ export function CommentsPage() {
         </Card>
       )}
 
-      {/* Comments List with Infinite Scroll */}
-      <InfiniteScroll hasMore={hasMore} loading={loadingMore} onLoadMore={loadMore}>
-        <CommentsList
-          comments={comments}
-          loading={loading}
-          onMarkViewed={handleMarkAsViewed}
-          onDelete={handleDeleteComment}
-        />
-      </InfiniteScroll>
+      {/* Comments List */}
+      <CommentsList
+        comments={data?.items || []}
+        loading={isLoading}
+        onMarkViewed={handleMarkAsViewed}
+        onDelete={handleDeleteComment}
+      />
     </div>
   )
 }

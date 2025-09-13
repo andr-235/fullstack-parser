@@ -7,17 +7,17 @@ import { Input } from '@/shared/ui'
 import { Switch } from '@/shared/ui'
 import { Label } from '@/shared/ui'
 
-import { CommentFilters as CommentFiltersType } from '@/entities/comment'
+import { CommentFilter } from '@/features/comments'
 
 interface CommentFiltersProps {
-  filters: CommentFiltersType
-  onFiltersChange: (filters: CommentFiltersType) => void
+  filters: CommentFilter
+  onFiltersChange: (filters: CommentFilter) => void
 }
 
 export function CommentFilters({ filters, onFiltersChange }: CommentFiltersProps) {
-  const updateFilter = <K extends keyof CommentFiltersType>(
+  const updateFilter = <K extends keyof CommentFilter>(
     key: K,
-    value: CommentFiltersType[K]
+    value: CommentFilter[K]
   ) => {
     onFiltersChange({
       ...filters,
@@ -26,7 +26,13 @@ export function CommentFilters({ filters, onFiltersChange }: CommentFiltersProps
   }
 
   const clearFilters = () => {
-    onFiltersChange({})
+    onFiltersChange({
+      search_text: '',
+      group_id: undefined,
+      post_id: undefined,
+      author_id: undefined,
+      is_deleted: false,
+    })
   }
 
   const hasActiveFilters = Object.values(filters).some(
@@ -43,7 +49,8 @@ export function CommentFilters({ filters, onFiltersChange }: CommentFiltersProps
             <Input
               placeholder="Поиск комментариев по тексту..."
               className="pl-10"
-              // Note: Text search would need backend implementation
+              value={filters.search_text || ''}
+              onChange={e => updateFilter('search_text', e.target.value || undefined)}
             />
           </div>
         </div>
@@ -72,27 +79,31 @@ export function CommentFilters({ filters, onFiltersChange }: CommentFiltersProps
           />
         </div>
 
-        {/* Keyword ID Filter */}
+        {/* Post ID Filter */}
         <div className="space-y-2">
-          <Label htmlFor="keywordId">ID ключевого слова</Label>
+          <Label htmlFor="postId">ID поста</Label>
           <Input
-            id="keywordId"
+            id="postId"
             type="number"
-            placeholder="Фильтр по ID ключевого слова..."
-            value={filters.keyword_id?.toString() || ''}
+            placeholder="Фильтр по ID поста..."
+            value={filters.post_id?.toString() || ''}
             onChange={e =>
-              updateFilter('keyword_id', e.target.value ? parseInt(e.target.value) : undefined)
+              updateFilter('post_id', e.target.value ? parseInt(e.target.value) : undefined)
             }
           />
         </div>
 
-        {/* Author Screen Name Filter */}
+        {/* Author ID Filter */}
         <div className="space-y-2">
-          <Label htmlFor="authorScreenName">Автор</Label>
+          <Label htmlFor="authorId">ID автора</Label>
           <Input
-            id="authorScreenName"
-            placeholder="Фильтр по screen name автора..."
-            // Note: Author screen name filter would need backend implementation
+            id="authorId"
+            type="number"
+            placeholder="Фильтр по ID автора..."
+            value={filters.author_id?.toString() || ''}
+            onChange={e =>
+              updateFilter('author_id', e.target.value ? parseInt(e.target.value) : undefined)
+            }
           />
         </div>
       </div>
@@ -101,37 +112,13 @@ export function CommentFilters({ filters, onFiltersChange }: CommentFiltersProps
       <div className="flex flex-wrap gap-6">
         <div className="flex items-center space-x-2">
           <Switch
-            id="has-keywords-only"
-            checked={filters.has_keywords === true}
-            onCheckedChange={checked => updateFilter('has_keywords', checked || undefined)}
+            id="deleted-only"
+            checked={filters.is_deleted === true}
+            onCheckedChange={checked => updateFilter('is_deleted', checked || false)}
           />
-          <Label htmlFor="has-keywords-only" className="text-sm flex items-center gap-1">
-            <Search className="h-4 w-4" />
-            Показывать только комментарии с ключевыми словами
-          </Label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="viewed-only"
-            checked={filters.is_viewed === true}
-            onCheckedChange={checked => updateFilter('is_viewed', checked || undefined)}
-          />
-          <Label htmlFor="viewed-only" className="text-sm flex items-center gap-1">
-            <Eye className="h-4 w-4" />
-            Показывать только просмотренные комментарии
-          </Label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="unviewed-only"
-            checked={filters.is_viewed === false}
-            onCheckedChange={checked => updateFilter('is_viewed', checked ? false : undefined)}
-          />
-          <Label htmlFor="unviewed-only" className="text-sm flex items-center gap-1">
+          <Label htmlFor="deleted-only" className="text-sm flex items-center gap-1">
             <EyeOff className="h-4 w-4" />
-            Показывать только новые комментарии
+            Показывать только удаленные комментарии
           </Label>
         </div>
       </div>

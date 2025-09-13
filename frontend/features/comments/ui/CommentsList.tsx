@@ -16,12 +16,13 @@ import {
 } from '@/shared/ui'
 import { HighlightText } from '@/shared/ui'
 
-import { Comment } from '@/entities/comment'
+import { CommentResponse } from '@/features/comments'
+import { formatCommentDate, getAuthorFullName, getAuthorInitials } from '@/features/comments'
 
 interface CommentsListProps {
-  comments: Comment[]
+  comments: CommentResponse[]
   loading?: boolean
-  onEdit?: (comment: Comment) => void
+  onEdit?: (comment: CommentResponse) => void
   onDelete?: (commentId: string) => void
   onMarkViewed?: (commentId: string) => void
   onLike?: (commentId: string) => void
@@ -78,48 +79,34 @@ export function CommentsList({
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
-                  {comment.author_photo_url ? (
+                  {comment.author?.photo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={comment.author_photo_url}
-                      alt={comment.author_name || 'Author'}
+                      src={comment.author.photo_url}
+                      alt={getAuthorFullName(comment.author)}
                       className="h-8 w-8 rounded-full object-cover"
                     />
                   ) : (
                     <AvatarFallback>
-                      {(comment.author_name || comment.author_screen_name || 'U')
-                        .charAt(0)
-                        .toUpperCase()}
+                      {comment.author ? getAuthorInitials(comment.author) : 'U'}
                     </AvatarFallback>
                   )}
                 </Avatar>
                 <div>
                   <CardTitle className="text-sm font-medium">
-                    {comment.author_name || comment.author_screen_name || 'Неизвестный автор'}
+                    {comment.author ? getAuthorFullName(comment.author) : 'Неизвестный автор'}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground">
-                    {comment.published_at
-                      ? formatDistanceToNow(new Date(comment.published_at), { addSuffix: true })
-                      : 'Дата неизвестна'}
+                    {formatCommentDate(comment.created_at)}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <div className="flex gap-1">
-                  <Badge variant={comment.is_viewed ? 'default' : 'secondary'} className="text-xs">
-                    {comment.is_viewed ? 'Просмотрено' : 'Новое'}
+                  <Badge variant={comment.is_deleted ? 'destructive' : 'secondary'} className="text-xs">
+                    {comment.is_deleted ? 'Удален' : 'Активен'}
                   </Badge>
-                  {comment.is_archived && (
-                    <Badge variant="outline" className="text-xs">
-                      Архивировано
-                    </Badge>
-                  )}
-                  {comment.matched_keywords_count > 0 && (
-                    <Badge variant="destructive" className="text-xs">
-                      {comment.matched_keywords_count} ключевых слов
-                    </Badge>
-                  )}
                 </div>
 
                 <DropdownMenu>
@@ -133,7 +120,7 @@ export function CommentsList({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {!comment.is_viewed && onMarkViewed && (
+                    {!comment.is_deleted && onMarkViewed && (
                       <DropdownMenuItem onClick={() => onMarkViewed(comment.id.toString())}>
                         <Edit className="mr-2 h-4 w-4" />
                         Отметить как просмотренное
@@ -156,22 +143,9 @@ export function CommentsList({
 
           <CardContent className="pt-0">
             <div className="space-y-3">
-              <HighlightText
-                text={comment.text}
-                keywords={comment.matched_keywords || []}
-                className="text-sm leading-relaxed"
-                highlightClassName="bg-yellow-200 text-yellow-900 px-1 rounded font-medium"
-              />
-
-              {comment.matched_keywords && comment.matched_keywords.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {comment.matched_keywords.map((keyword, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {keyword}
-                    </Badge>
-                  ))}
-                </div>
-              )}
+              <div className="text-sm leading-relaxed">
+                {comment.text}
+              </div>
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -183,26 +157,14 @@ export function CommentsList({
                       className="text-muted-foreground hover:text-foreground"
                     >
                       <ThumbsUp className="mr-1 h-4 w-4" />
-                      {comment.likes_count}
+                      0
                     </Button>
-                  )}
-
-                  {comment.parent_comment_id && (
-                    <Badge variant="outline" className="text-xs">
-                      Ответ на #{comment.parent_comment_id}
-                    </Badge>
-                  )}
-
-                  {comment.group && (
-                    <Badge variant="outline" className="text-xs">
-                      {comment.group.name}
-                    </Badge>
                   )}
                 </div>
 
                 <div className="text-xs text-muted-foreground">
                   <p>VK ID: {comment.vk_id}</p>
-                  {comment.post_vk_id && <p>Пост: {comment.post_vk_id}</p>}
+                  <p>Пост: {comment.post_id}</p>
                 </div>
               </div>
             </div>

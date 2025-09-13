@@ -2,7 +2,7 @@
  * API функции для работы с комментариями
  */
 
-import { apiClient } from "@/shared/lib/api";
+import { httpClient } from "@/shared/lib/http-client";
 import type {
   CommentResponse,
   CommentListResponse,
@@ -23,75 +23,63 @@ import type {
 
 // Базовые CRUD операции
 export const getComments = async (params: GetCommentsParams = {}): Promise<CommentListResponse> => {
-  const response = await apiClient.get("/comments", { params });
-  return response.data;
+  return await httpClient.get("/api/v1/comments", { params });
 };
 
 export const getComment = async (
   commentId: number,
   params: GetCommentParams = {}
 ): Promise<CommentResponse> => {
-  const response = await apiClient.get(`/comments/${commentId}`, { params });
-  return response.data;
+  return await httpClient.get(`/api/v1/comments/${commentId}`, { params });
 };
 
 export const getCommentByVkId = async (vkId: number): Promise<CommentResponse> => {
-  const response = await apiClient.get(`/comments/vk/${vkId}`);
-  return response.data;
+  return await httpClient.get(`/api/v1/comments/vk/${vkId}`);
 };
 
 export const createComment = async (data: CommentCreate): Promise<CommentResponse> => {
-  const response = await apiClient.post("/comments", data);
-  return response.data;
+  return await httpClient.post("/api/v1/comments", data);
 };
 
 export const updateComment = async (
   commentId: number,
   data: CommentUpdate
 ): Promise<CommentResponse> => {
-  const response = await apiClient.put(`/comments/${commentId}`, data);
-  return response.data;
+  return await httpClient.put(`/api/v1/comments/${commentId}`, data);
 };
 
 export const deleteComment = async (commentId: number): Promise<{ message: string }> => {
-  const response = await apiClient.delete(`/comments/${commentId}`);
-  return response.data;
+  return await httpClient.delete(`/api/v1/comments/${commentId}`);
 };
 
 // Статистика
 export const getCommentsStats = async (): Promise<CommentStats> => {
-  const response = await apiClient.get("/comments/stats/overview");
-  return response.data;
+  return await httpClient.get("/api/v1/comments/stats/overview");
 };
 
 export const getCommentsMetrics = async (): Promise<CommentsMetrics> => {
-  const response = await apiClient.get("/comments/metrics");
-  return response.data;
+  return await httpClient.get("/api/v1/comments/metrics");
 };
 
 // Анализ ключевых слов
 export const analyzeKeywords = async (
   request: KeywordAnalysisRequest
 ): Promise<KeywordAnalysisResponse> => {
-  const response = await apiClient.post("/comments/keyword-analysis/analyze", request);
-  return response.data;
+  return await httpClient.post("/api/v1/comments/keyword-analysis/analyze", request);
 };
 
 export const analyzeBatchKeywords = async (
   request: BatchKeywordAnalysisRequest
 ): Promise<BatchKeywordAnalysisResponse> => {
-  const response = await apiClient.post("/comments/keyword-analysis/analyze-batch", request);
-  return response.data;
+  return await httpClient.post("/api/v1/comments/keyword-analysis/analyze-batch", request);
 };
 
 export const searchByKeywords = async (
   request: KeywordSearchRequest
 ): Promise<KeywordSearchResponse> => {
-  const response = await apiClient.post("/comments/keyword-analysis/search", request);
-  return response.data;
+  return await httpClient.post("/api/v1/comments/keyword-analysis/search", request);
 };
 
 export const getKeywordStatistics = async (): Promise<KeywordStatisticsResponse> => {
-  const response = await apiClient.get("/comments/keyword-analysis/statistics");
-  return response.data;
+  return await httpClient.get("/api/v1/comments/keyword-analysis/statistics");
 };

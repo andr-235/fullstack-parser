@@ -1,14 +1,7 @@
 "use client";
 
-// Отключаем статическую генерацию для приватных страниц
-export const dynamic = 'force-dynamic'
+import { CommentsPage } from "@/features/comments";
 
-import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
-
-import { CommentsPage as CommentsPageComponent } from '@/features/comments'
-
-export default function CommentsPage() {
-  useRouteAccess(); // Проверяем доступ к приватной странице
-  
-  return <CommentsPageComponent />
+export default function Page() {
+  return <CommentsPage />;
 }
