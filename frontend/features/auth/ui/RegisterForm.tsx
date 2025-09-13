@@ -57,12 +57,12 @@ export const RegisterForm = () => {
 
   if (success) {
     return (
-      <Card className="w-full max-w-md mx-auto">
+      <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
         <CardContent className="pt-6">
           <div className="flex flex-col items-center space-y-4">
-            <CheckCircle className="h-12 w-12 text-green-500" />
-            <h3 className="text-lg font-semibold">Регистрация успешна!</h3>
-            <p className="text-sm text-muted-foreground text-center">
+            <CheckCircle className="h-12 w-12 text-green-400" />
+            <h3 className="text-lg font-semibold text-white">Регистрация успешна!</h3>
+            <p className="text-sm text-white/70 text-center">
               Добро пожаловать! Вы успешно зарегистрированы и авторизованы.
             </p>
           </div>

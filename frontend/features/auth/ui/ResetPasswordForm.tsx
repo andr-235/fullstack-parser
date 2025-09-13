@@ -99,12 +99,12 @@ export const ResetPasswordForm = () => {
 
   if (success && step === "confirm") {
     return (
-      <Card className="w-full max-w-md mx-auto">
+      <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
         <CardContent className="pt-6">
           <div className="flex flex-col items-center space-y-4">
-            <CheckCircle className="h-12 w-12 text-green-500" />
-            <h3 className="text-lg font-semibold">Пароль успешно сброшен</h3>
-            <p className="text-sm text-muted-foreground text-center">
+            <CheckCircle className="h-12 w-12 text-green-400" />
+            <h3 className="text-lg font-semibold text-white">Пароль успешно сброшен</h3>
+            <p className="text-sm text-white/70 text-center">
               Ваш пароль был успешно обновлен. Теперь вы можете войти в систему с новым паролем.
             </p>
             <Button
@@ -112,8 +112,7 @@ export const ResetPasswordForm = () => {
                 setStep("request");
                 setSuccess(false);
               }}
-              variant="outline"
-              className="w-full"
+              className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/20 backdrop-blur-sm transition-all duration-200"
             >
               Сбросить пароль еще раз
             </Button>
@@ -125,10 +124,10 @@ export const ResetPasswordForm = () => {
 
   if (step === "request") {
     return (
-      <Card className="w-full max-w-md mx-auto">
+      <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Сброс пароля</CardTitle>
-          <CardDescription className="text-center">
+          <CardTitle className="text-2xl text-center text-white">Сброс пароля</CardTitle>
+          <CardDescription className="text-center text-white/70">
             Введите email для получения инструкций по сбросу пароля
           </CardDescription>
         </CardHeader>
@@ -141,20 +140,25 @@ export const ResetPasswordForm = () => {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-white">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="example@email.com"
                 {...registerRequest("email")}
                 disabled={isLoading}
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
               />
               {requestErrors.email && (
-                <p className="text-sm text-red-500">{requestErrors.email.message}</p>
+                <p className="text-sm text-red-300">{requestErrors.email.message}</p>
               )}
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/20 backdrop-blur-sm transition-all duration-200" 
+              disabled={isLoading}
+            >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Отправить инструкции
             </Button>
@@ -165,7 +169,7 @@ export const ResetPasswordForm = () => {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
       <CardHeader className="space-y-1">
         <div className="flex items-center space-x-2">
           <Button
@@ -173,12 +177,13 @@ export const ResetPasswordForm = () => {
             size="sm"
             onClick={handleBack}
             disabled={isLoading}
+            className="text-white/70 hover:text-white hover:bg-white/10"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <CardTitle className="text-2xl">Подтверждение сброса</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-2xl text-white">Подтверждение сброса</CardTitle>
+            <CardDescription className="text-white/70">
               Введите код подтверждения и новый пароль
             </CardDescription>
           </div>
@@ -193,57 +198,64 @@ export const ResetPasswordForm = () => {
           )}
 
           {success && (
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
+            <Alert className="bg-green-500/20 border-green-500/30">
+              <CheckCircle className="h-4 w-4 text-green-400" />
+              <AlertDescription className="text-green-200">
                 Инструкции отправлены на {email}
               </AlertDescription>
             </Alert>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="token">Код подтверждения</Label>
+            <Label htmlFor="token" className="text-white">Код подтверждения</Label>
             <Input
               id="token"
               type="text"
               placeholder="Введите код из письма"
               {...registerConfirm("token")}
               disabled={isLoading}
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
             />
             {confirmErrors.token && (
-              <p className="text-sm text-red-500">{confirmErrors.token.message}</p>
+              <p className="text-sm text-red-300">{confirmErrors.token.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="new_password">Новый пароль</Label>
+            <Label htmlFor="new_password" className="text-white">Новый пароль</Label>
             <Input
               id="new_password"
               type="password"
               placeholder="Введите новый пароль"
               {...registerConfirm("new_password")}
               disabled={isLoading}
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
             />
             {confirmErrors.new_password && (
-              <p className="text-sm text-red-500">{confirmErrors.new_password.message}</p>
+              <p className="text-sm text-red-300">{confirmErrors.new_password.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirm_password">Подтвердите пароль</Label>
+            <Label htmlFor="confirm_password" className="text-white">Подтвердите пароль</Label>
             <Input
               id="confirm_password"
               type="password"
               placeholder="Подтвердите новый пароль"
               {...registerConfirm("confirm_password")}
               disabled={isLoading}
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-white/20"
             />
             {confirmErrors.confirm_password && (
-              <p className="text-sm text-red-500">{confirmErrors.confirm_password.message}</p>
+              <p className="text-sm text-red-300">{confirmErrors.confirm_password.message}</p>
             )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button 
+            type="submit" 
+            className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/20 backdrop-blur-sm transition-all duration-200" 
+            disabled={isLoading}
+          >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Сбросить пароль
           </Button>
