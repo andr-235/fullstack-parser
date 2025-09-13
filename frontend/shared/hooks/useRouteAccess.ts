@@ -14,10 +14,10 @@ export const useRouteAccess = () => {
   const pathname = usePathname();
 
   // Публичные маршруты (доступны без авторизации)
-  const publicRoutes = ["/login"];
+  const publicRoutes = ["/login", "/(auth)/login", "/(auth)/reset-password"];
   
   // Приватные маршруты (требуют авторизации)
-  const privateRoutes = ["/dashboard", "/profile", "/comments", "/groups", "/keywords", "/monitoring", "/parser", "/settings"];
+  const privateRoutes = ["/dashboard", "/profile", "/comments", "/groups", "/keywords", "/monitoring", "/parser", "/settings", "/(auth)/change-password"];
 
   const isPublicRoute = publicRoutes.includes(pathname);
   const isPrivateRoute = privateRoutes.includes(pathname);
