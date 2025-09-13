@@ -2,12 +2,6 @@
 
 import { Search, X, Eye, EyeOff } from 'lucide-react'
 
-import { Button } from '@/shared/ui'
-import { Input } from '@/shared/ui'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui'
-import { Switch } from '@/shared/ui'
-import { Label } from '@/shared/ui'
-
 import { KeywordsFilters as KeywordsFiltersType, KEYWORD_CATEGORIES } from '@/entities/keywords'
 
 interface KeywordsFiltersProps {
@@ -40,14 +34,14 @@ export function KeywordsFilters({ filters, onFiltersChange }: KeywordsFiltersPro
 
   return (
     <div className="space-y-4">
-      {/* Search and Quick Actions */}
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex-1 min-w-[300px]">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
               placeholder="Поиск ключевых слов по слову..."
-              className="pl-10"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               value={filters.search || ''}
               onChange={e => updateFilter('search', e.target.value || undefined)}
             />
@@ -55,69 +49,69 @@ export function KeywordsFilters({ filters, onFiltersChange }: KeywordsFiltersPro
         </div>
 
         {hasActiveFilters && (
-          <Button variant="outline" size="sm" onClick={clearFilters} className="shrink-0">
-            <X className="mr-2 h-4 w-4" />
+          <button
+            onClick={clearFilters}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-2 shrink-0"
+          >
+            <X className="h-4 w-4" />
             Очистить фильтры
-          </Button>
+          </button>
         )}
       </div>
 
-      {/* Filter Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Category Filter */}
         <div className="space-y-2">
-          <Label htmlFor="category">Категория</Label>
-          <Select
+          <label htmlFor="category" className="block text-sm font-medium text-gray-700">Категория</label>
+          <select
+            id="category"
             value={filters.category || 'all'}
-            onValueChange={value => updateFilter('category', value === 'all' ? undefined : value)}
+            onChange={e => updateFilter('category', e.target.value === 'all' ? undefined : e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Выберите категорию" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Все категории</SelectItem>
-              {KEYWORD_CATEGORIES.map((category: { key: string; label: string }) => (
-                <SelectItem key={category.key} value={category.key}>
-                  {category.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="all">Все категории</option>
+            {KEYWORD_CATEGORIES.map((category: { key: string; label: string }) => (
+              <option key={category.key} value={category.key}>
+                {category.label}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* Empty placeholder for future filters */}
         <div className="space-y-2">
-          <Label>Дополнительные фильтры</Label>
-          <p className="text-sm text-muted-foreground">
+          <label className="block text-sm font-medium text-gray-700">Дополнительные фильтры</label>
+          <p className="text-sm text-gray-500">
             Здесь будут доступны дополнительные опции фильтрации
           </p>
         </div>
       </div>
 
-      {/* Status Toggles */}
       <div className="flex flex-wrap gap-6">
         <div className="flex items-center space-x-2">
-          <Switch
+          <input
+            type="checkbox"
             id="active-only"
             checked={filters.active_only !== false}
-            onCheckedChange={checked => updateFilter('active_only', checked)}
+            onChange={e => updateFilter('active_only', e.target.checked)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
           />
-          <Label htmlFor="active-only" className="text-sm flex items-center gap-1">
+          <label htmlFor="active-only" className="text-sm flex items-center gap-1 text-gray-700">
             <Eye className="h-4 w-4" />
             Показывать только активные ключевые слова
-          </Label>
+          </label>
         </div>
 
         <div className="flex items-center space-x-2">
-          <Switch
+          <input
+            type="checkbox"
             id="inactive-only"
             checked={filters.active_only === false}
-            onCheckedChange={checked => updateFilter('active_only', checked ? false : undefined)}
+            onChange={e => updateFilter('active_only', e.target.checked ? false : undefined)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
           />
-          <Label htmlFor="inactive-only" className="text-sm flex items-center gap-1">
+          <label htmlFor="inactive-only" className="text-sm flex items-center gap-1 text-gray-700">
             <EyeOff className="h-4 w-4" />
             Показывать только неактивные ключевые слова
-          </Label>
+          </label>
         </div>
       </div>
     </div>

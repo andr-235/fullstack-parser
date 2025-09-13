@@ -2,14 +2,7 @@
 
 import { Hash, MessageSquare, FolderOpen } from 'lucide-react'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { Button } from '@/shared/ui'
-import { Badge } from '@/shared/ui'
-import { Skeleton } from '@/shared/ui'
-import { Alert, AlertDescription } from '@/shared/ui'
-
 import { Keyword } from '@/entities/keywords'
-
 import { KeywordCard } from '@/features/keywords/ui/KeywordCard'
 
 interface KeywordsListProps {
@@ -31,18 +24,18 @@ export function KeywordsList({
     return (
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-6 w-48" />
-                <Skeleton className="h-8 w-8" />
+          <div key={i} className="bg-white border border-gray-200 rounded-lg">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-6 w-48 bg-gray-200 rounded animate-pulse" />
+                <div className="h-8 w-8 bg-gray-200 rounded animate-pulse" />
               </div>
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-4 w-full mb-2" />
-              <Skeleton className="h-4 w-3/4" />
-            </CardContent>
-          </Card>
+              <div className="space-y-2">
+                <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
+                <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     )
@@ -50,73 +43,64 @@ export function KeywordsList({
 
   if (keywords.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12">
+      <div className="bg-white border border-gray-200 rounded-lg">
+        <div className="py-12 px-6">
           <div className="text-center space-y-4">
-            <Hash className="mx-auto h-16 w-16 text-muted-foreground" />
+            <Hash className="mx-auto h-16 w-16 text-gray-400" />
             <div>
               <h3 className="text-lg font-medium">Ключевые слова не найдены</h3>
-              <p className="text-muted-foreground">
+              <p className="text-gray-600">
                 {loading
                   ? 'Загрузка ключевых слов...'
                   : 'Добавьте свое первое ключевое слово для начала мониторинга комментариев'}
               </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      {/* Summary Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Всего ключевых слов</CardTitle>
-            <Hash className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{keywords.length}</div>
-          </CardContent>
-        </Card>
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-gray-600">Всего ключевых слов</h3>
+            <Hash className="h-4 w-4 text-gray-400" />
+          </div>
+          <div className="text-2xl font-bold">{keywords.length}</div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Активные ключевые слова</CardTitle>
-            <FolderOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {keywords.filter(k => k.status.is_active).length}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-gray-600">Активные ключевые слова</h3>
+            <FolderOpen className="h-4 w-4 text-gray-400" />
+          </div>
+          <div className="text-2xl font-bold">
+            {keywords.filter(k => k.status.is_active).length}
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Всего совпадений</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {keywords.reduce((sum, keyword) => sum + keyword.match_count, 0).toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-gray-600">Всего совпадений</h3>
+            <MessageSquare className="h-4 w-4 text-gray-400" />
+          </div>
+          <div className="text-2xl font-bold">
+            {keywords.reduce((sum, keyword) => sum + keyword.match_count, 0).toLocaleString()}
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Категории</CardTitle>
-            <FolderOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {new Set(keywords.map(k => k.category).filter(Boolean)).size}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-gray-600">Категории</h3>
+            <FolderOpen className="h-4 w-4 text-gray-400" />
+          </div>
+          <div className="text-2xl font-bold">
+            {new Set(keywords.map(k => k.category).filter(Boolean)).size}
+          </div>
+        </div>
       </div>
 
       {/* Keywords Grid */}

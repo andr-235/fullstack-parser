@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
 
-import { Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, FileUploadModal, Alert, AlertDescription } from '@/shared/ui';
 import { KeywordsFilters as KeywordsFiltersType, CreateKeywordRequest, UpdateKeywordRequest, useKeywords } from '@/entities/keywords';
 import { KeywordForm, KeywordsFilters, KeywordsList } from '@/features/keywords';
 
@@ -62,57 +61,49 @@ export function KeywordsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Ключевые слова</h1>
-          <p className="text-muted-foreground">Управление ключевыми словами для мониторинга и фильтрации комментариев</p>
+          <p className="text-gray-600">Управление ключевыми словами для мониторинга и фильтрации комментариев</p>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={refetch}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+          <button
+            onClick={refetch}
+            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
             Обновить
-          </Button>
+          </button>
 
-          <FileUploadModal
-            type="keywords"
-            triggerText="Загрузить из файла"
-            onSuccess={refetch}
-            apiParams={{ is_active: true, is_case_sensitive: false, is_whole_word: false }}
-          />
-
-          <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Добавить ключевое слово
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Добавить новое ключевое слово</DialogTitle>
-              </DialogHeader>
-              <KeywordForm onSubmit={handleCreate} onCancel={() => setShowCreateForm(false)} />
-            </DialogContent>
-          </Dialog>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Добавить ключевое слово
+          </button>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Фильтры</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="bg-white border border-gray-200 rounded-lg">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-medium">Фильтры</h2>
+        </div>
+        <div className="p-6">
           <KeywordsFilters filters={filters} onFiltersChange={setFilters} />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {error && (
-        <Alert className="border-destructive">
-          <AlertDescription>
-            Ошибка загрузки ключевых слов: {error}
-            <Button variant="outline" size="sm" onClick={refetch} className="ml-4">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-red-800">Ошибка загрузки ключевых слов: {error}</span>
+            <button
+              onClick={refetch}
+              className="ml-4 px-3 py-1 text-sm border border-red-300 rounded hover:bg-red-100"
+            >
               Попробовать снова
-            </Button>
-          </AlertDescription>
-        </Alert>
+            </button>
+          </div>
+        </div>
       )}
 
       <KeywordsList
@@ -122,6 +113,19 @@ export function KeywordsPage() {
         onDelete={handleDelete}
         onToggleStatus={handleToggle}
       />
+
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-md w-full mx-4">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-medium">Добавить новое ключевое слово</h2>
+            </div>
+            <div className="p-6">
+              <KeywordForm onSubmit={handleCreate} onCancel={() => setShowCreateForm(false)} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

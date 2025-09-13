@@ -13,23 +13,9 @@ import {
   MoreHorizontal,
   Calendar,
   MessageSquare,
-  Type,
-  WholeWord,
 } from 'lucide-react'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
-import { Button } from '@/shared/ui'
-import { Badge } from '@/shared/ui'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/shared/ui'
-
 import { Keyword } from '@/entities/keywords'
-
 import { KeywordForm } from '@/features/keywords/ui/KeywordForm'
 
 interface KeywordCardProps {
@@ -74,140 +60,123 @@ export function KeywordCard({ keyword, onUpdate, onDelete, onToggleStatus }: Key
   }
 
   return (
-    <Card className="group hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
+    <div className="bg-white border border-gray-200 rounded-lg group hover:shadow-md transition-shadow">
+      <div className="p-6 pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-              <Hash className="h-5 w-5 text-primary" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
+              <Hash className="h-5 w-5 text-blue-600" />
             </div>
             <div className="min-w-0 flex-1">
-              <CardTitle className="text-sm font-medium truncate">"{keyword.word}"</CardTitle>
-              <p className="text-xs text-muted-foreground">
+              <h3 className="text-sm font-medium truncate">"{keyword.word}"</h3>
+              <p className="text-xs text-gray-500">
                 {keyword.category?.name || 'Без категории'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex gap-1">
-              <Badge
-                variant={keyword.status.is_active ? 'default' : 'secondary'}
-                className="text-xs"
-              >
-                {keyword.status.is_active ? 'Активное' : 'Неактивное'}
-              </Badge>
-            </div>
+            <span className={`px-2 py-1 text-xs rounded-full ${
+              keyword.status.is_active 
+                ? 'bg-green-100 text-green-800' 
+                : 'bg-gray-100 text-gray-800'
+            }`}>
+              {keyword.status.is_active ? 'Активное' : 'Неактивное'}
+            </span>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {onUpdate && (
-                  <DropdownMenuItem onClick={() => setShowEditForm(true)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Редактировать
-                  </DropdownMenuItem>
-                )}
-                {onToggleStatus && (
-                  <DropdownMenuItem onClick={handleToggleStatus}>
-                    {keyword.status.is_active ? (
-                      <>
-                        <PowerOff className="mr-2 h-4 w-4" />
-                        Деактивировать
-                      </>
-                    ) : (
-                      <>
-                        <Power className="mr-2 h-4 w-4" />
-                        Активировать
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                )}
-                {onDelete && (
-                  <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Удалить
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="relative">
+              <button
+                onClick={() => setShowEditForm(true)}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="pt-0 space-y-4">
-        {/* Stats */}
+      <div className="px-6 pt-0 pb-6 space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            <MessageSquare className="h-4 w-4 text-gray-400" />
             <span className="text-sm">
               {(keyword.total_matches || keyword.match_count || 0).toLocaleString()} совпадений
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-gray-400" />
             <span className="text-sm">
               {formatDistanceToNow(new Date(keyword.created_at), { addSuffix: true })}
             </span>
           </div>
         </div>
 
-        {/* Description */}
         {keyword.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2">{keyword.description}</p>
+          <p className="text-xs text-gray-500 line-clamp-2">{keyword.description}</p>
         )}
 
-        {/* Actions */}
         <div className="flex items-center gap-2 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
+          <button
+            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-2"
             onClick={() => {
-              // TODO: Navigate to keyword matches/comments
               console.log('Navigate to matches for keyword:', keyword.id)
             }}
           >
-            <MessageSquare className="mr-2 h-3 w-3" />
+            <MessageSquare className="h-3 w-3" />
             Показать совпадения
-          </Button>
+          </button>
 
-          <Button variant="outline" size="sm">
-            <Settings className="h-3 w-3" />
-          </Button>
+          <button
+            className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+            onClick={() => setShowEditForm(true)}
+          >
+            <Edit className="h-3 w-3" />
+          </button>
+
+          <button
+            className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+            onClick={handleToggleStatus}
+          >
+            {keyword.status.is_active ? (
+              <PowerOff className="h-3 w-3" />
+            ) : (
+              <Power className="h-3 w-3" />
+            )}
+          </button>
+
+          <button
+            className="px-3 py-2 text-sm border border-red-300 text-red-600 rounded-md hover:bg-red-50"
+            onClick={handleDelete}
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
-      </CardContent>
+      </div>
 
-      {/* Edit Dialog */}
       {showEditForm && (
-        <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Редактировать ключевое слово</DialogTitle>
-            </DialogHeader>
-            <KeywordForm
-              initialData={{
-                word: keyword.word || '',
-                category: keyword.category?.name || '',
-                description: keyword.description,
-                is_active: keyword.status.is_active,
-              }}
-              onSubmit={handleUpdate}
-              onCancel={() => setShowEditForm(false)}
-              submitLabel="Обновить ключевое слово"
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-md w-full mx-4">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-medium">Редактировать ключевое слово</h2>
+            </div>
+            <div className="p-6">
+              <KeywordForm
+                initialData={{
+                  word: keyword.word || '',
+                  category: keyword.category?.name || '',
+                  description: keyword.description || '',
+                  is_active: keyword.status.is_active,
+                }}
+                onSubmit={handleUpdate}
+                onCancel={() => setShowEditForm(false)}
+                submitLabel="Обновить ключевое слово"
+              />
+            </div>
+          </div>
+        </div>
       )}
-    </Card>
+    </div>
   )
 }

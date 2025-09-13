@@ -2,31 +2,16 @@
 
 import { useState } from 'react'
 
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import * as z from 'zod'
+import { KEYWORD_CATEGORIES } from '@/entities/keywords'
 
-import { Button } from '@/shared/ui'
-import { Card, CardContent } from '@/shared/ui'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui'
-import { Input } from '@/shared/ui'
-import { Textarea } from '@/shared/ui'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui'
-import { Switch } from '@/shared/ui'
-import { Label } from '@/shared/ui'
-
-import { KEYWORD_CATEGORIES, KeywordCategory } from '@/entities/keywords'
-
-const keywordSchema = z.object({
-  word: z.string().min(1, 'Keyword is required').max(200, 'Keyword is too long'),
-  category: z.string().optional(),
-  description: z.string().optional(),
-  is_active: z.boolean().optional(),
-  is_case_sensitive: z.boolean().optional(),
-  is_whole_word: z.boolean().optional(),
-})
-
-type KeywordFormData = z.infer<typeof keywordSchema>
+interface KeywordFormData {
+  word: string;
+  category?: string;
+  description?: string;
+  is_active?: boolean;
+  is_case_sensitive?: boolean;
+  is_whole_word?: boolean;
+}
 
 interface KeywordFormProps {
   initialData?: Partial<KeywordFormData>
@@ -42,24 +27,46 @@ export function KeywordForm({
   submitLabel = 'Create Keyword',
 }: KeywordFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const form = useForm<KeywordFormData>({
-    resolver: zodResolver(keywordSchema),
-    defaultValues: {
-      word: initialData?.word || '',
-      category: initialData?.category || '',
-      description: initialData?.description || '',
-      is_active: initialData?.is_active ?? true,
-      is_case_sensitive: initialData?.is_case_sensitive ?? false,
-      is_whole_word: initialData?.is_whole_word ?? false,
-    },
+  const [formData, setFormData] = useState<KeywordFormData>({
+    word: initialData?.word || '',
+    category: initialData?.category || '',
+    description: initialData?.description || '',
+    is_active: initialData?.is_active ?? true,
+    is_case_sensitive: initialData?.is_case_sensitive ?? false,
+    is_whole_word: initialData?.is_whole_word ?? false,
   })
+  const [errors, setErrors] = useState<Partial<KeywordFormData>>({})
 
-  const handleSubmit = async (data: KeywordFormData) => {
+  const validateForm = (): boolean => {
+    const newErrors: Partial<KeywordFormData> = {}
+    
+    if (!formData.word.trim()) {
+      newErrors.word = 'Ключевое слово обязательно'
+    } else if (formData.word.length > 200) {
+      newErrors.word = 'Ключевое слово слишком длинное'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!validateForm()) return
+
     setIsSubmitting(true)
     try {
-      await onSubmit(data)
-      form.reset()
+      await onSubmit(formData)
+      setFormData({
+        word: '',
+        category: '',
+        description: '',
+        is_active: true,
+        is_case_sensitive: false,
+        is_whole_word: false,
+      })
+      setErrors({})
     } catch (error) {
       console.error('Form submission error:', error)
     } finally {
@@ -68,126 +75,101 @@ export function KeywordForm({
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="word"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Ключевое слово</FormLabel>
-              <FormControl>
-                <Input placeholder="Введите ключевое слово для мониторинга..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Ключевое слово</label>
+        <input
+          type="text"
+          placeholder="Введите ключевое слово для мониторинга..."
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          value={formData.word}
+          onChange={e => setFormData({ ...formData, word: e.target.value })}
         />
+        {errors.word && <p className="text-red-500 text-sm mt-1">{errors.word}</p>}
+      </div>
 
-        <FormField
-          control={form.control}
-          name="category"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Категория (необязательно)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ''}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите категорию" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {KEYWORD_CATEGORIES.map(category => (
-                    <SelectItem key={category.key} value={category.key}>
-                      {category.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Категория (необязательно)</label>
+        <select
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          value={formData.category || ''}
+          onChange={e => setFormData({ ...formData, category: e.target.value })}
+        >
+          <option value="">Выберите категорию</option>
+          {KEYWORD_CATEGORIES.map(category => (
+            <option key={category.key} value={category.key}>
+              {category.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Описание (необязательно)</label>
+        <textarea
+          placeholder="Опишите, для чего предназначено это ключевое слово..."
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[80px]"
+          value={formData.description || ''}
+          onChange={e => setFormData({ ...formData, description: e.target.value })}
         />
+      </div>
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Описание (необязательно)</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Опишите, для чего предназначено это ключевое слово..."
-                  className="min-h-[80px]"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="is_active"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">Активный мониторинг</FormLabel>
-                <div className="text-sm text-muted-foreground">
-                  Включить мониторинг комментариев для этого ключевого слова
-                </div>
-              </div>
-              <FormControl>
-                <Switch checked={field.value ?? true} onCheckedChange={field.onChange} />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="is_case_sensitive"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">Регистр</FormLabel>
-                <div className="text-sm text-muted-foreground">Совпадение с точным регистром</div>
-              </div>
-              <FormControl>
-                <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="is_whole_word"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">Только целое слово</FormLabel>
-                <div className="text-sm text-muted-foreground">
-                  Совпадение только с целыми словами
-                </div>
-              </div>
-              <FormControl>
-                <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-            Отмена
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Сохранение...' : submitLabel}
-          </Button>
+      <div className="flex items-center justify-between rounded-lg border p-4">
+        <div>
+          <label className="text-base font-medium text-gray-700">Активный мониторинг</label>
+          <p className="text-sm text-gray-500">Включить мониторинг комментариев для этого ключевого слова</p>
         </div>
-      </form>
-    </Form>
+        <input
+          type="checkbox"
+          checked={formData.is_active ?? true}
+          onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
+          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+        />
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border p-3">
+        <div>
+          <label className="text-base font-medium text-gray-700">Регистр</label>
+          <p className="text-sm text-gray-500">Совпадение с точным регистром</p>
+        </div>
+        <input
+          type="checkbox"
+          checked={formData.is_case_sensitive ?? false}
+          onChange={e => setFormData({ ...formData, is_case_sensitive: e.target.checked })}
+          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+        />
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border p-3">
+        <div>
+          <label className="text-base font-medium text-gray-700">Только целое слово</label>
+          <p className="text-sm text-gray-500">Совпадение только с целыми словами</p>
+        </div>
+        <input
+          type="checkbox"
+          checked={formData.is_whole_word ?? false}
+          onChange={e => setFormData({ ...formData, is_whole_word: e.target.checked })}
+          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+        />
+      </div>
+
+      <div className="flex justify-end gap-2 pt-4">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSubmitting}
+          className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+        >
+          Отмена
+        </button>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+        >
+          {isSubmitting ? 'Сохранение...' : submitLabel}
+        </button>
+      </div>
+    </form>
   )
 }
