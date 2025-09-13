@@ -1,11 +1,14 @@
 "use client";
 
-  useRouteAccess(); // Проверяем доступ к приватной странице
 import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
-
 import { UserProfile } from "@/features/auth";
 
+// Отключаем статическую генерацию для приватных страниц
+export const dynamic = 'force-dynamic'
+
 export default function ProfilePage() {
+  useRouteAccess(); // Проверяем доступ к приватной странице
+
   return (
     <div className="space-y-6">
       <div>

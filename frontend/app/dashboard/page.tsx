@@ -1,5 +1,8 @@
 "use client";
 
+// Отключаем статическую генерацию для приватных страниц
+export const dynamic = 'force-dynamic'
+
 import { useRouteAccess } from "@/shared/hooks/useRouteAccess";
 
 export default function DashboardPage() {
