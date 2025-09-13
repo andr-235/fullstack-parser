@@ -105,7 +105,7 @@ export const LoginForm = () => {
 
           <Button 
             type="submit" 
-            className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/20 backdrop-blur-sm transition-all duration-200" 
+            className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-white border border-blue-500/30 backdrop-blur-sm transition-all duration-200" 
             disabled={isLoading}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

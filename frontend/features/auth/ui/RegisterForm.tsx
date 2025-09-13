@@ -60,7 +60,7 @@ export const RegisterForm = () => {
       <Card className="w-full max-w-md mx-auto bg-transparent border-white/20 backdrop-blur-sm">
         <CardContent className="pt-6">
           <div className="flex flex-col items-center space-y-4">
-            <CheckCircle className="h-12 w-12 text-green-400" />
+            <CheckCircle className="h-12 w-12 text-blue-400" />
             <h3 className="text-lg font-semibold text-white">Регистрация успешна!</h3>
             <p className="text-sm text-white/70 text-center">
               Добро пожаловать! Вы успешно зарегистрированы и авторизованы.
@@ -181,7 +181,7 @@ export const RegisterForm = () => {
 
           <Button 
             type="submit" 
-            className="w-full bg-white/20 hover:bg-white/30 text-white border border-white/20 backdrop-blur-sm transition-all duration-200" 
+            className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-white border border-blue-500/30 backdrop-blur-sm transition-all duration-200" 
             disabled={isLoading}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
