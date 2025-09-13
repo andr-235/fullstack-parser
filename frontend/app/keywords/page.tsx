@@ -4,6 +4,6 @@ export const dynamic = 'force-dynamic';
 
 import { KeywordsPage } from '@/features/keywords';
 
-export default function KeywordsPageRoute() {
+export default function Page() {
   return <KeywordsPage />;
 }
