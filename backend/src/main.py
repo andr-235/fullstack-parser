@@ -97,6 +97,68 @@ async def health_check():
     return {"status": "healthy", "version": "1.7.0"}
 
 
+@app.get("/api/v1/metrics/dashboard")
+async def get_dashboard_metrics():
+    """Получить метрики для дашборда"""
+    try:
+        from common.database import get_async_session
+        from comments.service import CommentService
+        from comments.repository import CommentRepository
+        from groups.service import GroupService
+        from keywords.service import KeywordsService
+        from keywords.models import KeywordsRepository
+        
+        # Получаем сессию БД
+        async with get_async_session() as db_session:
+            # Инициализируем сервисы
+            comment_repo = CommentRepository(db_session)
+            comment_service = CommentService(comment_repo)
+            group_service = GroupService(db_session)
+            keyword_repo = KeywordsRepository(db_session)
+            keyword_service = KeywordsService(keyword_repo)
+            
+            # Получаем метрики
+            total_comments = await comment_service.get_total_comments_count()
+            comments_growth = await comment_service.get_comments_growth_percentage(30)
+            
+            active_groups = await group_service.get_active_groups_count()
+            groups_growth = await group_service.get_groups_growth_percentage(30)
+            
+            total_keywords = await keyword_service.get_total_keywords_count()
+            keywords_growth = await keyword_service.get_keywords_growth_percentage(30)
+            
+            # Заглушки для парсеров
+            active_parsers = 0
+            parsers_growth = 0.0
+            
+            return {
+                "comments": {
+                    "total": total_comments,
+                    "growth_percentage": round(comments_growth, 1),
+                    "trend": "рост с прошлого месяца" if comments_growth > 0 else "снижение с прошлого месяца"
+                },
+                "groups": {
+                    "active": active_groups,
+                    "growth_percentage": round(groups_growth, 1),
+                    "trend": "рост с прошлого месяца" if groups_growth > 0 else "снижение с прошлого месяца"
+                },
+                "keywords": {
+                    "total": total_keywords,
+                    "growth_percentage": round(keywords_growth, 1),
+                    "trend": "рост с прошлого месяца" if keywords_growth > 0 else "снижение с прошлого месяца"
+                },
+                "parsers": {
+                    "active": active_parsers,
+                    "growth_percentage": round(parsers_growth, 1),
+                    "trend": "рост с прошлого месяца" if parsers_growth > 0 else "снижение с прошлого месяца"
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"Error getting dashboard metrics: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get dashboard metrics")
+
+
 # Импортируем все модели для правильной инициализации relationships
 try:
     from models import *  # noqa: F401, F403

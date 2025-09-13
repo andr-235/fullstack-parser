@@ -207,4 +207,19 @@ async def bulk_deactivate_groups(
 
 
 
+@router.get("/metrics")
+async def get_groups_metrics(
+    service: GroupService = Depends(get_group_service)
+):
+    """Получить метрики групп"""
+    active = await service.get_active_groups_count()
+    growth = await service.get_groups_growth_percentage(30)
+    
+    return {
+        "active_groups": active,
+        "growth_percentage": round(growth, 1),
+        "trend": "рост с прошлого месяца" if growth > 0 else "снижение с прошлого месяца"
+    }
+
+
 __all__ = ["router"]

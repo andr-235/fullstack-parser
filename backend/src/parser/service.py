@@ -183,3 +183,29 @@ class ParserService:
             "running_tasks": running_tasks,
             "success_rate": (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0,
         }
+
+    async def get_active_parsers_count(self) -> int:
+        """Получить количество активных парсеров"""
+        running_tasks = sum(1 for task in self.tasks.values() if task.status == TaskStatus.RUNNING)
+        return running_tasks
+
+    async def get_parsers_count_by_period(self, days: int = 30) -> int:
+        """Получить количество запущенных парсеров за период"""
+        from datetime import datetime, timedelta
+        
+        since_date = datetime.utcnow() - timedelta(days=days)
+        count = 0
+        for task in self.tasks.values():
+            if task.created_at >= since_date:
+                count += 1
+        return count
+
+    async def get_parsers_growth_percentage(self, days: int = 30) -> float:
+        """Получить процент изменения активности парсеров за период"""
+        current_period = await self.get_parsers_count_by_period(days)
+        previous_period = await self.get_parsers_count_by_period(days * 2) - current_period
+        
+        if previous_period == 0:
+            return -100.0 if current_period == 0 else 100.0
+        
+        return ((current_period - previous_period) / previous_period) * 100

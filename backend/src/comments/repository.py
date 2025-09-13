@@ -274,3 +274,20 @@ class CommentRepository:
         await self.db.execute(query)
         await self.db.commit()
         return True
+
+    async def get_total_count(self) -> int:
+        """Получить общее количество комментариев"""
+        from sqlalchemy import func
+        query = select(func.count(Comment.id))
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
+    async def get_count_by_period(self, days: int) -> int:
+        """Получить количество комментариев за период"""
+        from sqlalchemy import func
+        from datetime import datetime, timedelta
+        
+        since_date = datetime.utcnow() - timedelta(days=days)
+        query = select(func.count(Comment.id)).where(Comment.created_at >= since_date)
+        result = await self.db.execute(query)
+        return result.scalar() or 0

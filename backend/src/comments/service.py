@@ -252,3 +252,21 @@ class CommentService:
             ],
             author=author_data,
         )
+
+    async def get_total_comments_count(self) -> int:
+        """Получить общее количество комментариев"""
+        return await self.repository.get_total_count()
+
+    async def get_comments_count_by_period(self, days: int = 30) -> int:
+        """Получить количество комментариев за период"""
+        return await self.repository.get_count_by_period(days)
+
+    async def get_comments_growth_percentage(self, days: int = 30) -> float:
+        """Получить процент роста комментариев за период"""
+        current_period = await self.get_comments_count_by_period(days)
+        previous_period = await self.get_comments_count_by_period(days * 2) - current_period
+        
+        if previous_period == 0:
+            return 100.0 if current_period > 0 else 0.0
+        
+        return ((current_period - previous_period) / previous_period) * 100

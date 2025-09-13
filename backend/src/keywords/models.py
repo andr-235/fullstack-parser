@@ -120,3 +120,29 @@ class KeywordsRepository:
         await self.db.delete(keyword)
         await self.db.commit()
         return True
+
+    async def get_total_count(self) -> int:
+        """Получить общее количество ключевых слов"""
+        from sqlalchemy import func, select
+        query = select(func.count(Keyword.id))
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
+    async def get_active_count(self) -> int:
+        """Получить количество активных ключевых слов"""
+        from sqlalchemy import func, select, and_
+        query = select(func.count(Keyword.id)).where(
+            and_(Keyword.is_active == True, Keyword.is_archived == False)
+        )
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
+    async def get_count_by_period(self, days: int) -> int:
+        """Получить количество ключевых слов за период"""
+        from sqlalchemy import func, select
+        from datetime import datetime, timedelta
+        
+        since_date = datetime.utcnow() - timedelta(days=days)
+        query = select(func.count(Keyword.id)).where(Keyword.created_at >= since_date)
+        result = await self.db.execute(query)
+        return result.scalar() or 0

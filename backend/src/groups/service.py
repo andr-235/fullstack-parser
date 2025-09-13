@@ -2,7 +2,7 @@
 Сервис для работы с группами VK
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from sqlalchemy import desc, func, or_, select, update
@@ -177,6 +177,29 @@ class GroupService:
         query = select(Group).where(Group.screen_name == screen_name)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
+
+    async def get_active_groups_count(self) -> int:
+        """Получить количество активных групп"""
+        query = select(func.count(Group.id)).where(Group.is_active == True)
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
+    async def get_groups_count_by_period(self, days: int = 30) -> int:
+        """Получить количество групп за период"""
+        since_date = datetime.utcnow() - timedelta(days=days)
+        query = select(func.count(Group.id)).where(Group.created_at >= since_date)
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
+    async def get_groups_growth_percentage(self, days: int = 30) -> float:
+        """Получить процент роста групп за период"""
+        current_period = await self.get_groups_count_by_period(days)
+        previous_period = await self.get_groups_count_by_period(days * 2) - current_period
+        
+        if previous_period == 0:
+            return 100.0 if current_period > 0 else 0.0
+        
+        return ((current_period - previous_period) / previous_period) * 100
 
 
 __all__ = ["GroupService"]

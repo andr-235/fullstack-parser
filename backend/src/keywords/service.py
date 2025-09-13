@@ -82,3 +82,25 @@ class KeywordsService:
     async def archive_keyword(self, keyword_id: int) -> bool:
         """Архивировать ключевое слово"""
         return await self.repository.update(keyword_id, is_active=False, is_archived=True)
+
+    async def get_total_keywords_count(self) -> int:
+        """Получить общее количество ключевых слов"""
+        return await self.repository.get_total_count()
+
+    async def get_active_keywords_count(self) -> int:
+        """Получить количество активных ключевых слов"""
+        return await self.repository.get_active_count()
+
+    async def get_keywords_count_by_period(self, days: int = 30) -> int:
+        """Получить количество ключевых слов за период"""
+        return await self.repository.get_count_by_period(days)
+
+    async def get_keywords_growth_percentage(self, days: int = 30) -> float:
+        """Получить процент роста ключевых слов за период"""
+        current_period = await self.get_keywords_count_by_period(days)
+        previous_period = await self.get_keywords_count_by_period(days * 2) - current_period
+        
+        if previous_period == 0:
+            return 100.0 if current_period > 0 else 0.0
+        
+        return ((current_period - previous_period) / previous_period) * 100

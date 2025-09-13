@@ -189,3 +189,20 @@ async def archive_keyword(
     if not success:
         raise HTTPException(status_code=404, detail="Ключевое слово не найдено")
     return {"message": "Ключевое слово архивировано"}
+
+
+@router.get("/metrics")
+async def get_keywords_metrics(
+    service: KeywordsService = Depends(get_keywords_service)
+):
+    """Получить метрики ключевых слов"""
+    total = await service.get_total_keywords_count()
+    active = await service.get_active_keywords_count()
+    growth = await service.get_keywords_growth_percentage(30)
+    
+    return {
+        "total_keywords": total,
+        "active_keywords": active,
+        "growth_percentage": round(growth, 1),
+        "trend": "рост с прошлого месяца" if growth > 0 else "снижение с прошлого месяца"
+    }

@@ -169,3 +169,18 @@ async def get_keyword_statistics(
 ):
     """Получить статистику ключевых слов"""
     return await service.get_keyword_statistics()
+
+
+@router.get("/metrics")
+async def get_comments_metrics(
+    service: CommentService = Depends(get_comment_service)
+):
+    """Получить метрики комментариев"""
+    total = await service.get_total_comments_count()
+    growth = await service.get_comments_growth_percentage(30)
+    
+    return {
+        "total_comments": total,
+        "growth_percentage": round(growth, 1),
+        "trend": "рост с прошлого месяца" if growth > 0 else "снижение с прошлого месяца"
+    }
