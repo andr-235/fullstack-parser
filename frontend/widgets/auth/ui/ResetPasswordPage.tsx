@@ -22,7 +22,7 @@ export const ResetPasswordPage = () => {
       <div className="relative w-full max-w-md">
         <div className="backdrop-blur-xl bg-white/10 rounded-2xl shadow-2xl border border-white/20 p-8">
           <div className="mb-6">
-            <Link href="/login">
+            <Link href="/(auth)/login">
               <Button
                 variant="ghost"
                 size="sm"

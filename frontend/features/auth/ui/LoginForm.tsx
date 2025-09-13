@@ -115,7 +115,7 @@ export const LoginForm = () => {
 
           <div className="text-center">
             <Link 
-              href="/reset-password" 
+              href="/(auth)/reset-password" 
               className="inline-flex items-center text-sm text-blue-300 hover:text-blue-200 transition-colors hover:underline"
             >
               Забыли пароль?
