@@ -1,9 +1,9 @@
-import { Inter } from 'next/font/google'
-import type { Metadata } from 'next'
+import { Inter } from 'next/font/google';
+import type { Metadata } from 'next';
 
-import './globals.css'
+import './globals.css';
 
-import { APP_CONFIG } from '@/shared/config'
+import { APP_CONFIG } from '@/shared/config';
 import { AppProviders } from '@/shared/providers/AppProviders'
 
 import { AppLayout } from '@/widgets/layout/AppLayout'
