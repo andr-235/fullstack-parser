@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for Next.js 15 Frontend Application with Bun
-FROM oven/bun:1.2.19-alpine AS deps
+FROM oven/bun:1.2.20-alpine AS deps
 
 RUN apk add --no-cache libc6-compat
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
@@ -7,12 +7,14 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 WORKDIR /app
 
 COPY package.json bun.lock ./
-ENV BUN_INSTALL_CACHE_DIR=/tmp/bun-cache
+ENV BUN_INSTALL_CACHE_DIR=/tmp/bun-install-cache
 
-RUN --mount=type=cache,target=/tmp/bun-cache \
+RUN --mount=type=bind,source=package.json,target=package.json \
+    --mount=type=bind,source=bun.lock,target=bun.lock \
+    --mount=type=cache,target=/tmp/bun-install-cache \
     bun install
 
-FROM oven/bun:1.2.19-alpine AS builder
+FROM oven/bun:1.2.20-alpine AS builder
 
 WORKDIR /app
 
@@ -28,7 +30,7 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     DOCKER=true \
     CI=true
 
-RUN --mount=type=cache,target=/app/.next/cache \
+RUN --mount=type=cache,target=/tmp/bun-build-cache \
     bun run build
 
 FROM node:20-alpine AS runner

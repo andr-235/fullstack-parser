@@ -5,9 +5,18 @@ RUN apk add --no-cache dumb-init
 
 WORKDIR /app
 
+# Log cache status before copy
+RUN echo "Checking Docker build cache before COPY" && ls -la /app || true
+
 COPY package.json bun.lock ./
 
+# Log after copy
+RUN echo "Files copied: package.json and bun.lock" && ls -la /app
+
 RUN bun install
+
+# Log file descriptors after install
+RUN echo "File descriptors after bun install:" && lsof | head -20 || true
 
 EXPOSE 3000
 
@@ -16,4 +25,5 @@ ENV PORT=3000 \
     NODE_ENV=development \
     NEXT_TELEMETRY_DISABLED=1
 
-CMD ["bun", "run", "dev"] 
+# Modified CMD to log file operations
+CMD ["sh", "-c", "echo 'Starting dev server, monitoring file descriptors...' && (lsof -r 5 | grep -E '(bun|node|next)' || true) & bun run dev"]

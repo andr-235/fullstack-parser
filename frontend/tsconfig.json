@@ -23,7 +23,8 @@
       "@/*": ["./*"],
       "@/shared/*": ["./shared/*"],
       "@/shared/lib": ["./shared/lib/index", "./shared/lib", "./shared/lib.ts"],
-      "@/shared/lib/*": ["./shared/lib/*"]
+      "@/shared/lib/*": ["./shared/lib/*"],
+      "@/entities/*": ["./entities/*"]
     },
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,
