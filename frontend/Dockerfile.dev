@@ -1,5 +1,5 @@
 # Development Dockerfile for Next.js 15 Frontend Application
-FROM oven/bun:1.2.19-alpine
+FROM oven/bun:1.2.22-alpine
 
 RUN apk add --no-cache dumb-init
 
