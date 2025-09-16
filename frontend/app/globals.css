@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* Единая цветовая схема с градиентами */
 @layer base {
@@ -78,7 +76,7 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/20 rounded-full;
+    @apply bg-slate-500/20 rounded-full;
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
@@ -96,7 +94,7 @@
 
   /* Фокус */
   .focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
   }
 
   /* Анимации */
@@ -219,9 +217,6 @@
   }
 
   /* Focus состояния */
-  .focus-visible-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
-  }
 
   /* Loading состояния */
   .loading-shimmer {
@@ -252,11 +247,11 @@
 /* Базовые стили */
 @layer base {
   * {
-    @apply border-border;
+    @apply border-slate-800;
   }
 
   body {
-    @apply bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-foreground font-sans antialiased min-h-screen;
+    @apply bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white font-sans antialiased min-h-screen;
   }
 
   /* Улучшенная типографика */
@@ -290,17 +285,17 @@
 
   /* Ссылки */
   a {
-    @apply text-primary hover:text-primary/80 transition-colors;
+    @apply text-blue-500 hover:text-blue-400 transition-colors;
   }
 
   /* Кнопки */
   button {
-    @apply focus-visible-ring;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
   }
 
   /* Input элементы */
   input, textarea, select {
-    @apply focus-visible-ring;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
   }
 
   /* Скролл */
@@ -310,7 +305,7 @@
 
   /* Выделение текста */
   ::selection {
-    @apply bg-primary/20 text-primary-foreground;
+    @apply bg-blue-500/20 text-slate-900;
   }
 }
 

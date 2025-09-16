@@ -115,7 +115,7 @@ test_*.py
 *_tests.py
 
 # Alembic migration files (keep structure, exclude generated)
-alembic/versions/*.py
+# alembic/versions/*.py  # Commented out - migration files are needed
 
 # Development tools
 .ruff_cache/

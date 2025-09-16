@@ -62,11 +62,16 @@ run_migrations() {
         exit 1
     fi
     
-    # Run migrations
+    # Run migrations with verbose output
+    echo "🔍 Running alembic command: alembic -c /app/alembic.ini upgrade head"
     if alembic -c /app/alembic.ini upgrade head; then
         echo "✅ Database migrations completed successfully"
     else
         echo "❌ Database migrations failed"
+        echo "🔍 Checking current alembic state..."
+        alembic -c /app/alembic.ini current 2>/dev/null || echo "No current revision found"
+        echo "🔍 Listing available revisions..."
+        alembic -c /app/alembic.ini heads 2>/dev/null || echo "Failed to get heads"
         exit 1
     fi
 }
