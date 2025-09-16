@@ -76,14 +76,23 @@ async def login(
     auth_service: AuthService = Depends(get_auth_service)
 ):
     """Вход в систему"""
+    from common.logging import get_logger
+    logger = get_logger()
+    logger.info(f"[AuthRouter] Login request received for email: {login_data.email}")
+    logger.info(f"[AuthRouter] Request URL: {request.url}")
+    logger.info(f"[AuthRouter] Request method: {request.method}")
     try:
-        return await auth_service.login(login_data)
+        result = await auth_service.login(login_data)
+        logger.info(f"[AuthRouter] Login successful for email: {login_data.email}")
+        return result
     except InvalidCredentialsError:
+        logger.warning(f"[AuthRouter] Invalid credentials for email: {login_data.email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password"
         )
     except UserInactiveError:
+        logger.warning(f"[AuthRouter] User account inactive for email: {login_data.email}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User account is inactive"

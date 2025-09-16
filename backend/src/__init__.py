@@ -4,7 +4,6 @@ VK Parser Backend
 FastAPI backend для парсинга комментариев VK
 """
 
-# Убираем проблемный импорт
-# from common.database import Base
+from common.database import Base
 
-__all__ = []
+__all__ = ["Base"]
