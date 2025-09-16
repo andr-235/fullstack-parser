@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Import all models to ensure they are registered
 try:
-    from src import Base
+    from common.database import Base
     from authors.models import AuthorModel
     from comments.models import Comment, CommentKeywordMatch
     from posts.models import Post
@@ -42,7 +42,7 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = Base.metadata
+target_metadata = Base.metadata if hasattr(Base, 'metadata') else Base
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
