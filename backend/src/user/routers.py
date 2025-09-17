@@ -6,7 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from common.logging import get_logger
+from src.common.logging import get_logger
 
 from .dependencies import (
     get_current_active_user,

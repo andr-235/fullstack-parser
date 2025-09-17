@@ -5,6 +5,8 @@
 from datetime import datetime
 from typing import Optional
 
+from src.auth.services.password_service import PasswordServiceProtocol
+
 from .exceptions import (
     UserAlreadyExistsError,
     UserNotFoundError,
@@ -23,9 +25,19 @@ from .schemas import (
 
 
 class UserService:
-    """Сервис пользователей"""
+    """Сервис пользователей с поддержкой аутентификации"""
 
-    def __init__(self, repository: UserRepository, password_service):
+    def __init__(
+        self,
+        repository: UserRepository,
+        password_service: PasswordServiceProtocol
+    ):
+        """Инициализация сервиса пользователей
+
+        Args:
+            repository: Репозиторий пользователей
+            password_service: Сервис для работы с паролями
+        """
         self.repository = repository
         self.password_service = password_service
 
