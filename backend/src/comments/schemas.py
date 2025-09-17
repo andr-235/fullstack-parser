@@ -10,6 +10,27 @@ from pydantic import BaseModel, ConfigDict, Field
 from authors.schemas import AuthorResponse
 
 
+# Константы для валидации
+MIN_COMMENT_TEXT_LENGTH = 1
+MAX_COMMENT_TEXT_LENGTH = 10000
+MIN_SEARCH_TEXT_LENGTH = 2
+DEFAULT_LIMIT = 20
+MAX_LIMIT = 100
+DEFAULT_OFFSET = 0
+MIN_CONFIDENCE = 0.0
+MAX_CONFIDENCE = 1.0
+DEFAULT_MIN_CONFIDENCE = 0.3
+MAX_KEYWORDS = 50
+DEFAULT_MAX_KEYWORDS = 10
+MIN_KEYWORDS_LIST = 1
+MAX_KEYWORDS_LIST = 20
+MIN_WORD_LENGTH = 3
+DEFAULT_KEYWORD_CONFIDENCE = 50
+GROWTH_PERIOD_DAYS = 30
+
+from authors.schemas import AuthorResponse
+
+
 class KeywordMatch(BaseModel):
     """Схема совпадения ключевого слова"""
     keyword: str
@@ -43,7 +64,7 @@ class CommentCreate(BaseModel):
     group_id: int
     post_id: int
     author_id: int
-    text: str = Field(..., min_length=1, max_length=10000)
+    text: str = Field(..., min_length=MIN_COMMENT_TEXT_LENGTH, max_length=MAX_COMMENT_TEXT_LENGTH)
 
 
 class CommentUpdate(BaseModel):
@@ -51,7 +72,7 @@ class CommentUpdate(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    text: Optional[str] = Field(None, min_length=1, max_length=10000)
+    text: Optional[str] = Field(None, min_length=MIN_COMMENT_TEXT_LENGTH, max_length=MAX_COMMENT_TEXT_LENGTH)
     is_deleted: Optional[bool] = None
 
 
@@ -63,10 +84,10 @@ class CommentFilter(BaseModel):
     group_id: Optional[int] = None
     post_id: Optional[int] = None
     author_id: Optional[int] = None
-    search_text: Optional[str] = Field(None, min_length=2)
+    search_text: Optional[str] = Field(None, min_length=MIN_SEARCH_TEXT_LENGTH)
     is_deleted: Optional[bool] = None
-    limit: int = Field(default=20, ge=1, le=100)
-    offset: int = Field(default=0, ge=0)
+    limit: int = Field(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT)
+    offset: int = Field(default=DEFAULT_OFFSET, ge=0)
 
 
 class CommentListResponse(BaseModel):
@@ -92,8 +113,8 @@ class KeywordAnalysisRequest(BaseModel):
     """Запрос на анализ ключевых слов"""
 
     comment_id: int
-    min_confidence: float = Field(0.3, ge=0.0, le=1.0)
-    max_keywords: int = Field(10, ge=1, le=50)
+    min_confidence: float = Field(DEFAULT_MIN_CONFIDENCE, ge=MIN_CONFIDENCE, le=MAX_CONFIDENCE)
+    max_keywords: int = Field(DEFAULT_MAX_KEYWORDS, ge=MIN_KEYWORDS_LIST, le=MAX_KEYWORDS)
 
 
 class KeywordAnalysisResponse(BaseModel):
@@ -109,9 +130,9 @@ class KeywordAnalysisResponse(BaseModel):
 class BatchKeywordAnalysisRequest(BaseModel):
     """Запрос на массовый анализ"""
 
-    comment_ids: List[int] = Field(..., min_items=1, max_items=100)
-    min_confidence: float = Field(0.3, ge=0.0, le=1.0)
-    max_keywords: int = Field(10, ge=1, le=50)
+    comment_ids: List[int] = Field(..., min_items=MIN_KEYWORDS_LIST, max_items=MAX_KEYWORDS_LIST)
+    min_confidence: float = Field(DEFAULT_MIN_CONFIDENCE, ge=MIN_CONFIDENCE, le=MAX_CONFIDENCE)
+    max_keywords: int = Field(DEFAULT_MAX_KEYWORDS, ge=MIN_KEYWORDS_LIST, le=MAX_KEYWORDS)
 
 
 class BatchKeywordAnalysisResponse(BaseModel):
@@ -129,9 +150,10 @@ class BatchKeywordAnalysisResponse(BaseModel):
 class KeywordSearchRequest(BaseModel):
     """Запрос поиска по ключевым словам"""
 
-    keywords: List[str] = Field(..., min_items=1, max_items=20)
-    limit: int = Field(20, ge=1, le=100)
-    offset: int = Field(0, ge=0)
+    keywords: List[str] = Field(..., min_items=MIN_KEYWORDS_LIST, max_items=MAX_KEYWORDS_LIST)
+    min_confidence: float = Field(DEFAULT_MIN_CONFIDENCE, ge=MIN_CONFIDENCE, le=MAX_CONFIDENCE)
+    limit: int = Field(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT)
+    offset: int = Field(DEFAULT_OFFSET, ge=0)
 
 
 class KeywordSearchResponse(BaseModel):

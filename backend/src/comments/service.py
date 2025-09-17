@@ -3,7 +3,7 @@
 """
 
 import logging
-from typing import Optional
+from typing import List, Optional
 
 from comments.models import Comment
 from comments.repository import CommentRepository
@@ -16,25 +16,48 @@ from comments.schemas import (
     CommentResponse,
     CommentStats,
     CommentUpdate,
+    DEFAULT_KEYWORD_CONFIDENCE,
     KeywordAnalysisRequest,
     KeywordAnalysisResponse,
     KeywordMatch,
     KeywordSearchRequest,
     KeywordSearchResponse,
     KeywordStatisticsResponse,
+    MIN_COMMENT_TEXT_LENGTH,
+    MIN_WORD_LENGTH,
 )
 
 logger = logging.getLogger(__name__)
 
 
 class CommentService:
-    """Сервис для работы с комментариями"""
+    """
+    Сервис для работы с комментариями.
+
+    Обеспечивает бизнес-логику для операций с комментариями,
+    включая валидацию, анализ ключевых слов и статистику.
+    """
 
     def __init__(self, repository: CommentRepository):
         self.repository = repository
 
     async def get_comment(self, comment_id: int, include_author: bool = False) -> Optional[CommentResponse]:
-        """Получить комментарий по ID"""
+        """
+        Получить комментарий по ID.
+
+        Args:
+            comment_id: ID комментария
+            include_author: Включать ли информацию об авторе
+
+        Returns:
+            CommentResponse или None, если комментарий не найден
+
+        Raises:
+            ValueError: Если comment_id не положительное число
+        """
+        if comment_id <= 0:
+            raise ValueError("ID комментария должен быть положительным числом")
+
         comment = await self.repository.get_by_id(comment_id, include_author)
         if not comment:
             return None
@@ -42,7 +65,21 @@ class CommentService:
         return self._to_response(comment, include_author)
 
     async def get_comment_by_vk_id(self, vk_id: int) -> Optional[CommentResponse]:
-        """Получить комментарий по VK ID"""
+        """
+        Получить комментарий по VK ID.
+
+        Args:
+            vk_id: VK ID комментария
+
+        Returns:
+            CommentResponse или None, если комментарий не найден
+
+        Raises:
+            ValueError: Если vk_id не положительное число
+        """
+        if vk_id <= 0:
+            raise ValueError("VK ID должен быть положительным числом")
+
         comment = await self.repository.get_by_vk_id(vk_id)
         if not comment:
             return None
@@ -56,7 +93,26 @@ class CommentService:
         offset: int = 0,
         include_author: bool = False,
     ) -> CommentListResponse:
-        """Получить список комментариев"""
+        """
+        Получить список комментариев с фильтрацией.
+
+        Args:
+            filters: Фильтры для применения
+            limit: Максимальное количество комментариев
+            offset: Смещение для пагинации
+            include_author: Включать ли информацию об авторе
+
+        Returns:
+            CommentListResponse с комментариями и метаданными пагинации
+
+        Raises:
+            ValueError: Если параметры limit или offset некорректны
+        """
+        if limit <= 0 or limit > 100:
+            raise ValueError("Limit должен быть между 1 и 100")
+        if offset < 0:
+            raise ValueError("Offset не может быть отрицательным")
+
         comments = await self.repository.get_list(filters, limit, offset, include_author)
         total = await self.repository.count(filters)
 
@@ -88,11 +144,30 @@ class CommentService:
         return self._to_response(comment)
 
     async def delete_comment(self, comment_id: int) -> bool:
-        """Удалить комментарий"""
+        """
+        Удалить комментарий (мягкое удаление).
+
+        Args:
+            comment_id: ID комментария для удаления
+
+        Returns:
+            True, если комментарий найден и удален, False в противном случае
+
+        Raises:
+            ValueError: Если comment_id некорректен
+        """
+        if comment_id <= 0:
+            raise ValueError("ID комментария должен быть положительным числом")
+
         return await self.repository.delete(comment_id)
 
     async def get_stats(self) -> CommentStats:
-        """Получить статистику комментариев"""
+        """
+        Получить статистику комментариев.
+
+        Returns:
+            CommentStats со статистикой комментариев
+        """
         stats = await self.repository.get_stats()
         return CommentStats(**stats)
 
@@ -105,7 +180,7 @@ class CommentService:
             if not comment:
                 raise ValueError(f"Комментарий с ID {request.comment_id} не найден")
 
-            if not comment.text or len(comment.text.strip()) < 3:
+            if not comment.text or len(comment.text.strip()) < MIN_COMMENT_TEXT_LENGTH:
                 return KeywordAnalysisResponse(
                     comment_id=request.comment_id,
                     keywords_found=0,
@@ -122,7 +197,7 @@ class CommentService:
             # Извлекаем слова из текста
             words = comment.text.lower().split()
             for word in words:
-                if len(word) < 3:
+                if len(word) < MIN_WORD_LENGTH:
                     continue
 
                 # Проверяем существующую связь
@@ -132,7 +207,7 @@ class CommentService:
                 else:
                     keywords_created += 1
                     await self.repository.create_keyword_match(
-                        request.comment_id, word, 50  # Простая уверенность
+                        request.comment_id, word, DEFAULT_KEYWORD_CONFIDENCE  # Простая уверенность
                     )
 
                 keywords_found += 1
@@ -264,9 +339,10 @@ class CommentService:
     async def get_comments_growth_percentage(self, days: int = 30) -> float:
         """Получить процент роста комментариев за период"""
         current_period = await self.get_comments_count_by_period(days)
-        previous_period = await self.get_comments_count_by_period(days * 2) - current_period
-        
+        total_previous = await self.get_comments_count_by_period(days * 2)
+        previous_period = total_previous - current_period
+
         if previous_period == 0:
             return 100.0 if current_period > 0 else 0.0
-        
+
         return ((current_period - previous_period) / previous_period) * 100
