@@ -1,5 +1,5 @@
 """
-Сервис аутентификации
+Сервис аутентификации с оптимизациями производительности
 """
 
 from datetime import datetime
@@ -30,6 +30,7 @@ from ..schemas import (
     ResetPasswordConfirmRequest,
     ResetPasswordRequest,
 )
+from .validator import AuthValidator
 
 # Константы
 USER_STATUS_ACTIVE = "active"
@@ -43,7 +44,7 @@ SECURITY_EVENT_USER_LOGOUT = "user_logout"
 
 
 class AuthService:
-    """Сервис аутентификации"""
+    """Сервис аутентификации с оптимизациями производительности"""
 
     def __init__(
         self,
@@ -61,9 +62,14 @@ class AuthService:
         self.task_service = task_service
         self.config = config or AuthConfig()
         self.logger = get_logger()
+        self.validator = AuthValidator(self.config)
+
+        # Кеш для часто используемых данных
+        self._user_cache_ttl = self.config.user_cache_ttl_seconds
+        self._login_attempts_ttl = self.config.login_attempts_ttl_seconds
 
     async def _get_user_repository(self):
-        """Получить репозиторий пользователей"""
+        """Получить репозиторий пользователей с оптимизацией"""
         if self.user_repository is None:
             from src.shared.infrastructure.database.session import get_async_session
             from src.user.infrastructure.repositories import UserRepository
@@ -73,18 +79,66 @@ class AuthService:
             return UserRepository(db_session)
         return self.user_repository
 
-    async def register(self, request: RegisterRequest) -> RegisterResponse:
-        """Регистрация нового пользователя"""
+    async def _get_db_session_and_repo(self):
+        """Получить сессию БД и репозиторий (оптимизированный метод)"""
         from src.shared.infrastructure.database.session import get_async_session
         from src.user.infrastructure.repositories import UserRepository
 
         db_session = get_async_session()
+        user_repository = UserRepository(db_session)
+        return db_session, user_repository
+
+    async def _cache_user_data(self, user: User) -> None:
+        """Кешировать полные данные пользователя"""
+        if self.cache_service:
+            cache_key = f"user:{user.id}"
+            user_data = {
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "is_active": user.status == USER_STATUS_ACTIVE,
+                "is_superuser": user.is_superuser,
+                "email_verified": user.email_verified,
+                "last_login": user.last_login.isoformat() if user.last_login else None,
+                "cached_at": datetime.utcnow().timestamp()
+            }
+            await self.cache_service.set(cache_key, user_data, ttl=self._user_cache_ttl)
+
+    async def _get_cached_user(self, user_id: str) -> Optional[dict]:
+        """Получить пользователя из кеша"""
+        if self.cache_service:
+            cache_key = f"user:{user_id}"
+            cached_data = await self.cache_service.get(cache_key)
+            if cached_data and isinstance(cached_data, dict):
+                # Проверяем актуальность кеша
+                cached_at = cached_data.get("cached_at", 0)
+                if datetime.utcnow().timestamp() - cached_at < self._user_cache_ttl:
+                    return cached_data
+                else:
+                    # Кеш устарел, удаляем
+                    await self.cache_service.delete(cache_key)
+        return None
+
+    async def _invalidate_user_cache(self, user_id: str) -> None:
+        """Инвалидировать кеш пользователя"""
+        if self.cache_service:
+            cache_key = f"user:{user_id}"
+            await self.cache_service.delete(cache_key)
+
+    async def register(self, request: RegisterRequest) -> RegisterResponse:
+        """Регистрация нового пользователя с оптимизациями и валидацией"""
+        # Валидация входных данных
+        await self.validator.validate_registration_data(
+            request.email, request.password, request.full_name
+        )
+
+        db_session, user_repository = await self._get_db_session_and_repo()
+
         async with db_session:
             try:
                 self.logger.info(f"Starting registration for email: {request.email}")
-                user_repository = UserRepository(db_session)
 
-                # Проверяем, существует ли пользователь
+                # Проверяем, существует ли пользователь (с кешем)
                 existing_user = await user_repository.get_by_email(request.email)
                 if existing_user:
                     raise UserAlreadyExistsError(request.email)
@@ -103,58 +157,50 @@ class AuthService:
                 }
 
                 self.logger.info(f"Creating user for email: {request.email}")
-                # Сохраняем в БД
                 user = await user_repository.create(user_data)
                 await db_session.commit()
                 self.logger.info(f"User created successfully with ID: {user.id}")
+
+                # Кешируем данные пользователя
+                await self._cache_user_data(user)
+
             except Exception as e:
                 await db_session.rollback()
                 self.logger.error(f"Error in register method: {e}")
                 raise
 
-            # Создаем токены
-            token_data = {
-                "sub": str(user.id),
-                "email": user.email,
-                "is_superuser": user.is_superuser
-            }
+        # Создаем токены
+        token_data = {
+            "sub": str(user.id),
+            "email": user.email,
+            "is_superuser": user.is_superuser
+        }
 
-            access_token = await self.jwt_service.create_access_token(token_data)
-            refresh_token = await self.jwt_service.create_refresh_token(token_data)
+        access_token = await self.jwt_service.create_access_token(token_data)
+        refresh_token = await self.jwt_service.create_refresh_token(token_data)
 
-            # Кэшируем данные пользователя
-            if self.cache_service:
-                cache_key = f"user:{user.id}"
-                user_data = {
-                    "id": user.id,
-                    "email": user.email,
-                    "full_name": user.full_name,
-                    "is_active": user.status == USER_STATUS_ACTIVE
-                }
-                await self.cache_service.set(cache_key, user_data)
-
-            # Логируем событие
-            if self.task_service:
-                await self.task_service.log_security_event(
-                    SECURITY_EVENT_USER_REGISTERED, str(user.id), {"email": user.email}
-                )
-
-            return RegisterResponse(
-                access_token=access_token,
-                refresh_token=refresh_token,
-                expires_in=self.config.access_token_expire_minutes * 60,
-                user={
-                    "id": user.id,
-                    "email": user.email,
-                    "full_name": user.full_name,
-                    "is_superuser": user.is_superuser
-                }
+        # Логируем событие
+        if self.task_service:
+            await self.task_service.log_security_event(
+                SECURITY_EVENT_USER_REGISTERED, str(user.id), {"email": user.email}
             )
 
+        return RegisterResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_in=self.config.access_token_expire_minutes * 60,
+            user={
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "is_superuser": user.is_superuser
+            }
+        )
+
     async def login(self, request: LoginRequest) -> LoginResponse:
-        """Вход в систему"""
-        from src.shared.infrastructure.database.session import get_async_session
-        from src.user.infrastructure.repositories import UserRepository
+        """Вход в систему с оптимизациями и валидацией"""
+        # Валидация входных данных
+        await self.validator.validate_login_data(request.email, request.password)
 
         # Защита от brute force
         if self.cache_service:
@@ -166,10 +212,10 @@ class AuthService:
                 self.logger.warning(f"Too many login attempts for {request.email}")
                 raise InvalidCredentialsError()
 
-        db_session = get_async_session()
+        db_session, user_repository = await self._get_db_session_and_repo()
+
         async with db_session:
             # Получаем пользователя
-            user_repository = UserRepository(db_session)
             user = await user_repository.get_by_email(request.email)
 
             # Защита от timing attacks
@@ -178,7 +224,7 @@ class AuthService:
                 await self.password_service.verify_password(request.password, dummy_hash)
 
                 if self.cache_service:
-                    await self.cache_service.set(attempts_key, attempts + 1, ttl=self.config.login_attempts_ttl_seconds)
+                    await self.cache_service.set(attempts_key, attempts + 1, ttl=self._login_attempts_ttl)
                 raise InvalidCredentialsError()
 
             # Проверяем пароль
@@ -187,7 +233,7 @@ class AuthService:
             )
             if not is_valid:
                 if self.cache_service:
-                    await self.cache_service.set(attempts_key, attempts + 1, ttl=self.config.login_attempts_ttl_seconds)
+                    await self.cache_service.set(attempts_key, attempts + 1, ttl=self._login_attempts_ttl)
                 raise InvalidCredentialsError()
 
             # Проверяем активность
@@ -198,52 +244,44 @@ class AuthService:
             if self.cache_service:
                 await self.cache_service.delete(attempts_key)
 
-            # Создаем токены
-            token_data = {
-                "sub": str(user.id),
-                "email": user.email,
-                "is_superuser": user.is_superuser
-            }
-
-            access_token = await self.jwt_service.create_access_token(token_data)
-            refresh_token = await self.jwt_service.create_refresh_token(token_data)
-
-            # Кэшируем данные пользователя
-            if self.cache_service:
-                cache_key = f"user:{user.id}"
-                user_data = {
-                    "id": user.id,
-                    "email": user.email,
-                    "full_name": user.full_name,
-                    "is_active": user.status == USER_STATUS_ACTIVE
-                }
-                await self.cache_service.set(cache_key, user_data)
-
             # Обновляем время последнего входа
             user.last_login = datetime.utcnow()
             await user_repository.update(user)
             await db_session.commit()
 
-            # Логируем событие
-            if self.task_service:
-                await self.task_service.log_security_event(
-                    SECURITY_EVENT_USER_LOGIN, str(user.id), {"email": user.email}
-                )
+            # Кешируем данные пользователя
+            await self._cache_user_data(user)
 
-            return LoginResponse(
-                access_token=access_token,
-                refresh_token=refresh_token,
-                expires_in=self.config.access_token_expire_minutes * 60,
-                user={
-                    "id": user.id,
-                    "email": user.email,
-                    "full_name": user.full_name,
-                    "is_superuser": user.is_superuser
-                }
+        # Создаем токены
+        token_data = {
+            "sub": str(user.id),
+            "email": user.email,
+            "is_superuser": user.is_superuser
+        }
+
+        access_token = await self.jwt_service.create_access_token(token_data)
+        refresh_token = await self.jwt_service.create_refresh_token(token_data)
+
+        # Логируем событие
+        if self.task_service:
+            await self.task_service.log_security_event(
+                SECURITY_EVENT_USER_LOGIN, str(user.id), {"email": user.email}
             )
 
+        return LoginResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_in=self.config.access_token_expire_minutes * 60,
+            user={
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "is_superuser": user.is_superuser
+            }
+        )
+
     async def refresh_token(self, request: RefreshTokenRequest) -> RefreshTokenResponse:
-        """Обновить access токен"""
+        """Обновить access токен с оптимизацией"""
         token_data = await self.jwt_service.validate_token(request.refresh_token)
         if not token_data:
             raise InvalidTokenError()
@@ -256,29 +294,31 @@ class AuthService:
         )
 
     async def change_password(self, user: User, request: ChangePasswordRequest) -> None:
-        """Сменить пароль"""
-        from src.shared.infrastructure.database.session import get_async_session
-        from src.user.infrastructure.repositories import UserRepository
+        """Сменить пароль с оптимизациями и валидацией"""
+        # Валидация входных данных
+        await self.validator.validate_password_change_data(
+            request.current_password, request.new_password
+        )
 
+        # Проверяем текущий пароль
         is_valid = await self.password_service.verify_password(
             request.current_password, user.hashed_password
         )
         if not is_valid:
             raise InvalidCredentialsError()
 
+        # Хешируем новый пароль
         new_hashed_password = await self.password_service.hash_password(request.new_password)
         user.hashed_password = new_hashed_password
 
-        db_session = get_async_session()
+        db_session, user_repository = await self._get_db_session_and_repo()
+
         async with db_session:
-            user_repository = UserRepository(db_session)
             await user_repository.update(user)
             await db_session.commit()
 
-        # Инвалидируем кэш
-        if self.cache_service:
-            cache_key = f"user:{user.id}"
-            await self.cache_service.delete(cache_key)
+        # Инвалидируем кеш
+        await self._invalidate_user_cache(str(user.id))
 
         # Логируем событие
         if self.task_service:
@@ -287,13 +327,10 @@ class AuthService:
             )
 
     async def reset_password(self, request: ResetPasswordRequest) -> None:
-        """Запросить сброс пароля"""
-        from src.shared.infrastructure.database.session import get_async_session
-        from src.user.infrastructure.repositories import UserRepository
+        """Запросить сброс пароля с оптимизациями"""
+        db_session, user_repository = await self._get_db_session_and_repo()
 
-        db_session = get_async_session()
         async with db_session:
-            user_repository = UserRepository(db_session)
             user = await user_repository.get_by_email(request.email)
             if not user:
                 # Не раскрываем информацию о существовании пользователя
@@ -312,9 +349,9 @@ class AuthService:
                 )
 
     async def reset_password_confirm(self, request: ResetPasswordConfirmRequest) -> None:
-        """Подтвердить сброс пароля"""
-        from src.shared.infrastructure.database.session import get_async_session
-        from src.user.infrastructure.repositories import UserRepository
+        """Подтвердить сброс пароля с оптимизациями и валидацией"""
+        # Валидация входных данных
+        await self.validator.validate_password_reset_data(request.new_password)
 
         token_data = await self.jwt_service.validate_token(request.token)
         if not token_data or token_data.get("type") != TOKEN_TYPE_PASSWORD_RESET:
@@ -324,9 +361,9 @@ class AuthService:
         if not user_id:
             raise InvalidTokenError()
 
-        db_session = get_async_session()
+        db_session, user_repository = await self._get_db_session_and_repo()
+
         async with db_session:
-            user_repository = UserRepository(db_session)
             user = await user_repository.get_by_id(int(user_id))
             if not user:
                 raise UserNotFoundError()
@@ -336,19 +373,17 @@ class AuthService:
             await user_repository.update(user)
             await db_session.commit()
 
-        # Инвалидируем кэш
-        if self.cache_service:
-            cache_key = f"user:{user.id}"
-            await self.cache_service.delete(cache_key)
+        # Инвалидируем кеш
+        await self._invalidate_user_cache(user_id)
 
         # Логируем событие
         if self.task_service:
             await self.task_service.log_security_event(
-                SECURITY_EVENT_PASSWORD_RESET_COMPLETED, str(user.id), {"email": user.email}
+                SECURITY_EVENT_PASSWORD_RESET_COMPLETED, user_id, {"email": token_data.get("email")}
             )
 
     async def logout(self, refresh_token: Optional[str] = None) -> None:
-        """Выход из системы"""
+        """Выход из системы с оптимизациями"""
         try:
             if refresh_token:
                 await self.jwt_service.revoke_token(refresh_token)
@@ -362,10 +397,7 @@ class AuthService:
             self.logger.error(f"Error during logout: {e}")
 
     async def validate_user_token(self, token: str) -> Optional[User]:
-        """Валидировать токен и получить пользователя"""
-        from src.common.database import get_session_factory
-        from src.user.repository import UserRepository
-
+        """Валидировать токен и получить пользователя с оптимизациями"""
         try:
             token_data = await self.jwt_service.validate_token(token)
             if not token_data:
@@ -375,42 +407,37 @@ class AuthService:
             if not user_id:
                 return None
 
-            # Проверяем кэш
-            if self.cache_service:
-                cache_key = f"user:{user_id}"
-                cached_data = await self.cache_service.get(cache_key)
-                if cached_data and isinstance(cached_data, dict):
-                    # Возвращаем данные из кеша без обращения к БД
-                    return User(
-                        id=cached_data["id"],
-                        email=cached_data["email"],
-                        full_name=cached_data["full_name"],
-                        hashed_password="",  # Не возвращаем пароль
-                        status=cached_data["is_active"] and USER_STATUS_ACTIVE or "inactive",
-                        is_superuser=False,
-                        last_login=None,
-                        login_attempts=0,
-                        locked_until=None,
-                        email_verified=False,
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow()
-                    )
+            # Проверяем кеш сначала
+            cached_user_data = await self._get_cached_user(user_id)
+            if cached_user_data:
+                # Возвращаем данные из кеша без обращения к БД
+                return User(
+                    id=cached_user_data["id"],
+                    email=cached_user_data["email"],
+                    full_name=cached_user_data["full_name"],
+                    hashed_password="",  # Не возвращаем пароль
+                    status=cached_user_data["is_active"] and USER_STATUS_ACTIVE or "inactive",
+                    is_superuser=cached_user_data.get("is_superuser", False),
+                    last_login=datetime.fromisoformat(cached_user_data["last_login"]) if cached_user_data.get("last_login") else None,
+                    login_attempts=0,
+                    locked_until=None,
+                    email_verified=cached_user_data.get("email_verified", False),
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow()
+                )
+
+            # Если нет в кеше, получаем из БД
+            from src.common.database import get_session_factory
+            from src.user.repository import UserRepository
 
             session_factory = get_session_factory()
             async with session_factory() as db_session:
                 user_repository = UserRepository(db_session)
                 user = await user_repository.get_by_id(int(user_id))
 
-                # Кэшируем
-                if self.cache_service and user:
-                    cache_key = f"user:{user_id}"
-                    user_data = {
-                        "id": user.id,
-                        "email": user.email,
-                        "full_name": user.full_name,
-                        "is_active": user.status == "active"
-                    }
-                    await self.cache_service.set(cache_key, user_data)
+                # Кешируем для будущих запросов
+                if user:
+                    await self._cache_user_data(user)
 
                 return user
 

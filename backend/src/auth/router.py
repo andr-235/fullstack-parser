@@ -3,6 +3,7 @@
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -10,9 +11,22 @@ from src.user.exceptions import UserInactiveError, UserAlreadyExistsError
 
 from .dependencies import get_auth_service, get_current_user
 from .exceptions import (
+    AuthException,
     InvalidCredentialsError,
     InvalidTokenError,
     TokenExpiredError,
+    UserNotFoundError,
+    UserInactiveError,
+    PasswordTooWeakError,
+    PasswordMismatchError,
+    RateLimitExceededError,
+    EmailAlreadyExistsError,
+    InvalidEmailFormatError,
+    TokenRevokedError,
+    InsufficientPermissionsError,
+    SessionExpiredError,
+    TwoFactorRequiredError,
+    TwoFactorCodeInvalidError,
 )
 from .schemas import (
     ChangePasswordRequest,
@@ -27,7 +41,7 @@ from .schemas import (
     ResetPasswordRequest,
     SuccessResponse,
 )
-from .services import AuthService
+from .domain.services.auth_service_interface import AuthServiceInterface
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -40,7 +54,7 @@ limiter = Limiter(key_func=get_remote_address)
 async def register(
     request: Request,
     register_data: RegisterRequest,
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthServiceInterface = Depends(get_auth_service)
 ):
     """Регистрация нового пользователя"""
     from src.common.logging import get_logger
@@ -73,7 +87,7 @@ async def register(
 async def login(
     request: Request,
     login_data: LoginRequest,
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthServiceInterface = Depends(get_auth_service)
 ):
     """Вход в систему"""
     from src.common.logging import get_logger
@@ -102,7 +116,7 @@ async def login(
 @router.post("/refresh", response_model=RefreshTokenResponse)
 async def refresh_token(
     refresh_data: RefreshTokenRequest,
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthServiceInterface = Depends(get_auth_service)
 ):
     """Обновить access токен"""
     try:
@@ -118,7 +132,7 @@ async def refresh_token(
 async def change_password(
     password_data: ChangePasswordRequest,
     current_user = Depends(get_current_user),
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthServiceInterface = Depends(get_auth_service)
 ):
     """Сменить пароль"""
     try:
@@ -134,7 +148,7 @@ async def change_password(
 @router.post("/reset-password")
 async def reset_password(
     reset_data: ResetPasswordRequest,
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthServiceInterface = Depends(get_auth_service)
 ):
     """Запросить сброс пароля"""
     await auth_service.reset_password(reset_data)
@@ -144,7 +158,7 @@ async def reset_password(
 @router.post("/reset-password/confirm")
 async def reset_password_confirm(
     confirm_data: ResetPasswordConfirmRequest,
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthServiceInterface = Depends(get_auth_service)
 ):
     """Подтвердить сброс пароля"""
     try:
@@ -160,7 +174,7 @@ async def reset_password_confirm(
 @router.post("/logout")
 async def logout(
     logout_data: LogoutRequest,
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthServiceInterface = Depends(get_auth_service)
 ):
     """Выход из системы"""
     await auth_service.logout(logout_data.refresh_token)
@@ -179,3 +193,54 @@ async def get_current_user_info(
         "is_active": current_user.status == "active",
         "is_superuser": current_user.is_superuser
     }
+
+
+# Универсальный обработчик исключений для всех эндпоинтов
+@router.exception_handler(AuthException)
+async def auth_exception_handler(request: Request, exc: AuthException):
+    """Обработчик исключений аутентификации"""
+    from src.common.logging import get_logger
+    logger = get_logger()
+
+    # Логируем ошибку с контекстом
+    logger.warning(
+        f"Auth exception in {request.method} {request.url.path}: {exc.code} - {exc.message}",
+        extra={
+            "error_code": exc.code,
+            "status_code": exc.status_code,
+            "details": exc.details,
+            "user_agent": request.headers.get("user-agent"),
+            "client_ip": request.client.host if request.client else None
+        }
+    )
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=exc.to_dict()
+    )
+
+
+@router.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Обработчик общих исключений"""
+    from src.common.logging import get_logger
+    logger = get_logger()
+
+    # Логируем неожиданную ошибку
+    logger.error(
+        f"Unexpected error in {request.method} {request.url.path}: {str(exc)}",
+        exc_info=True,
+        extra={
+            "user_agent": request.headers.get("user-agent"),
+            "client_ip": request.client.host if request.client else None
+        }
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "error": "INTERNAL_SERVER_ERROR",
+            "message": "An unexpected error occurred",
+            "status_code": 500
+        }
+    )

@@ -7,7 +7,13 @@ from typing import Any, Optional
 from common.logging import get_logger
 
 from .config import AuthConfig
-from .services import AuthService, JWTService, PasswordService
+from .domain.services.service_factory import AuthServiceFactory
+from .infrastructure.adapters.cache_adapter import RedisCacheAdapter, InMemoryCacheAdapter
+from .infrastructure.adapters.event_publisher_adapter import EventPublisherAdapter, NoOpEventPublisher
+from .infrastructure.adapters.jwt_adapter import JWTServiceAdapter
+from .infrastructure.adapters.password_adapter import PasswordServiceAdapter
+from .infrastructure.adapters.user_repository_adapter import UserRepositoryAdapter
+from .services import JWTService, PasswordService
 
 
 class AuthSetup:
@@ -40,9 +46,8 @@ class AuthSetup:
             max_login_attempts=5
         )
 
-        # Создаем сервисы
+        # Создаем базовые сервисы
         self._password_service = PasswordService(rounds=password_rounds)
-
         self._jwt_service = JWTService(
             secret_key=secret_key,
             algorithm=algorithm,
@@ -51,15 +56,27 @@ class AuthSetup:
             cache_service=self._cache_service
         )
 
-        # Настраиваем Redis если передан клиент
-        self._cache_service = redis_client
+        # Настраиваем кеширование
+        if redis_client:
+            self._cache_service = RedisCacheAdapter(redis_client)
+        else:
+            self._cache_service = InMemoryCacheAdapter()
 
-        # Создаем основной сервис
-        self._auth_service = AuthService(
-            user_repository=user_repository,
-            password_service=self._password_service,
-            jwt_service=self._jwt_service,
-            cache_service=self._cache_service,
+        # Создаем адаптеры
+        user_repo_adapter = UserRepositoryAdapter(user_repository) if user_repository else None
+        password_adapter = PasswordServiceAdapter(self._password_service)
+        jwt_adapter = JWTServiceAdapter(self._jwt_service)
+        cache_adapter = self._cache_service
+        event_publisher = NoOpEventPublisher()  # Можно заменить на реальный адаптер
+
+        # Создаем сервис через фабрику
+        factory = AuthServiceFactory()
+        self._auth_service = factory.create_auth_service(
+            user_repository=user_repo_adapter,
+            password_service=password_adapter,
+            jwt_service=jwt_adapter,
+            cache_service=cache_adapter,
+            event_publisher=event_publisher,
             config=self._config
         )
 
@@ -121,7 +138,7 @@ def setup_auth(
     )
 
 
-def get_auth_service() -> AuthService:
+def get_auth_service() -> AuthServiceInterface:
     """Получить сервис аутентификации"""
     return _auth_setup.get_auth_service()
 

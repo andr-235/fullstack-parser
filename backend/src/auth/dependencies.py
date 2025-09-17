@@ -19,7 +19,7 @@ from .services import AuthService
 security = HTTPBearer()
 
 
-async def get_auth_service() -> AuthService:
+async def get_auth_service() -> AuthServiceInterface:
     """Получить сервис аутентификации"""
     from .setup import get_auth_service as _get_auth_service
     return _get_auth_service()
