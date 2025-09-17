@@ -8,14 +8,17 @@
 """
 
 from .api import health_check, router
+from .exceptions import (
+    AuthorAlreadyExistsError,
+    AuthorError,
+    AuthorNotFoundError,
+    AuthorValidationError,
+)
 from .models import AuthorModel
+from .repository import AuthorRepository
 from .schemas import (
-    AuthorBulkAction,
     AuthorCreate,
-    AuthorFilter,
-    AuthorListResponse,
     AuthorResponse,
-    AuthorSearch,
     AuthorStatus,
     AuthorUpdate,
 )
@@ -27,14 +30,19 @@ __all__ = [
     "AuthorCreate",
     "AuthorUpdate",
     "AuthorResponse",
-    "AuthorListResponse",
-    "AuthorFilter",
-    "AuthorSearch",
-    "AuthorBulkAction",
     "AuthorStatus",
+
+    # Repository
+    "AuthorRepository",
 
     # Services
     "AuthorService",
+
+    # Exceptions
+    "AuthorError",
+    "AuthorNotFoundError",
+    "AuthorAlreadyExistsError",
+    "AuthorValidationError",
 
     # API
     "router",
