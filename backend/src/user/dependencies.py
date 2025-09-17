@@ -6,8 +6,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from common.database import get_db_session
-from common.logging import get_logger
+from src.common.database import get_db_session
+from src.common.logging import get_logger
 
 from .exceptions import UserNotFoundError
 from .models import User

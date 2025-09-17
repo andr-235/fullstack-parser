@@ -15,7 +15,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from common.database import Base
+from src.common.database import Base
 
 if TYPE_CHECKING:
     from comments.models import Comment

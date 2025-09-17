@@ -6,7 +6,7 @@ from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 
-from common.database import Base
+from src.common.database import Base
 
 
 class Group(Base):

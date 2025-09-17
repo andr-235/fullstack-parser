@@ -10,7 +10,7 @@ from pathlib import Path
 # Добавляем src в путь
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from common.celery_config import celery_app
+from src.common.celery_config import celery_app
 
 if __name__ == "__main__":
     # Запускаем Flower

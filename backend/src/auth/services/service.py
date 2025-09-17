@@ -5,13 +5,13 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from common.logging import get_logger
-from user.exceptions import (
+from src.common.logging import get_logger
+from src.user.exceptions import (
     UserAlreadyExistsError,
     UserInactiveError,
     UserNotFoundError,
 )
-from user.models import User
+from src.user.models import User
 
 from ..config import AuthConfig
 from ..exceptions import (
@@ -65,22 +65,21 @@ class AuthService:
     async def _get_user_repository(self):
         """Получить репозиторий пользователей"""
         if self.user_repository is None:
-            from common.database import get_session_factory
-            from user.repository import UserRepository
+            from src.shared.infrastructure.database.session import get_async_session
+            from src.user.infrastructure.repositories import UserRepository
 
             # Создаем сессию напрямую
-            session_factory = get_session_factory()
-            db_session = session_factory()
+            db_session = get_async_session()
             return UserRepository(db_session)
         return self.user_repository
 
     async def register(self, request: RegisterRequest) -> RegisterResponse:
         """Регистрация нового пользователя"""
-        from common.database import get_session_factory
-        from user.repository import UserRepository
+        from src.shared.infrastructure.database.session import get_async_session
+        from src.user.infrastructure.repositories import UserRepository
 
-        session_factory = get_session_factory()
-        async with session_factory() as db_session:
+        db_session = get_async_session()
+        async with db_session:
             try:
                 self.logger.info(f"Starting registration for email: {request.email}")
                 user_repository = UserRepository(db_session)
@@ -154,8 +153,8 @@ class AuthService:
 
     async def login(self, request: LoginRequest) -> LoginResponse:
         """Вход в систему"""
-        from common.database import get_session_factory
-        from user.repository import UserRepository
+        from src.shared.infrastructure.database.session import get_async_session
+        from src.user.infrastructure.repositories import UserRepository
 
         # Защита от brute force
         if self.cache_service:
@@ -167,8 +166,8 @@ class AuthService:
                 self.logger.warning(f"Too many login attempts for {request.email}")
                 raise InvalidCredentialsError()
 
-        session_factory = get_session_factory()
-        async with session_factory() as db_session:
+        db_session = get_async_session()
+        async with db_session:
             # Получаем пользователя
             user_repository = UserRepository(db_session)
             user = await user_repository.get_by_email(request.email)
@@ -258,8 +257,8 @@ class AuthService:
 
     async def change_password(self, user: User, request: ChangePasswordRequest) -> None:
         """Сменить пароль"""
-        from common.database import get_session_factory
-        from user.repository import UserRepository
+        from src.shared.infrastructure.database.session import get_async_session
+        from src.user.infrastructure.repositories import UserRepository
 
         is_valid = await self.password_service.verify_password(
             request.current_password, user.hashed_password
@@ -270,8 +269,8 @@ class AuthService:
         new_hashed_password = await self.password_service.hash_password(request.new_password)
         user.hashed_password = new_hashed_password
 
-        session_factory = get_session_factory()
-        async with session_factory() as db_session:
+        db_session = get_async_session()
+        async with db_session:
             user_repository = UserRepository(db_session)
             await user_repository.update(user)
             await db_session.commit()
@@ -289,11 +288,11 @@ class AuthService:
 
     async def reset_password(self, request: ResetPasswordRequest) -> None:
         """Запросить сброс пароля"""
-        from common.database import get_session_factory
-        from user.repository import UserRepository
+        from src.shared.infrastructure.database.session import get_async_session
+        from src.user.infrastructure.repositories import UserRepository
 
-        session_factory = get_session_factory()
-        async with session_factory() as db_session:
+        db_session = get_async_session()
+        async with db_session:
             user_repository = UserRepository(db_session)
             user = await user_repository.get_by_email(request.email)
             if not user:
@@ -314,8 +313,8 @@ class AuthService:
 
     async def reset_password_confirm(self, request: ResetPasswordConfirmRequest) -> None:
         """Подтвердить сброс пароля"""
-        from common.database import get_session_factory
-        from user.repository import UserRepository
+        from src.shared.infrastructure.database.session import get_async_session
+        from src.user.infrastructure.repositories import UserRepository
 
         token_data = await self.jwt_service.validate_token(request.token)
         if not token_data or token_data.get("type") != TOKEN_TYPE_PASSWORD_RESET:
@@ -325,8 +324,8 @@ class AuthService:
         if not user_id:
             raise InvalidTokenError()
 
-        session_factory = get_session_factory()
-        async with session_factory() as db_session:
+        db_session = get_async_session()
+        async with db_session:
             user_repository = UserRepository(db_session)
             user = await user_repository.get_by_id(int(user_id))
             if not user:
@@ -364,8 +363,8 @@ class AuthService:
 
     async def validate_user_token(self, token: str) -> Optional[User]:
         """Валидировать токен и получить пользователя"""
-        from common.database import get_session_factory
-        from user.repository import UserRepository
+        from src.common.database import get_session_factory
+        from src.user.repository import UserRepository
 
         try:
             token_data = await self.jwt_service.validate_token(token)

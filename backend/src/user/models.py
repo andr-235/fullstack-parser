@@ -8,7 +8,7 @@ from typing import Optional
 from sqlalchemy import Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from common.database import Base
+from src.common.database import Base
 
 
 class User(Base):

@@ -15,7 +15,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from common.database import Base
+from src.common.database import Base
 
 
 class Keyword(Base):

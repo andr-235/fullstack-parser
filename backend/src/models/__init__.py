@@ -6,7 +6,7 @@
 from authors.models import AuthorModel
 from comments.models import Comment, CommentKeywordMatch
 from posts.models import Post
-from user.models import User
+from src.user.models import User
 from groups.models import Group
 from keywords.models import Keyword
 

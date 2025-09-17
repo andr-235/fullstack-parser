@@ -10,8 +10,8 @@ import json
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from settings.config import settings_config
-from settings.database import get_db_session
+from src.settings.config import settings_config
+from src.settings.database import get_db_session
 
 
 class SettingsRepository:

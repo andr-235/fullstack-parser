@@ -58,7 +58,7 @@ class TaskPriority(str, Enum):
 
 
 # SQLAlchemy модель
-from common.database import Base
+from src.common.database import Base
 
 class ParsingTaskModel(Base):
     """SQLAlchemy модель задачи парсинга"""

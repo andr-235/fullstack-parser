@@ -7,9 +7,9 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from common.celery_config import celery_app
-from common.logging import get_logger
-from common.redis_client import redis_client
+from src.common.celery_config import celery_app
+from src.common.logging import get_logger
+from src.common.redis_client import redis_client
 
 logger = get_logger(__name__)
 

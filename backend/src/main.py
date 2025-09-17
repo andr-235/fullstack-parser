@@ -12,13 +12,13 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from common.logging import get_logger, setup_logging
+from src.common.logging import get_logger, setup_logging
 
 # Настраиваем логирование
 setup_logging()
 
 # Импортируем все модели для правильной инициализации SQLAlchemy relationships
-from models import *  # noqa: F401, F403
+from src.models import *  # noqa: F401, F403
 
 logger = get_logger(__name__)
 
@@ -101,8 +101,8 @@ async def health_check():
 async def get_dashboard_metrics():
     """Получить метрики для дашборда"""
     try:
-        from common.database import get_async_session
-        from comments.service import CommentService
+        from src.common.database import get_async_session
+        from src.comments.service import CommentService
         from comments.repository import CommentRepository
         from groups.service import GroupService
         from keywords.service import KeywordsService
@@ -161,19 +161,19 @@ async def get_dashboard_metrics():
 
 # Импортируем все модели для правильной инициализации relationships
 try:
-    from models import *  # noqa: F401, F403
+    from src.models import *  # noqa: F401, F403
 except ImportError as e:
     logger.warning(f"Some models not available: {e}")
 
 # Подключаем роутеры модулей
 try:
-    from auth.router import router as auth_router
-    from authors.api import router as authors_router
-    from comments.router import router as comments_router
-    from groups.router import router as groups_router
-    from keywords.router import router as keywords_router
-    from user.routers import user_router
-    from tasks.router import router as tasks_router
+    from src.auth.router import router as auth_router
+    from src.authors.api import router as authors_router
+    from src.comments.router import router as comments_router
+    from src.groups.router import router as groups_router
+    from src.keywords.router import router as keywords_router
+    from src.user.routers import user_router
+    from src.tasks.router import router as tasks_router
 
     app.include_router(auth_router, prefix="/api/v1", tags=["Authentication"])
     app.include_router(user_router, prefix="/api/v1", tags=["Users"])

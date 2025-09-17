@@ -24,7 +24,7 @@ from comments.schemas import (
     KeywordStatisticsResponse,
 )
 from comments.service import CommentService
-from common.database import get_db_session
+from src.common.database import get_db_session
 
 router = APIRouter(prefix="/comments", tags=["comments"])
 

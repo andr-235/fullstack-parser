@@ -7,8 +7,8 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from common.logging import get_logger
-from user.models import User
+from src.common.logging import get_logger
+from src.user.models import User
 
 from .exceptions import (
     InvalidTokenError,

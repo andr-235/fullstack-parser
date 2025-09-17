@@ -17,7 +17,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from common.database import Base
+from src.common.database import Base
 
 if TYPE_CHECKING:
     from authors.models import AuthorModel

@@ -5,7 +5,7 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from common.database import get_db_session
+from src.common.database import get_db_session
 from keywords.models import KeywordsRepository
 from keywords.service import KeywordsService
 

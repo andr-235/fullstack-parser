@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from user.exceptions import UserInactiveError, UserAlreadyExistsError
+from src.user.exceptions import UserInactiveError, UserAlreadyExistsError
 
 from .dependencies import get_auth_service, get_current_user
 from .exceptions import (
@@ -43,7 +43,7 @@ async def register(
     auth_service: AuthService = Depends(get_auth_service)
 ):
     """Регистрация нового пользователя"""
-    from common.logging import get_logger
+    from src.common.logging import get_logger
     logger = get_logger()
     logger.info(f"Register request received for email: {register_data.email}")
     
@@ -57,7 +57,7 @@ async def register(
             detail="User with this email already exists"
         )
     except Exception as e:
-        from common.logging import get_logger
+        from src.common.logging import get_logger
         logger = get_logger()
         logger.error(f"Unexpected error in register endpoint: {e}")
         import traceback
@@ -76,7 +76,7 @@ async def login(
     auth_service: AuthService = Depends(get_auth_service)
 ):
     """Вход в систему"""
-    from common.logging import get_logger
+    from src.common.logging import get_logger
     logger = get_logger()
     logger.info(f"[AuthRouter] Login request received for email: {login_data.email}")
     logger.info(f"[AuthRouter] Request URL: {request.url}")

@@ -18,13 +18,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Import all models to ensure they are registered
 try:
-    from common.database import Base
-    from authors.models import AuthorModel
-    from comments.models import Comment, CommentKeywordMatch
-    from posts.models import Post
-    from user.models import User
-    from groups.models import Group
-    from keywords.models import Keyword
+    from src.shared.infrastructure.database.base import Base
+    # Import all models through the models module
+    from src import models  # This imports all models
 except ImportError as e:
     print(f"Warning: Could not import models: {e}")
     # Fallback: create minimal metadata
