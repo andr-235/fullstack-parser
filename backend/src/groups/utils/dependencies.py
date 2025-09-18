@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.database import get_db_session
 
-from .service import GroupService
+from ..core.service import GroupService
 
 
 def get_group_service(db: AsyncSession = Depends(get_db_session)) -> GroupService:

@@ -6,7 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from .dependencies import get_group_service
+from ..utils.dependencies import get_group_service
 from .schemas import (
     GroupBulkAction,
     GroupBulkResponse,
@@ -15,7 +15,7 @@ from .schemas import (
     GroupResponse,
     GroupUpdate,
 )
-from .service import GroupService
+from ..core.service import GroupService
 
 # Упрощенные параметры пагинации
 from typing import Annotated
@@ -29,6 +29,8 @@ class PaginationParams:
         self.page = page
         self.size = size
         self.search = search
+        self.limit = size
+        self.offset = (page - 1) * size
 
 router = APIRouter(prefix="/groups", tags=["Groups"])
 
