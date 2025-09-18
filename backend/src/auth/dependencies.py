@@ -14,15 +14,14 @@ from .exceptions import (
     InvalidTokenError,
     TokenExpiredError,
 )
-from .services import AuthService
+from .service import AuthService
 
 security = HTTPBearer()
 
 
-async def get_auth_service() -> AuthServiceInterface:
+async def get_auth_service() -> AuthService:
     """Получить сервис аутентификации"""
-    from .setup import get_auth_service as _get_auth_service
-    return _get_auth_service()
+    return AuthService()
 
 
 async def get_current_user(
