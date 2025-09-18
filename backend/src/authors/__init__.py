@@ -7,7 +7,7 @@
 - api: FastAPI роутеры
 """
 
-from .api import health_check, router
+from .api import router
 from .exceptions import (
     AuthorAlreadyExistsError,
     AuthorError,
@@ -15,7 +15,6 @@ from .exceptions import (
     AuthorValidationError,
 )
 from .models import AuthorModel
-from .repository import AuthorRepository
 from .schemas import (
     AuthorCreate,
     AuthorResponse,
@@ -32,8 +31,6 @@ __all__ = [
     "AuthorResponse",
     "AuthorStatus",
 
-    # Repository
-    "AuthorRepository",
 
     # Services
     "AuthorService",
@@ -46,5 +43,4 @@ __all__ = [
 
     # API
     "router",
-    "health_check",
 ]
