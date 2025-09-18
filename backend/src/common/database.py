@@ -14,43 +14,67 @@ from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):
+    """Базовый класс для всех моделей базы данных
+    
+    Наследуется от DeclarativeBase SQLAlchemy и предоставляет
+    общую функциональность для всех моделей в приложении.
+    """
     pass
 
 
-_engine = None
-_session_factory = None
+class DatabaseManager:
+    """Менеджер базы данных с паттерном singleton"""
+
+    _instance = None
+    _engine = None
+    _session_factory = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def get_engine(self):
+        """Получить движок БД"""
+        if self._engine is None:
+            self._engine = create_async_engine(
+                get_database_url(),
+                echo=False,
+                pool_pre_ping=True
+            )
+        return self._engine
+
+    def get_session_factory(self):
+        """Получить фабрику сессий"""
+        if self._session_factory is None:
+            self._session_factory = async_sessionmaker(
+                self.get_engine(),
+                class_=AsyncSession,
+                expire_on_commit=False
+            )
+        return self._session_factory
 
 
 def get_database_url() -> str:
     """Получить URL базы данных"""
     return os.getenv(
         "DATABASE_URL",
-        "postgresql+asyncpg://user:password@localhost:5432/vk_parser"
+        "postgresql+asyncpg://user@localhost:5432/vk_parser"
     )
+
+
+# Глобальный экземпляр менеджера БД
+db_manager = DatabaseManager()
 
 
 def get_engine():
     """Получить движок БД"""
-    global _engine
-    if _engine is None:
-        _engine = create_async_engine(
-            get_database_url(),
-            echo=False,
-            pool_pre_ping=True
-        )
-    return _engine
+    return db_manager.get_engine()
 
 
 def get_session_factory():
     """Получить фабрику сессий"""
-    global _session_factory
-    if _session_factory is None:
-        _session_factory = async_sessionmaker(
-            get_engine(),
-            class_=AsyncSession,
-            expire_on_commit=False
-        )
-    return _session_factory
+    return db_manager.get_session_factory()
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:

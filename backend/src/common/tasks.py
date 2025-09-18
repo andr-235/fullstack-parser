@@ -2,6 +2,7 @@
 Базовые задачи Celery
 """
 
+import json
 from typing import Any, Dict, List, Optional
 
 from celery import Task
@@ -55,12 +56,12 @@ class BaseTask(Task):
     name="common.health_check",
     queue="default"
 )
-def health_check_task(self) -> Dict[str, Any]:
+async def health_check_task(self) -> Dict[str, Any]:
     """Задача проверки здоровья системы"""
     try:
         # Проверка Redis
-        redis_status = redis_client.ping()
-        
+        redis_status = await redis_client.ping()
+
         return {
             "status": "healthy",
             "redis_connected": redis_status,
