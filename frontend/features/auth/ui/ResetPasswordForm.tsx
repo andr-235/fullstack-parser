@@ -20,8 +20,8 @@ const resetPasswordSchema = z.object({
 
 const confirmResetSchema = z.object({
   token: z.string().min(1, "Введите код подтверждения"),
-  new_password: z.string().min(6, "Пароль должен содержать минимум 6 символов"),
-  confirm_password: z.string().min(6, "Подтвердите пароль"),
+  new_password: z.string().min(8, "Пароль должен содержать минимум 8 символов").regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, "Пароль должен содержать заглавные и строчные буквы, цифры и специальные символы"),
+  confirm_password: z.string().min(8, "Подтвердите пароль"),
 }).refine((data) => data.new_password === data.confirm_password, {
   message: "Пароли не совпадают",
   path: ["confirm_password"],

@@ -104,7 +104,7 @@ async def get_dashboard_metrics():
         from src.common.database import get_async_session
         from src.comments.service import CommentService
         from comments.repository import CommentRepository
-        from groups.service import GroupService
+        from src.groups import GroupService
         from keywords.service import KeywordsService
         from keywords.models import KeywordsRepository
         
@@ -170,7 +170,7 @@ try:
     from src.auth.router import router as auth_router
     from src.authors.api import router as authors_router
     from src.comments.router import router as comments_router
-    from src.groups.router import router as groups_router
+    from src.groups import router as groups_router
     from src.keywords.router import router as keywords_router
     from src.user.routers import user_router
     from src.tasks.router import router as tasks_router

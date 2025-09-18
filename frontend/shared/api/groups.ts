@@ -39,41 +39,41 @@ export const groupsApi = {
   },
 
   async createGroup(groupData: CreateGroupRequest): Promise<VKGroup> {
-    return httpClient.post('/api/v1/groups', groupData)
+    return httpClient.post(getRoutePath(GROUPS_ROUTES.CREATE), groupData)
   },
 
   async updateGroup(id: number, updates: UpdateGroupRequest): Promise<VKGroup> {
-    return httpClient.patch(`/api/v1/groups/${id}`, updates)
+    return httpClient.patch(getRoutePath(GROUPS_ROUTES.UPDATE(id)), updates)
   },
 
   async deleteGroup(id: number): Promise<void> {
-    return httpClient.delete(`/api/v1/groups/${id}`)
+    return httpClient.delete(getRoutePath(GROUPS_ROUTES.DELETE(id)))
   },
 
   async getGroup(id: number): Promise<VKGroup> {
-    return httpClient.get(`/api/v1/groups/${id}`)
+    return httpClient.get(getRoutePath(GROUPS_ROUTES.GET(id)))
   },
 
   async getGroupStats(id: number): Promise<GroupStats> {
-    return httpClient.get(`/api/v1/groups/${id}/stats`)
+    return httpClient.get(getRoutePath(GROUPS_ROUTES.STATS(id)))
   },
 
   async getGroupsStats(): Promise<GroupsStats> {
-    return httpClient.get('/api/v1/groups/stats')
+    return httpClient.get(getRoutePath(GROUPS_ROUTES.GLOBAL_STATS))
   },
 
   async bulkAction(action: GroupBulkAction): Promise<GroupBulkResponse> {
-    return httpClient.post('/api/v1/groups/bulk', action)
+    return httpClient.post(getRoutePath(GROUPS_ROUTES.BULK), action)
   },
 
   async uploadGroups(file: File): Promise<UploadGroupsResponse> {
     const formData = new FormData()
     formData.append('file', file)
 
-    return httpClient.post('/api/v1/groups/upload', formData)
+    return httpClient.post(getRoutePath(GROUPS_ROUTES.UPLOAD), formData)
   },
 
   async getUploadProgress(taskId: string): Promise<UploadProgress> {
-    return httpClient.get(`/api/v1/groups/upload/${taskId}`)
+    return httpClient.get(getRoutePath(GROUPS_ROUTES.UPLOAD_PROGRESS(taskId)))
   },
 }

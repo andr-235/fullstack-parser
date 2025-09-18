@@ -29,7 +29,7 @@ export const AuthWidget = () => {
         </TabsList>
         
         {TABS.map((tab) => {
-          const Component = tab.component;
+          const Component = tab.component as React.ComponentType;
           return (
             <TabsContent key={tab.value} value={tab.value} className="mt-10">
               <Component />

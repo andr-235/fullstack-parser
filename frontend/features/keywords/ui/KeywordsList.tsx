@@ -4,11 +4,12 @@ import { Hash, MessageSquare, FolderOpen } from 'lucide-react'
 
 import { Keyword } from '@/entities/keywords'
 import { KeywordCard } from '@/features/keywords/ui/KeywordCard'
+import type { KeywordFormData } from '@/features/keywords/ui/KeywordForm'
 
 interface KeywordsListProps {
   keywords: Keyword[]
   loading?: boolean
-  onUpdate?: (id: number, updates: any) => void
+  onUpdate?: (id: number, updates: KeywordFormData) => void
   onDelete?: (id: number) => void
   onToggleStatus?: (id: number, isActive: boolean) => void
 }
@@ -88,7 +89,7 @@ export function KeywordsList({
             <MessageSquare className="h-4 w-4 text-gray-400" />
           </div>
           <div className="text-2xl font-bold">
-            {keywords.reduce((sum, keyword) => sum + keyword.match_count, 0).toLocaleString()}
+            {keywords.reduce((sum, keyword) => sum + (keyword.match_count ?? 0), 0).toLocaleString()}
           </div>
         </div>
 

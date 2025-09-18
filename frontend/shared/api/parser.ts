@@ -4,16 +4,14 @@
 
 import { httpClient } from '@/shared/lib/http-client'
 import type {
-  ParseTaskCreate,
-  ParseTaskResponse,
+  ParseRequest,
+  ParseResponse,
   ParserState,
   ParserStats,
   ParserGlobalStats,
-  ParserTasksResponse,
-  ParserHistoryResponse,
+  ParseTaskListResponse,
   ParserTaskFilters,
-  StartBulkParserForm,
-  BulkParseResponse,
+  StartBulkParserRequest,
   ParseStatus,
   StopParseRequest,
   StopParseResponse,
@@ -32,19 +30,19 @@ export const parserApi = {
     return httpClient.get('/api/v1/parser/stats')
   },
 
-  async getTasks(params?: ParserTaskFilters): Promise<ParserTasksResponse> {
+  async getTasks(params?: ParserTaskFilters): Promise<ParseTaskListResponse> {
     return httpClient.get('/api/v1/parser/tasks', params)
   },
 
-  async getTaskHistory(params?: ParserTaskFilters): Promise<ParserHistoryResponse> {
+  async getTaskHistory(params?: ParserTaskFilters): Promise<ParseTaskListResponse> {
     return httpClient.get('/api/v1/parser/history', params)
   },
 
-  async createTask(taskData: ParseTaskCreate): Promise<ParseTaskResponse> {
+  async createTask(taskData: ParseRequest): Promise<ParseResponse> {
     return httpClient.post('/api/v1/parser/tasks', taskData)
   },
 
-  async startBulkParse(formData: StartBulkParserForm): Promise<BulkParseResponse> {
+  async startBulkParse(formData: StartBulkParserRequest): Promise<ParseResponse> {
     return httpClient.post('/api/v1/parser/bulk-start', formData)
   },
 

@@ -10,6 +10,8 @@ import { Button } from '@/shared/ui'
 
 import { RecentActivityItem } from '@/entities/dashboard'
 
+const MAX_RECENT_COMMENTS = 8
+
 interface RecentCommentsProps {
   comments: RecentActivityItem[]
 }
@@ -18,7 +20,7 @@ export function RecentComments({ comments }: RecentCommentsProps) {
   // Фильтруем только комментарии из активности
   const recentComments = comments
     .filter(activity => activity.type === 'comment' || activity.type === 'match')
-    .slice(0, 8)
+    .slice(0, MAX_RECENT_COMMENTS)
 
   if (recentComments.length === 0) {
     return (
@@ -48,6 +50,10 @@ export function RecentComments({ comments }: RecentCommentsProps) {
         return <CheckCircle className="h-4 w-4 text-green-500" />
       case 'comment':
         return <MessageSquare className="h-4 w-4 text-blue-500" />
+      case 'post':
+        return <MessageSquare className="h-4 w-4 text-purple-500" />
+      case 'group':
+        return <Users className="h-4 w-4 text-orange-500" />
       default:
         return <Clock className="h-4 w-4 text-muted-foreground" />
     }
@@ -59,6 +65,10 @@ export function RecentComments({ comments }: RecentCommentsProps) {
         return { label: 'Совпадение', variant: 'default' as const }
       case 'comment':
         return { label: 'Комментарий', variant: 'secondary' as const }
+      case 'post':
+        return { label: 'Пост', variant: 'destructive' as const }
+      case 'group':
+        return { label: 'Группа', variant: 'outline' as const }
       default:
         return { label: 'Активность', variant: 'outline' as const }
     }

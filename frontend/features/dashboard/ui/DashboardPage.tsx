@@ -165,6 +165,7 @@ export function DashboardPage() {
           )}
         </div>
       </div>
+      </div>
     </GlassLayout>
   )
 }

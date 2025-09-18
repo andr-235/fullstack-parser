@@ -1,22 +1,24 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, memo } from "react";
 
 interface GlassButtonProps {
   children: ReactNode;
   className?: string;
   variant?: "default" | "outline" | "ghost";
   size?: "sm" | "md" | "lg";
+  type?: "button" | "submit" | "reset";
   onClick?: () => void;
   disabled?: boolean;
   loading?: boolean;
 }
 
-export const GlassButton = ({
+export const GlassButton = memo(({
   children,
   className = "",
   variant = "default",
   size = "md",
+  type = "button",
   onClick,
   disabled = false,
   loading = false
@@ -44,6 +46,7 @@ export const GlassButton = ({
   return (
     <button
       className={baseClasses}
+      type={type}
       onClick={onClick}
       disabled={disabled || loading}
     >
@@ -57,4 +60,5 @@ export const GlassButton = ({
       )}
     </button>
   );
-};
+});
+GlassButton.displayName = "GlassButton";

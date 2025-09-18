@@ -7,9 +7,10 @@ import { KeywordsFilters as KeywordsFiltersType, KEYWORD_CATEGORIES } from '@/en
 interface KeywordsFiltersProps {
   filters: KeywordsFiltersType
   onFiltersChange: (filters: KeywordsFiltersType) => void
+  disabled?: boolean
 }
 
-export function KeywordsFilters({ filters, onFiltersChange }: KeywordsFiltersProps) {
+export function KeywordsFilters({ filters, onFiltersChange, disabled = false }: KeywordsFiltersProps) {
   const updateFilter = <K extends keyof KeywordsFiltersType>(
     key: K,
     value: KeywordsFiltersType[K]
@@ -41,9 +42,10 @@ export function KeywordsFilters({ filters, onFiltersChange }: KeywordsFiltersPro
             <input
               type="text"
               placeholder="Поиск ключевых слов по слову..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               value={filters.search || ''}
               onChange={e => updateFilter('search', e.target.value || undefined)}
+              disabled={disabled}
             />
           </div>
         </div>
@@ -51,7 +53,8 @@ export function KeywordsFilters({ filters, onFiltersChange }: KeywordsFiltersPro
         {hasActiveFilters && (
           <button
             onClick={clearFilters}
-            className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-2 shrink-0"
+            className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-2 shrink-0 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={disabled}
           >
             <X className="h-4 w-4" />
             Очистить фильтры
@@ -66,11 +69,12 @@ export function KeywordsFilters({ filters, onFiltersChange }: KeywordsFiltersPro
             id="category"
             value={filters.category || 'all'}
             onChange={e => updateFilter('category', e.target.value === 'all' ? undefined : e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={disabled}
           >
             <option value="all">Все категории</option>
-            {KEYWORD_CATEGORIES.map((category: { key: string; label: string }) => (
-              <option key={category.key} value={category.key}>
+            {KEYWORD_CATEGORIES.map((category: { value: string; label: string }) => (
+              <option key={category.value} value={category.value}>
                 {category.label}
               </option>
             ))}
@@ -92,7 +96,8 @@ export function KeywordsFilters({ filters, onFiltersChange }: KeywordsFiltersPro
             id="active-only"
             checked={filters.active_only !== false}
             onChange={e => updateFilter('active_only', e.target.checked)}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:cursor-not-allowed"
+            disabled={disabled}
           />
           <label htmlFor="active-only" className="text-sm flex items-center gap-1 text-gray-700">
             <Eye className="h-4 w-4" />
@@ -106,7 +111,8 @@ export function KeywordsFilters({ filters, onFiltersChange }: KeywordsFiltersPro
             id="inactive-only"
             checked={filters.active_only === false}
             onChange={e => updateFilter('active_only', e.target.checked ? false : undefined)}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:cursor-not-allowed"
+            disabled={disabled}
           />
           <label htmlFor="inactive-only" className="text-sm flex items-center gap-1 text-gray-700">
             <EyeOff className="h-4 w-4" />

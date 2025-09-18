@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 
 import { usePathname } from 'next/navigation'
 
@@ -48,7 +48,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const [isLoading, setIsLoading] = useState(false)
   const pathname = usePathname()
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       setIsLoading(true)
 
@@ -95,7 +95,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchStats()
@@ -103,11 +103,11 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     // Автообновление отключено для снижения нагрузки
     // const interval = setInterval(fetchStats, 2 * 60 * 1000)
     // return () => clearInterval(interval)
-  }, [])
+  }, [fetchStats])
 
-  const refreshStats = async () => {
+  const refreshStats = useCallback(async () => {
     await fetchStats()
-  }
+  }, [fetchStats])
 
   return (
     <NavigationContext.Provider

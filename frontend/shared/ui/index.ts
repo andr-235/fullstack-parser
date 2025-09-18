@@ -1,11 +1,7 @@
 // UI Components - shadcn/ui
-export { Alert, AlertDescription, AlertTitle } from './alert'
-export { Avatar, AvatarFallback, AvatarImage } from './avatar'
-export { Badge, badgeVariants } from './badge'
 export { Button, buttonVariants } from './button'
 export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './card'
 export { Checkbox } from './checkbox'
-export { Collapsible, CollapsibleContent, CollapsibleTrigger } from './collapsible'
 export {
   Dialog,
   DialogContent,
@@ -33,24 +29,8 @@ export {
   FormLabel,
   FormMessage,
 } from './form'
-export { HoverCard, HoverCardContent, HoverCardTrigger } from './hover-card'
 export { Input } from './input'
 export { Label } from './label'
-export {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuIndicator,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  NavigationMenuViewport,
-  navigationMenuTriggerStyle,
-} from './navigation-menu'
-export { Popover, PopoverContent, PopoverTrigger } from './popover'
-export { Progress } from './progress'
-export { RadioGroup, RadioGroupItem } from './radio-group'
-export { ScrollArea, ScrollBar } from './scroll-area'
 export {
   Select,
   SelectContent,
@@ -63,7 +43,6 @@ export {
   SelectTrigger,
   SelectValue,
 } from './select'
-export { Separator } from './separator'
 export {
   Sidebar,
   SidebarContent,
@@ -90,9 +69,6 @@ export {
   SidebarTrigger,
   useSidebar,
 } from './sidebar'
-export { Skeleton } from './skeleton'
-export { Switch } from './switch'
-export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs'
 export { Textarea } from './textarea'
 export {
   Toast,
@@ -107,10 +83,20 @@ export { Toaster } from './toaster'
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip'
 export { ThemeToggle } from './theme-toggle'
 export { FileUploadModal } from './file-upload-modal'
-export { Pagination, PaginationInfo } from './pagination'
-export { HighlightText } from './highlight-text'
-export { InfiniteScroll } from './infinite-scroll'
 export { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardContent, GlassCardDescription } from './glass-card'
 export { GlassButton } from './glass-button'
 export { GlassLayout } from './glass-layout'
 export { StatCard } from './stat-card'
+export { Pagination, PaginationInfo } from './pagination'
+export { HighlightText } from './highlight-text'
+export { InfiniteScroll } from './infinite-scroll'
+
+// Additional UI components
+export { Alert, AlertTitle, AlertDescription } from './alert'
+export { Avatar, AvatarImage, AvatarFallback } from './avatar'
+export { Badge, badgeVariants } from './badge'
+export { Progress } from './progress'
+export { Separator } from './separator'
+export { Skeleton } from './skeleton'
+export { Switch } from './switch'
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'

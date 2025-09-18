@@ -16,11 +16,11 @@ import {
 } from 'lucide-react'
 
 import { Keyword } from '@/entities/keywords'
-import { KeywordForm } from '@/features/keywords/ui/KeywordForm'
+import { KeywordForm, type KeywordFormData } from '@/features/keywords/ui/KeywordForm'
 
 interface KeywordCardProps {
   keyword: Keyword
-  onUpdate?: (id: number, updates: any) => void
+  onUpdate?: (id: number, updates: KeywordFormData) => void
   onDelete?: (id: number) => void
   onToggleStatus?: (id: number, isActive: boolean) => void
 }
@@ -28,10 +28,10 @@ interface KeywordCardProps {
 export function KeywordCard({ keyword, onUpdate, onDelete, onToggleStatus }: KeywordCardProps) {
   const [showEditForm, setShowEditForm] = useState(false)
 
-  const handleUpdate = async (updates: any) => {
+  const handleUpdate = async (updates: KeywordFormData) => {
     if (onUpdate) {
       try {
-        await onUpdate(keyword.id, updates)
+        await onUpdate(Number(keyword.id), updates)
         setShowEditForm(false)
       } catch (err) {
         console.error('Failed to update keyword:', err)
@@ -42,7 +42,7 @@ export function KeywordCard({ keyword, onUpdate, onDelete, onToggleStatus }: Key
   const handleDelete = async () => {
     if (onDelete && confirm('Вы уверены, что хотите удалить это ключевое слово?')) {
       try {
-        await onDelete(keyword.id)
+        await onDelete(Number(keyword.id))
       } catch (err) {
         console.error('Failed to delete keyword:', err)
       }
@@ -52,7 +52,7 @@ export function KeywordCard({ keyword, onUpdate, onDelete, onToggleStatus }: Key
   const handleToggleStatus = async () => {
     if (onToggleStatus) {
       try {
-        await onToggleStatus(keyword.id, !keyword.status.is_active)
+        await onToggleStatus(Number(keyword.id), !keyword.status.is_active)
       } catch (err) {
         console.error('Failed to toggle keyword status:', err)
       }
@@ -68,7 +68,7 @@ export function KeywordCard({ keyword, onUpdate, onDelete, onToggleStatus }: Key
               <Hash className="h-5 w-5 text-blue-600" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-medium truncate">"{keyword.word}"</h3>
+              <h3 className="text-sm font-medium truncate">"{keyword.name}"</h3>
               <p className="text-xs text-gray-500">
                 {keyword.category?.name || 'Без категории'}
               </p>
@@ -164,7 +164,7 @@ export function KeywordCard({ keyword, onUpdate, onDelete, onToggleStatus }: Key
             <div className="p-6">
               <KeywordForm
                 initialData={{
-                  word: keyword.word || '',
+                  name: keyword.name || '',
                   category: keyword.category?.name || '',
                   description: keyword.description || '',
                   is_active: keyword.status.is_active,

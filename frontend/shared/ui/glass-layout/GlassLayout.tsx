@@ -3,7 +3,7 @@
 import { ReactNode } from "react";
 import { cn } from "@/shared/lib";
 
-interface GlassLayoutProps {
+export interface GlassLayoutProps {
   children: ReactNode;
   variant?: "full" | "content" | "minimal";
   className?: string;

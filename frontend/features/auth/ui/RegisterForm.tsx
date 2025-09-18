@@ -15,9 +15,9 @@ import { useAuthStore } from "@/entities/user";
 import type { RegisterRequest } from "@/entities/user";
 
 const registerSchema = z.object({
-  full_name: z.string().min(2, "Имя должно содержать минимум 2 символа"),
+  full_name: z.string().min(2, "Имя должно содержать минимум 2 символа").max(100, "Имя слишком длинное"),
   email: z.string().email("Введите корректный email"),
-  password: z.string().min(8, "Пароль должен содержать минимум 8 символов"),
+  password: z.string().min(8, "Пароль должен содержать минимум 8 символов").regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, "Пароль должен содержать заглавные и строчные буквы, цифры и специальные символы"),
   confirm_password: z.string().min(8, "Подтвердите пароль"),
 }).refine((data) => data.password === data.confirm_password, {
   message: "Пароли не совпадают",
@@ -76,7 +76,7 @@ export const RegisterForm = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           {error && (
             <Alert variant="destructive">
-              <AlertDescription>{error.message}</AlertDescription>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 

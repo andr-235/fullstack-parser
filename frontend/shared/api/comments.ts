@@ -6,13 +6,13 @@ import { httpClient } from '@/shared/lib/http-client'
 import { getRoutePath, COMMENTS_ROUTES } from '@/shared/config/routes'
 import type {
   Comment as VKComment,
-  CommentsResponse,
+  CommentListResponse,
   CommentFilters,
-  UpdateCommentRequest,
+  CommentUpdateRequest,
 } from '@/entities/comment'
 
 export const commentsApi = {
-  async getComments(params?: CommentFilters): Promise<CommentsResponse> {
+  async getComments(params?: CommentFilters): Promise<CommentListResponse> {
     return httpClient.get(getRoutePath(COMMENTS_ROUTES.LIST), params)
   },
 
@@ -26,7 +26,7 @@ export const commentsApi = {
 
   async updateCommentStatus(
     commentId: number,
-    statusUpdate: UpdateCommentRequest
+    statusUpdate: CommentUpdateRequest
   ): Promise<VKComment> {
     return httpClient.put(getRoutePath(COMMENTS_ROUTES.UPDATE(commentId)), statusUpdate)
   },

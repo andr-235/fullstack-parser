@@ -9,6 +9,12 @@
     "lint": "next lint",
     "format": "prettier --write .",
     "type-check": "tsc --noEmit",
+    "type-check:watch": "tsc --noEmit --watch",
+    "type-check:widgets": "tsc --noEmit --include 'widgets/**/*'",
+    "type-check:features": "tsc --noEmit --include 'features/**/*'",
+    "type-check:shared": "tsc --noEmit --include 'shared/**/*'",
+    "type-check:app": "tsc --noEmit --include 'app/**/*'",
+    "type-check:all": "npm run type-check:widgets && npm run type-check:features && npm run type-check:shared && npm run type-check:app",
     "test": "jest"
   },
   "dependencies": {

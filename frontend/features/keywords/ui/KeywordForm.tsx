@@ -4,8 +4,8 @@ import { useState } from 'react'
 
 import { KEYWORD_CATEGORIES } from '@/entities/keywords'
 
-interface KeywordFormData {
-  word: string;
+export interface KeywordFormData {
+  name: string;
   category?: string;
   description?: string;
   is_active?: boolean;
@@ -28,7 +28,7 @@ export function KeywordForm({
 }: KeywordFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState<KeywordFormData>({
-    word: initialData?.word || '',
+    name: initialData?.name || '',
     category: initialData?.category || '',
     description: initialData?.description || '',
     is_active: initialData?.is_active ?? true,
@@ -39,11 +39,11 @@ export function KeywordForm({
 
   const validateForm = (): boolean => {
     const newErrors: Partial<KeywordFormData> = {}
-    
-    if (!formData.word.trim()) {
-      newErrors.word = 'Ключевое слово обязательно'
-    } else if (formData.word.length > 200) {
-      newErrors.word = 'Ключевое слово слишком длинное'
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Ключевое слово обязательно'
+    } else if (formData.name.length > 200) {
+      newErrors.name = 'Ключевое слово слишком длинное'
     }
 
     setErrors(newErrors)
@@ -59,7 +59,7 @@ export function KeywordForm({
     try {
       await onSubmit(formData)
       setFormData({
-        word: '',
+        name: '',
         category: '',
         description: '',
         is_active: true,
@@ -82,10 +82,10 @@ export function KeywordForm({
           type="text"
           placeholder="Введите ключевое слово для мониторинга..."
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          value={formData.word}
-          onChange={e => setFormData({ ...formData, word: e.target.value })}
+          value={formData.name}
+          onChange={e => setFormData({ ...formData, name: e.target.value })}
         />
-        {errors.word && <p className="text-red-500 text-sm mt-1">{errors.word}</p>}
+        {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
       </div>
 
       <div>
@@ -97,7 +97,7 @@ export function KeywordForm({
         >
           <option value="">Выберите категорию</option>
           {KEYWORD_CATEGORIES.map(category => (
-            <option key={category.key} value={category.key}>
+            <option key={category.value} value={category.value}>
               {category.label}
             </option>
           ))}

@@ -17,11 +17,14 @@ import type { ChangePasswordRequest } from "@/entities/user";
 
 const changePasswordSchema = z.object({
   current_password: z.string().min(1, "Введите текущий пароль"),
-  new_password: z.string().min(6, "Новый пароль должен содержать минимум 6 символов"),
-  confirm_password: z.string().min(6, "Подтвердите пароль"),
+  new_password: z.string().min(8, "Новый пароль должен содержать минимум 8 символов").regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, "Пароль должен содержать заглавные и строчные буквы, цифры и специальные символы"),
+  confirm_password: z.string().min(8, "Подтвердите пароль"),
 }).refine((data) => data.new_password === data.confirm_password, {
   message: "Пароли не совпадают",
   path: ["confirm_password"],
+}).refine((data) => data.current_password !== data.new_password, {
+  message: "Новый пароль не должен совпадать со старым",
+  path: ["new_password"],
 });
 
 type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;

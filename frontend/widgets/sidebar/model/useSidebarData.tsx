@@ -32,7 +32,7 @@ export const useSidebarData = (): SidebarData => {
         // Ошибка обрабатывается в store
       });
     }
-  }, [data, isLoading, fetchData]);
+  }, [data, isLoading]); // Убрали fetchData из зависимостей
 
   // Fallback данные для случаев ошибки или загрузки
   const fallbackData: SidebarData = useMemo(
@@ -105,7 +105,13 @@ export const useSidebarData = (): SidebarData => {
     { id: "profile", title: "Профиль", url: "/profile", icon: User },
   ];
 
-  // Обновляем навигационные элементы с актуальными данными
+  /**
+   * Мемоизированный массив навигационных элементов sidebar.
+   * Создает элементы навигации на основе конфигурации, добавляя badges с актуальными статистиками
+   * и отмечая активный элемент на основе текущего пути.
+   *
+   * @returns {Array} Массив объектов навигационных элементов с id, title, url, icon, isActive и опционально badge
+   */
   const navItems = useMemo(() => {
     const statsData: SidebarStats = stats || currentData.stats;
 

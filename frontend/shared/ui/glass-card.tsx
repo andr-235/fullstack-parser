@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, memo } from "react";
 
 interface GlassCardProps {
   children: ReactNode;
@@ -10,7 +10,7 @@ interface GlassCardProps {
   padding?: "sm" | "md" | "lg";
 }
 
-export const GlassCard = ({
+export const GlassCard = memo(({
   children,
   className = "",
   variant = "default",
@@ -44,7 +44,8 @@ export const GlassCard = ({
       {children}
     </div>
   );
-};
+});
+GlassCard.displayName = "GlassCard";
 
 interface GlassCardHeaderProps {
   children: ReactNode;
@@ -65,14 +66,16 @@ export const GlassCardHeader = ({
 interface GlassCardTitleProps {
   children: ReactNode;
   className?: string;
+  id?: string;
 }
 
 export const GlassCardTitle = ({
   children,
-  className = ""
+  className = "",
+  id
 }: GlassCardTitleProps) => {
   return (
-    <h3 className={`text-xl font-semibold text-white ${className}`}>
+    <h3 id={id} className={`text-xl font-semibold text-white ${className}`}>
       {children}
     </h3>
   );

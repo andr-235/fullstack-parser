@@ -1,7 +1,7 @@
 // Конфигурация приложения
 export const config = {
   api: {
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || '',
+    baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost/api',
     timeout: 10000,
   },
   app: {

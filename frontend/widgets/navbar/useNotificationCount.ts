@@ -12,6 +12,14 @@ interface NotificationState {
   error: string | null
 }
 
+/**
+ * Хук для получения количества уведомлений.
+ * Выполняет запросы к API для получения глобальной статистики и статистики дашборда,
+ * суммирует количество комментариев за сегодня и возвращает общее количество уведомлений.
+ * Автоматически обновляет данные каждые 30 секунд.
+ *
+ * @returns {number} Текущее количество уведомлений
+ */
 export function useNotificationCount() {
   const [state, setState] = useState<NotificationState>({
     count: 0,
@@ -19,7 +27,16 @@ export function useNotificationCount() {
     error: null,
   })
 
-  const fetchNotificationCount = useCallback(async () => {
+  /**
+   * Асинхронная функция для получения количества уведомлений с сервера.
+   * Выполняет параллельные запросы к API глобальной статистики и статистики дашборда,
+   * суммирует количество комментариев за сегодня из успешных ответов.
+   * В случае ошибки логирует её и обновляет состояние с сообщением об ошибке.
+   *
+   * @async
+   * @returns {Promise<void>} Не возвращает значение, обновляет внутреннее состояние
+   */
+  const fetchNotificationCount = useCallback(async (): Promise<void> => {
     setState(prev => ({ ...prev, loading: true, error: null }))
 
     try {
@@ -28,7 +45,7 @@ export function useNotificationCount() {
         httpClient.get<DashboardStatsResponse>('/api/stats/dashboard'),
       ])
 
-      let notificationCount = 0
+      let notificationCount: number = 0
 
       // Обрабатываем успешные ответы
       if (dashboardStats.status === 'fulfilled' && dashboardStats.value?.today_comments) {

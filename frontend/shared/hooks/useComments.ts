@@ -3,11 +3,11 @@
  */
 
 import { useReadList, useReadOne, useUpdate } from './useCrud'
-import type { Comment as VKComment, CommentsResponse, UpdateCommentRequest, CommentFilters } from '@/entities/comment'
+import type { Comment as VKComment, CommentListResponse, CommentUpdateRequest, CommentFilters } from '@/entities/comment'
 
 // Хук для получения списка комментариев
 export function useComments(params?: CommentFilters) {
-  return useReadList<CommentsResponse>('/api/v1/comments', params as Record<string, unknown>)
+  return useReadList<CommentListResponse>('/api/v1/comments', params as Record<string, unknown>)
 }
 
 // Хук для получения одного комментария
@@ -17,7 +17,7 @@ export function useComment(id: number) {
 
 // Хук для обновления статуса комментария
 export function useUpdateCommentStatus(id: number) {
-  return useUpdate<VKComment, UpdateCommentRequest>(`/api/v1/comments/${id}`, {
+  return useUpdate<VKComment, CommentUpdateRequest>(`/api/v1/comments/${id}`, {
     successMessage: 'Статус комментария успешно обновлен',
     errorMessage: 'Ошибка при обновлении статуса комментария',
   })

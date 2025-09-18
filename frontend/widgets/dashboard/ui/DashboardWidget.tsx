@@ -1,27 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useState, lazy, Suspense, useCallback, useMemo } from "react";
 import { useDashboard } from "../model";
 import { StatCard } from "./StatCard";
-import { QuickActionModal } from "./QuickActionModal";
-import { Card } from "./CustomCard";
-import { Button } from "./CustomButton";
+import { GlassCard } from "@/shared/ui";
+import { GlassButton } from "@/shared/ui";
+
+const QuickActionModal = lazy(() => import("./QuickActionModal").then(mod => ({ default: mod.QuickActionModal })));
 
 export const DashboardWidget = () => {
   const { stats, loading, error, statsConfig, quickActions, refetch } = useDashboard();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAction, setSelectedAction] = useState<string>("");
 
-  const handleActionClick = (action: string) => {
+  const handleActionClick = useCallback((action: string) => {
     setSelectedAction(action);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleModalClose = () => {
+  const handleModalClose = useCallback(() => {
     setIsModalOpen(false);
     setSelectedAction("");
     refetch();
-  };
+  }, [refetch]);
+
+  const statsCards = useMemo(() => statsConfig.map((config) => (
+    <GlassCard key={config.key}>
+      <StatCard
+        title={config.title}
+        value={stats[config.key]}
+        growth={stats[config.growthKey]}
+        icon={config.icon}
+        color={config.color}
+        loading={loading}
+      />
+    </GlassCard>
+  )), [statsConfig, stats, loading]);
+
+  const quickActionButtons = useMemo(() => quickActions.map((action) => (
+    <GlassButton
+      key={action.label}
+      onClick={() => handleActionClick(action.label)}
+      variant="ghost"
+      className="w-full justify-start p-3 h-auto"
+    >
+      <span className="flex items-center justify-between w-full">
+        <span className="flex items-center">
+          <span className="mr-2">{action.icon}</span>
+          {action.label}
+        </span>
+        <span className="text-white/40 hover:text-white/60">→</span>
+      </span>
+    </GlassButton>
+  )), [quickActions, handleActionClick]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-6">
@@ -32,26 +63,25 @@ export const DashboardWidget = () => {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-gray-100 to-gray-200 bg-clip-text text-transparent">
               Панель управления
             </h1>
-            <Button
+            <GlassButton
               onClick={refetch}
               disabled={loading}
               loading={loading}
               variant="ghost"
               size="lg"
               className="p-3"
-              title="Обновить данные"
             >
-              <span className="text-2xl">🔄</span>
-            </Button>
+              <span className="text-2xl" title="Обновить данные">🔄</span>
+            </GlassButton>
           </div>
           <p className="text-lg text-white/70 max-w-2xl mx-auto">
             Добро пожаловать в систему управления парсером комментариев
           </p>
         </div>
-        
+
         {/* Ошибка загрузки */}
         {error && (
-          <Card className="bg-red-500/10 border-red-500/20">
+          <GlassCard className="bg-red-500/10 border-red-500/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <span className="text-red-400 text-2xl">⚠️</span>
@@ -60,70 +90,46 @@ export const DashboardWidget = () => {
                   <p className="text-red-300/80 text-sm">{error}</p>
                 </div>
               </div>
-              <Button
+              <GlassButton
                 onClick={refetch}
                 disabled={loading}
                 loading={loading}
-                variant="danger"
+                variant="outline"
                 size="md"
               >
                 Повторить
-              </Button>
+              </GlassButton>
             </div>
-          </Card>
+          </GlassCard>
         )}
 
         {/* Статистические карточки */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {statsConfig.map((config) => (
-            <Card key={config.key}>
-              <StatCard
-                title={config.title}
-                value={stats[config.key] as number}
-                growth={stats[config.growthKey] as number}
-                icon={config.icon}
-                color={config.color}
-                loading={loading}
-              />
-            </Card>
-          ))}
+          {statsCards}
         </div>
 
         {/* Быстрые действия */}
         <div className="grid gap-6 md:grid-cols-2">
-          <Card>
+          <GlassCard>
             <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
               <span className="mr-2">🚀</span>
               Быстрые действия
             </h3>
             <div className="space-y-3">
-              {quickActions.map((action) => (
-                <Button
-                  key={action.label}
-                  onClick={() => handleActionClick(action.label)}
-                  variant="ghost"
-                  className="w-full justify-start p-3 h-auto"
-                >
-                  <span className="flex items-center justify-between w-full">
-                    <span className="flex items-center">
-                      <span className="mr-2">{action.icon}</span>
-                      {action.label}
-                    </span>
-                    <span className="text-white/40 group-hover:text-white/60">→</span>
-                  </span>
-                </Button>
-              ))}
+              {quickActionButtons}
             </div>
-          </Card>
+          </GlassCard>
         </div>
       </div>
 
       {/* Модальное окно для быстрых действий */}
-      <QuickActionModal
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-        action={selectedAction}
-      />
+      <Suspense fallback={<div className="flex items-center justify-center p-4"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>}>
+        <QuickActionModal
+          isOpen={isModalOpen}
+          onClose={handleModalClose}
+          action={selectedAction}
+        />
+      </Suspense>
     </div>
   );
 };

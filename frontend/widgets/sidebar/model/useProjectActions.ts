@@ -21,6 +21,13 @@ export const useProjectActions = () => {
     toast(`Поделиться проектом ${projectId}`);
   }, []);
 
+  /**
+   * Асинхронная функция для удаления проекта.
+   * Вызывает API для удаления проекта, показывает уведомление об успехе или ошибке.
+   *
+   * @param {string} projectId - Идентификатор проекта для удаления
+   * @returns {Promise<void>} Не возвращает значение
+   */
   const handleDeleteProject = useCallback(async (projectId: string) => {
     try {
       await deleteProject(projectId);
@@ -31,6 +38,16 @@ export const useProjectActions = () => {
     }
   }, [deleteProject]);
 
+  /**
+   * Асинхронная функция для создания нового проекта.
+   * Вызывает API для создания проекта с переданными данными, показывает уведомление об успехе
+   * и перенаправляет на страницу проектов. В случае ошибки логирует её и показывает уведомление.
+   *
+   * @param {Object} data - Данные для создания проекта
+   * @param {string} data.name - Название проекта
+   * @param {string} [data.description] - Описание проекта (опционально)
+   * @returns {Promise<void>} Не возвращает значение
+   */
   const handleCreateProject = useCallback(async (data: {
     name: string;
     description?: string;

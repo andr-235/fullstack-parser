@@ -2,6 +2,11 @@ import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse 
 import { config } from '@/shared/config'
 import { AuthStorage } from '@/shared/lib/auth-storage'
 
+// Проверяем базовый URL
+if (!config.api.baseUrl) {
+  console.error('API base URL is not configured. Please set NEXT_PUBLIC_API_URL environment variable.')
+}
+
 // Создаем базовый экземпляр axios
 const apiClient: AxiosInstance = axios.create({
   baseURL: config.api.baseUrl,

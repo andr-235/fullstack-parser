@@ -9,11 +9,11 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const { setUser, isAuthenticated, accessToken } = useAuthStore();
+  const { setUser, isAuthenticated, user } = useAuthStore();
 
   useEffect(() => {
     // При инициализации приложения проверяем, есть ли сохраненный токен
-    if (isAuthenticated && accessToken) {
+    if (isAuthenticated && !user) {
       // Загружаем информацию о пользователе
       authApi.getCurrentUser()
         .then(setUser)
@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           useAuthStore.getState().logout();
         });
     }
-  }, [isAuthenticated, accessToken, setUser]);
+  }, [isAuthenticated, user, setUser]);
 
   return <>{children}</>;
 };

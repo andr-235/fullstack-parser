@@ -75,7 +75,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
     },
     {
       title: 'Всего комментариев',
-      value: stats.total_comments.toLocaleString(),
+      value: stats.totalComments.toLocaleString(),
       description: `${stats.comments_with_keywords} с ключевыми словами`,
       icon: Calendar,
       trend: stats.comments_with_keywords > 0,

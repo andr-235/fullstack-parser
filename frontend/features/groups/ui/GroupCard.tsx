@@ -28,12 +28,12 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui'
 
-import { VKGroup } from '@/entities/groups'
+import { Group } from '@/entities/groups'
 
 import { GroupForm } from '@/features/groups/ui/GroupForm'
 
 interface GroupCardProps {
-  group: VKGroup
+  group: Group
   onUpdate?: (id: number, updates: any) => void
   onDelete?: (id: number) => void
   onToggleStatus?: (id: number, isActive: boolean) => void

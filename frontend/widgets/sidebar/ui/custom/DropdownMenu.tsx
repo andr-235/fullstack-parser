@@ -5,7 +5,7 @@ import { ReactNode, useState, useRef, useEffect, createContext, useContext } fro
 interface DropdownMenuContextType {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  triggerRef: React.RefObject<HTMLDivElement>;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const DropdownMenuContext = createContext<DropdownMenuContextType | null>(null);

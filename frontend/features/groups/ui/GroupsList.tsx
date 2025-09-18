@@ -5,12 +5,12 @@ import { MessageSquare, Users, Hash, FolderOpen } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui'
 import { Skeleton } from '@/shared/ui'
 
-import { VKGroup, UpdateGroupRequest } from '@/entities/groups'
+import { Group, UpdateGroupRequest } from '@/entities/groups'
 
 import { GroupCard } from '@/features/groups/ui/GroupCard'
 
 interface GroupsListProps {
-  groups: VKGroup[]
+  groups: Group[]
   loading?: boolean
   totalGroups?: number
   totalActiveGroups?: number

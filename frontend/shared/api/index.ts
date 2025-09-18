@@ -13,10 +13,10 @@ export { httpClient as apiClient } from '@/shared/lib/http-client'
 export const API_ENDPOINTS = {
   // Auth
   AUTH: {
-    LOGIN: '/auth/login',
-    LOGOUT: '/auth/logout',
-    REFRESH: '/auth/refresh',
-    PROFILE: '/auth/profile',
+    LOGIN: '/api/v1/auth/login',
+    LOGOUT: '/api/v1/auth/logout',
+    REFRESH: '/api/v1/auth/refresh',
+    PROFILE: '/api/v1/auth/me',
   },
 
   // Keywords
