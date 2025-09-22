@@ -4,7 +4,7 @@ services:
        context: ./backend
        dockerfile: Dockerfile
        target: runtime
-     command: fastapi
+     command: ["./main"]
      depends_on:
        postgres:
          condition: service_healthy
@@ -12,35 +12,20 @@ services:
          condition: service_started
      environment:
        # Database
-       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-vk_parser}
+       DATABASE_DSN: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-vk_parser}?sslmode=disable
 
-       # Redis
-       REDIS_URL: redis://redis:6379/0
-       REDIS_CACHE_URL: redis://redis:6379/0
-       REDIS_CELERY_URL: redis://redis:6379/1
-       CELERY_BROKER_URL: redis://redis:6379/1
-       CELERY_RESULT_BACKEND: redis://redis:6379/1
+       # JWT
+       JWT_SECRET: ${SECRET_KEY}
+       ACCESS_TTL: "15m"
+       REFRESH_TTL: "24h"
+
+       # Server
+       PORT: "8080"
+       GIN_MODE: "release"
 
        # Production settings
-       DEBUG: "false"
        LOG_LEVEL: "WARNING"
        ENVIRONMENT: "production"
-
-       # Security
-       SECRET_KEY: ${SECRET_KEY}
-       ACCESS_TOKEN_EXPIRE_MINUTES: 15
-
-       # Database connection pooling
-       DATABASE_POOL_SIZE: 20
-       DATABASE_MAX_OVERFLOW: 30
-
-       # Redis settings
-       REDIS_MAX_CONNECTIONS: 50
-
-       # Sentry
-       SENTRY_DSN: ${SENTRY_DSN}
-       SENTRY_ENVIRONMENT: "production"
-       SENTRY_TRACES_SAMPLE_RATE: "0.1"
 
      deploy:
        resources:
@@ -60,12 +45,12 @@ services:
        - app-network
 
   # =============================================================================
-     # Production Celery Worker
+     # Production Asynq Worker
   # =============================================================================
-  celery-worker:
+  asynq-worker:
      build:
        context: ./backend
-       dockerfile: Dockerfile
+       dockerfile: Dockerfile.worker
        target: runtime
      depends_on:
        postgres:
@@ -74,28 +59,18 @@ services:
          condition: service_started
      environment:
        # Database
-       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-vk_parser}
+       DATABASE_DSN: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-vk_parser}?sslmode=disable
 
        # Redis
-       REDIS_URL: redis://redis:6379/0
-       REDIS_CACHE_URL: redis://redis:6379/0
-       REDIS_CELERY_URL: redis://redis:6379/1
-       CELERY_BROKER_URL: redis://redis:6379/1
-       CELERY_RESULT_BACKEND: redis://redis:6379/1
+       REDIS_ADDR: redis:6379
+       REDIS_DB: 1
 
        # Production settings
-       DEBUG: "false"
        LOG_LEVEL: "WARNING"
        ENVIRONMENT: "production"
 
        # Security
-       SECRET_KEY: ${SECRET_KEY}
-
-       # Celery production settings
-       CELERY_WORKER_CONCURRENCY: 4
-       CELERY_WORKER_PREFETCH_MULTIPLIER: 1
-       CELERY_TASK_ACKS_LATE: "true"
-       CELERY_WORKER_DISABLE_RATE_LIMITS: "true"
+       JWT_SECRET: ${SECRET_KEY}
 
      deploy:
        resources:
@@ -114,98 +89,7 @@ services:
      networks:
        - app-network
 
-  # =============================================================================
-     # Production Celery Beat
-  # =============================================================================
-  celery-beat:
-     build:
-       context: ./backend
-       dockerfile: Dockerfile
-       target: runtime
-     depends_on:
-       postgres:
-         condition: service_healthy
-       redis:
-         condition: service_started
-     environment:
-       # Database
-       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-vk_parser}
 
-       # Redis
-       REDIS_URL: redis://redis:6379/0
-       REDIS_CACHE_URL: redis://redis:6379/0
-       REDIS_CELERY_URL: redis://redis:6379/1
-       CELERY_BROKER_URL: redis://redis:6379/1
-       CELERY_RESULT_BACKEND: redis://redis:6379/1
-
-       # Production settings
-       DEBUG: "false"
-       LOG_LEVEL: "WARNING"
-       ENVIRONMENT: "production"
-
-       # Security
-       SECRET_KEY: ${SECRET_KEY}
-
-     deploy:
-       resources:
-         limits:
-           memory: 256M
-           cpus: '0.25'
-         reservations:
-           memory: 128M
-           cpus: '0.1'
-     restart: always
-     logging:
-       driver: "json-file"
-       options:
-         max-size: "50m"
-         max-file: "5"
-     networks:
-       - app-network
-
-  # =============================================================================
-     # Production Flower
-  # =============================================================================
-  flower:
-     build:
-       context: ./backend
-       dockerfile: Dockerfile
-       target: runtime
-     depends_on:
-       redis:
-         condition: service_started
-     environment:
-       # Redis
-       REDIS_URL: redis://redis:6379/0
-       REDIS_CACHE_URL: redis://redis:6379/0
-       REDIS_CELERY_URL: redis://redis:6379/1
-       CELERY_BROKER_URL: redis://redis:6379/1
-       CELERY_RESULT_BACKEND: redis://redis:6379/1
-
-       # Production settings
-       DEBUG: "false"
-       LOG_LEVEL: "WARNING"
-       ENVIRONMENT: "production"
-
-       # Security
-       SECRET_KEY: ${SECRET_KEY}
-
-     deploy:
-       resources:
-         limits:
-           memory: 256M
-           cpus: '0.25'
-         reservations:
-           memory: 128M
-           cpus: '0.1'
-     restart: always
-     logging:
-       driver: "json-file"
-       options:
-         max-size: "50m"
-         max-file: "5"
-     networks:
-       - app-network
 
   # =============================================================================
      # Production PostgreSQL
@@ -310,7 +194,7 @@ services:
        context: .
        dockerfile: frontend/Dockerfile
      ports:
-       - "3002:3000"
+       - "3003:3000"
      deploy:
        resources:
          limits:
@@ -342,7 +226,7 @@ services:
        context: .
        dockerfile: nginx/Dockerfile
      ports:
-       - "80:80"
+       - "8080:80"
      depends_on:
        - api
        - frontend

@@ -4,12 +4,14 @@ package users
 import (
 	"backend/internal/domain/users"
 	"backend/internal/repository/postgres"
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -21,19 +23,21 @@ type AuthUseCase interface {
 
 // AuthUseCaseImpl реализует AuthUseCase.
 type AuthUseCaseImpl struct {
-	repo       postgres.UserRepository
-	jwtSecret  string
-	accessTTL  time.Duration
-	refreshTTL time.Duration
+	repo        postgres.UserRepository
+	redisClient *redis.Client
+	jwtSecret   string
+	accessTTL   time.Duration
+	refreshTTL  time.Duration
 }
 
 // NewAuthUseCase создает новый экземпляр AuthUseCaseImpl.
-func NewAuthUseCase(repo postgres.UserRepository, jwtSecret string, accessTTL, refreshTTL time.Duration) AuthUseCase {
+func NewAuthUseCase(repo postgres.UserRepository, redisClient *redis.Client, jwtSecret string, accessTTL, refreshTTL time.Duration) AuthUseCase {
 	return &AuthUseCaseImpl{
-		repo:       repo,
-		jwtSecret:  jwtSecret,
-		accessTTL:  accessTTL,
-		refreshTTL: refreshTTL,
+		repo:        repo,
+		redisClient: redisClient,
+		jwtSecret:   jwtSecret,
+		accessTTL:   accessTTL,
+		refreshTTL:  refreshTTL,
 	}
 }
 
@@ -65,6 +69,11 @@ func (ac *AuthUseCaseImpl) AuthenticateUser(identifier, password string) (*users
 	}
 	refreshToken, err := ac.generateToken(user.ID, user.Role, ac.refreshTTL)
 	if err != nil {
+		return nil, "", "", err
+	}
+
+	ctx := context.Background()
+	if err := ac.redisClient.Set(ctx, "refresh:"+user.ID.String(), refreshToken, ac.refreshTTL).Err(); err != nil {
 		return nil, "", "", err
 	}
 
@@ -106,12 +115,25 @@ func (ac *AuthUseCaseImpl) RefreshToken(refreshToken string) (string, string, er
 		return "", "", fmt.Errorf("роль не совпадает")
 	}
 
+	ctx := context.Background()
+	storedToken, err := ac.redisClient.Get(ctx, "refresh:"+userID.String()).Result()
+	if err != nil || storedToken != refreshToken {
+		return "", "", fmt.Errorf("неверный refresh token")
+	}
+
 	accessToken, err := ac.generateToken(userID, role, ac.accessTTL)
 	if err != nil {
 		return "", "", err
 	}
 	newRefreshToken, err := ac.generateToken(userID, role, ac.refreshTTL)
 	if err != nil {
+		return "", "", err
+	}
+
+	if err := ac.redisClient.Del(ctx, "refresh:"+userID.String()).Err(); err != nil {
+		return "", "", err
+	}
+	if err := ac.redisClient.Set(ctx, "refresh:"+userID.String(), newRefreshToken, ac.refreshTTL).Err(); err != nil {
 		return "", "", err
 	}
 

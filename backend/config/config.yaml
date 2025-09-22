@@ -1,0 +1,14 @@
+server:
+  port: ":8080"
+
+database:
+  url: "postgres://user:pass@localhost/db?sslmode=disable"
+
+redis:
+  url: "redis://localhost:6379"
+
+jwt:
+  secret: "your-jwt-secret-key-min-32-chars-long"
+
+log:
+  level: "info"

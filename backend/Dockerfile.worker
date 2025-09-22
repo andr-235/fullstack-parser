@@ -32,9 +32,9 @@ RUN CGO_ENABLED=0 \
     ./cmd/worker
 
 # ===========================================
-# Final stage - минимальный runtime образ для worker
+# Runtime stage - минимальный runtime образ для worker
 # ===========================================
-FROM alpine:3.21 AS final
+FROM alpine:3.21 AS runtime
 
 # Установка необходимых пакетов для runtime
 RUN apk add --no-cache \

@@ -10,7 +10,7 @@ import (
 // Keyword представляет доменную сущность ключевого слова.
 type Keyword struct {
 	ID          uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	Text        string    `json:"text" gorm:"type:varchar(255);uniqueIndex;not null"`
+	Text        string    `json:"text" gorm:"type:varchar(255);uniqueIndex;not null;index"`
 	Active      bool      `json:"active" gorm:"default:true"`
 	Description string    `json:"description" gorm:"type:text"`
 	CreatedAt   time.Time `json:"created_at" gorm:"autoCreateTime"`

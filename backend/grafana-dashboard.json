@@ -198,6 +198,29 @@
           "x": 12,
           "y": 24
         }
+      },
+      {
+        "id": 9,
+        "title": "Comment Analysis Duration",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(comment_analysis_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile",
+            "datasource": "Prometheus"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 32
+        }
       }
     ],
     "time": {

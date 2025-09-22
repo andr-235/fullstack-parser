@@ -40,9 +40,9 @@ FROM builder AS test
 RUN go test -v -race -coverprofile=coverage.out ./...
 
 # ===========================================
-# Final stage - минимальный runtime образ
+# Runtime stage - минимальный runtime образ
 # ===========================================
-FROM alpine:3.21 AS final
+FROM alpine:3.21 AS runtime
 
 # Установка необходимых пакетов для runtime
 RUN apk add --no-cache \

@@ -7,13 +7,13 @@ import (
 
 // Task представляет сущность задачи в системе очередей.
 type Task struct {
-	ID        string          `json:"id"`
-	Type      string          `json:"type"`      // Тип задачи, например "analyze_comment"
-	Payload   json.RawMessage `json:"payload"`   // Полезная нагрузка задачи в JSON
-	Status    Status          `json:"status"`    // Статус задачи
-	Result    json.RawMessage `json:"result"`    // Результат выполнения (JSON)
-	Error     string          `json:"error,omitempty"` // Ошибка, если статус failed
-	CreatedAt time.Time       `json:"created_at"`
+	ID        string          `json:"id" gorm:"primaryKey;type:varchar(36)"`
+	Type      string          `json:"type" gorm:"type:varchar(50);not null;index"`      // Тип задачи, например "analyze_comment"
+	Payload   json.RawMessage `json:"payload" gorm:"type:jsonb;not null"`   // Полезная нагрузка задачи в JSON
+	Status    Status          `json:"status" gorm:"type:varchar(20);not null;default:'pending';index"`    // Статус задачи
+	Result    json.RawMessage `json:"result" gorm:"type:jsonb"`    // Результат выполнения (JSON)
+	Error     string          `json:"error,omitempty" gorm:"type:text"` // Ошибка, если статус failed
+	CreatedAt time.Time       `json:"created_at" gorm:"not null"`
 	UpdatedAt time.Time       `json:"updated_at,omitempty"`
 }
 
