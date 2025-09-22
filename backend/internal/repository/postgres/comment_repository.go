@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -10,6 +11,15 @@ import (
 
 	"backend/internal/domain/comments"
 	"backend/internal/repository"
+)
+
+// Константы для запросов
+const (
+	commentTableName = "comments"
+	postIDColumn     = "post_id"
+	authorIDColumn   = "author_id"
+	textColumn       = "text"
+	analyzedColumn   = "analyzed"
 )
 
 // CommentRepository определяет интерфейс для работы с комментариями в PostgreSQL.
@@ -35,22 +45,63 @@ func NewCommentRepository(db *gorm.DB) CommentRepository {
 	return &commentPostgresRepository{db: db}
 }
 
+// buildSearchQuery строит запрос поиска с учетом фильтров.
+func (r *commentPostgresRepository) buildSearchQuery(ctx context.Context, filters repository.ListFilters) *gorm.DB {
+	query := r.db.WithContext(ctx).Model(&comments.Comment{})
+
+	if filters.PostID != nil {
+		query = query.Where(fmt.Sprintf("%s = ?", postIDColumn), *filters.PostID)
+	}
+	if filters.AuthorID != nil {
+		query = query.Where(fmt.Sprintf("%s = ?", authorIDColumn), *filters.AuthorID)
+	}
+	if filters.Search != "" {
+		searchTerm := "%" + strings.ToLower(filters.Search) + "%"
+		query = query.Where(fmt.Sprintf("LOWER(%s) LIKE ?", textColumn), searchTerm)
+	}
+
+	// Применяем пагинацию
+	if filters.Limit > 0 {
+		query = query.Limit(filters.Limit)
+	}
+	if filters.Offset > 0 {
+		query = query.Offset(filters.Offset)
+	}
+
+	return query
+}
+
+// handleGormError обрабатывает ошибки GORM и преобразует их в стандартные ошибки репозитория.
+func (r *commentPostgresRepository) handleGormError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return repository.ErrNotFound
+	}
+	return err
+}
+
 // Create создает новый комментарий в базе данных.
 // Проверяет валидность и сохраняет с автоматической генерацией ID.
 func (r *commentPostgresRepository) Create(ctx context.Context, comment *comments.Comment) error {
-	return r.db.WithContext(ctx).Create(comment).Error
+	if comment == nil {
+		return repository.ErrInvalidID
+	}
+	return r.handleGormError(r.db.WithContext(ctx).Create(comment).Error)
 }
 
 // GetByID получает комментарий по уникальному идентификатору.
 // Возвращает ошибку, если не найден (gorm.ErrRecordNotFound).
 func (r *commentPostgresRepository) GetByID(ctx context.Context, id uuid.UUID) (*comments.Comment, error) {
+	if id == uuid.Nil {
+		return nil, repository.ErrInvalidID
+	}
+
 	var comment comments.Comment
 	err := r.db.WithContext(ctx).First(&comment, "id = ?", id).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, repository.ErrNotFound
-		}
-		return nil, err
+		return nil, r.handleGormError(err)
 	}
 	return &comment, nil
 }
@@ -58,9 +109,13 @@ func (r *commentPostgresRepository) GetByID(ctx context.Context, id uuid.UUID) (
 // Update обновляет существующий комментарий.
 // Обновляет только указанные поля, проверяет существование.
 func (r *commentPostgresRepository) Update(ctx context.Context, comment *comments.Comment) error {
+	if comment == nil || comment.ID == uuid.Nil {
+		return repository.ErrInvalidID
+	}
+
 	result := r.db.WithContext(ctx).Save(comment)
 	if result.Error != nil {
-		return result.Error
+		return r.handleGormError(result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return repository.ErrNotFound
@@ -71,9 +126,13 @@ func (r *commentPostgresRepository) Update(ctx context.Context, comment *comment
 // Delete удаляет комментарий по ID.
 // Проверяет существование перед удалением.
 func (r *commentPostgresRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	if id == uuid.Nil {
+		return repository.ErrInvalidID
+	}
+
 	result := r.db.WithContext(ctx).Delete(&comments.Comment{}, "id = ?", id)
 	if result.Error != nil {
-		return result.Error
+		return r.handleGormError(result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return repository.ErrNotFound
@@ -85,23 +144,11 @@ func (r *commentPostgresRepository) Delete(ctx context.Context, id uuid.UUID) er
 // Фильтры: PostID, AuthorID, Search (поиск по тексту с LIKE).
 func (r *commentPostgresRepository) List(ctx context.Context, filters repository.ListFilters) ([]*comments.Comment, error) {
 	var commentsList []*comments.Comment
-	query := r.db.WithContext(ctx).Model(&comments.Comment{})
-
-	if filters.PostID != nil {
-		query = query.Where("post_id = ?", *filters.PostID)
-	}
-	if filters.AuthorID != nil {
-		query = query.Where("author_id = ?", *filters.AuthorID)
-	}
-	if filters.Search != "" {
-		// Простой поиск по тексту, игнорируя регистр
-		searchTerm := "%" + strings.ToLower(filters.Search) + "%"
-		query = query.Where("LOWER(text) LIKE ?", searchTerm)
-	}
+	query := r.buildSearchQuery(ctx, filters)
 
 	err := query.Find(&commentsList).Error
 	if err != nil {
-		return nil, err
+		return nil, r.handleGormError(err)
 	}
 	return commentsList, nil
 }
@@ -111,22 +158,25 @@ func (r *commentPostgresRepository) List(ctx context.Context, filters repository
 func (r *commentPostgresRepository) CountTotal(ctx context.Context) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&comments.Comment{}).Count(&count).Error
-	return count, err
+	return count, r.handleGormError(err)
 }
 
 // CountByPost возвращает количество комментариев для конкретного поста.
-// postID может быть nil для общего подсчета, но по ТЗ - для stats per post.
-func (r *commentPostgresRepository) CountByPost(ctx context.Context, postID *uint) (int64, error) {
+func (r *commentPostgresRepository) CountByPost(ctx context.Context, postID uuid.UUID) (int64, error) {
+	if postID == uuid.Nil {
+		return 0, repository.ErrInvalidID
+	}
+
 	var count int64
-	query := r.db.WithContext(ctx).Model(&comments.Comment{}).Where("post_id = ?", *postID)
+	query := r.db.WithContext(ctx).Model(&comments.Comment{}).Where(fmt.Sprintf("%s = ?", postIDColumn), postID)
 	err := query.Count(&count).Error
-	return count, err
+	return count, r.handleGormError(err)
 }
 
 // CountAnalyzed возвращает количество проанализированных комментариев.
 // Фильтр по полю analyzed = true.
 func (r *commentPostgresRepository) CountAnalyzed(ctx context.Context) (int64, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&comments.Comment{}).Where("analyzed = ?", true).Count(&count).Error
-	return count, err
+	err := r.db.WithContext(ctx).Model(&comments.Comment{}).Where(fmt.Sprintf("%s = ?", analyzedColumn), true).Count(&count).Error
+	return count, r.handleGormError(err)
 }

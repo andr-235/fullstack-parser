@@ -19,10 +19,6 @@ const (
 	MaxTextLength = 1000
 )
 
-// TODO: Архитектурная проблема - смешанное использование типов ID
-// Comment.AuthorID использует uuid.UUID, а User.ID использует uint
-// Необходимо привести к единообразию во всей системе
-
 // CommentsUseCase - интерфейс для use cases CRUD операций с комментариями.
 type CommentsUseCase interface {
 	CreateComment(ctx context.Context, text string, authorID uuid.UUID, postID *uuid.UUID) (*comments.Comment, error)
@@ -58,27 +54,12 @@ func (uc *commentsUseCase) validateText(text string) error {
 
 // checkUserExists проверяет существование пользователя.
 func (uc *commentsUseCase) checkUserExists(ctx context.Context, userID uuid.UUID) error {
-	// Временное решение: преобразуем UUID в uint для совместимости
-	// TODO: Привести все ID к единому типу (UUID)
-	userIDUint := uc.uuidToUint(userID)
-	_, err := uc.userRepo.GetByID(userIDUint)
+	_, err := uc.userRepo.GetByID(userID)
 	if err != nil {
 		uc.logger.WithError(err).WithField("user_id", userID).Error("пользователь не найден")
 		return err
 	}
 	return nil
-}
-
-// uuidToUint преобразует UUID в uint для совместимости с существующим репозиторием.
-// Временное решение до приведения всех ID к единому типу.
-func (uc *commentsUseCase) uuidToUint(id uuid.UUID) uint {
-	// Берем первые 4 байта UUID и преобразуем в uint
-	bytes := id[:4]
-	var result uint
-	for i, b := range bytes {
-		result |= uint(b) << (8 * (3 - i))
-	}
-	return result
 }
 
 // checkCommentOwnership проверяет права на комментарий.

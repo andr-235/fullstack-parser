@@ -72,7 +72,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		User: UserInfo{
-			ID:       user.ID,
+			ID:       user.ID.String(),
 			Username: user.Username,
 			Email:    user.Email,
 			Role:     user.Role,
@@ -114,7 +114,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		User: UserInfo{
-			ID:       user.ID,
+			ID:       user.ID.String(),
 			Username: user.Username,
 			Email:    user.Email,
 			Role:     user.Role,

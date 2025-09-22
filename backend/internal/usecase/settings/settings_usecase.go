@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
 	"backend/internal/domain/settings"
@@ -16,15 +17,24 @@ var _ users.User // blank import to satisfy compiler
 
 var _ users.User // Используем импорт для удовлетворения компилятора
 
+// SettingsUseCase определяет интерфейс для use cases настроек.
+type SettingsUseCase interface {
+	GetSettings(ctx context.Context) ([]*settings.Setting, error)
+	GetSettingByKey(ctx context.Context, key string) (*settings.Setting, error)
+	CreateSetting(ctx context.Context, key, value, description string, userID uuid.UUID) (*settings.Setting, error)
+	UpdateSetting(ctx context.Context, key, value, description string, userID uuid.UUID) (*settings.Setting, error)
+	DeleteSetting(ctx context.Context, key string, userID uuid.UUID) error
+}
+
 // SettingsUsecase содержит бизнес-логику для настроек.
 type SettingsUsecase struct {
 	settingRepo postgres.SettingRepository
 	userRepo    postgres.UserRepository
-	logger     *logrus.Logger
+	logger      *logrus.Logger
 }
 
 // NewSettingsUsecase создает новый usecase для настроек.
-func NewSettingsUsecase(settingRepo postgres.SettingRepository, userRepo postgres.UserRepository, logger *logrus.Logger) *SettingsUsecase {
+func NewSettingsUsecase(settingRepo postgres.SettingRepository, userRepo postgres.UserRepository, logger *logrus.Logger) SettingsUseCase {
 	return &SettingsUsecase{
 		settingRepo: settingRepo,
 		userRepo:    userRepo,
@@ -33,7 +43,7 @@ func NewSettingsUsecase(settingRepo postgres.SettingRepository, userRepo postgre
 }
 
 // CreateSetting создает новую настройку с проверкой роли admin.
-func (u *SettingsUsecase) CreateSetting(ctx context.Context, key, value, description string, userID uint) (*settings.Setting, error) {
+func (u *SettingsUsecase) CreateSetting(ctx context.Context, key, value, description string, userID uuid.UUID) (*settings.Setting, error) {
 	if err := u.validateKey(key); err != nil {
 		u.logger.WithError(err).WithField("key", key).Warn("Недопустимый ключ настройки")
 		return nil, err
@@ -78,7 +88,7 @@ func (u *SettingsUsecase) GetSettingByKey(ctx context.Context, key string) (*set
 }
 
 // UpdateSetting обновляет настройку с проверкой роли admin.
-func (u *SettingsUsecase) UpdateSetting(ctx context.Context, key, value, description string, userID uint) (*settings.Setting, error) {
+func (u *SettingsUsecase) UpdateSetting(ctx context.Context, key, value, description string, userID uuid.UUID) (*settings.Setting, error) {
 	if err := u.validateKey(key); err != nil {
 		u.logger.WithError(err).WithField("key", key).Warn("Недопустимый ключ настройки")
 		return nil, err
@@ -124,7 +134,7 @@ func (u *SettingsUsecase) ListSettings(ctx context.Context) ([]*settings.Setting
 }
 
 // DeleteSetting удаляет настройку по ключу с проверкой роли admin.
-func (u *SettingsUsecase) DeleteSetting(ctx context.Context, key string, userID uint) error {
+func (u *SettingsUsecase) DeleteSetting(ctx context.Context, key string, userID uuid.UUID) error {
 	if err := u.validateKey(key); err != nil {
 		u.logger.WithError(err).WithField("key", key).Warn("Недопустимый ключ настройки")
 		return err

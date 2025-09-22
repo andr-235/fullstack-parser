@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -85,7 +86,16 @@ func (ac *AuthUseCaseImpl) RefreshToken(refreshToken string) (string, string, er
 		return "", "", fmt.Errorf("неверные claims в token")
 	}
 
-	userID := uint(claims["user_id"].(float64))
+	userIDStr, ok := claims["user_id"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("неверный формат user_id в token")
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return "", "", fmt.Errorf("неверный UUID в token")
+	}
+
 	role := claims["role"].(string)
 
 	user, err := ac.repo.GetByID(userID)
@@ -109,9 +119,9 @@ func (ac *AuthUseCaseImpl) RefreshToken(refreshToken string) (string, string, er
 }
 
 // generateToken генерирует JWT токен.
-func (ac *AuthUseCaseImpl) generateToken(userID uint, role string, ttl time.Duration) (string, error) {
+func (ac *AuthUseCaseImpl) generateToken(userID uuid.UUID, role string, ttl time.Duration) (string, error) {
 	claims := jwt.MapClaims{
-		"user_id": userID,
+		"user_id": userID.String(),
 		"role":    role,
 		"exp":     time.Now().Add(ttl).Unix(),
 	}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 // Константы для ключей контекста
@@ -48,7 +49,20 @@ func JWTAuth(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		userID := uint(claims["user_id"].(float64))
+		userIDStr, ok := claims["user_id"].(string)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "неверный формат user_id"})
+			c.Abort()
+			return
+		}
+
+		userID, err := uuid.Parse(userIDStr)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "неверный UUID в токене"})
+			c.Abort()
+			return
+		}
+
 		role := claims["role"].(string)
 
 		c.Set(UserIDKey, userID)

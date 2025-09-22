@@ -2,19 +2,20 @@
 package postgres
 
 import (
-	"internal/domain/users"
+	"backend/internal/domain/users"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // UserRepository определяет интерфейс для работы с пользователями в БД.
 type UserRepository interface {
 	Create(user *users.User) error
-	GetByID(id uint) (*users.User, error)
+	GetByID(id uuid.UUID) (*users.User, error)
 	GetByEmail(email string) (*users.User, error)
 	GetByUsername(username string) (*users.User, error)
 	Update(user *users.User) error
-	Delete(id uint) error
+	Delete(id uuid.UUID) error
 }
 
 // UserRepositoryImpl реализует UserRepository с использованием GORM.
@@ -33,9 +34,9 @@ func (r *UserRepositoryImpl) Create(user *users.User) error {
 }
 
 // GetByID получает пользователя по ID.
-func (r *UserRepositoryImpl) GetByID(id uint) (*users.User, error) {
+func (r *UserRepositoryImpl) GetByID(id uuid.UUID) (*users.User, error) {
 	var user users.User
-	err := r.db.First(&user, id).Error
+	err := r.db.First(&user, "id = ?", id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +69,6 @@ func (r *UserRepositoryImpl) Update(user *users.User) error {
 }
 
 // Delete удаляет пользователя по ID.
-func (r *UserRepositoryImpl) Delete(id uint) error {
-	return r.db.Delete(&users.User{}, id).Error
+func (r *UserRepositoryImpl) Delete(id uuid.UUID) error {
+	return r.db.Delete(&users.User{}, "id = ?", id).Error
 }

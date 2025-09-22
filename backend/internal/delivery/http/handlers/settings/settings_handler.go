@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
 	"backend/internal/delivery/http/middleware"
@@ -55,18 +56,18 @@ func NewSettingsHandler(usecase *settings.SettingsUsecase, logger *logrus.Logger
 }
 
 // getUserIDFromContext извлекает ID пользователя из контекста.
-func (h *SettingsHandler) getUserIDFromContext(c *gin.Context) (uint, error) {
+func (h *SettingsHandler) getUserIDFromContext(c *gin.Context) (uuid.UUID, error) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
-		return 0, ErrUnauthorized
+		return uuid.Nil, ErrUnauthorized
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		return 0, ErrInvalidUserID
+		return uuid.Nil, ErrInvalidUserID
 	}
 
-	return userIDUint, nil
+	return userIDUUID, nil
 }
 
 // sendErrorResponse отправляет стандартизированный ответ об ошибке.

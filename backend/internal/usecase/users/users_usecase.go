@@ -7,15 +7,16 @@ import (
 	"fmt"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // UserUseCase определяет интерфейс для use cases пользователей.
 type UserUseCase interface {
 	CreateUser(username, email, password string) (*users.User, error)
-	GetUser(id uint) (*users.User, error)
-	UpdateUser(id uint, username, email string) (*users.User, error)
-	DeleteUser(id uint) error
+	GetUser(id uuid.UUID) (*users.User, error)
+	UpdateUser(id uuid.UUID, username, email string) (*users.User, error)
+	DeleteUser(id uuid.UUID) error
 }
 
 // UserUseCaseImpl реализует UserUseCase.
@@ -74,7 +75,7 @@ func (uc *UserUseCaseImpl) CreateUser(username, email, password string) (*users.
 }
 
 // GetUser получает пользователя по ID.
-func (uc *UserUseCaseImpl) GetUser(id uint) (*users.User, error) {
+func (uc *UserUseCaseImpl) GetUser(id uuid.UUID) (*users.User, error) {
 	user, err := uc.repo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -85,7 +86,7 @@ func (uc *UserUseCaseImpl) GetUser(id uint) (*users.User, error) {
 }
 
 // UpdateUser обновляет пользователя.
-func (uc *UserUseCaseImpl) UpdateUser(id uint, username, email string) (*users.User, error) {
+func (uc *UserUseCaseImpl) UpdateUser(id uuid.UUID, username, email string) (*users.User, error) {
 	user, err := uc.repo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -113,6 +114,6 @@ func (uc *UserUseCaseImpl) UpdateUser(id uint, username, email string) (*users.U
 }
 
 // DeleteUser удаляет пользователя.
-func (uc *UserUseCaseImpl) DeleteUser(id uint) error {
+func (uc *UserUseCaseImpl) DeleteUser(id uuid.UUID) error {
 	return uc.repo.Delete(id)
 }

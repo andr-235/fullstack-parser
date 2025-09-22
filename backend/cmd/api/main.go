@@ -1,147 +1,142 @@
-// Package main содержит точку входа в приложение.
 package main
 
 import (
 	"log"
 	"time"
 
-	authHandlers "backend/internal/delivery/http/handlers/auth"
-	settingsHandlers "backend/internal/delivery/http/handlers/settings"
-	usersHandlers "backend/internal/delivery/http/handlers/users"
-	"backend/internal/delivery/http/middleware"
+	"backend/internal/domain/comments"
+	"backend/internal/domain/keywords"
 	"backend/internal/domain/settings"
 	"backend/internal/domain/users"
-	postgresRepo "backend/internal/repository/postgres"
-	settingsUsecase "backend/internal/usecase/settings"
-	usersUsecase "backend/internal/usecase/users"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 // Config содержит конфигурацию приложения
 type Config struct {
-	JWTSecret  string
-	DSN        string
-	AccessTTL  time.Duration
-	RefreshTTL time.Duration
-}
-
-// loadConfig загружает конфигурацию из файла
-func loadConfig() *Config {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatal("Ошибка чтения конфига:", err)
-	}
-
-	return &Config{
-		JWTSecret:  viper.GetString("jwt.secret"),
-		DSN:        viper.GetString("database.dsn"),
-		AccessTTL:  15 * time.Minute,
-		RefreshTTL: 168 * time.Hour,
-	}
-}
-
-// initDatabase инициализирует подключение к БД и выполняет миграции
-func initDatabase(dsn string) *gorm.DB {
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Fatal("Ошибка подключения к БД:", err)
-	}
-
-	// Автомиграция
-	if err := db.AutoMigrate(&users.User{}, &settings.Setting{}); err != nil {
-		log.Fatal("Ошибка миграции БД:", err)
-	}
-
-	return db
-}
-
-// setupHandlers инициализирует все handlers и use cases
-func setupHandlers(db *gorm.DB, config *Config) (*authHandlers.AuthHandler, *usersHandlers.UserHandler, *settingsHandlers.SettingsHandler) {
-	// Репозитории
-	userRepo := postgresRepo.NewUserRepository(db)
-	settingRepo := postgresRepo.NewSettingPostgresRepository(db)
-
-	// Use cases
-	userUseCase := usersUsecase.NewUserUseCase(userRepo)
-	authUseCase := usersUsecase.NewAuthUseCase(userRepo, config.JWTSecret, config.AccessTTL, config.RefreshTTL)
-	settingsUsecase := settingsUsecase.NewSettingsUsecase(settingRepo, userRepo, logrus.New())
-
-	// Handlers
-	authHandler := authHandlers.NewAuthHandler(authUseCase, userUseCase)
-	userHandler := usersHandlers.NewUserHandler(userUseCase)
-	settingsHandler := settingsHandlers.NewSettingsHandler(settingsUsecase, logrus.New())
-
-	return authHandler, userHandler, settingsHandler
-}
-
-// setupRoutes настраивает маршруты API
-func setupRoutes(authHandler *authHandlers.AuthHandler, userHandler *usersHandlers.UserHandler, settingsHandler *settingsHandlers.SettingsHandler, jwtSecret string) *gin.Engine {
-	r := gin.Default()
-
-	api := r.Group("/api/v1")
-	{
-		// Аутентификация (публичные маршруты)
-		authGroup := api.Group("/auth")
-		{
-			authGroup.POST("/register", authHandler.Register)
-			authGroup.POST("/login", authHandler.Login)
-			authGroup.POST("/refresh", authHandler.Refresh)
-		}
-
-		// Пользователи (требуют аутентификации)
-		usersGroup := api.Group("/users")
-		usersGroup.Use(middleware.JWTAuth(jwtSecret))
-		{
-			usersGroup.GET("/:id", userHandler.GetUser)
-			usersGroup.PUT("/:id", userHandler.UpdateUser)
-			usersGroup.DELETE("/:id", userHandler.DeleteUser)
-			usersGroup.GET("/", middleware.AdminOnly(), userHandler.ListUsers)
-		}
-
-		// Настройки (требуют аутентификации и права администратора)
-		settingsGroup := api.Group("/settings")
-		settingsGroup.Use(middleware.JWTAuth(jwtSecret))
-		settingsGroup.Use(middleware.AdminOnly())
-		{
-			settingsGroup.GET("/", settingsHandler.GetSettings)
-			settingsGroup.GET("/:key", settingsHandler.GetSettingByKey)
-			settingsGroup.POST("/", settingsHandler.CreateSetting)
-			settingsGroup.PUT("/:key", settingsHandler.UpdateSetting)
-			settingsGroup.DELETE("/:key", settingsHandler.DeleteSetting)
-		}
-	}
-
-	return r
+	DatabaseDSN string
+	JWTSecret   string
+	AccessTTL   time.Duration
+	RefreshTTL  time.Duration
+	Port        string
 }
 
 func main() {
-	// Загрузка конфигурации
-	config := loadConfig()
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
 
-	// Инициализация БД
-	db := initDatabase(config.DSN)
-	defer func() {
-		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
-		}
-	}()
+	// Конфигурация приложения
+	config := getConfig()
 
-	// Настройка handlers
-	authHandler, userHandler, settingsHandler := setupHandlers(db, config)
+	// Инициализация базы данных
+	db, err := initDatabase(config.DatabaseDSN)
+	if err != nil {
+		log.Fatal("failed to connect database:", err)
+	}
 
-	// Настройка маршрутов
-	router := setupRoutes(authHandler, userHandler, settingsHandler, config.JWTSecret)
+	// Миграции
+	if err := runMigrations(db); err != nil {
+		log.Fatal("failed to run migrations:", err)
+	}
+
+	// Инициализация зависимостей
+	initDependencies(db, config, logger)
+
+	// HTTP роутер
+	r := gin.Default()
+
+	// Регистрация роутов
+	setupRoutes(r)
 
 	// Запуск сервера
-	if err := router.Run(":8080"); err != nil {
-		log.Fatal("Ошибка запуска сервера:", err)
+	logger.Infof("Starting server on port %s", config.Port)
+	if err := r.Run(":" + config.Port); err != nil {
+		log.Fatal("failed to start server:", err)
+	}
+}
+
+// getConfig возвращает конфигурацию приложения
+func getConfig() *Config {
+	return &Config{
+		DatabaseDSN: "host=localhost user=postgres password=postgres dbname=vk_comments port=5432 sslmode=disable TimeZone=UTC",
+		JWTSecret:   "your-jwt-secret-key-change-in-production",
+		AccessTTL:   15 * time.Minute,
+		RefreshTTL:  24 * time.Hour,
+		Port:        "8080",
+	}
+}
+
+// initDatabase инициализирует подключение к базе данных
+func initDatabase(dsn string) (*gorm.DB, error) {
+	return gorm.Open(postgres.Open(dsn), &gorm.Config{})
+}
+
+// runMigrations выполняет миграции базы данных
+func runMigrations(db *gorm.DB) error {
+	return db.AutoMigrate(
+		&users.User{},
+		&comments.Comment{},
+		&settings.Setting{},
+		&keywords.Keyword{},
+	)
+}
+
+// initDependencies инициализирует все зависимости приложения
+func initDependencies(db *gorm.DB, config *Config, logger *logrus.Logger) {
+	// Здесь будет инициализация зависимостей
+	// Пока что просто логируем
+	logger.Info("Dependencies initialized")
+}
+
+// setupRoutes настраивает все роуты приложения
+func setupRoutes(r *gin.Engine) {
+	// API v1 группа
+	v1 := r.Group("/api/v1")
+
+	// Базовый роут для проверки работоспособности
+	v1.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":  "ok",
+			"message": "Server is running",
+		})
+	})
+
+	// Заглушки для будущих роутов
+	auth := v1.Group("/auth")
+	{
+		auth.GET("/", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Auth endpoints coming soon"})
+		})
+	}
+
+	users := v1.Group("/users")
+	{
+		users.GET("/", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Users endpoints coming soon"})
+		})
+	}
+
+	comments := v1.Group("/comments")
+	{
+		comments.GET("/", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Comments endpoints coming soon"})
+		})
+	}
+
+	keywords := v1.Group("/keywords")
+	{
+		keywords.GET("/", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Keywords endpoints coming soon"})
+		})
+	}
+
+	settings := v1.Group("/settings")
+	{
+		settings.GET("/", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Settings endpoints coming soon"})
+		})
 	}
 }

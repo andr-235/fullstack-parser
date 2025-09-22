@@ -2,6 +2,8 @@ package comments
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Comment представляет доменную сущность комментария.

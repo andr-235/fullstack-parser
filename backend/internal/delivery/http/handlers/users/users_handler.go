@@ -3,11 +3,11 @@ package users
 
 import (
 	"net/http"
-	"strconv"
 
 	"backend/internal/usecase/users"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // UserHandler представляет handlers для пользователей.
@@ -23,13 +23,13 @@ func NewUserHandler(userUseCase users.UserUseCase) *UserHandler {
 // GetUser получает пользователя по ID.
 func (h *UserHandler) GetUser(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "неверный ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "неверный UUID"})
 		return
 	}
 
-	user, err := h.userUseCase.GetUser(uint(id))
+	user, err := h.userUseCase.GetUser(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "пользователь не найден"})
 		return
@@ -41,9 +41,9 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 // UpdateUser обновляет пользователя.
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "неверный ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "неверный UUID"})
 		return
 	}
 
@@ -57,7 +57,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userUseCase.UpdateUser(uint(id), req.Username, req.Email)
+	user, err := h.userUseCase.UpdateUser(id, req.Username, req.Email)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -69,13 +69,13 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 // DeleteUser удаляет пользователя.
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "неверный ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "неверный UUID"})
 		return
 	}
 
-	if err := h.userUseCase.DeleteUser(uint(id)); err != nil {
+	if err := h.userUseCase.DeleteUser(id); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "пользователь не найден"})
 		return
 	}
