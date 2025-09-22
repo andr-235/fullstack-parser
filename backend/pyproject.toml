@@ -110,7 +110,7 @@ httpx = "0.26.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.4.1"
-pytest-cov = "4.1.0"
+pytest-cov = "7.0.0"
 pytest-mock = "3.14.1"
 httpx = "0.26.0"
 black = "25.1.0"
