@@ -13,12 +13,14 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from src.common.logging import get_logger, setup_logging
+from src.common.database import Base
+from src.user.models import User
+from src.authors.models import Author
+from src.comments.models import Comment
+from src.posts.models import Post
 
 # Настраиваем логирование
 setup_logging()
-
-# Импортируем все модели для правильной инициализации SQLAlchemy relationships
-from src.models import *  # noqa: F401, F403
 
 logger = get_logger(__name__)
 
@@ -159,11 +161,7 @@ async def get_dashboard_metrics():
         raise HTTPException(status_code=500, detail="Failed to get dashboard metrics")
 
 
-# Импортируем все модели для правильной инициализации relationships
-try:
-    from src.models import *  # noqa: F401, F403
-except ImportError as e:
-    logger.warning(f"Some models not available: {e}")
+# Модели импортированы выше для инициализации relationships
 
 # Подключаем роутеры модулей
 try:

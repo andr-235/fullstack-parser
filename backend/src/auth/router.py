@@ -12,6 +12,7 @@ from .schemas import (
     ChangePasswordRequest,
     LoginRequest,
     LoginResponse,
+    LogoutRequest,
     RefreshTokenRequest,
     RefreshTokenResponse,
     RegisterRequest,

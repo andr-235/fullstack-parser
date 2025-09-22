@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Import all models to ensure they are registered
 try:
-    from src.shared.infrastructure.database.base import Base
+    from src.common.database import Base
     # Import all models through the models module
     from src import models  # This imports all models
 except ImportError as e:

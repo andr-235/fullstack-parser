@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.common.logging import get_logger
 from src.user.exceptions import UserAlreadyExistsError, UserInactiveError, UserNotFoundError
 from src.user.models import User
-from src.user.infrastructure.repositories import UserRepository
+from src.user.repository import UserRepository
 
 from .config import AuthConfig
 from .exceptions import (

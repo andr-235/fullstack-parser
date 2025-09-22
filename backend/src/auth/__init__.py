@@ -6,9 +6,9 @@
 
 from .config import AuthConfig
 from .dependencies import get_current_active_user, get_current_user
-from .exceptions import AuthError, UserNotFoundError, InvalidCredentialsError
+from .exceptions import AuthException, UserNotFoundError, InvalidCredentialsError
 from .router import router
-from .schemas import LoginRequest, RegisterRequest, TokenResponse, UserResponse
+from .schemas import LoginRequest, RegisterRequest, LoginResponse, RegisterResponse
 from .service import AuthService
 
 __all__ = [
@@ -17,11 +17,11 @@ __all__ = [
     "get_current_active_user",
     "AuthService",
     "AuthConfig",
-    "AuthError",
+    "AuthException",
     "UserNotFoundError",
     "InvalidCredentialsError",
     "LoginRequest",
     "RegisterRequest",
-    "TokenResponse",
-    "UserResponse",
+    "LoginResponse",
+    "RegisterResponse",
 ]

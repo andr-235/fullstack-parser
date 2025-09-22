@@ -5,7 +5,7 @@
 from datetime import datetime
 from typing import Optional
 
-from src.auth.services.password_service import PasswordServiceProtocol
+from src.auth.service import AuthService
 
 from .exceptions import (
     UserAlreadyExistsError,
@@ -30,7 +30,7 @@ class UserService:
     def __init__(
         self,
         repository: UserRepository,
-        password_service: PasswordServiceProtocol
+        auth_service: AuthService
     ):
         """Инициализация сервиса пользователей
 

@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth.services.password_service import PasswordService, PasswordServiceProtocol
+from src.auth.service import AuthService
 from src.common.database import get_db_session
 from src.common.logging import get_logger
 
@@ -31,29 +31,29 @@ def get_user_repository(session: AsyncSession = Depends(get_db_session)) -> User
     return UserRepository(session)
 
 
-def get_password_service() -> PasswordServiceProtocol:
-    """Получить сервис паролей
+def get_auth_service() -> AuthService:
+    """Получить сервис аутентификации
 
     Returns:
-        PasswordServiceProtocol: Сервис для работы с паролями
+        AuthService: Сервис аутентификации
     """
-    return PasswordService()
+    return AuthService()
 
 
 def get_user_service(
     repository: UserRepository = Depends(get_user_repository),
-    password_service: PasswordServiceProtocol = Depends(get_password_service)
+    auth_service: AuthService = Depends(get_auth_service)
 ) -> UserService:
     """Получить сервис пользователей
 
     Args:
         repository: Репозиторий пользователей
-        password_service: Сервис для работы с паролями
+        auth_service: Сервис аутентификации
 
     Returns:
         UserService: Сервис пользователей
     """
-    return UserService(repository, password_service)
+    return UserService(repository, auth_service)
 
 
 async def get_current_user(

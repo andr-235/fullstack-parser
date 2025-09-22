@@ -301,46 +301,6 @@ services:
        retries: 5
        start_period: 30s
 
-  # =============================================================================
-  # Production Next.js Frontend
-  # =============================================================================
-  frontend:
-     build:
-       context: ./frontend
-       dockerfile: Dockerfile
-       target: runner
-     environment:
-       # Production settings
-       NODE_ENV: "production"
-       NEXT_TELEMETRY_DISABLED: "1"
-       DOCKER: "true"
-       CI: "true"
-
-      # API URL
-       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:8000}
-
-     deploy:
-       resources:
-         limits:
-           memory: 512M
-           cpus: '0.5'
-         reservations:
-           memory: 256M
-           cpus: '0.25'
-     restart: always
-     logging:
-       driver: "json-file"
-       options:
-         max-size: "50m"
-         max-file: "5"
-     networks:
-       - app-network
-     # healthcheck:
-     #   test: ["CMD", "curl", "-f", "http://localhost:3000/"]
-     #   interval: 30s
-     #   timeout: 10s
-     #   retries: 3
-     #   start_period: 40s
 
   # =============================================================================
      # Production Nginx
@@ -353,7 +313,6 @@ services:
        - "80:80"
      depends_on:
        - api
-       - frontend
      deploy:
        resources:
          limits:
