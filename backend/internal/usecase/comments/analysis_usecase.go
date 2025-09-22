@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
-	"backend/internal/domain/comments"
 	"backend/internal/repository/postgres"
 )
 
@@ -84,8 +83,8 @@ func (uc *analysisUseCase) GetStats(ctx context.Context) (map[string]int64, erro
 	}
 
 	stats := map[string]int64{
-		"total":     total,
-		"analyzed":  analyzed,
+		"total":      total,
+		"analyzed":   analyzed,
 		"unanalyzed": total - analyzed,
 	}
 

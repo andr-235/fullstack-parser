@@ -5,11 +5,11 @@ package keywords
 
 import (
 	"net/http"
-	"strconv"
 
 	"backend/internal/usecase/keywords"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -69,13 +69,13 @@ func (h *Handler) listKeywords(c *gin.Context) {
 // getKeyword обрабатывает GET /api/v1/keywords/{id}.
 func (h *Handler) getKeyword(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный UUID"})
 		return
 	}
 
-	k, err := h.useCase.GetKeyword(c.Request.Context(), uint(id))
+	k, err := h.useCase.GetKeyword(c.Request.Context(), id)
 	if err != nil {
 		h.logger.WithError(err).WithField("id", id).Error("ошибка получения ключевого слова")
 		c.JSON(http.StatusNotFound, gin.H{"error": "ключ не найден"})
@@ -118,9 +118,9 @@ func (h *Handler) createKeyword(c *gin.Context) {
 // updateKeyword обрабатывает PUT /api/v1/keywords/{id}.
 func (h *Handler) updateKeyword(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный UUID"})
 		return
 	}
 
@@ -134,7 +134,7 @@ func (h *Handler) updateKeyword(c *gin.Context) {
 		return
 	}
 
-	k, err := h.useCase.UpdateKeyword(c.Request.Context(), uint(id), req.Text, req.Description)
+	k, err := h.useCase.UpdateKeyword(c.Request.Context(), id, req.Text, req.Description)
 	if err != nil {
 		h.logger.WithError(err).Error("ошибка обновления ключевого слова")
 		c.JSON(http.StatusConflict, gin.H{"error": "конфликт, ключ уже существует"})
@@ -147,13 +147,13 @@ func (h *Handler) updateKeyword(c *gin.Context) {
 // deleteKeyword обрабатывает DELETE /api/v1/keywords/{id}.
 func (h *Handler) deleteKeyword(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный UUID"})
 		return
 	}
 
-	if err := h.useCase.DeleteKeyword(c.Request.Context(), uint(id)); err != nil {
+	if err := h.useCase.DeleteKeyword(c.Request.Context(), id); err != nil {
 		h.logger.WithError(err).Error("ошибка удаления ключевого слова")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "внутренняя ошибка сервера"})
 		return
@@ -165,13 +165,13 @@ func (h *Handler) deleteKeyword(c *gin.Context) {
 // activateKeyword обрабатывает PATCH /api/v1/keywords/{id}/activate.
 func (h *Handler) activateKeyword(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный UUID"})
 		return
 	}
 
-	if err := h.useCase.ActivateKeyword(c.Request.Context(), uint(id)); err != nil {
+	if err := h.useCase.ActivateKeyword(c.Request.Context(), id); err != nil {
 		h.logger.WithError(err).Error("ошибка активации ключевого слова")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "внутренняя ошибка сервера"})
 		return
@@ -183,13 +183,13 @@ func (h *Handler) activateKeyword(c *gin.Context) {
 // deactivateKeyword обрабатывает PATCH /api/v1/keywords/{id}/deactivate.
 func (h *Handler) deactivateKeyword(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный UUID"})
 		return
 	}
 
-	if err := h.useCase.DeactivateKeyword(c.Request.Context(), uint(id)); err != nil {
+	if err := h.useCase.DeactivateKeyword(c.Request.Context(), id); err != nil {
 		h.logger.WithError(err).Error("ошибка деактивации ключевого слова")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "внутренняя ошибка сервера"})
 		return

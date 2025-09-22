@@ -5,25 +5,24 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 
-	"backend/internal/domain/comments"
-	"backend/internal/usecase/comments"
-	"backend/internal/usecase/users"
 	"backend/internal/repository"
+	commentsUsecase "backend/internal/usecase/comments"
+	"backend/internal/usecase/users"
 )
 
 // CommentsHandler - структура для handlers комментариев.
 type CommentsHandler struct {
-	useCase         comments.CommentsUseCase
-	analysisUseCase comments.AnalysisUseCase
+	useCase         commentsUsecase.CommentsUseCase
+	analysisUseCase commentsUsecase.AnalysisUseCase
 	userUseCase     users.UserUseCase
 	validate        *validator.Validate
 }
 
 // NewCommentsHandler создает новый экземпляр handlers для комментариев.
-func NewCommentsHandler(useCase comments.CommentsUseCase, analysisUseCase comments.AnalysisUseCase, userUseCase users.UserUseCase, validate *validator.Validate) *CommentsHandler {
+func NewCommentsHandler(useCase commentsUsecase.CommentsUseCase, analysisUseCase commentsUsecase.AnalysisUseCase, userUseCase users.UserUseCase, validate *validator.Validate) *CommentsHandler {
 	return &CommentsHandler{
 		useCase:         useCase,
 		analysisUseCase: analysisUseCase,
@@ -37,7 +36,7 @@ func (h *CommentsHandler) GetCommentsList(c *gin.Context) {
 	var filters repository.ListFilters
 
 	if postIDStr := c.Query("post_id"); postIDStr != "" {
-		postID, err := strconv.ParseUint(postIDStr, 10, 64)
+		postID, err := uuid.Parse(postIDStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid post_id format"})
 			return
@@ -46,7 +45,7 @@ func (h *CommentsHandler) GetCommentsList(c *gin.Context) {
 	}
 
 	if authorIDStr := c.Query("author_id"); authorIDStr != "" {
-		authorID, err := strconv.ParseUint(authorIDStr, 10, 64)
+		authorID, err := uuid.Parse(authorIDStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid author_id format"})
 			return
@@ -105,9 +104,9 @@ func (h *CommentsHandler) GetComment(c *gin.Context) {
 
 // CreateComment обрабатывает POST /api/v1/comments - создание комментария.
 type CreateCommentRequest struct {
-	Text     string `json:"text" binding:"required,min=1,max=1000"`
-	AuthorID uint   `json:"author_id" binding:"required"`
-	PostID   *uint  `json:"post_id,omitempty"`
+	Text     string     `json:"text" binding:"required,min=1,max=1000"`
+	AuthorID uuid.UUID  `json:"author_id" binding:"required"`
+	PostID   *uuid.UUID `json:"post_id,omitempty"`
 }
 
 func (h *CommentsHandler) CreateComment(c *gin.Context) {
@@ -151,13 +150,13 @@ func (h *CommentsHandler) UpdateComment(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
-	currentUserIDUint, ok := currentUserID.(uint)
+	currentUserIDUUID, ok := currentUserID.(uuid.UUID)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user id"})
 		return
 	}
 
-	comment, err := h.useCase.UpdateComment(c.Request.Context(), id, req.Text, currentUserIDUint)
+	comment, err := h.useCase.UpdateComment(c.Request.Context(), id, req.Text, currentUserIDUUID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -180,13 +179,13 @@ func (h *CommentsHandler) DeleteComment(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
-	currentUserIDUint, ok := currentUserID.(uint)
+	currentUserIDUUID, ok := currentUserID.(uuid.UUID)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user id"})
 		return
 	}
 
-	err = h.useCase.DeleteComment(c.Request.Context(), id, currentUserIDUint)
+	err = h.useCase.DeleteComment(c.Request.Context(), id, currentUserIDUUID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

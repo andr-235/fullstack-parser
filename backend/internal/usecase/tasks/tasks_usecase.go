@@ -5,18 +5,27 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"backend/internal/domain/tasks"
-	redis "backend/internal/repository/redis"
+
+	"github.com/sirupsen/logrus"
 )
+
+// TaskRepository определяет интерфейс для работы с задачами.
+type TaskRepository interface {
+	Enqueue(ctx context.Context, req *tasks.EnqueueRequest) (string, error)
+	GetTask(ctx context.Context, id string) (*tasks.TaskResponse, error)
+	CancelTask(ctx context.Context, id string) error
+	ListTasks(ctx context.Context, req *tasks.ListRequest) (*tasks.ListResponse, error)
+	GetStats(ctx context.Context) (*tasks.StatsResponse, error)
+}
 
 // TasksUsecase - use case для управления задачами.
 type TasksUsecase struct {
-	repo redis.TaskRepository
+	repo TaskRepository
 }
 
 // NewTasksUsecase создает новый use case для задач.
-func NewTasksUsecase(repo redis.TaskRepository) *TasksUsecase {
+func NewTasksUsecase(repo TaskRepository) *TasksUsecase {
 	return &TasksUsecase{repo: repo}
 }
 

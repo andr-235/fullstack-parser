@@ -1,4 +1,4 @@
-package tasks
+package handlers
 
 import (
 	"net/http"
@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"backend/internal/domain/tasks" as domain_tasks
-	"backend/internal/usecase/tasks" as usecase
+	domain "backend/internal/domain/tasks"
+	usecase "backend/internal/usecase/tasks"
 )
 
 // TasksHandler - обработчики HTTP для задач.
@@ -22,7 +22,7 @@ func NewTasksHandler(usecase *usecase.TasksUsecase) *TasksHandler {
 
 // EnqueueTask handler для постановки задачи.
 func (h *TasksHandler) EnqueueTask(c *gin.Context) {
-	var req domain_tasks.EnqueueRequest
+	var req domain.EnqueueRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logrus.WithError(err).Error("Неверный формат запроса на постановку задачи")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -75,7 +75,7 @@ func (h *TasksHandler) CancelTask(c *gin.Context) {
 
 // ListTasks handler для списка задач.
 func (h *TasksHandler) ListTasks(c *gin.Context) {
-	var req domain_tasks.ListRequest
+	var req domain.ListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		logrus.WithError(err).Error("Неверный формат запроса на список задач")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

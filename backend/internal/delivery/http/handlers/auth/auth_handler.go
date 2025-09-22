@@ -39,7 +39,7 @@ type RegisterResponse struct {
 
 // UserInfo представляет информацию о пользователе.
 type UserInfo struct {
-	ID       uint   `json:"id"`
+	ID       string `json:"id"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	Role     string `json:"role"`

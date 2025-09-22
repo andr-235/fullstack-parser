@@ -42,6 +42,27 @@ func NewSettingsUsecase(settingRepo postgres.SettingRepository, userRepo postgre
 	}
 }
 
+// GetSettings получает все настройки.
+func (u *SettingsUsecase) GetSettings(ctx context.Context) ([]*settings.Setting, error) {
+	settings, err := u.settingRepo.List(ctx)
+	if err != nil {
+		u.logger.WithError(err).Error("Ошибка получения списка настроек")
+		return nil, err
+	}
+	u.logger.Info("получение всех настроек")
+	return settings, nil
+}
+
+// GetSettingByKey получает настройку по ключу.
+func (u *SettingsUsecase) GetSettingByKey(ctx context.Context, key string) (*settings.Setting, error) {
+	setting, err := u.settingRepo.GetByKey(ctx, key)
+	if err != nil {
+		u.logger.WithError(err).WithField("key", key).Error("ошибка получения настройки")
+		return nil, err
+	}
+	return setting, nil
+}
+
 // CreateSetting создает новую настройку с проверкой роли admin.
 func (u *SettingsUsecase) CreateSetting(ctx context.Context, key, value, description string, userID uuid.UUID) (*settings.Setting, error) {
 	if err := u.validateKey(key); err != nil {
@@ -71,19 +92,6 @@ func (u *SettingsUsecase) CreateSetting(ctx context.Context, key, value, descrip
 	}
 
 	u.logger.WithField("key", key).Info("Настройка создана успешно")
-	return setting, nil
-}
-
-// GetSettingByKey получает настройку по ключу.
-func (u *SettingsUsecase) GetSettingByKey(ctx context.Context, key string) (*settings.Setting, error) {
-	setting, err := u.settingRepo.GetByKey(ctx, key)
-	if err != nil {
-		u.logger.WithError(err).WithField("key", key).Error("Ошибка получения настройки")
-		return nil, err
-	}
-	if setting == nil {
-		return nil, errors.New("настройка не найдена")
-	}
 	return setting, nil
 }
 

@@ -9,17 +9,18 @@ import (
 	"backend/internal/domain/keywords"
 	"backend/internal/repository/postgres"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
 // UseCase - интерфейс для use cases ключевых слов.
 type UseCase interface {
 	CreateKeyword(ctx context.Context, text, description string) (*keywords.Keyword, error)
-	GetKeyword(ctx context.Context, id uint) (*keywords.Keyword, error)
-	UpdateKeyword(ctx context.Context, id uint, text, description string) (*keywords.Keyword, error)
-	DeleteKeyword(ctx context.Context, id uint) error
-	ActivateKeyword(ctx context.Context, id uint) error
-	DeactivateKeyword(ctx context.Context, id uint) error
+	GetKeyword(ctx context.Context, id uuid.UUID) (*keywords.Keyword, error)
+	UpdateKeyword(ctx context.Context, id uuid.UUID, text, description string) (*keywords.Keyword, error)
+	DeleteKeyword(ctx context.Context, id uuid.UUID) error
+	ActivateKeyword(ctx context.Context, id uuid.UUID) error
+	DeactivateKeyword(ctx context.Context, id uuid.UUID) error
 	ListKeywords(ctx context.Context, activeOnly bool) ([]*keywords.Keyword, error)
 	GetKeywordStats(ctx context.Context) (*postgres.KeywordStats, error)
 }
@@ -63,4 +64,59 @@ func (uc *keywordUseCase) CreateKeyword(ctx context.Context, text, description s
 
 	uc.logger.WithField("id", k.ID).Info("ключ создано успешно")
 	return k, nil
+}
+
+// GetKeyword получает ключевое слово по ID.
+func (uc *keywordUseCase) GetKeyword(ctx context.Context, id uuid.UUID) (*keywords.Keyword, error) {
+	return uc.repo.GetByID(ctx, id)
+}
+
+// UpdateKeyword обновляет ключевое слово.
+func (uc *keywordUseCase) UpdateKeyword(ctx context.Context, id uuid.UUID, text, description string) (*keywords.Keyword, error) {
+	keyword, err := uc.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	keyword.Text = text
+	keyword.Description = description
+
+	return keyword, uc.repo.Update(ctx, keyword)
+}
+
+// DeleteKeyword удаляет ключевое слово.
+func (uc *keywordUseCase) DeleteKeyword(ctx context.Context, id uuid.UUID) error {
+	return uc.repo.Delete(ctx, id)
+}
+
+// ActivateKeyword активирует ключевое слово.
+func (uc *keywordUseCase) ActivateKeyword(ctx context.Context, id uuid.UUID) error {
+	keyword, err := uc.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	keyword.Activate()
+	return uc.repo.Update(ctx, keyword)
+}
+
+// DeactivateKeyword деактивирует ключевое слово.
+func (uc *keywordUseCase) DeactivateKeyword(ctx context.Context, id uuid.UUID) error {
+	keyword, err := uc.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	keyword.Deactivate()
+	return uc.repo.Update(ctx, keyword)
+}
+
+// ListKeywords получает список ключевых слов.
+func (uc *keywordUseCase) ListKeywords(ctx context.Context, activeOnly bool) ([]*keywords.Keyword, error) {
+	return uc.repo.List(ctx, activeOnly)
+}
+
+// GetKeywordStats получает статистику по ключевым словам.
+func (uc *keywordUseCase) GetKeywordStats(ctx context.Context) (*postgres.KeywordStats, error) {
+	return uc.repo.GetStats(ctx)
 }
