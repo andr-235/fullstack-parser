@@ -9,15 +9,17 @@ import (
 	"gorm.io/gorm"
 
 	"backend/internal/domain/keywords"
+
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
 // KeywordRepository - интерфейс для репозитория ключевых слов.
 type KeywordRepository interface {
 	Create(ctx context.Context, k *keywords.Keyword) error
-	GetByID(ctx context.Context, id uint) (*keywords.Keyword, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*keywords.Keyword, error)
 	Update(ctx context.Context, k *keywords.Keyword) error
-	Delete(ctx context.Context, id uint) error
+	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, activeOnly bool) ([]*keywords.Keyword, error)
 	GetStats(ctx context.Context) (*KeywordStats, error)
 }
@@ -49,9 +51,9 @@ func (r *keywordRepository) Create(ctx context.Context, k *keywords.Keyword) err
 }
 
 // GetByID получает ключевое слово по ID.
-func (r *keywordRepository) GetByID(ctx context.Context, id uint) (*keywords.Keyword, error) {
+func (r *keywordRepository) GetByID(ctx context.Context, id uuid.UUID) (*keywords.Keyword, error) {
 	var k keywords.Keyword
-	if err := r.db.WithContext(ctx).First(&k, id).Error; err != nil {
+	if err := r.db.WithContext(ctx).First(&k, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("ключ не найден")
 		}
@@ -71,8 +73,8 @@ func (r *keywordRepository) Update(ctx context.Context, k *keywords.Keyword) err
 }
 
 // Delete удаляет ключевое слово по ID.
-func (r *keywordRepository) Delete(ctx context.Context, id uint) error {
-	if err := r.db.WithContext(ctx).Delete(&keywords.Keyword{}, id).Error; err != nil {
+func (r *keywordRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	if err := r.db.WithContext(ctx).Delete(&keywords.Keyword{}, "id = ?", id).Error; err != nil {
 		logrus.WithError(err).WithField("id", id).Error("ошибка удаления ключевого слова")
 		return err
 	}
