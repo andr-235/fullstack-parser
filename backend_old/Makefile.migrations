@@ -1,0 +1,76 @@
+# Database Migration Management
+# VK Parser Backend - Alembic Best Practices 2025
+
+.PHONY: help migrate-up migrate-down migrate-create migrate-status migrate-history migrate-init
+
+# Default target
+help:
+	@echo "Database Migration Commands:"
+	@echo "  migrate-up        - Apply all pending migrations"
+	@echo "  migrate-down      - Rollback one migration"
+	@echo "  migrate-create    - Create new migration (usage: make migrate-create MESSAGE='description')"
+	@echo "  migrate-status    - Show current migration status"
+	@echo "  migrate-history   - Show migration history"
+	@echo "  migrate-init      - Initialize Alembic and create initial migration"
+	@echo "  migrate-reset     - Reset database and apply all migrations"
+
+# Apply all pending migrations
+migrate-up:
+	@echo "🚀 Applying migrations..."
+	python3 scripts/migrate.py up
+
+# Rollback one migration
+migrate-down:
+	@echo "⬇️ Rolling back migration..."
+	python3 scripts/migrate.py down
+
+# Create new migration
+migrate-create:
+	@if [ -z "$(MESSAGE)" ]; then \
+		echo "❌ Please provide a message: make migrate-create MESSAGE='your message'"; \
+		exit 1; \
+	fi
+	@echo "📝 Creating migration: $(MESSAGE)"
+	python3 scripts/migrate.py create "$(MESSAGE)"
+
+# Show migration status
+migrate-status:
+	@echo "📊 Migration status:"
+	python3 scripts/migrate.py status
+
+# Show migration history
+migrate-history:
+	@echo "📚 Migration history:"
+	python3 scripts/migrate.py history
+
+# Initialize Alembic
+migrate-init:
+	@echo "🔧 Initializing Alembic..."
+	python3 scripts/init_alembic.py
+
+# Reset database and apply all migrations
+migrate-reset:
+	@echo "⚠️  This will reset the database and apply all migrations"
+	@read -p "Are you sure? (y/N): " confirm && [ "$$confirm" = "y" ]
+	@echo "🔄 Resetting database..."
+	python3 scripts/migrate.py down base
+	python3 scripts/migrate.py up
+
+# Check database connection
+migrate-check:
+	@echo "🔍 Checking database connection..."
+	python3 -c "import asyncio; from src.shared.config import settings; from sqlalchemy.ext.asyncio import create_async_engine; asyncio.run(create_async_engine(settings.database_url).connect())"
+
+# Format migration files
+migrate-format:
+	@echo "🎨 Formatting migration files..."
+	black alembic/versions/*.py
+	ruff check --fix alembic/versions/*.py
+
+# Validate migration files
+migrate-validate:
+	@echo "✅ Validating migration files..."
+	python3 -m py_compile alembic/env.py
+	python3 -m py_compile scripts/migrate.py
+	python3 -m py_compile scripts/init_alembic.py
+	@echo "✅ All migration files are valid"
