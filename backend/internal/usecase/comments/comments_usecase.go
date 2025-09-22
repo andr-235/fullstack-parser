@@ -13,12 +13,22 @@ import (
 	"backend/internal/repository/postgres"
 )
 
+// Константы для валидации
+const (
+	MinTextLength = 1
+	MaxTextLength = 1000
+)
+
+// TODO: Архитектурная проблема - смешанное использование типов ID
+// Comment.AuthorID использует uuid.UUID, а User.ID использует uint
+// Необходимо привести к единообразию во всей системе
+
 // CommentsUseCase - интерфейс для use cases CRUD операций с комментариями.
 type CommentsUseCase interface {
-	CreateComment(ctx context.Context, text string, authorID uint, postID *uint) (*comments.Comment, error)
+	CreateComment(ctx context.Context, text string, authorID uuid.UUID, postID *uuid.UUID) (*comments.Comment, error)
 	GetComment(ctx context.Context, id uuid.UUID) (*comments.Comment, error)
-	UpdateComment(ctx context.Context, id uuid.UUID, text string, currentUserID uint) (*comments.Comment, error)
-	DeleteComment(ctx context.Context, id uuid.UUID, currentUserID uint) error
+	UpdateComment(ctx context.Context, id uuid.UUID, text string, currentUserID uuid.UUID) (*comments.Comment, error)
+	DeleteComment(ctx context.Context, id uuid.UUID, currentUserID uuid.UUID) error
 	ListComments(ctx context.Context, filters repository.ListFilters) ([]*comments.Comment, error)
 }
 
@@ -38,20 +48,66 @@ func NewCommentsUseCase(repo postgres.CommentRepository, userRepo postgres.UserR
 	}
 }
 
+// validateText проверяет валидность текста комментария.
+func (uc *commentsUseCase) validateText(text string) error {
+	if len(text) < MinTextLength || len(text) > MaxTextLength {
+		return errors.New("текст комментария должен быть от 1 до 1000 символов")
+	}
+	return nil
+}
+
+// checkUserExists проверяет существование пользователя.
+func (uc *commentsUseCase) checkUserExists(ctx context.Context, userID uuid.UUID) error {
+	// Временное решение: преобразуем UUID в uint для совместимости
+	// TODO: Привести все ID к единому типу (UUID)
+	userIDUint := uc.uuidToUint(userID)
+	_, err := uc.userRepo.GetByID(userIDUint)
+	if err != nil {
+		uc.logger.WithError(err).WithField("user_id", userID).Error("пользователь не найден")
+		return err
+	}
+	return nil
+}
+
+// uuidToUint преобразует UUID в uint для совместимости с существующим репозиторием.
+// Временное решение до приведения всех ID к единому типу.
+func (uc *commentsUseCase) uuidToUint(id uuid.UUID) uint {
+	// Берем первые 4 байта UUID и преобразуем в uint
+	bytes := id[:4]
+	var result uint
+	for i, b := range bytes {
+		result |= uint(b) << (8 * (3 - i))
+	}
+	return result
+}
+
+// checkCommentOwnership проверяет права на комментарий.
+func (uc *commentsUseCase) checkCommentOwnership(comment *comments.Comment, userID uuid.UUID) error {
+	if comment.AuthorID != userID {
+		return errors.New("нет прав на выполнение операции с комментарием")
+	}
+	return nil
+}
+
+// logOperation логирует операцию с комментарием.
+func (uc *commentsUseCase) logOperation(operation string, commentID uuid.UUID, fields logrus.Fields) {
+	uc.logger.WithFields(fields).WithField("comment_id", commentID).Info(operation)
+}
+
 // CreateComment создает новый комментарий.
 // Валидирует текст (длина 1-1000), проверяет автора.
-func (uc *commentsUseCase) CreateComment(ctx context.Context, text string, authorID, postID *uuid.UUID) (*comments.Comment, error) {
-	if len(text) < 1 || len(text) > 1000 {
-		return nil, errors.New("текст комментария должен быть от 1 до 1000 символов")
-	}
-
-	// Проверка существования автора
-	_, err := uc.userRepo.GetByID(ctx, uint(*authorID))
-	if err != nil {
-		uc.logger.WithError(err).Error("пользователь не найден при создании комментария")
+func (uc *commentsUseCase) CreateComment(ctx context.Context, text string, authorID uuid.UUID, postID *uuid.UUID) (*comments.Comment, error) {
+	// Валидация текста
+	if err := uc.validateText(text); err != nil {
 		return nil, err
 	}
 
+	// Проверка существования автора
+	if err := uc.checkUserExists(ctx, authorID); err != nil {
+		return nil, err
+	}
+
+	// Создание комментария
 	comment := &comments.Comment{
 		Text:     text,
 		AuthorID: authorID,
@@ -59,16 +115,17 @@ func (uc *commentsUseCase) CreateComment(ctx context.Context, text string, autho
 		Analyzed: false,
 	}
 
-	err = uc.repo.Create(ctx, comment)
-	if err != nil {
+	// Сохранение в репозитории
+	if err := uc.repo.Create(ctx, comment); err != nil {
 		uc.logger.WithError(err).Error("ошибка создания комментария")
 		return nil, err
 	}
 
-	uc.logger.WithFields(logrus.Fields{
-		"comment_id": comment.ID,
-		"author_id":  authorID,
-	}).Info("комментарий создан успешно")
+	// Логирование успешного создания
+	uc.logOperation("комментарий создан успешно", comment.ID, logrus.Fields{
+		"author_id": authorID,
+		"post_id":   postID,
+	})
 
 	return comment, nil
 }
@@ -77,7 +134,7 @@ func (uc *commentsUseCase) CreateComment(ctx context.Context, text string, autho
 func (uc *commentsUseCase) GetComment(ctx context.Context, id uuid.UUID) (*comments.Comment, error) {
 	comment, err := uc.repo.GetByID(ctx, id)
 	if err != nil {
-		uc.logger.WithError(err).WithField("id", id).Error("комментарий не найден")
+		uc.logger.WithError(err).WithField("comment_id", id).Error("комментарий не найден")
 		return nil, err
 	}
 
@@ -87,29 +144,36 @@ func (uc *commentsUseCase) GetComment(ctx context.Context, id uuid.UUID) (*comme
 // UpdateComment обновляет текст комментария.
 // Проверяет ownership (author_id == currentUserID), валидация текста.
 func (uc *commentsUseCase) UpdateComment(ctx context.Context, id uuid.UUID, text string, currentUserID uuid.UUID) (*comments.Comment, error) {
-	if len(text) < 1 || len(text) > 1000 {
-		return nil, errors.New("текст комментария должен быть от 1 до 1000 символов")
+	// Валидация текста
+	if err := uc.validateText(text); err != nil {
+		return nil, err
 	}
 
+	// Получение комментария
 	comment, err := uc.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if comment.AuthorID != uint(currentUserID) {
-		return nil, errors.New("нет прав на обновление комментария")
-	}
-
-	comment.Text = text
-	comment.UpdatedAt = time.Now()
-
-	err = uc.repo.Update(ctx, comment)
-	if err != nil {
-		uc.logger.WithError(err).WithField("id", id).Error("ошибка обновления комментария")
+	// Проверка прав на обновление
+	if err := uc.checkCommentOwnership(comment, currentUserID); err != nil {
 		return nil, err
 	}
 
-	uc.logger.WithField("id", id).Info("комментарий обновлен успешно")
+	// Обновление данных
+	comment.Text = text
+	comment.UpdatedAt = time.Now()
+
+	// Сохранение изменений
+	if err := uc.repo.Update(ctx, comment); err != nil {
+		uc.logger.WithError(err).WithField("comment_id", id).Error("ошибка обновления комментария")
+		return nil, err
+	}
+
+	// Логирование успешного обновления
+	uc.logOperation("комментарий обновлен успешно", id, logrus.Fields{
+		"user_id": currentUserID,
+	})
 
 	return comment, nil
 }
@@ -117,22 +181,27 @@ func (uc *commentsUseCase) UpdateComment(ctx context.Context, id uuid.UUID, text
 // DeleteComment удаляет комментарий.
 // Проверяет ownership.
 func (uc *commentsUseCase) DeleteComment(ctx context.Context, id uuid.UUID, currentUserID uuid.UUID) error {
+	// Получение комментария
 	comment, err := uc.repo.GetByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	if comment.AuthorID != uint(currentUserID) {
-		return errors.New("нет прав на удаление комментария")
-	}
-
-	err = uc.repo.Delete(ctx, id)
-	if err != nil {
-		uc.logger.WithError(err).WithField("id", id).Error("ошибка удаления комментария")
+	// Проверка прав на удаление
+	if err := uc.checkCommentOwnership(comment, currentUserID); err != nil {
 		return err
 	}
 
-	uc.logger.WithField("id", id).Info("комментарий удален успешно")
+	// Удаление комментария
+	if err := uc.repo.Delete(ctx, id); err != nil {
+		uc.logger.WithError(err).WithField("comment_id", id).Error("ошибка удаления комментария")
+		return err
+	}
+
+	// Логирование успешного удаления
+	uc.logOperation("комментарий удален успешно", id, logrus.Fields{
+		"user_id": currentUserID,
+	})
 
 	return nil
 }
@@ -141,9 +210,16 @@ func (uc *commentsUseCase) DeleteComment(ctx context.Context, id uuid.UUID, curr
 func (uc *commentsUseCase) ListComments(ctx context.Context, filters repository.ListFilters) ([]*comments.Comment, error) {
 	commentsList, err := uc.repo.List(ctx, filters)
 	if err != nil {
-		uc.logger.WithError(err).Error("ошибка получения списка комментариев")
+		uc.logger.WithError(err).WithFields(logrus.Fields{
+			"filters": filters,
+		}).Error("ошибка получения списка комментариев")
 		return nil, err
 	}
+
+	uc.logger.WithFields(logrus.Fields{
+		"count":   len(commentsList),
+		"filters": filters,
+	}).Debug("список комментариев получен успешно")
 
 	return commentsList, nil
 }
