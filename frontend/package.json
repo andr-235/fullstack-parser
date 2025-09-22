@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
+    "serve": "bunx serve",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
     "build-only": "vite build",
