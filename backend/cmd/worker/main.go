@@ -1,164 +1,148 @@
 package main
 
 import (
-	"backend/internal/usecase/tasks"
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/hibiken/asynq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/hibiken/asynq"
+
+	"backend/internal/config"
+	"backend/internal/logger"
+	"backend/internal/repository/redis"
+	"backend/internal/usecase/comments"
+	"backend/internal/usecase/morphological"
+	"backend/internal/usecase/vk"
+	"backend/internal/repository/tasks"
+	"backend/internal/repository/postgres"
 )
 
-// Config содержит конфигурацию worker
-type Config struct {
-	DatabaseDSN string
-	RedisAddr   string
-	RedisPass   string
-}
-
-// getConfig возвращает конфигурацию worker
-func getConfig() *Config {
-	databaseDSN := os.Getenv("DATABASE_DSN")
-	if databaseDSN == "" {
-		databaseDSN = "host=postgres user=postgres password=postgres dbname=vk_parser port=5432 sslmode=disable TimeZone=UTC"
-	}
-
-	redisAddr := os.Getenv("REDIS_ADDR")
-	if redisAddr == "" {
-		redisAddr = "redis:6379"
-	}
-
-	redisPass := os.Getenv("REDIS_PASS")
-
-	return &Config{
-		DatabaseDSN: databaseDSN,
-		RedisAddr:   redisAddr,
-		RedisPass:   redisPass,
-	}
-}
-
-// initDatabase инициализирует подключение к базе данных
-func initDatabase(dsn string) (*gorm.DB, error) {
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		return nil, err
-	}
-
-	// Получаем sql.DB для правильного закрытия
-	sqlDB, err := db.DB()
-	if err != nil {
-		return nil, err
-	}
-
-	// Настраиваем пул соединений
-	sqlDB.SetMaxOpenConns(10)
-	sqlDB.SetMaxIdleConns(5)
-
-	return db, nil
-}
-
-// parseCommentsTask обрабатывает задачу парсинга комментариев
-func parseCommentsTask(ctx context.Context, t *asynq.Task) error {
-	// Извлечение payload
-	var payload struct {
-		TaskID  string `json:"task_id"`
-		GroupID int64  `json:"group_id"`
-		PostID  int64  `json:"post_id"`
-	}
-	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
-		return fmt.Errorf("json.Unmarshal failed: %v", err)
-	}
-
-	// Инициализация базы данных
-	db, err := initDatabase(getConfig().DatabaseDSN)
-	if err != nil {
-		return fmt.Errorf("database init failed: %v", err)
-	}
-	defer func() {
-		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
-		}
-	}()
-
-	// Создаем usecase для обработки задач
-	taskProcessor := tasks.NewTaskProcessorUsecase(db)
-
-	// Обрабатываем задачу
-	if err := taskProcessor.ProcessCommentsTask(ctx, payload.TaskID, payload.GroupID, payload.PostID); err != nil {
-		return fmt.Errorf("process comments failed: %v", err)
-	}
-
-	return nil
-}
-
-// processTask универсальный обработчик задач
-func processTask(ctx context.Context, t *asynq.Task) error {
-	// Извлечение payload
-	var payload struct {
-		TaskID   string          `json:"task_id"`
-		TaskType string          `json:"task_type"`
-		Payload  json.RawMessage `json:"payload"`
-	}
-	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
-		return fmt.Errorf("json.Unmarshal failed: %v", err)
-	}
-
-	// Инициализация базы данных
-	db, err := initDatabase(getConfig().DatabaseDSN)
-	if err != nil {
-		return fmt.Errorf("database init failed: %v", err)
-	}
-	defer func() {
-		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
-		}
-	}()
-
-	// Создаем usecase для обработки задач
-	taskProcessor := tasks.NewTaskProcessorUsecase(db)
-
-	// Обрабатываем задачу по типу
-	if err := taskProcessor.ProcessTask(ctx, payload.TaskID, payload.TaskType, payload.Payload); err != nil {
-		return fmt.Errorf("process task failed: %v", err)
-	}
-
-	return nil
-}
-
 func main() {
-	config := getConfig()
-
-	// Инициализация базы данных
-	db, err := initDatabase(config.DatabaseDSN)
+	ctx := context.Background()
+	cfg, err := config.NewConfig()
 	if err != nil {
-		log.Fatal("Database init failed:", err)
+		log.Fatal("config error", err)
 	}
-	defer func() {
-		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
+
+	lg := logger.NewLogger()
+
+	db, err := postgres.NewDB(cfg)
+	if err != nil {
+		log.Fatal("db error", err)
+	}
+
+	rdb := redis.NewRedisClient(cfg.RedisURL)
+	defer rdb.Close()
+
+	// DI for usecases - stub for now, assume implementations exist
+	vkRepo, err := vk.NewVKRepository(cfg) // assume NewVKRepository from config or stub
+	if err != nil {
+		log.Fatal("vk repo error", err)
+	}
+	vkCommentsUC := vk.NewVKCommentsUseCase(vkRepo)
+
+	commentRepo, err := comments.NewCommentRepository(db) // assume postgres impl
+	if err != nil {
+		log.Fatal("comment repo error", err)
+	}
+	commentUC := comments.NewCommentsUseCase(commentRepo)
+
+	morphRepo := postgres.NewMorphologicalRepository(db, lg)
+	morphUC := morphological.NewMorphologicalUseCase(commentRepo, morphRepo, lg)
+	prometheus.MustRegister(morphUC.metrics)
+
+	taskRepo := redis.NewTaskRepository(rdb)
+
+	// Asynq worker
+	worker := asynq.NewWorker("redis://localhost:6379", asynq.Config{Concurrency: 10})
+
+	// Register handlers
+	worker.Use(logger.NewAsynqHandler(lg)) // assume logger has Asynq handler or stub log
+
+	worker.HandleFunc("vk:fetch_comments", func(ctx context.Context, t *asynq.Task) error {
+		var payload struct {
+			OwnerID string                 `json:"owner_id"`
+			PostID  string                 `json:"post_id"`
+			Options map[string]interface{} `json:"options"`
 		}
-	}()
+		if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+			lg.Error("payload unmarshal error", err)
+			return err
+		}
 
-	// Настройка сервера worker
-	srv := asynq.NewServer(
-		asynq.RedisClientOpt{
-			Addr:     config.RedisAddr,
-			Password: config.RedisPass,
-		},
-		asynq.Config{
-			Concurrency: 10,
-		},
-	)
+		// Set status processing
+		if err := taskRepo.SetStatus(ctx, t.ID(), tasks.StatusProcessing, nil); err != nil {
+			lg.Error("set status error", err)
+		}
 
-	mux := asynq.NewServeMux()
-	mux.HandleFunc("comments:parse", parseCommentsTask) // Handler для задачи парсинга комментариев
-	mux.HandleFunc("task:process", processTask)         // Универсальный handler для обработки задач
+		comments, err := vkCommentsUC.FetchComments(ctx, payload.OwnerID, payload.PostID, payload.Options)
+		if err != nil {
+			taskRepo.SetStatus(ctx, t.ID(), tasks.StatusFailed, map[string]interface{}{"error": err.Error()})
+			return err
+		}
 
-	if err := srv.Run(mux); err != nil {
-		log.Fatal("Worker run failed:", err)
+		var commentIDs []uint
+		// Save comments to DB via commentUC
+		for _, comment := range comments {
+			if err := commentUC.Create(ctx, comment); err != nil {
+				lg.Error("comment create error", err)
+			} else {
+				commentIDs = append(commentIDs, comment.ID)
+			}
+		}
+
+		// Enqueue process comments task
+		processPayload, _ := json.Marshal(map[string]interface{}{"comment_ids": commentIDs})
+		processTask, err := asynq.NewTask("vk:process_comments", processPayload)
+		if err != nil {
+			lg.Error("failed to create process task", err)
+			return err
+		}
+		if _, err := taskRepo.Enqueue(processTask); err != nil {
+			lg.Error("failed to enqueue process task", err)
+			return err
+		}
+
+		// Set status completed with comment IDs
+		taskRepo.SetStatus(ctx, t.ID(), tasks.StatusCompleted, map[string]interface{}{"comment_ids": commentIDs})
+		return nil
+	})
+
+	worker.HandleFunc("vk:process_comments", func(ctx context.Context, t *asynq.Task) error {
+		var payload struct {
+			CommentIDs []uint `json:"comment_ids"`
+		}
+		if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+			lg.Error("payload unmarshal error", err)
+			return err
+		}
+
+		// For batch, call AnalyzeBatch
+		err := morphUC.AnalyzeBatch(ctx, payload.CommentIDs)
+		if err != nil {
+			taskRepo.SetStatus(ctx, t.ID(), tasks.StatusFailed, map[string]interface{}{"error": err.Error()})
+			return err
+		}
+
+		// Update status
+		taskRepo.SetStatus(ctx, t.ID(), tasks.StatusCompleted, nil)
+		return nil
+	})
+
+	if err := worker.Run(); err != nil {
+		log.Fatal("worker run error", err)
 	}
+
+	// Graceful shutdown
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+	worker.Shutdown()
 }
