@@ -1,5 +1,5 @@
 # =============================================================================
-# Production-Ready Makefile for VK Parser API
+# Production-Ready Makefile for Go Backend API
 # Docker Compose + Nginx Management
 # =============================================================================
 
@@ -9,7 +9,7 @@
 .DEFAULT_GOAL := help
 
 # Configuration
-COMPOSE_FILE = docker-compose.yml
+COMPOSE_FILE = backend/docker-compose.yml
 PROD_COMPOSE_FILE = docker-compose.prod.yml
 ENV_FILE = .env
 
@@ -21,8 +21,8 @@ NC = \033[0m # No Color
 
 # Help target
 help: ## Show this help message
-	@echo "$(BLUE)VK Parser API - Docker Management$(NC)"
-	@echo "=================================="
+	@echo "$(BLUE)Go Backend API - Docker Management$(NC)"
+	@echo "======================================"
 	@echo ""
 	@echo "$(YELLOW)Available commands:$(NC)"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -42,8 +42,8 @@ up: ## Start development environment
 	@echo "$(BLUE)Starting development environment...$(NC)"
 	docker-compose -f $(COMPOSE_FILE) up -d
 	@echo "$(GREEN)✅ Development environment started$(NC)"
-	@echo "$(YELLOW)API: http://localhost:8000$(NC)"
-	@echo "$(YELLOW)Health: http://localhost/health$(NC)"
+	@echo "$(YELLOW)API: http://localhost:8080$(NC)"
+	@echo "$(YELLOW)Health: http://localhost:8080/health$(NC)"
 
 down: ## Stop all services
 	@echo "$(BLUE)Stopping all services...$(NC)"
@@ -88,6 +88,10 @@ logs-nginx: ## View Nginx logs only
 	@echo "$(BLUE)Showing Nginx logs...$(NC)"
 	docker-compose -f $(COMPOSE_FILE) logs -f nginx
 
+logs-frontend: ## View Frontend logs only
+	@echo "$(BLUE)Showing Frontend logs...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) logs -f frontend
+
 status: ## Show service status
 	@echo "$(BLUE)Service status:$(NC)"
 	docker-compose -f $(COMPOSE_FILE) ps
@@ -117,7 +121,7 @@ backup-restore: ## Restore database from backup (usage: make backup-restore FILE
 
 migrate: ## Run database migrations
 	@echo "$(BLUE)Running database migrations...$(NC)"
-	docker-compose -f $(COMPOSE_FILE) exec api alembic upgrade head
+	docker-compose -f $(COMPOSE_FILE) exec api ./main migrate
 	@echo "$(GREEN)✅ Migrations completed$(NC)"
 
 # Maintenance commands
@@ -144,46 +148,51 @@ shell-api: ## Open shell in API container
 
 shell-db: ## Open PostgreSQL shell
 	@echo "$(BLUE)Opening PostgreSQL shell...$(NC)"
-	docker-compose -f $(COMPOSE_FILE) exec postgres psql -U postgres -d vk_parser
+	docker-compose -f $(COMPOSE_FILE) exec postgres psql -U postgres -d comments_analysis
 
 shell-redis: ## Open Redis shell
 	@echo "$(BLUE)Opening Redis shell...$(NC)"
 	docker-compose -f $(COMPOSE_FILE) exec redis redis-cli
 
+shell-frontend: ## Open shell in Frontend container
+	@echo "$(BLUE)Opening shell in Frontend container...$(NC)"
+	docker-compose -f $(COMPOSE_FILE) exec frontend sh
+
 # Testing commands
 test: ## Run tests
 	@echo "$(BLUE)Running tests...$(NC)"
-	docker-compose -f $(COMPOSE_FILE) exec api python -m pytest
+	docker-compose -f $(COMPOSE_FILE) exec api go test ./...
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 test-coverage: ## Run tests with coverage
 	@echo "$(BLUE)Running tests with coverage...$(NC)"
-	docker-compose -f $(COMPOSE_FILE) exec api python -m pytest --cov=src
+	docker-compose -f $(COMPOSE_FILE) exec api go test -coverprofile=coverage.out ./...
 	@echo "$(GREEN)✅ Test coverage completed$(NC)"
 
 # Security commands
 security-scan: ## Run security scan on images
 	@echo "$(BLUE)Running security scan...$(NC)"
 	@if command -v trivy >/dev/null 2>&1; then \
-		trivy image vk_parser_api:latest; \
+		trivy image go_backend_api:latest; \
 	else \
 		echo "$(YELLOW)⚠️  Trivy not installed. Install with: https://aquasecurity.github.io/trivy/$(NC)"; \
 	fi
 
 # Information commands
 info: ## Show project information
-	@echo "$(BLUE)VK Parser API - Project Information$(NC)"
-	@echo "======================================"
+	@echo "$(BLUE)Go Backend API - Project Information$(NC)"
+	@echo "======================================="
 	@echo ""
 	@echo "$(YELLOW)Services:$(NC)"
-	@echo "  API:      http://localhost:8000"
+	@echo "  Frontend: http://localhost:3000"
+	@echo "  API:      http://localhost:8080"
 	@echo "  Nginx:    http://localhost:80"
-	@echo "  Health:   http://localhost/health"
+	@echo "  Health:   http://localhost:8080/health"
 	@echo ""
 	@echo "$(YELLOW)Database:$(NC)"
 	@echo "  Host:     localhost"
 	@echo "  Port:     5432"
-	@echo "  Database: vk_parser"
+	@echo "  Database: comments_analysis"
 	@echo "  User:     postgres"
 	@echo ""
 	@echo "$(YELLOW)Redis:$(NC)"

@@ -1,0 +1,5 @@
+POST http://localhost:8080/morphological/analyze
+Content-Type: application/json
+Authorization: Bearer test_token
+
+{"text": "test text for analysis"}

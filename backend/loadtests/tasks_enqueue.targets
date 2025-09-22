@@ -1,0 +1,5 @@
+POST http://localhost:8080/tasks/enqueue
+Content-Type: application/json
+Authorization: Bearer test_token  # Assume token from auth
+
+{"task_type": "morphological_analyze", "payload": {"comment_id": 1}}
