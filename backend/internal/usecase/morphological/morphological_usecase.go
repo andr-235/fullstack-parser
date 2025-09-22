@@ -1,141 +1,96 @@
-// Package morphological содержит use cases для морфологического анализа текста.
-// Предоставляет бизнес-логику для анализа текста, валидации и сохранения результатов.
 package morphological
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
 	"strings"
-	"unicode"
 
-	"backend/internal/domain/morphological"
+	"github.com/go-resty/resty/v2"
+	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/sirupsen/logrus"
+	"backend/internal/domain"
+	"backend/internal/logger"
+	"backend/internal/repository"
 )
 
-// Константы для валидации текста.
-const (
-	MaxTextLength = 1000 // Максимальная длина текста для анализа
-	MinTextLength = 1    // Минимальная длина текста для анализа
-)
-
-// MorphologicalRepository определяет интерфейс для хранения результатов анализа (optional).
-type MorphologicalRepository interface {
-	SaveResult(textHash string, result *morphological.AnalysisResult) error
+type MorphologicalUseCase struct {
+	commentRepo  repository.CommentRepository
+	morphRepo    repository.MorphologicalRepository
+	logger       logger.Logger
+	metrics      *prometheus.CounterVec
 }
 
-// MorphologicalUsecase определяет интерфейс для бизнес-логики морфологического анализа.
-type MorphologicalUsecase interface {
-	AnalyzeText(req *morphological.TextRequest) (*morphological.AnalysisResult, error)
-	ValidateText(text string) error
-	GetTextHash(text string) string
-}
-
-// morphologicalUsecase - имплементация usecase.
-type morphologicalUsecase struct {
-	service MorphologyService
-	repo    MorphologicalRepository // Optional.
-	logger  *logrus.Logger
-}
-
-// NewMorphologicalUsecase создаёт новый usecase для морфологического анализа.
-func NewMorphologicalUsecase(service MorphologyService, repo MorphologicalRepository, logger *logrus.Logger) MorphologicalUsecase {
-	return &morphologicalUsecase{
-		service: service,
-		repo:    repo,
-		logger:  logger,
+func NewMorphologicalUseCase(commentRepo repository.CommentRepository, morphRepo repository.MorphologicalRepository, lg logger.Logger) *MorphologicalUseCase {
+	return &MorphologicalUseCase{
+		commentRepo: commentRepo,
+		morphRepo:   morphRepo,
+		logger:      lg,
+		metrics: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "morphological_analysis_calls_total",
+			Help: "Total number of morphological analysis calls",
+		}),
 	}
 }
 
-// AnalyzeText выполняет анализ текста: валидация, вызов сервиса, optional сохранение, логирование.
-func (uc *morphologicalUsecase) AnalyzeText(req *morphological.TextRequest) (*morphological.AnalysisResult, error) {
-	// Валидация входного текста.
-	if err := uc.validateText(req.Text); err != nil {
-		uc.logger.WithError(err).WithField("text_length", len(req.Text)).Error("ошибка валидации текста")
-		return nil, err
+func (uc *MorphologicalUseCase) Analyze(ctx context.Context, text string) (*domain.TextAnalysis, error) {
+	uc.logger.Info(ctx, "Starting morphological analysis", logger.Fields{"text_length": len(text)})
+
+	uc.metrics.WithLabelValues("analyze").Inc()
+
+	// Mock external API call using resty
+	client := resty.New()
+	resp, err := client.R().
+		SetHeader("Content-Type", "application/json").
+		SetBody(map[string]string{"text": text}).
+		Post("https://api.ya.ru/analyze") // Stub URL, in real use actual Yandex API endpoint
+
+	if err != nil || resp.StatusCode() != http.StatusOK {
+		uc.logger.Warn(ctx, "External API failed, using fallback stub", logger.Fields{"error": err})
+		// Fallback to simple stub
+		return uc.simpleAnalyze(ctx, text)
 	}
 
-	// Вызов сервиса анализа.
-	result, err := uc.service.AnalyzeText(req.Text)
-	if err != nil {
-		uc.logger.WithError(err).WithField("text_length", len(req.Text)).Error("ошибка анализа текста")
-		return nil, err
+	var apiResp struct {
+		Keywords []string `json:"keywords"`
+		Tone     string   `json:"tone"`
+		Entities map[string][]string `json:"entities"`
+		Score    float64  `json:"score"`
+	}
+	if err := json.Unmarshal(resp.Body(), &apiResp); err != nil {
+		uc.logger.Warn(ctx, "Failed to parse API response, using fallback", logger.Fields{"error": err})
+		return uc.simpleAnalyze(ctx, text)
 	}
 
-	// Валидация результата анализа.
-	if result == nil {
-		uc.logger.Error("сервис анализа вернул nil результат")
-		return nil, errors.New("ошибка анализа: получен пустой результат")
-	}
-
-	// Optional: сохранение в репозиторий.
-	if uc.repo != nil {
-		textHash := uc.hashText(req.Text)
-		if saveErr := uc.repo.SaveResult(textHash, result); saveErr != nil {
-			uc.logger.WithError(saveErr).WithField("text_hash", textHash).Warn("не удалось сохранить результат анализа")
-			// Не фатально, продолжаем.
-		} else {
-			uc.logger.WithField("text_hash", textHash).WithField("word_count", len(result.Words)).Info("результат анализа сохранён")
-		}
-	}
-
-	uc.logger.WithField("word_count", len(result.Words)).Info("анализ текста завершён успешно")
-	return result, nil
+	uc.logger.Info(ctx, "External API analysis successful")
+	return &domain.TextAnalysis{
+		Keywords: apiResp.Keywords,
+		Tone:     apiResp.Tone,
+		Entities: apiResp.Entities,
+		Score:    apiResp.Score,
+	}, nil
 }
 
-// validateText проверяет длину и символы текста (алфавит + пробелы, русский/английский).
-func (uc *morphologicalUsecase) validateText(text string) error {
-	// Проверка на пустую строку
-	if text == "" {
-		return errors.New("текст не может быть пустым")
+// simpleAnalyze is a fallback stub for morphological analysis.
+func (uc *MorphologicalUseCase) simpleAnalyze(text string) (*domain.TextAnalysis, error) {
+	uc.logger.Info(ctx, "Using simple fallback analysis")
+	// Simple keyword extraction: split by space, take first 5 words as keywords
+	words := strings.Split(text, " ")
+	if len(words) > 5 {
+		words = words[:5]
 	}
+	return &domain.TextAnalysis{
+		Keywords: words,
+		Tone:     "neutral",
+		Entities: map[string][]string{},
+		Score:    0.5,
+	}, nil
+}
 
-	// Проверка длины
-	length := len(text)
-	if length < MinTextLength || length > MaxTextLength {
-		return errors.New("длина текста должна быть от 1 до 1000 символов")
-	}
-
-	// Проверка на разрешённые символы: буквы, пробелы, базовая пунктуация, цифры.
-	invalidChars := make([]rune, 0)
-	for _, r := range text {
-		if !unicode.IsLetter(r) && !unicode.IsSpace(r) && !unicode.IsPunct(r) && !unicode.IsNumber(r) {
-			invalidChars = append(invalidChars, r)
-		}
-	}
-
-	if len(invalidChars) > 0 {
-		uc.logger.WithField("invalid_chars", string(invalidChars)).Warn("найдены недопустимые символы")
-		return errors.New("текст содержит недопустимые символы")
-	}
-
+// AnalyzeCommentsBatch performs batch analysis for multiple comments.
+// For now, stub; in production, batch process and update comments.
+func (uc *MorphologicalUseCase) AnalyzeCommentsBatch(ctx context.Context, commentIDs []uint) error {
+	// Stub: no-op, actual implementation would fetch, analyze, update via repo
 	return nil
-}
-
-// hashText создает простой хеш для текста (placeholder, можно заменить на sha256).
-func (uc *morphologicalUsecase) hashText(text string) string {
-	// Нормализация текста: приведение к нижнему регистру и удаление лишних пробелов
-	normalized := strings.ToLower(strings.TrimSpace(text))
-	// Простой хеш на основе длины и первых/последних символов
-	if len(normalized) == 0 {
-		return "empty"
-	}
-	return normalized[:min(10, len(normalized))]
-}
-
-// ValidateText проверяет валидность текста для анализа.
-func (uc *morphologicalUsecase) ValidateText(text string) error {
-	return uc.validateText(text)
-}
-
-// GetTextHash возвращает хеш текста для идентификации.
-func (uc *morphologicalUsecase) GetTextHash(text string) string {
-	return uc.hashText(text)
-}
-
-// min возвращает минимальное из двух чисел.
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

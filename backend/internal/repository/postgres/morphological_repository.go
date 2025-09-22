@@ -1,48 +1,68 @@
 package postgres
 
 import (
-	"encoding/json"
-	"errors"
-	"time"
+	"context"
 
-	"backend/internal/domain/morphological"
 	"gorm.io/gorm"
+
+	"backend/internal/domain"
+	"backend/internal/logger"
 )
 
-// MorphologicalResult представляет модель для хранения результатов анализа в БД.
-type MorphologicalResult struct {
-	ID        uint   `gorm:"primaryKey"`
-	TextHash  string `gorm:"uniqueIndex;not null"`
-	Result    string `gorm:"type:jsonb;not null"` // JSONB для AnalysisResult.
-	CreatedAt time.Time
+// MorphologicalRepository defines the interface for morphological analysis storage.
+type MorphologicalRepository interface {
+	SaveAnalysis(ctx context.Context, commentID uint, analysis *domain.TextAnalysis) error
+	GetAnalysis(ctx context.Context, commentID uint) (*domain.TextAnalysis, error)
 }
 
-// MorphologicalRepository - имплементация интерфейса для PostgreSQL.
-type MorphologicalRepository struct {
-	db *gorm.DB
+// morphologicalRepository is the PostgreSQL implementation of MorphologicalRepository.
+type morphologicalRepository struct {
+	db     *gorm.DB
+	logger logger.Logger
 }
 
-// NewMorphologicalRepository создаёт новый репозиторий для морфологического анализа.
-func NewMorphologicalRepository(db *gorm.DB) *MorphologicalRepository {
-	return &MorphologicalRepository{db: db}
+// NewMorphologicalRepository creates a new MorphologicalRepository.
+func NewMorphologicalRepository(db *gorm.DB, lg logger.Logger) MorphologicalRepository {
+	return &morphologicalRepository{
+		db:     db,
+		logger: lg,
+	}
 }
 
-// SaveResult сохраняет результат анализа в БД.
-func (r *MorphologicalRepository) SaveResult(textHash string, result *morphological.AnalysisResult) error {
-	// Сериализуем result в JSON.
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return errors.New("ошибка сериализации результата")
+// SaveAnalysis saves the analysis result to the Comment's Analysis field as JSON.
+func (r *morphologicalRepository) SaveAnalysis(ctx context.Context, commentID uint, analysis *domain.TextAnalysis) error {
+	var comment domain.Comment
+	if err := r.db.WithContext(ctx).First(&comment, commentID).Error; err != nil {
+		r.logger.Error(ctx, "Failed to find comment for analysis save", logger.Fields{"comment_id": commentID, "error": err})
+		return err
 	}
 
-	morphResult := &MorphologicalResult{
-		TextHash: textHash,
-		Result:   string(resultJSON),
+	// Update analysis fields
+	comment.Analysis = analysis
+	comment.Keywords = analysis.Keywords
+	comment.Tone = analysis.Tone
+
+	if err := r.db.WithContext(ctx).Save(&comment).Error; err != nil {
+		r.logger.Error(ctx, "Failed to save analysis", logger.Fields{"comment_id": commentID, "error": err})
+		return err
 	}
 
-	if err := r.db.Create(morphResult).Error; err != nil {
-		return errors.New("ошибка сохранения результата в БД")
-	}
-
+	r.logger.Info(ctx, "Analysis saved successfully", logger.Fields{"comment_id": commentID})
 	return nil
+}
+
+// GetAnalysis retrieves the analysis for a comment.
+func (r *morphologicalRepository) GetAnalysis(ctx context.Context, commentID uint) (*domain.TextAnalysis, error) {
+	var comment domain.Comment
+	if err := r.db.WithContext(ctx).First(&comment, commentID).Error; err != nil {
+		r.logger.Error(ctx, "Failed to find comment for analysis get", logger.Fields{"comment_id": commentID, "error": err})
+		return nil, err
+	}
+
+	if comment.Analysis == nil {
+		return nil, nil // No analysis yet
+	}
+
+	r.logger.Info(ctx, "Analysis retrieved successfully", logger.Fields{"comment_id": commentID})
+	return comment.Analysis, nil
 }
