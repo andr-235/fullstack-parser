@@ -1,0 +1,37 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alerts.yml"
+
+scrape_configs:
+  - job_name: 'api'
+    static_configs:
+      - targets: ['api:8080']
+    metrics_path: /metrics
+    scrape_interval: 5s
+
+  - job_name: 'worker'
+    static_configs:
+      - targets: ['worker:8080']
+    metrics_path: /metrics
+    scrape_interval: 5s
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:9187']
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:9121']
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  - job_name: 'asynq'
+    static_configs:
+      - targets: ['worker:8080']
+    metrics_path: /metrics
+    scrape_interval: 5s

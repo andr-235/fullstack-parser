@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"backend/internal/domain/comments"
@@ -10,6 +12,9 @@ import (
 	"backend/internal/domain/users"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -45,11 +50,51 @@ func main() {
 	// Инициализация зависимостей
 	initDependencies(db, config, logger)
 
+	// HTTP metrics
+	var (
+		httpRequestsTotal = promauto.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "http_requests_total",
+				Help: "Total number of HTTP requests",
+			},
+			[]string{"method", "path", "status"},
+		)
+
+		httpRequestDuration = promauto.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name: "http_request_duration_seconds",
+				Help: "Duration of HTTP requests in seconds",
+			},
+			[]string{"method", "path"},
+		)
+	)
+
+	// Custom Prometheus middleware for Gin
+	promMiddleware := func(c *gin.Context) {
+		start := time.Now()
+		path := c.Request.URL.Path
+		method := c.Request.Method
+
+		c.Next()
+
+		status := fmt.Sprintf("%d", c.Writer.Status())
+		duration := time.Since(start).Seconds()
+
+		httpRequestsTotal.WithLabelValues(method, path, status).Inc()
+		httpRequestDuration.WithLabelValues(method, path).Observe(duration)
+	}
+
 	// HTTP роутер
 	r := gin.Default()
 
+	// Prometheus middleware
+	r.Use(promMiddleware)
+
 	// Регистрация роутов
 	setupRoutes(r)
+
+	// Metrics endpoint
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Запуск сервера
 	logger.Infof("Starting server on port %s", config.Port)
@@ -69,9 +114,56 @@ func getConfig() *Config {
 	}
 }
 
-// initDatabase инициализирует подключение к базе данных
+// initDatabase инициализирует подключение к базе данных с GORM instrumentation
 func initDatabase(dsn string) (*gorm.DB, error) {
-	return gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+
+	// GORM tracing
+	db.Callback().Create().Before("gorm:before_create").Register("trace:before_create", func(db *gorm.DB) {
+		start := time.Now()
+		db.InstanceSet("trace_start", start)
+	})
+	db.Callback().Create().After("gorm:after_create").Register("trace:after_create", func(db *gorm.DB) {
+		if start, ok := db.InstanceGet("trace_start"); ok {
+			duration := time.Since(start.(time.Time))
+			// Note: Define GormCreateDuration in metrics.go
+			// GormCreateDuration.WithLabelValues("model").Observe(duration.Seconds())
+		}
+	})
+
+	db.Callback().Query().Before("gorm:before_query").Register("trace:before_query", func(db *gorm.DB) {
+		start := time.Now()
+		db.InstanceSet("trace_start", start)
+	})
+	db.Callback().Query().After("gorm:after_query").Register("trace:after_query", func(db *gorm.DB) {
+		if start, ok := db.InstanceGet("trace_start"); ok {
+			duration := time.Since(start.(time.Time))
+			// Note: Define GormQueryDuration in metrics.go
+			// GormQueryDuration.WithLabelValues("model").Observe(duration.Seconds())
+		}
+	})
+
+	// Connection pool monitoring
+	go func() {
+		for {
+			stats := sqlDB.Stats()
+			// Note: Define GormDBOpenConnections in metrics.go
+			// GormDBOpenConnections.WithLabelValues("db").Set(float64(stats.OpenConnections))
+			// GormDBInUse.WithLabelValues("db").Set(float64(stats.InUse))
+			// GormDBIdle.WithLabelValues("db").Set(float64(stats.Idle))
+			time.Sleep(10 * time.Second)
+		}
+	}()
+
+	return db, nil
 }
 
 // runMigrations выполняет миграции базы данных
