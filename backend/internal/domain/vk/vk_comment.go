@@ -1,24 +1,13 @@
 package vk
 
-import (
-	"errors"
-)
+import "time"
 
+// VKComment представляет комментарий из VK API.
 type VKComment struct {
-	ID         string `json:"id"`
-	FromID     string `json:"from_id"`
-	Date       int64  `json:"date"`
-	Text       string `json:"text"`
-	LikesCount int    `json:"likes_count"`
-	ReplyCount int    `json:"reply_count"`
-}
-
-func (c *VKComment) Validate() error {
-	if c.ID == "" {
-		return errors.New("id is required")
-	}
-	if c.Text == "" {
-		return errors.New("text is required")
-	}
-	return nil
+	ID       int64     `json:"id"`
+	FromID   int64     `json:"from_id"`
+	Date     time.Time `json:"date"`
+	Text     string    `json:"text"`
+	Likes    int       `json:"likes_count"`
+	// Другие поля можно добавить по необходимости, e.g. attachments.
 }

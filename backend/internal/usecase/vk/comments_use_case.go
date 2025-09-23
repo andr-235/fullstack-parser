@@ -5,16 +5,22 @@ import (
 	"fmt"
 
 	"vk-analyzer/internal/domain/comments"
+	"vk-analyzer/internal/repository/postgres"
+	"vk-analyzer/internal/repository/vk"
 )
 
 // VKCommentsUseCase инкапсулирует бизнес-логику для работы с VK комментариями.
 type VKCommentsUseCase struct {
-	// Dependencies: VKRepository, AsynqClient, CommentsRepository и т.д. (wired позже)
+	vkRepo      vk.VKRepository
+	commentRepo postgres.CommentRepository
 }
 
 // NewVKCommentsUseCase создает новый экземпляр VKCommentsUseCase.
-func NewVKCommentsUseCase() *VKCommentsUseCase {
-	return &VKCommentsUseCase{}
+func NewVKCommentsUseCase(vkRepo vk.VKRepository, commentRepo postgres.CommentRepository) *VKCommentsUseCase {
+	return &VKCommentsUseCase{
+		vkRepo:      vkRepo,
+		commentRepo: commentRepo,
+	}
 }
 
 // FetchComments запускает асинхронную задачу для получения комментариев.
