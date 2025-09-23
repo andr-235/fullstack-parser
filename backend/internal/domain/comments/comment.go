@@ -1,19 +1,43 @@
 package comments
 
-import (
-	"time"
+// Donut represents VK Donut information
+type Donut struct {
+	IsDon       bool   `json:"is_don"`
+	Placeholder string `json:"placeholder"`
+}
 
-	"github.com/google/uuid"
-)
+// Likes represents information about comment likes
+type Likes struct {
+	Count     int `json:"count"`
+	UserLikes int `json:"user_likes"`
+	CanLike   int `json:"can_like"`
+}
 
-// Comment представляет доменную сущность комментария.
-// Содержит текст, автора, связь с постом (опционально), временные метки и флаг анализа.
+// Thread represents information about nested comment thread
+type Thread struct {
+	Count           int       `json:"count"`
+	Items           []Comment `json:"items,omitempty"`
+	CanPost         bool      `json:"can_post"`
+	ShowReplyButton bool      `json:"show_reply_button"`
+	GroupsCanPost   bool      `json:"groups_can_post"`
+}
+
+// Comment represents a wall comment entity according to VK API.
 type Comment struct {
-	ID        uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id" example:"123e4567-e89b-12d3-a456-426614174000"` // Уникальный идентификатор комментария
-	Text      string     `gorm:"type:text;not null;size:1000" json:"text" validate:"required,min=1,max=1000"`                              // Текст комментария
-	AuthorID  uuid.UUID  `gorm:"type:uuid;not null;index" json:"author_id" validate:"required,uuid"`                                       // ID автора (ссылка на пользователя)
-	PostID    *uuid.UUID `gorm:"type:uuid;index" json:"post_id,omitempty" validate:"omitempty,uuid"`                                       // ID поста (опционально, для связи)
-	CreatedAt time.Time  `json:"created_at"`                                                                                               // Время создания
-	UpdatedAt time.Time  `json:"updated_at"`                                                                                               // Время последнего обновления
-	Analyzed  bool       `gorm:"default:false" json:"analyzed"`                                                                            // Флаг, указывающий, был ли проведен анализ ключевых слов
+	ID             int64         `json:"id"`
+	FromID         int64         `json:"from_id"`
+	Date           int64         `json:"date"` // Unix timestamp
+	Text           string        `json:"text"`
+	Donut          *Donut        `json:"donut,omitempty"`
+	ReplyToUser    *int64        `json:"reply_to_user,omitempty"`
+	ReplyToComment *int64        `json:"reply_to_comment,omitempty"`
+	Attachments    []interface{} `json:"attachments,omitempty"` // Will be properly typed based on VK API
+	ParentsStack   []int64       `json:"parents_stack,omitempty"`
+	Thread         *Thread       `json:"thread,omitempty"`
+	Likes          *Likes        `json:"likes,omitempty"` // VK API likes information
+
+	// Additional processed fields for our domain
+	Keywords  []string `json:"keywords,omitempty"`
+	Sentiment string   `json:"sentiment,omitempty"`
+	TaskID    string   `json:"task_id,omitempty"`
 }

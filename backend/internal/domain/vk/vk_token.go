@@ -1,19 +1,11 @@
 package vk
 
-import (
-	"time"
-)
+import "time"
 
+// VKToken представляет токен доступа VK.
 type VKToken struct {
 	AccessToken string    `json:"access_token"`
-	Expiry      time.Time `json:"expiry"`
-}
-
-func (t *VKToken) IsExpired() bool {
-	return time.Now().After(t.Expiry)
-}
-
-func (t *VKToken) Refresh() error {
-	// Заглушка для обновления токена
-	return nil
+	ExpiresIn   int       `json:"expires_in"`
+	UserID      int64     `json:"user_id"`
+	ExpiresAt   time.Time `json:"expires_at,omitempty"`
 }
