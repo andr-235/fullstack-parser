@@ -1,178 +1,178 @@
+// Package vk provides repository for VK API integration.
 package vk
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/go-resty/resty/v2"
 	"golang.org/x/time/rate"
 
-	"github.com/example/comment-analysis-backend/internal/config"
-	"github.com/example/comment-analysis-backend/internal/domain/vk"
+	"vk-analyzer/internal/domain/vk"
 )
 
+// VKRepository defines interface for VK API operations.
 type VKRepository interface {
-	GetComments(ctx context.Context, ownerID, postID string) ([]*vk.VKComment, error)
-	GetPosts(ctx context.Context, ownerID string, count int) ([]*vk.VKPost, error)
-	GetLikes(ctx context.Context, type_, ownerID, itemID string) ([]int, error)
+	GetComments(ctx context.Context, ownerID int64, postID int64, token string) ([]vk.VKComment, error)
+	GetPosts(ctx context.Context, ownerID int64, count int, offset int, token string) ([]vk.VKPost, error)
+	GetLikesList(ctx context.Context, typ string, ownerID int64, itemID int64, token string) ([]int64, error)
+	RenewToken(ctx context.Context, userID string) (vk.VKToken, error)
 }
 
-type vkHTTPClient struct {
-	client     *resty.Client
-	limiter    *rate.Limiter
-	apiVersion string
+// vkRepository implements VKRepository with HTTP client and rate limiting.
+type vkRepository struct {
+	client  *resty.Client
+	limiter *rate.Limiter
 }
 
-func NewVKRepository(cfg *config.Config) *vkHTTPClient {
+// NewVKRepository creates new VKRepository instance.
+func NewVKRepository() VKRepository {
 	client := resty.New()
-	client.SetTimeout(10 * time.Second)
-	limiter := rate.NewLimiter(rate.Limit(cfg.VK.RateLimit), cfg.VK.RateLimit)
-	return &vkHTTPClient{
-		client:     client,
-		limiter:    limiter,
-		apiVersion: cfg.VK.APIVersion,
+	client.SetBaseURL("https://api.vk.com")
+	limiter := rate.NewLimiter(3, 10) // 3 req/s, burst 10
+	return &vkRepository{
+		client:  client,
+		limiter: limiter,
 	}
 }
 
-func (v *vkHTTPClient) GetComments(ctx context.Context, ownerID, postID string) ([]*vk.VKComment, error) {
-	if err := v.limiter.Wait(ctx); err != nil {
-		return nil, err
+// vkResponse is helper struct for VK API response unmarshaling.
+type vkResponse struct {
+	Response vkItemsResponse `json:"response"`
+}
+
+type vkItemsResponse struct {
+	Items interface{} `json:"items"` // Flexible for different types
+}
+
+// GetComments fetches comments for a post using VK API wall.getComments.
+func (r *vkRepository) GetComments(ctx context.Context, ownerID int64, postID int64, token string) ([]vk.VKComment, error) {
+	if err := r.limiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit wait: %w", err)
 	}
-	token := os.Getenv("VK_ACCESS_TOKEN")
-	if token == "" {
-		return nil, fmt.Errorf("VK_ACCESS_TOKEN not set")
-	}
-	url := fmt.Sprintf("https://api.vk.com/method/wall.getComments?owner_id=%s&post_id=%s&access_token=%s&v=%s", ownerID, postID, token, v.apiVersion)
-	resp, err := v.client.R().
-		SetContext(ctx).
-		Get(url)
-	if err != nil {
-		return nil, err
-	}
-	if resp.IsError() {
-		return nil, fmt.Errorf("VK API error: %s", resp.String())
-	}
-	var result struct {
-		Response struct {
-			Items []struct {
-				ID         int64  `json:"id"`
-				FromID     int64  `json:"from_id"`
-				Date       int64  `json:"date"`
-				Text       string `json:"text"`
-				LikesCount int    `json:"likes_count"`
-				ReplyCount int    `json:"reply_count"`
-			} `json:"items"`
-		} `json:"response"`
-		Error struct {
-			ErrorCode int    `json:"error_code"`
-			ErrorMsg string `json:"error_msg"`
-		} `json:"error"`
-	}
-	if err := json.Unmarshal(resp.Body(), &result); err != nil {
-		return nil, err
-	}
-	if result.Error.ErrorCode != 0 {
-		return nil, fmt.Errorf("VK API error %d: %s", result.Error.ErrorCode, result.Error.ErrorMsg)
-	}
-	comments := make([]*vk.VKComment, len(result.Response.Items))
-	for i, item := range result.Response.Items {
-		comments[i] = &vk.VKComment{
-			ID:         fmt.Sprintf("%d", item.ID),
-			FromID:     fmt.Sprintf("%d", item.FromID),
-			Date:       item.Date,
-			Text:       item.Text,
-			LikesCount: item.LikesCount,
-			ReplyCount: item.ReplyCount,
+
+	var comments []vk.VKComment
+	err := r.executeWithRetry(ctx, func() (*resty.Response, error) {
+		resp, err := r.client.R().
+			SetQueryParams(map[string]string{
+				"owner_id":     fmt.Sprintf("%d", ownerID),
+				"post_id":      fmt.Sprintf("%d", postID),
+				"access_token": token,
+				"v":            "5.131",
+			}).
+			SetResult(&vkResponse{
+				Response: vkItemsResponse{
+					Items: &[]vk.VKComment{},
+				},
+			}).
+			Get("method/wall.getComments")
+		if err == nil {
+			comments = (*resp.Result().(*vkResponse).Response.Items.(*[]vk.VKComment))
 		}
-	}
-	return comments, nil
+		return resp, err
+	})
+
+	return comments, err
 }
 
-func (v *vkHTTPClient) GetPosts(ctx context.Context, ownerID string, count int) ([]*vk.VKPost, error) {
-	if err := v.limiter.Wait(ctx); err != nil {
-		return nil, err
+// GetPosts fetches posts using VK API wall.get with pagination.
+func (r *vkRepository) GetPosts(ctx context.Context, ownerID int64, count int, offset int, token string) ([]vk.VKPost, error) {
+	if err := r.limiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit wait: %w", err)
 	}
-	token := os.Getenv("VK_ACCESS_TOKEN")
-	if token == "" {
-		return nil, fmt.Errorf("VK_ACCESS_TOKEN not set")
-	}
-	url := fmt.Sprintf("https://api.vk.com/method/wall.get?owner_id=%s&count=%d&access_token=%s&v=%s", ownerID, count, token, v.apiVersion)
-	resp, err := v.client.R().
-		SetContext(ctx).
-		Get(url)
-	if err != nil {
-		return nil, err
-	}
-	if resp.IsError() {
-		return nil, fmt.Errorf("VK API error: %s", resp.String())
-	}
-	var result struct {
-		Response struct {
-			Items []struct {
-				ID      int64  `json:"id"`
-				OwnerID int64  `json:"owner_id"`
-				Text    string `json:"text"`
-				Date    int64  `json:"date"`
-			} `json:"items"`
-		} `json:"response"`
-		Error struct {
-			ErrorCode int    `json:"error_code"`
-			ErrorMsg string `json:"error_msg"`
-		} `json:"error"`
-	}
-	if err := json.Unmarshal(resp.Body(), &result); err != nil {
-		return nil, err
-	}
-	if result.Error.ErrorCode != 0 {
-		return nil, fmt.Errorf("VK API error %d: %s", result.Error.ErrorCode, result.Error.ErrorMsg)
-	}
-	posts := make([]*vk.VKPost, len(result.Response.Items))
-	for i, item := range result.Response.Items {
-		posts[i] = &vk.VKPost{
-			ID:      fmt.Sprintf("%d", item.ID),
-			OwnerID: fmt.Sprintf("%d", item.OwnerID),
-			Text:    item.Text,
-			Date:    item.Date,
+
+	var posts []vk.VKPost
+	err := r.executeWithRetry(ctx, func() (*resty.Response, error) {
+		resp, err := r.client.R().
+			SetQueryParams(map[string]string{
+				"owner_id":     fmt.Sprintf("%d", ownerID),
+				"count":        fmt.Sprintf("%d", count),
+				"offset":       fmt.Sprintf("%d", offset),
+				"access_token": token,
+				"v":            "5.131",
+			}).
+			SetResult(&vkResponse{
+				Response: vkItemsResponse{
+					Items: &[]vk.VKPost{},
+				},
+			}).
+			Get("method/wall.get")
+		if err == nil {
+			posts = (*resp.Result().(*vkResponse).Response.Items.(*[]vk.VKPost))
 		}
-	}
-	return posts, nil
+		return resp, err
+	})
+
+	return posts, err
 }
 
-func (v *vkHTTPClient) GetLikes(ctx context.Context, type_, ownerID, itemID string) ([]int, error) {
-	if err := v.limiter.Wait(ctx); err != nil {
-		return nil, err
+// GetLikesList fetches list of user IDs who liked an item using VK API likes.getList.
+func (r *vkRepository) GetLikesList(ctx context.Context, typ string, ownerID int64, itemID int64, token string) ([]int64, error) {
+	if err := r.limiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit wait: %w", err)
 	}
-	token := os.Getenv("VK_ACCESS_TOKEN")
-	if token == "" {
-		return nil, fmt.Errorf("VK_ACCESS_TOKEN not set")
+
+	var userIDs []int64
+	err := r.executeWithRetry(ctx, func() (*resty.Response, error) {
+		resp, err := r.client.R().
+			SetQueryParams(map[string]string{
+				"type":         typ,
+				"owner_id":     fmt.Sprintf("%d", ownerID),
+				"item_id":      fmt.Sprintf("%d", itemID),
+				"access_token": token,
+				"v":            "5.131",
+			}).
+			SetResult(&vkResponse{
+				Response: vkItemsResponse{
+					Items: &[]int64{},
+				},
+			}).
+			Get("method/likes.getList")
+		if err == nil {
+			userIDs = (*resp.Result().(*vkResponse).Response.Items.(*[]int64))
+		}
+		return resp, err
+	})
+
+	return userIDs, err
+}
+
+// executeWithRetry performs HTTP request with retry logic for rate limit errors (429).
+func (r *vkRepository) executeWithRetry(ctx context.Context, fn func() (*resty.Response, error)) error {
+	const maxRetries = 5
+	var resp *resty.Response
+	var err error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		resp, err = fn()
+		if err != nil {
+			return fmt.Errorf("request failed: %w", err)
+		}
+
+		if resp.IsSuccess() {
+			return nil
+		}
+
+		if resp.StatusCode() == 429 {
+			backoff := time.Duration(1<<attempt) * time.Second
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(backoff):
+			}
+			continue
+		}
+
+		return fmt.Errorf("VK API error: %d - %s", resp.StatusCode(), resp.String())
 	}
-	url := fmt.Sprintf("https://api.vk.com/method/likes.getList?type=%s&owner_id=%s&item_id=%s&access_token=%s&v=%s", type_, ownerID, itemID, token, v.apiVersion)
-	resp, err := v.client.R().
-		SetContext(ctx).
-		Get(url)
-	if err != nil {
-		return nil, err
-	}
-	if resp.IsError() {
-		return nil, fmt.Errorf("VK API error: %s", resp.String())
-	}
-	var result struct {
-		Response struct {
-			Items []int `json:"users"`
-		} `json:"response"`
-		Error struct {
-			ErrorCode int    `json:"error_code"`
-			ErrorMsg string `json:"error_msg"`
-		} `json:"error"`
-	}
-	if err := json.Unmarshal(resp.Body(), &result); err != nil {
-		return nil, err
-	}
-	if result.Error.ErrorCode != 0 {
-		return nil, fmt.Errorf("VK API error %d: %s", result.Error.ErrorCode, result.Error.ErrorMsg)
-	}
-	return result.Response.Items, nil
+
+	return fmt.Errorf("max retries exceeded for rate limit")
+}
+
+// RenewToken renews VK access token for a user.
+func (r *vkRepository) RenewToken(ctx context.Context, userID string) (vk.VKToken, error) {
+	// This is a placeholder implementation
+	// In a real implementation, this would call VK API to refresh the token
+	return vk.VKToken{}, fmt.Errorf("token renewal not implemented")
 }
