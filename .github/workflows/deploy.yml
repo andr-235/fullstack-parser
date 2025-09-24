@@ -17,12 +17,12 @@ on:
           - production
 
 env:
-  NODE_VERSION: '20'
+  BUN_VERSION: 'latest'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # Test and build Express.js backend
+  # Test and build Bun backend
   backend-test:
     runs-on: ubuntu-latest
 
@@ -60,21 +60,19 @@ jobs:
         uses: actions/checkout@v4
 
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install
 
       - name: Run linting
-        run: npm run lint || echo "Linting step skipped - no lint script"
+        run: bun run lint || echo "Linting step skipped - no lint script"
 
       - name: Run tests
-        run: npm test || echo "Tests passed or skipped"
+        run: bun test || echo "Tests passed or skipped"
         env:
           NODE_ENV: test
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
@@ -82,9 +80,9 @@ jobs:
           JWT_SECRET: test-secret-key
 
       - name: Build application
-        run: npm run build || echo "Build step completed or skipped"
+        run: bun run build || echo "Build step completed or skipped"
 
-  # Test and build Vue.js frontend
+  # Test and build Vue.js frontend with Bun
   frontend-test:
     runs-on: ubuntu-latest
 
@@ -96,27 +94,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install
 
       - name: Run type checking
-        run: npm run type-check || echo "Type check completed"
+        run: bun run type-check || echo "Type check completed"
 
       - name: Run linting
-        run: npm run lint || echo "Linting completed"
+        run: bun run lint || echo "Linting completed"
 
       - name: Run tests
-        run: npm test || echo "Tests completed"
+        run: bun test || echo "Tests completed"
 
       - name: Build application
-        run: npm run build
+        run: bun run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -211,7 +207,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to staging (Express.js)
+      - name: Deploy to staging (Bun backend)
         run: |
           echo "Current user: $(whoami)"
           echo "Current directory: $(pwd)"
@@ -254,11 +250,11 @@ jobs:
         run: |
           echo "Running health checks..."
 
-          # Check Express.js backend
+          # Check Bun backend
           if curl -f http://localhost:3000 > /dev/null 2>&1; then
-            echo "✅ Express.js backend is healthy"
+            echo "✅ Bun backend is healthy"
           else
-            echo "❌ Express.js backend health check failed"
+            echo "❌ Bun backend health check failed"
             exit 1
           fi
 
@@ -321,11 +317,11 @@ jobs:
         run: |
           echo "Running comprehensive health checks..."
 
-          # Check Express.js backend
+          # Check Bun backend
           if curl -f http://localhost:3000 > /dev/null 2>&1; then
-            echo "✅ Express.js backend is healthy"
+            echo "✅ Bun backend is healthy"
           else
-            echo "❌ Express.js backend health check failed"
+            echo "❌ Bun backend health check failed"
             exit 1
           fi
 
