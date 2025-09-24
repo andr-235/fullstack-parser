@@ -1,0 +1,49 @@
+# Локальная конфигурация для разработки без внешних образов
+# Используется для self-hosted runner на сервере
+
+services:
+  # Локальные сервисы для разработки - только application код
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # Подключение к локальным сервисам
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/vk_parser
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key}
+    network_mode: host
+    depends_on: []
+    env_file:
+      - .env
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - TARGET=worker
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/vk_parser
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key}
+    network_mode: host
+    depends_on: []
+    env_file:
+      - .env
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    env_file:
+      - .env
+    network_mode: host
+
+# Без PostgreSQL и Redis - они должны быть установлены локально

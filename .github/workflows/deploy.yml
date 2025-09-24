@@ -24,32 +24,8 @@ env:
 jobs:
   # Test and build Bun backend
   backend-test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
 
-    services:
-      postgres:
-        image: quay.io/postgres/postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
-          POSTGRES_USER: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-      redis:
-        image: quay.io/redis/redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
 
     defaults:
       run:
@@ -59,6 +35,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup local services
+        run: |
+          # Проверяем и запускаем локальные сервисы
+          sudo systemctl start postgresql || echo "PostgreSQL уже запущен"
+          sudo systemctl start redis-server || echo "Redis уже запущен"
+          
+          # Проверяем подключения
+          pg_isready -h localhost -p 5432 || exit 1
+          redis-cli ping || exit 1
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -84,7 +69,7 @@ jobs:
 
   # Test and build Vue.js frontend with Bun
   frontend-test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
 
     defaults:
       run:
@@ -230,13 +215,13 @@ jobs:
           ls -la
 
           echo "Stopping current services..."
-          docker-compose down || true
+          docker-compose -f docker-compose.local.yml down || true
 
-          echo "Pulling latest images..."
-          docker-compose pull || true
+          echo "Starting local services..."
+          ./scripts/setup-local-env.sh || echo "Локальные сервисы уже настроены"
 
-          echo "Starting services..."
-          docker-compose up -d
+          echo "Starting application services..."
+          docker-compose -f docker-compose.local.yml up -d
 
           echo "Cleaning up old images..."
           docker image prune -f || true
