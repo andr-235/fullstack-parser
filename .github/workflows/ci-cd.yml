@@ -1,28 +1,23 @@
-name: CI/CD Pipeline
+name: Legacy CI/CD Pipeline (DISABLED)
 
-# Documentation:
-# - Setup Bun action: see /oven-sh/setup-bun (inputs: bun-version, registry, cache)
-# - Checkout action: see /actions/checkout (supports fetch-depth, sparse-checkout)
-# - Cache action: see /actions/cache (composite restore/save with key/restore-keys)
-# - Docker metadata/build-push: see /docker/metadata-action and /docker/build-push-action
-# - Codecov uploader: see /codecov/codecov-action (tokenless on GitHub-hosted runners)
+# This workflow is disabled in favor of the new deploy.yml and ci.yml workflows
+# Keep for reference only
 
-# Recommended: restrict permissions by default (principle of least privilege)
 permissions:
   contents: read
   packages: write
   id-token: write
 
-# Avoid duplicate runs on the same branch/PR
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
+  # Disabled - uncomment to re-enable
+  # push:
+  #   branches: [main, develop]
+  # pull_request:
+  #   branches: [main, develop]
   workflow_dispatch:
 
 env:

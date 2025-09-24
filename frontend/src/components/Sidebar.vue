@@ -2,7 +2,7 @@
   <nav class="sidebar">
     <ul class="nav-list">
       <li v-for="item in navItems" :key="item.path" class="nav-item">
-        <router-link :to="item.path" class="nav-link">
+        <router-link :to="item.path" class="nav-link" active-class="nav-link-active" exact-active-class="nav-link-exact-active">
           {{ item.label }}
         </router-link>
       </li>
@@ -24,11 +24,11 @@ const authStore = useAuthStore()
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 
 const navItems = [
-  { path: '/dashboard', label: 'Dashboard' },
-  { path: '/posts', label: 'Posts' },
-  { path: '/authors', label: 'Authors' },
-  { path: '/groups', label: 'Groups' },
-  { path: '/profile', label: 'Profile' }
+  { path: '/dashboard', label: 'Главная' },
+  { path: '/posts', label: 'Посты' },
+  { path: '/authors', label: 'Авторы' },
+  { path: '/groups', label: 'Группы' },
+  { path: '/profile', label: 'Профиль' }
 ]
 </script>
 
@@ -65,6 +65,19 @@ const navItems = [
 
 .nav-link:hover {
   background-color: var(--color-border-hover);
+}
+
+.nav-link-active {
+  background-color: var(--color-background-mute);
+  color: var(--color-text-accent);
+  font-weight: 500;
+}
+
+.nav-link-exact-active {
+  background-color: var(--color-background-active, var(--color-border-hover));
+  color: var(--color-text-active, var(--color-text));
+  font-weight: 600;
+  border-left: 4px solid var(--color-accent, #007bff);
 }
 
 @media (max-width: 768px) {

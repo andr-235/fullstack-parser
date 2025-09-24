@@ -2,23 +2,23 @@
 
 ## Обзор
 
-Эти правила определяют конвенции именования для Python backend проекта, основанные на PEP 8 и лучших практиках. Соблюдение этих правил обеспечивает читаемость, поддерживаемость и согласованность кода.
+Эти правила определяют конвенции именования для JavaScript/TypeScript проектов, основанные на лучших практиках (Airbnb style guide). Соблюдение этих правил обеспечивает читаемость, поддерживаемость и согласованность кода в backend (Node.js/Express) и frontend (Vue.js).
 
 ## Переменные
 
-- Использовать `snake_case` для имен переменных.
+- Использовать `camelCase` для имен переменных.
 - Примеры:
-  - `user_name`
-  - `total_count`
-  - `is_active`
+  - `userName`
+  - `totalCount`
+  - `isActive`
 
 ## Функции и методы
 
-- Использовать `snake_case` для имен функций и методов.
+- Использовать `camelCase` для имен функций и методов.
 - Примеры:
-  - `get_user_data()`
-  - `calculate_total()`
-  - `validate_input()`
+  - `getUserData()`
+  - `calculateTotal()`
+  - `validateInput()`
 
 ## Классы
 
@@ -38,54 +38,73 @@
 
 ## Файлы и модули
 
-- Использовать `snake_case` для имен файлов и модулей.
-- Расширение: `.py`
+- Использовать `kebab-case` или `camelCase` для имен файлов и модулей.
+- Расширения: `.js`, `.ts`, `.vue`
 - Примеры:
-  - `user_model.py`
-  - `database_utils.py`
-  - `api_client.py`
+  - `user-model.js`
+  - `database-utils.js`
+  - `TaskStatus.vue`
 
-## Пакеты
+## Пакеты и директории
 
-- Использовать `snake_case` для имен пакетов.
+- Использовать `kebab-case` для имен пакетов и директорий.
 - Примеры:
-  - `models`
-  - `utils`
-  - `services`
+  - `src/models`
+  - `src/services`
+  - `node_modules`
 
 ## Приватные переменные и методы
 
-- Начинать с одного подчеркивания для приватных переменных и методов: `_private_var`
-- Для более строгой приватности (name mangling): `__private_var`
+- Начинать с подчеркивания для приватных переменных и методов: `_privateVar`
 - Примеры:
-  - `_internal_counter`
-  - `__hidden_method()`
+  - `_internalCounter`
+  - `_hiddenMethod()`
 
-## Специальные методы (магические методы)
+## Специальные методы
 
-- Использовать двойные подчеркивания в начале и конце: `__init__`, `__str__`
+- Для lifecycle методов в классах использовать стандартные имена (e.g., `constructor`, `render` в Vue).
 - Примеры:
-  - `__init__(self)`
-  - `__repr__(self)`
-  - `__eq__(self, other)`
+  - `constructor()`
+  - `componentDidMount()`
 
 ## Исключения
 
-- Использовать `PascalCase` и заканчивать на `Error` или `Exception`.
+- Использовать `PascalCase` и заканчивать на `Error`.
 - Примеры:
   - `ValidationError`
-  - `DatabaseException`
+  - `DatabaseError`
 
 ## Переменные окружения
 
 - Использовать `UPPER_SNAKE_CASE` для переменных окружения.
 - Примеры:
   - `DATABASE_URL`
-  - `SECRET_KEY`
+  - `VK_TOKEN`
 
 ## Рекомендации
 
 - Избегать однобуквенных имен, кроме счетчиков в циклах (i, j, k).
 - Использовать описательные имена, отражающие назначение.
-- Для сокращений использовать общепринятые формы (например, `url` вместо `uniform_resource_locator`).
+- Для сокращений использовать общепринятые формы (e.g., `url` вместо `uniformResourceLocator`).
 - Соблюдать длину имен: не слишком короткие, но и не чрезмерно длинные.
+
+Пример для Express route:
+```javascript
+// routes/taskRoutes.js
+const express = require('express');
+const router = express.Router();
+const taskController = require('../controllers/taskController');
+
+router.post('/tasks', taskController.createTask);
+```
+
+Пример для Vue компонента:
+```vue
+<!-- components/CommentsList.vue -->
+<script setup>
+import { computed } from 'vue';
+import { useCommentsStore } from '@/stores/comments';
+
+const commentsStore = useCommentsStore();
+const filteredComments = computed(() => commentsStore.comments);
+</script>
