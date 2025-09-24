@@ -97,6 +97,33 @@ const router = createRouter({
       }
     },
     {
+      path: '/posts',
+      name: 'posts',
+      component: () => import('../views/PostsView.vue'),
+      meta: {
+        requiresAuth: true,
+        title: 'Посты'
+      }
+    },
+    {
+      path: '/authors',
+      name: 'authors',
+      component: () => import('../views/AuthorsView.vue'),
+      meta: {
+        requiresAuth: true,
+        title: 'Авторы'
+      }
+    },
+    {
+      path: '/groups',
+      name: 'groups',
+      component: () => import('../views/GroupsView.vue'),
+      meta: {
+        requiresAuth: true,
+        title: 'Группы'
+      }
+    },
+    {
       path: '/logout',
       name: 'logout',
       redirect: '/auth/login'
