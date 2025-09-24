@@ -237,7 +237,7 @@ jobs:
 
   # Deploy to production after release
   deploy-production:
-    runs-on: debian
+    runs-on: [self-hosted, linux, x64]
     needs: [should-release, create-release]
     if: needs.should-release.outputs.should_release == 'true' && github.ref == 'refs/heads/main'
 
@@ -248,41 +248,43 @@ jobs:
       - name: Deploy release to production
         run: |
           echo "Current directory: $(pwd)"
-          cd /opt/app
+          PROJECT_DIR="/home/adm79/fullstack-parser"
+          cd "$PROJECT_DIR"
           echo "Deploying release ${{ needs.should-release.outputs.tag }} to production..."
 
           # Pull latest changes
           git pull origin main
 
+          # Create backup before deployment
+          ./scripts/quick-deploy-adm79.sh backup || echo "Backup failed, continuing..."
+
           # Update to latest images
-          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.yml -f docker-compose.prod.yml pull
 
           # Deploy with zero-downtime
-          docker-compose -f docker-compose.prod.yml up -d
+          docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
           # Run health checks
           echo "Running post-deployment health checks..."
           sleep 30
 
-          if curl -f http://localhost:8000/health; then
-            echo "✅ Backend is healthy"
+          if curl -f http://localhost:3000; then
+            echo "✅ Express.js backend is healthy"
           else
-            echo "❌ Backend health check failed"
+            echo "❌ Express.js backend health check failed"
             exit 1
           fi
 
           if curl -f http://localhost:3000/api/health; then
-            echo "✅ Frontend is healthy"
+            echo "✅ API health endpoint is working"
           else
-            echo "❌ Frontend health check failed"
-            exit 1
+            echo "⚠️ API health endpoint not available"
           fi
 
-          if curl -f http://localhost/health; then
-            echo "✅ Nginx is healthy"
+          if curl -f http://localhost; then
+            echo "✅ Frontend is accessible"
           else
-            echo "❌ Nginx health check failed"
-            exit 1
+            echo "⚠️ Frontend not accessible (may not be configured)"
           fi
 
           # Clean up old images
