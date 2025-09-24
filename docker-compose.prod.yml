@@ -95,7 +95,7 @@ services:
      # Production PostgreSQL
   # =============================================================================
   postgres:
-     image: ghcr.io/postgres/postgres:15-alpine
+     image: quay.io/postgres/postgres:15-alpine
      environment:
        # Database credentials
        POSTGRES_DB: ${POSTGRES_DB:-vk_parser}
@@ -150,7 +150,7 @@ services:
      # Production Redis
   # =============================================================================
   redis:
-     image: ghcr.io/redis/redis:7-alpine
+     image: quay.io/redis/redis:7-alpine
      command: >
        redis-server
        --appendonly yes

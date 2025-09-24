@@ -28,7 +28,7 @@ jobs:
 
     services:
       postgres:
-        image: ghcr.io/postgres/postgres:15
+        image: quay.io/postgres/postgres:15
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: test_db
@@ -42,7 +42,7 @@ jobs:
           - 5432:5432
 
       redis:
-        image: ghcr.io/redis/redis:7-alpine
+        image: quay.io/redis/redis:7-alpine
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -58,6 +58,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

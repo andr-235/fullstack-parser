@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: ghcr.io/postgres/postgres:15
+    image: quay.io/postgres/postgres:15
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -18,7 +18,7 @@ services:
       - default
 
   redis:
-    image: ghcr.io/redis/redis:7-alpine
+    image: quay.io/redis/redis:7-alpine
     ports:
       - "6379:6379"
     volumes:
