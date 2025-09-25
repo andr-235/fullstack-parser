@@ -1,4 +1,3 @@
-const winston = require('winston');
 const logger = require('./src/utils/logger');
 
 const express = require('express');
@@ -24,10 +23,21 @@ app.get('/', (req, res) => {
 // Import routes
 app.use('/api', require('./src/controllers/taskController'));
 
-db.sequelize.sync({ force: false }).then(() => {
+const syncAndStart = async () => {
+  if (db.sequelize && typeof db.sequelize.sync === 'function') {
+    await db.sequelize.sync({ force: false });
+  } else {
+    logger.warn('Skipping sequelize.sync: function not available');
+  }
+
   app.listen(PORT, () => {
     logger.info(`Server running on port ${PORT}`);
   });
+};
+
+syncAndStart().catch((error) => {
+  logger.error('Server failed to start', { error: error.message });
+  process.exitCode = 1;
 });
 
 module.exports = app;
