@@ -55,7 +55,7 @@ describe('TaskService', () => {
 
       expect(result).toEqual({
         status: 'completed',
-        progress: { posts: 10, comments: 50 },
+        progress: { posts: 10, comments: 50, errors: [] },
         errors: [],
         groups: ['test-group']
       });

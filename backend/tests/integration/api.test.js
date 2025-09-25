@@ -1,5 +1,9 @@
 // Mock всех зависимостей
 jest.mock('../../src/repositories/vkApi', () => ({
+  default: {
+    getPosts: jest.fn(),
+    getComments: jest.fn()
+  },
   getPosts: jest.fn(),
   getComments: jest.fn()
 }));
