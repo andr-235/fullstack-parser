@@ -25,13 +25,13 @@ When reviewing code or architecture:
 5. Assess error handling, logging, and monitoring strategies
 6. Consider maintainability and technical debt implications
 
-For the current Express.js/Node.js project context:
-- Leverage Sequelize ORM best practices for database operations
-- Optimize BullMQ job processing and Redis caching strategies
-- Ensure proper Express.js middleware usage and error handling
-- Follow the established MVC pattern with controllers, services, and repositories
-- Maintain compatibility with the PostgreSQL database and existing schema
-- Consider the Vue.js frontend integration and CORS requirements
+For the current backend context (Express 5 + Bun runtime):
+- Keep the CommonJS controller/service/repository structure aligned with Sequelize models (`Task`, `Post`, `Comment`) stored in PostgreSQL via `DATABASE_URL`
+- Ensure BullMQ (`backend/config/queue.js`) jobs stay idempotent, use the shared `queue`/`worker`, and handle Redis connectivity via `REDIS_URL`
+- Safeguard the VK data ingestion flow (`taskService`, `vkService`, `vkApi`) by managing concurrency (`p-limit`), rate limits, and consistent task status/metrics updates
+- Maintain unified Winston logging (`backend/src/utils/logger.js`) and structured error handling for Express routes under `backend/src/controllers`
+- Protect API boundaries: validate payloads with Joi, enforce CORS, sanitize external data before persistence, and secure secrets/config management
+- Align tests and diagnostics with Bun tooling (`bun test`), and recommend targeted integration/unit coverage for task orchestration and repository layers
 
 Always provide:
 - Concrete, actionable recommendations with code examples when relevant
