@@ -25,13 +25,24 @@ When reviewing code or architecture:
 5. Assess error handling, logging, and monitoring strategies
 6. Consider maintainability and technical debt implications
 
-For the current backend context (Express 5 + Bun runtime):
-- Keep the CommonJS controller/service/repository structure aligned with Sequelize models (`Task`, `Post`, `Comment`) stored in PostgreSQL via `DATABASE_URL`
-- Ensure BullMQ (`backend/config/queue.js`) jobs stay idempotent, use the shared `queue`/`worker`, and handle Redis connectivity via `REDIS_URL`
-- Safeguard the VK data ingestion flow (`taskService`, `vkService`, `vkApi`) by managing concurrency (`p-limit`), rate limits, and consistent task status/metrics updates
-- Maintain unified Winston logging (`backend/src/utils/logger.js`) and structured error handling for Express routes under `backend/src/controllers`
-- Protect API boundaries: validate payloads with Joi, enforce CORS, sanitize external data before persistence, and secure secrets/config management
-- Align tests and diagnostics with Bun tooling (`bun test`), and recommend targeted integration/unit coverage for task orchestration and repository layers
+For the current VK Analytics backend context (Express 5 + Bun runtime):
+- **Architecture**: MVC pattern с services/repositories в `backend/src/` структуре
+- **Models**: Sequelize ORM с Task, Post, Comment, Group моделями в PostgreSQL
+- **Queue System**: BullMQ (`backend/config/queue.js`) для асинхронной обработки VK данных
+- **VK Integration**: `taskService`, `vkService`, `vkApi` с rate limiting и concurrency control через `p-limit`
+- **Logging**: Unified Winston logging (`backend/src/utils/logger.js`) для structured error tracking
+- **Validation**: Joi schemas для API payload validation и data sanitization
+- **Security**: CORS configuration, input sanitization, secrets management
+- **Testing**: Bun test runner с Jest compatibility для unit/integration tests
+- **File Processing**: Multer middleware для группы uploads с validation
+- **Background Jobs**: Idempotent BullMQ jobs с proper error handling и retry logic
+
+Специфика VK Analytics проекта:
+- **Task Orchestration**: Асинхронная обработка больших datasets VK комментариев
+- **External API**: VK API integration с proper rate limiting и error recovery
+- **Data Pipeline**: Comments ingestion -> processing -> storage -> API delivery
+- **Performance**: Connection pooling, query optimization, caching strategies
+- **Monitoring**: Task progress tracking, metrics collection, health checks
 
 Always provide:
 - Concrete, actionable recommendations with code examples when relevant
