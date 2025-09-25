@@ -8,7 +8,7 @@ const mockDbRepo = {
   getTasks: jest.fn()
 };
 
-jest.doMock('../../src/repositories/dbRepo', () => mockDbRepo);
+jest.mock('../../src/repositories/dbRepo', () => mockDbRepo);
 
 const { createTask, getTaskStatus, startCollect, listTasks } = require('../../src/services/taskService');
 

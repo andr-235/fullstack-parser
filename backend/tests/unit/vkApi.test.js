@@ -1,15 +1,19 @@
-// Mock axios перед импортом
+// Mock модулей перед импортом
+const nock = require('nock');
+
+// Mock axios
 const mockAxios = {
-  get: jest.fn(),
-  defaults: { baseURL: '', timeout: 30000 },
-  interceptors: {
-    request: { use: jest.fn() },
-    response: { use: jest.fn() }
-  }
+  get: jest.fn()
 };
 
-jest.doMock('axios', () => mockAxios);
-jest.doMock('axios-retry', () => jest.fn());
+jest.mock('axios', () => ({
+  default: mockAxios,
+  ...mockAxios
+}));
+
+jest.mock('axios-retry', () => jest.fn());
+
+const axios = require('axios');
 
 const { getPosts, getComments } = require('../../src/repositories/vkApi');
 
@@ -36,11 +40,11 @@ describe('VKApi', () => {
           ]
         }
       };
-      axios.get.mockResolvedValue({ data: mockResponse });
+      mockAxios.get.mockResolvedValue({ data: mockResponse });
 
       const result = await getPosts(mockGroupId, mockToken);
 
-      expect(axios.get).toHaveBeenCalledWith(
+      expect(mockAxios.get).toHaveBeenCalledWith(
         expect.stringContaining('https://api.vk.com/method/wall.get'),
         expect.objectContaining({
           params: expect.objectContaining({
@@ -57,7 +61,7 @@ describe('VKApi', () => {
     });
 
     it('should handle API error', async () => {
-      axios.get.mockRejectedValue(new Error('VK API error'));
+      mockAxios.get.mockRejectedValue(new Error('VK API error'));
 
       await expect(getPosts(mockGroupId, mockToken)).rejects.toThrow('VK API error');
     });

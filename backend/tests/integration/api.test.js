@@ -6,7 +6,7 @@ const mockTaskService = {
   listTasks: jest.fn()
 };
 
-jest.doMock('../../src/services/mockTaskService', () => mockTaskService);
+jest.mock('../../src/services/taskService', () => mockTaskService);
 
 const request = require('supertest');
 const app = require('../../server.js');
