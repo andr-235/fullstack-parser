@@ -1,47 +1,27 @@
-import { DataTypes } from 'sequelize';
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/db.js');
 
-export default (sequelize) => {
-  const Comment = sequelize.define('Comment', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true
-    },
-    postId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'Posts',
-        key: 'id'
-      }
-    },
-    text: {
-      type: DataTypes.TEXT,
-      allowNull: false
-    },
-    authorId: {
-      type: DataTypes.INTEGER,
-      allowNull: false
-    },
-    authorName: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
-    date: {
-      type: DataTypes.DATE,
-      allowNull: false
-    },
-    likes: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0
-    }
-  }, {
-    timestamps: false,
-    indexes: [
-      {
-        fields: ['postId']
-      }
-    ]
-  });
+const Comment = sequelize.define('Comment', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  text: {
+    type: DataTypes.TEXT,
+    allowNull: false
+  },
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  postId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  }
+}, {
+  tableName: 'comments',
+  timestamps: true
+});
 
-  return Comment;
-};
+module.exports = Comment;

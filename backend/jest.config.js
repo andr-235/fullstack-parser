@@ -1,6 +1,5 @@
-export default {
+module.exports = {
   testEnvironment: 'node',
-  extensionsToTreatAsEsm: ['.js'],
   coverageDirectory: 'coverage',
   collectCoverageFrom: ['src/**/*.js'],
   coverageThreshold: {

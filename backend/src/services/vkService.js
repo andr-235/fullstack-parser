@@ -2,7 +2,7 @@ import logger from '../utils/logger.js';
 
 import vkApi from '../repositories/vkApi.js';
 import dbRepo from '../repositories/dbRepo.js';
-import pLimit from 'p-limit';
+// import pLimit from 'p-limit'; // Удалено, так как не используется и не в dependencies
 import taskService from './taskService.js';
 
 class VKService {
@@ -11,61 +11,61 @@ class VKService {
     this.dbRepo = dbRepoInstance || dbRepo;
   }
 
+  async getResults(taskId, groupId = null, postId = null) {
+    return await this.dbRepo.getResults(taskId, groupId, postId);
+  }
+
   async collectForTask(taskId, groups) {
     let totalPosts = 0;
     let totalComments = 0;
     const errors = [];
-    const limit = pLimit(5); // max 5 parallel VK requests
+    // const limit = pLimit(5); // max 5 parallel VK requests - закомментировано, использовать последовательную обработку для простоты
 
     try {
       await this.dbRepo.updateTask(taskId, {
         status: 'in_progress'
       });
 
-      const promises = groups.map(groupId =>
-        limit(async () => {
-          try {
-            const posts = await this.vkApi.getPosts(-groupId, { count: 10 });
-            let groupPosts = 0;
-            let groupComments = 0;
+      for (const groupId of groups) {
+        try {
+          const posts = await this.vkApi.getPosts(-groupId, { count: 10 });
+          let groupPosts = 0;
+          let groupComments = 0;
 
-            for (const post of posts.items || []) {
-              const comments = await this.vkApi.getComments(-groupId, post.id);
-              const mappedPost = {
-                id: post.id,
-                groupId: -groupId,
-                text: post.text,
-                date: new Date(post.date * 1000),
-                likes: post.likes?.count || 0
-              };
-              await this.dbRepo.createPosts(taskId, [mappedPost]);
-              groupPosts++;
+          for (const post of posts.items || []) {
+            const comments = await this.vkApi.getComments(-groupId, post.id);
+            const mappedPost = {
+              id: post.id,
+              groupId: -groupId,
+              text: post.text,
+              date: new Date(post.date * 1000),
+              likes: post.likes?.count || 0
+            };
+            await this.dbRepo.createPosts(taskId, [mappedPost]);
+            groupPosts++;
 
-              const mappedComments = (comments.items || []).map(comment => ({
-                id: comment.id,
-                postId: post.id,
-                text: comment.text,
-                authorId: comment.from_id,
-                authorName: comment.from?.name || 'Unknown',
-                date: new Date(comment.date * 1000),
-                likes: comment.likes?.count || 0
-              }));
-              if (mappedComments.length > 0) {
-                await this.dbRepo.createComments(post.id, mappedComments);
-              }
-              groupComments += mappedComments.length;
+            const mappedComments = (comments.items || []).map(comment => ({
+              id: comment.id,
+              postId: post.id,
+              text: comment.text,
+              authorId: comment.from_id,
+              authorName: comment.from?.name || 'Unknown',
+              date: new Date(comment.date * 1000),
+              likes: comment.likes?.count || 0
+            }));
+            if (mappedComments.length > 0) {
+              await this.dbRepo.createComments(post.id, mappedComments);
             }
-
-            totalPosts += groupPosts;
-            totalComments += groupComments;
-          } catch (error) {
-            logger.error('Error processing group', { groupId, error: error.message });
-            errors.push(`Error processing group ${groupId}: ${error.message}`);
+            groupComments += mappedComments.length;
           }
-        })
-      );
 
-      await Promise.allSettled(promises);
+          totalPosts += groupPosts;
+          totalComments += groupComments;
+        } catch (error) {
+          logger.error('Error processing group', { groupId, error: error.message });
+          errors.push(`Error processing group ${groupId}: ${error.message}`);
+        }
+      }
 
       const metrics = {
         posts: totalPosts,

@@ -1,24 +1,32 @@
 {
   "name": "backend",
   "module": "server.js",
-  "type": "module",
   "private": true,
   "scripts": {
     "dev": "nodemon server.js",
-    "test": "jest"
+    "test": "jest",
+    "migrate": "node scripts/run-migration.js"
   },
   "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "eslint": "^9.36.0",
+    "globals": "^16.4.0",
     "jest": "^30.1.3",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "supertest": "^7.1.4"
   },
   "dependencies": {
     "axios": "^1.12.2",
+    "axios-retry": "^4.5.0",
     "bullmq": "^5.58.7",
+    "cors": "^2.8.5",
     "express": "^5.1.0",
     "joi": "^18.0.1",
+    "multer": "^2.0.2",
     "pg": "^8.16.3",
     "rate-limiter-flexible": "^7.3.2",
     "sequelize": "^6.37.7",
+    "uuid": "^13.0.0",
     "winston": "^3.17.0"
   }
 }
