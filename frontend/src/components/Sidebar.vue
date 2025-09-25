@@ -95,26 +95,26 @@ const menuItems = computed(() => [
   {
     title: 'Задачи',
     subtitle: 'Управление задачами',
-    to: '/fetch',
-    icon: 'mdi-tasks'
-  },
-  {
-    title: 'Статус',
-    subtitle: 'Мониторинг выполнения',
-    to: tasksStore.taskId ? `/task/${tasksStore.taskId}` : '/fetch',
-    icon: 'mdi-chart-line'
-  },
-  {
-    title: 'Комментарии',
-    subtitle: 'Просмотр результатов',
-    to: '/comments',
-    icon: 'mdi-comment-multiple'
+    to: '/tasks',
+    icon: 'mdi-format-list-bulleted'
   },
   {
     title: 'Группы VK',
     subtitle: 'Управление группами',
     to: '/groups',
     icon: 'mdi-account-group'
+  },
+  {
+    title: 'Старые задачи',
+    subtitle: 'Создание задач (legacy)',
+    to: '/fetch',
+    icon: 'mdi-plus-box'
+  },
+  {
+    title: 'Комментарии',
+    subtitle: 'Просмотр результатов',
+    to: '/comments',
+    icon: 'mdi-comment-multiple'
   }
 ])
 
@@ -128,21 +128,21 @@ const processedCommentsCount = computed(() => 0) // TODO: Получать из 
  * @returns {boolean} - true если маршрут активен
  */
 const isActiveRoute = (routePath) => {
-  // Для "Статус" - активен только на страницах задач
-  if (routePath.includes('/task/')) {
-    return route.path.startsWith('/task/')
+  // Для "Задачи" - активен на всех страницах задач
+  if (routePath === '/tasks') {
+    return route.path.startsWith('/tasks')
   }
-  // Для "Задачи" - активен только на /fetch
+  // Для "Группы VK" - активен на всех страницах групп
+  if (routePath === '/groups') {
+    return route.path.startsWith('/groups')
+  }
+  // Для "Старые задачи" - активен только на /fetch
   if (routePath === '/fetch') {
     return route.path === '/fetch'
   }
   // Для "Комментарии" - активен только на /comments
   if (routePath === '/comments') {
     return route.path === '/comments'
-  }
-  // Для "Группы VK" - активен на всех страницах групп
-  if (routePath === '/groups') {
-    return route.path.startsWith('/groups')
   }
   return false
 }

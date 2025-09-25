@@ -5,7 +5,17 @@ import { createRouter, createWebHistory } from "vue-router"
  * @returns {Object} Экземпляр роутера.
  */
 const routes = [
-  { path: "/", redirect: "/fetch" },
+  { path: "/", redirect: "/tasks" },
+  // Tasks routes
+  {
+    path: "/tasks",
+    component: () => import("@/views/TasksView.vue")
+  },
+  {
+    path: "/tasks/:taskId",
+    component: () => import("@/views/TaskDetailsView.vue")
+  },
+  // Legacy routes (for backward compatibility)
   {
     path: "/fetch",
     component: () => import("@/views/FetchComments.vue")
@@ -30,6 +40,10 @@ const routes = [
   {
     path: "/groups/task/:taskId",
     component: () => import("@/views/groups/GroupsTaskStatus.vue")
+  },
+  {
+    path: "/groups/stats/:taskId",
+    component: () => import("@/views/groups/GroupsStatsView.vue")
   }
 ]
 

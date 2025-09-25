@@ -67,6 +67,33 @@ export const getResults = async (taskId, params = {}) => {
   return api.get(`/results/${taskId}`, { params: defaultParams });
 };
 
+// Tasks API
+export const tasksApi = {
+  /**
+   * Получает список задач с пагинацией.
+   * @param {Object} [params={}] - Параметры: page, limit, status
+   * @returns {Promise<Object>} {tasks: [...], total, page, totalPages}
+   */
+  getTasks: (params = {}) =>
+    api.get('/tasks', { params }),
+
+  /**
+   * Создает новую VK collect задачу.
+   * @param {Object} data - Данные: {groups: number[], token: string}
+   * @returns {Promise<Object>} Ответ с taskId
+   */
+  createVkCollectTask: (data) =>
+    api.post('/tasks/collect', data),
+
+  /**
+   * Получает детальную информацию о задаче.
+   * @param {string|number} taskId - ID задачи
+   * @returns {Promise<Object>} Детальная информация о задаче
+   */
+  getTaskDetails: (taskId) =>
+    api.get(`/tasks/${taskId}`)
+};
+
 // Groups API
 export const groupsApi = {
   /**
