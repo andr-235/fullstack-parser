@@ -4,47 +4,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build and Development Commands
 
-### Express.js Backend (Primary)
+### Backend (Express.js)
 ```bash
 # Development
 cd backend/
-bun run dev      # Start Express.js server with nodemon
-bun test         # Run Jest tests
+npm run dev      # Start Express.js server with nodemon
+npm test         # Run Jest tests
+npm run migrate  # Run database migrations
 node server.js   # Start server directly
 
 # Dependencies
-bun install      # with Bun runtime
+npm install      # Install dependencies
+```
 
-# Database operations via Docker
-make migrate     # Run database migrations
-make backup      # Create database backup
-make shell-db    # Open PostgreSQL shell
+### Frontend (Vue.js 3)
+```bash
+# Development
+cd frontend/
+npm run dev      # Start Vite dev server on port 5173
+npm run build    # Build for production
+npm run preview  # Preview production build
+
+# Dependencies
+npm install      # Install dependencies
 ```
 
 ### Docker Services
 ```bash
-# Development with Express.js backend
-make up          # Start development environment with Docker
-make down        # Stop all services
-make restart     # Restart all services
-make logs        # View all logs
-
-# Production
-make deploy      # Deploy to production with zero-downtime
-make prod-up     # Start production environment
-make health      # Check service health
-```
-
-### Docker Services
-```bash
-# Standard Docker operations
-docker-compose up -d              # Start all services
+# Development environment
+docker-compose up -d              # Start all services (postgres, redis, api, frontend)
 docker-compose down               # Stop all services
-docker-compose logs -f api        # View specific service logs
-docker-compose exec api bash      # Shell into Go API container
-
-# Production deployment
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker-compose logs -f api        # View API service logs
+docker-compose logs -f frontend   # View frontend service logs
+docker-compose exec postgres bash # Shell into PostgreSQL container
 ```
 
 ## Architecture Overview
