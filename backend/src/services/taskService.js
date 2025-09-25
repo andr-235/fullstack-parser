@@ -1,7 +1,6 @@
-import logger from '../utils/logger.js';
+const logger = require('../utils/logger.js');
 
-import dbRepo from '../repositories/dbRepo.js';
-import vkService from './vkService.js';
+const dbRepo = require('../repositories/dbRepo.js');
 
 class TaskService {
   constructor(dbRepoInstance) {
@@ -41,10 +40,8 @@ class TaskService {
         startedAt: new Date()
       });
 
-      // Запуск сбора в фоне
-      vkService.collectForTask(taskId, JSON.parse(task.groups)).catch(error => {
-        logger.error('Background collect failed', { taskId, error: error.message });
-      });
+      // Note: Background collection is now handled by BullMQ queue
+      // This method is for manual task starts if needed
 
       return { status: 'pending', startedAt: new Date() };
     } catch (error) {
@@ -84,4 +81,4 @@ class TaskService {
   }
 }
 
-export default new TaskService();
+module.exports = new TaskService();

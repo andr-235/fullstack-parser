@@ -4,6 +4,7 @@ const { Router } = require('express');
 const Joi = require('joi');
 const taskService = require('../services/taskService.js');
 const vkService = require('../services/vkService.js');
+const { queue } = require('../../config/queue.js');
 
 const router = Router();
 
@@ -12,6 +13,11 @@ const taskSchema = Joi.object({
   ownerId: Joi.number().integer().negative().required(),
   postId: Joi.number().integer().positive().required(),
   token: Joi.string().required()
+});
+
+// Validation schema for VK collect task creation
+const vkCollectSchema = Joi.object({
+  groups: Joi.array().items(Joi.number().integer().positive()).min(1).required()
 });
 
 /**
@@ -34,6 +40,49 @@ const createTask = async (req, res) => {
       return res.status(400).json({ error: err.message });
     }
     logger.error('Error in createTask', { error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * Создает задачу на сбор постов и комментариев из VK групп через очередь BullMQ.
+ * @param {Object} req - HTTP-запрос
+ * @param {Object} res - HTTP-ответ
+ * @returns {Promise<void>}
+ */
+const createVkCollectTask = async (req, res) => {
+  try {
+    const { error, value } = vkCollectSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const { groups } = value;
+
+    // Create task in database
+    const { taskId } = await taskService.createTask({
+      groups,
+      status: 'created',
+      metrics: { posts: 0, comments: 0, errors: [] }
+    });
+
+    // Add job to BullMQ queue
+    await queue.add('vk-collect', { taskId }, {
+      delay: 1000, // Small delay to ensure task is saved
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 5000,
+      },
+      removeOnComplete: 100,
+      removeOnFail: 50
+    });
+
+    logger.info('VK collect task created and queued', { taskId, groups });
+    res.status(201).json({ taskId, status: 'created' });
+
+  } catch (err) {
+    logger.error('Error in createVkCollectTask', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -106,6 +155,7 @@ const getResults = async (req, res) => {
 
 // Routes
 router.post('/tasks', createTask);
+router.post('/tasks/collect', createVkCollectTask);
 router.post('/collect/:taskId', postCollect);
 router.get('/tasks/:taskId', getTask);
 router.get('/tasks', getTasks);

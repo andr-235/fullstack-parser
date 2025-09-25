@@ -1,8 +1,8 @@
-import logger from '../utils/logger.js';
+const logger = require('../utils/logger.js');
 
-import axios from 'axios';
-import { RateLimiterMemory } from 'rate-limiter-flexible';
-import axiosRetry from 'axios-retry';
+const axios = require('axios');
+const { RateLimiterMemory } = require('rate-limiter-flexible');
+const axiosRetry = require('axios-retry');
 
 class VKApi {
   constructor() {
@@ -66,7 +66,7 @@ class VKApi {
   }
 
   async getPosts(groupId) {
-    const ownerId = -groupId; // Negative for groups
+    const ownerId = -Math.abs(groupId); // Ensure negative for groups
     const params = {
       owner_id: ownerId,
       count: 10,
@@ -75,17 +75,19 @@ class VKApi {
     const response = await this._makeRequest('wall.get', params);
 
     const posts = response.items.map(post => ({
-      id: post.id,
-      text: post.text,
-      date: post.date,
-      likes: post.likes.count,
+      vk_post_id: post.id,
+      owner_id: ownerId,
+      group_id: Math.abs(groupId),
+      text: post.text || '',
+      date: new Date(post.date * 1000),
+      likes: post.likes?.count || 0,
     }));
 
     return { posts };
   }
 
-  async getComments(groupId, postId, offset = 0) {
-    const ownerId = -groupId;
+  async getComments(groupId, postVkId, offset = 0) {
+    const ownerId = -Math.abs(groupId); // Ensure negative for groups
     let allComments = [];
     let currentOffset = offset;
     let hasMore = true;
@@ -93,23 +95,32 @@ class VKApi {
     while (hasMore) {
       const params = {
         owner_id: ownerId,
-        post_id: postId,
+        post_id: postVkId,
         offset: currentOffset,
         count: 100,
         extended: 1,
-        fields: 'name', // Для from.name
+        fields: 'first_name,last_name',
       };
 
       const response = await this._makeRequest('wall.getComments', params);
       const items = response.items || [];
+      const profiles = response.profiles || [];
+
+      // Create profile mapping for author names
+      const profileMap = profiles.reduce((map, profile) => {
+        map[profile.id] = `${profile.first_name} ${profile.last_name}`;
+        return map;
+      }, {});
 
       allComments = allComments.concat(items.map(comment => ({
-        id: comment.id,
-        text: comment.text,
-        from_id: comment.from_id,
-        from: comment.from ? `${comment.from.first_name} ${comment.from.last_name}` : null,
-        date: comment.date,
-        likes: comment.likes ? comment.likes.count : 0,
+        vk_comment_id: comment.id,
+        post_vk_id: postVkId,
+        owner_id: ownerId,
+        author_id: comment.from_id,
+        author_name: profileMap[comment.from_id] || `User ${comment.from_id}`,
+        text: comment.text || '',
+        date: new Date(comment.date * 1000),
+        likes: comment.likes?.count || 0,
       })));
 
       if (items.length < 100) {
@@ -123,4 +134,4 @@ class VKApi {
   }
 }
 
-export default new VKApi();
+module.exports = new VKApi();

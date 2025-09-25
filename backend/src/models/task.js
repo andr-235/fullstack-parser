@@ -23,6 +23,10 @@ const Task = sequelize.define('Task', {
   startedAt: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  finishedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   tableName: 'tasks',

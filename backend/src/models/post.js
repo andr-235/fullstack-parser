@@ -7,17 +7,41 @@ const Post = sequelize.define('Post', {
     primaryKey: true,
     autoIncrement: true
   },
-  ownerId: {
+  vk_post_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    unique: true
+  },
+  owner_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  group_id: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
   text: {
     type: DataTypes.TEXT,
+    allowNull: false,
+    defaultValue: ''
+  },
+  date: {
+    type: DataTypes.DATE,
     allowNull: false
+  },
+  likes: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
   },
   taskId: {
     type: DataTypes.INTEGER,
     allowNull: false
+  },
+  // Legacy field for backward compatibility
+  ownerId: {
+    type: DataTypes.INTEGER,
+    allowNull: true
   },
   groupId: {
     type: DataTypes.INTEGER,
