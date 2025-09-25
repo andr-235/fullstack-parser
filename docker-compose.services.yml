@@ -1,8 +1,5 @@
 # Docker-compose только для сервисов (PostgreSQL и Redis)
 # Приложения запускаются на хосте и подключаются к этим контейнерам
-
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15
