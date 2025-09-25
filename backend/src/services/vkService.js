@@ -77,14 +77,17 @@ class VKService {
             groupComments
           });
 
-          // Update progress periodically for UI tracking
-          await this.dbRepo.updateTask(taskId, {
-            metrics: {
-              posts: totalPosts,
-              comments: totalComments,
-              errors: [...errors]
-            }
-          });
+          // Update progress and metrics periodically for UI tracking
+          const currentProgress = Math.min(80, Math.round((totalPosts / (normalizedGroups.length * 10)) * 80));
+          await task.updateProgress(currentProgress);
+
+          // Update metrics using new method
+          task.metrics = {
+            posts: totalPosts,
+            comments: totalComments,
+            errors: [...errors]
+          };
+          await task.save(['metrics']);
 
         } catch (error) {
           logger.error('Error processing group', { groupId, error: error.message });
@@ -98,14 +101,24 @@ class VKService {
         errors
       };
 
-      // Determine final status
-      const finalStatus = errors.length > 0 ? 'failed' : 'completed';
+      // Determine final status and mark task as completed/failed
+      if (errors.length > 0) {
+        const errorMessage = errors.join('; ');
+        await task.markAsFailed(new Error(errorMessage));
+      } else {
+        // Update final result and mark as completed
+        const result = {
+          totalGroups: normalizedGroups.length,
+          processedPosts: totalPosts,
+          processedComments: totalComments,
+          completedAt: new Date().toISOString()
+        };
+        await task.markAsCompleted(result);
+      }
 
-      await this.dbRepo.updateTask(taskId, {
-        status: finalStatus,
-        metrics: finalMetrics,
-        finishedAt: new Date()
-      });
+      // Update final metrics
+      task.metrics = finalMetrics;
+      await task.save(['metrics']);
 
       logger.info('Task completed', {
         taskId,
@@ -119,11 +132,11 @@ class VKService {
       logger.error('General error in collectForTask', { taskId, error: error.message });
       errors.push(`General error in collectForTask: ${error.message}`);
 
-      await this.dbRepo.updateTask(taskId, {
-        status: 'failed',
-        metrics: { posts: totalPosts, comments: totalComments, errors },
-        finishedAt: new Date()
-      });
+      await task.markAsFailed(error);
+
+      // Update error metrics
+      task.metrics = { posts: totalPosts, comments: totalComments, errors };
+      await task.save(['metrics']);
 
       throw error;
     }
