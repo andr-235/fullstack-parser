@@ -1,5 +1,6 @@
 {
   "name": "backend",
+  "version": "0.0.2",
   "module": "server.js",
   "private": true,
   "scripts": {
