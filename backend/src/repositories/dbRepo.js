@@ -76,7 +76,19 @@ class DBRepo {
 
   async upsertComments(postVkId, comments) {
     try {
-      const createdComments = await this.Comment.bulkCreate(comments, {
+      // Найти пост по vk_post_id для связи с комментариями
+      const post = await this.Post.findOne({ where: { vk_post_id: postVkId } });
+      if (!post) {
+        throw new Error(`Post with vk_post_id ${postVkId} not found`);
+      }
+
+      // Добавить postId к комментариям для корректной ассоциации
+      const commentsWithPostId = comments.map(comment => ({
+        ...comment,
+        postId: post.id // Связь через внутренний ID поста
+      }));
+
+      const createdComments = await this.Comment.bulkCreate(commentsWithPostId, {
         updateOnDuplicate: ['text', 'date', 'likes', 'author_id', 'author_name', 'updatedAt'],
         ignoreDuplicates: false
       });

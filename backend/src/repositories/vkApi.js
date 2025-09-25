@@ -7,7 +7,7 @@ const axiosRetry = require('axios-retry');
 class VKApi {
   constructor() {
     this.baseURL = 'https://api.vk.com/method';
-    this.token = process.env.VK_TOKEN;
+    this.token = process.env.VK_ACCESS_TOKEN;
     this.version = '5.199';
     this.client = axios.create({
       baseURL: this.baseURL,
@@ -91,8 +91,10 @@ class VKApi {
     let allComments = [];
     let currentOffset = offset;
     let hasMore = true;
+    let maxIterations = 100; // Максимум 10,000 комментариев (100 * 100)
 
-    while (hasMore) {
+    while (hasMore && maxIterations > 0) {
+      maxIterations--;
       const params = {
         owner_id: ownerId,
         post_id: postVkId,
@@ -128,6 +130,15 @@ class VKApi {
       } else {
         currentOffset += 100;
       }
+    }
+
+    if (maxIterations <= 0) {
+      logger.warn('Comments pagination reached maximum limit', {
+        groupId,
+        postVkId,
+        currentOffset,
+        commentsCount: allComments.length
+      });
     }
 
     return { comments: allComments, hasMore: false };

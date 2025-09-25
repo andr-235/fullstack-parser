@@ -19,10 +19,13 @@ class VKService {
     const errors = [];
 
     try {
-      await this.dbRepo.updateTask(taskId, {
-        status: 'in_progress',
-        startedAt: new Date()
-      });
+      // Получаем задачу и переводим в статус processing
+      const task = await this.dbRepo.getTaskById(taskId);
+      if (!task) {
+        throw new Error(`Task with id ${taskId} not found`);
+      }
+
+      await task.markAsProcessing();
 
       // Convert groups to positive numbers if needed
       const normalizedGroups = groups.map(group => Math.abs(parseInt(group)));

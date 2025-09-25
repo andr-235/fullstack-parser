@@ -7,14 +7,19 @@ class TaskService {
     this.dbRepo = dbRepoInstance || dbRepo;
   }
 
-  async createTask(groups) {
+  async createTask(taskData) {
     try {
+      // Создаем задачу с новой структурой данных
       const task = await this.dbRepo.createTask({
-        groups,
-        status: 'created',
-        metrics: { posts: 0, comments: 0, errors: [] }
+        type: taskData.type || 'fetch_comments',
+        priority: taskData.priority || 0,
+        groups: taskData.groups,
+        parameters: taskData.parameters || {},
+        metrics: taskData.metrics || { posts: 0, comments: 0, errors: [] },
+        createdBy: taskData.createdBy || 'system',
+        status: 'pending' // Начальный статус согласно новой модели
       });
-      return { taskId: task.id, status: 'created' };
+      return { taskId: task.id, status: task.status };
     } catch (error) {
       logger.error('Failed to create task', { error: error.message });
       throw new Error(`Failed to create task: ${error.message}`);
@@ -31,19 +36,17 @@ class TaskService {
       if (!task) {
         throw new Error('Task not found');
       }
-      if (task.status !== 'created') {
-        throw new Error('Task is not in created status');
+      if (task.status !== 'pending') {
+        throw new Error('Task is not in pending status');
       }
 
-      await this.dbRepo.updateTask(taskId, {
-        status: 'in_progress',
-        startedAt: new Date()
-      });
+      // Используем новый метод модели Task для установки статуса processing
+      await task.markAsProcessing();
 
       // Note: Background collection is now handled by BullMQ queue
       // This method is for manual task starts if needed
 
-      return { status: 'pending', startedAt: new Date() };
+      return { status: 'processing', startedAt: task.startedAt };
     } catch (error) {
       logger.error('Failed to start collect', { taskId, error: error.message });
       throw new Error(`Failed to start collect: ${error.message}`);
@@ -56,12 +59,24 @@ class TaskService {
       if (!task) {
         throw new Error('Task not found');
       }
-      const metrics = task.metrics ? JSON.parse(task.metrics) : { posts: 0, comments: 0, errors: [] };
+      const metrics = task.metrics || { posts: 0, comments: 0, errors: [] };
       return {
         status: task.status,
-        progress: metrics || { posts: 0, comments: 0 },
+        type: task.type,
+        priority: task.priority,
+        progress: task.progress, // Используем dedicated поле progress
+        metrics: metrics,
         errors: metrics?.errors || [],
-        groups: JSON.parse(task.groups || '[]')
+        groups: task.groups || [],
+        parameters: task.parameters,
+        result: task.result,
+        error: task.error,
+        executionTime: task.executionTime,
+        startedAt: task.startedAt,
+        finishedAt: task.finishedAt,
+        createdBy: task.createdBy,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt
       };
     } catch (error) {
       logger.error('Failed to get task status', { taskId, error: error.message });
