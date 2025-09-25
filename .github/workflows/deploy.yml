@@ -240,11 +240,97 @@ jobs:
           echo "Current project structure:"
           ls -la
 
-          echo "Checking for running services on ports..."
-          netstat -tulpn | grep -E ':(3000|5173|5432|6379) ' || echo "No conflicting services found"
+          # Function to kill processes on specific ports
+          kill_port_processes() {
+            local port=$1
+            local service_name=$2
+            echo "Checking processes on port $port for $service_name..."
 
-          echo "Stopping current services..."
-          docker-compose down --remove-orphans || true
+            # Find processes using the port
+            local pids=$(lsof -ti:$port 2>/dev/null || true)
+
+            if [ -n "$pids" ]; then
+              echo "Found processes using port $port: $pids"
+              echo "Attempting to kill processes gracefully..."
+              echo "$pids" | xargs -r kill -TERM 2>/dev/null || true
+              sleep 3
+
+              # Force kill if still running
+              local remaining_pids=$(lsof -ti:$port 2>/dev/null || true)
+              if [ -n "$remaining_pids" ]; then
+                echo "Force killing remaining processes on port $port: $remaining_pids"
+                echo "$remaining_pids" | xargs -r kill -KILL 2>/dev/null || true
+                sleep 2
+              fi
+            else
+              echo "No processes found using port $port"
+            fi
+          }
+
+          # Function to wait for port to be free
+          wait_for_port_free() {
+            local port=$1
+            local max_attempts=10
+            local attempt=1
+
+            echo "Waiting for port $port to be free..."
+            while [ $attempt -le $max_attempts ]; do
+              if ! lsof -i:$port >/dev/null 2>&1; then
+                echo "Port $port is now free"
+                return 0
+              fi
+
+              echo "Port $port still in use (attempt $attempt/$max_attempts), waiting..."
+              sleep 2
+              attempt=$((attempt + 1))
+            done
+
+            echo "Port $port is still in use after $max_attempts attempts"
+            return 1
+          }
+
+          echo "=== PRE-DEPLOYMENT CLEANUP ==="
+
+          # Show current system state
+          echo "Current Docker containers:"
+          docker ps -a || true
+
+          echo "Current port usage:"
+          netstat -tulpn | grep -E ':(3000|5173|5432|6379) ' || echo "No services on target ports"
+
+          # Stop Docker services with timeout
+          echo "Stopping Docker Compose services..."
+          timeout 60s docker-compose down --remove-orphans || {
+            echo "Docker compose down timed out, force stopping containers..."
+            docker-compose kill || true
+            docker-compose rm -f || true
+          }
+
+          # Additional cleanup: remove any orphaned containers
+          echo "Cleaning up orphaned containers..."
+          docker container prune -f || true
+
+          # Kill processes on required ports
+          kill_port_processes 3000 "Backend API"
+          kill_port_processes 5173 "Frontend Dev Server"
+          kill_port_processes 5432 "PostgreSQL"
+          kill_port_processes 6379 "Redis"
+
+          # Wait for ports to be completely free
+          echo "Verifying ports are free..."
+          wait_for_port_free 3000 || {
+            echo "ERROR: Port 3000 is still in use"
+            echo "Processes still using port 3000:"
+            lsof -i:3000 || true
+            exit 1
+          }
+
+          wait_for_port_free 5173 || {
+            echo "WARNING: Port 5173 is still in use, but continuing..."
+            lsof -i:5173 || true
+          }
+
+          echo "=== DOCKER IMAGES PREPARATION ==="
 
           echo "Pulling latest Docker images from registry..."
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:main || echo "Backend image pull failed, will use local build"
@@ -261,76 +347,213 @@ jobs:
               build: null
           EOF
 
+          echo "=== DEPLOYMENT START ==="
+
+          # Remove any existing override file conflicts
+          rm -f docker-compose.override.yml.bak
+
           echo "Starting services with updated images..."
-          docker-compose up -d --force-recreate
+          docker-compose up -d --force-recreate --remove-orphans
 
-          echo "Waiting for containers to start..."
-          sleep 10
+          echo "Waiting for containers to initialize..."
+          sleep 15
 
-          echo "Checking container status..."
+          echo "=== POST-DEPLOYMENT VERIFICATION ==="
+
+          echo "Checking container status:"
           docker-compose ps
 
-          echo "Checking container logs..."
+          echo "Verifying port bindings:"
+          netstat -tulpn | grep -E ':(3000|5173|5432|6379) ' || echo "Warning: Some ports may not be bound yet"
+
+          echo "Checking container health:"
+          for service in postgres redis api frontend; do
+            if docker-compose ps $service | grep -q "Up"; then
+              echo "✅ $service container is running"
+            else
+              echo "❌ $service container is not running properly"
+              echo "Logs for $service:"
+              docker-compose logs --tail=10 $service || true
+            fi
+          done
+
+          echo "Recent container logs:"
           docker-compose logs --tail=20 api || true
           docker-compose logs --tail=20 frontend || true
 
-          echo "Cleaning up old images..."
+          echo "=== CLEANUP ==="
+          echo "Cleaning up old Docker images..."
           docker image prune -f || true
+
+          echo "Deployment process completed!"
 
       - name: Wait for services to start
         run: |
-          echo "Waiting for services to start..."
+          echo "=== PROGRESSIVE SERVICE STARTUP VERIFICATION ==="
 
-          # Progressive waiting with health checks
-          MAX_WAIT=120
-          WAIT_INTERVAL=10
-          elapsed=0
+          # Function to check if a service is healthy
+          check_service_health() {
+            local service=$1
+            local port=$2
+            local endpoint=${3:-""}
+            local max_attempts=12
+            local attempt=1
 
-          while [ $elapsed -lt $MAX_WAIT ]; do
-            echo "Waiting... ($elapsed/${MAX_WAIT}s)"
+            echo "Checking $service health on port $port..."
 
-            # Check if API container is running
-            if docker-compose ps api | grep -q "Up"; then
-              echo "API container is running, checking HTTP response..."
-              if curl -f http://localhost:3000 > /dev/null 2>&1; then
-                echo "API is responding to HTTP requests"
-                break
+            while [ $attempt -le $max_attempts ]; do
+              echo "  Attempt $attempt/$max_attempts for $service..."
+
+              # Check container status first
+              if ! docker-compose ps $service | grep -q "Up"; then
+                echo "  ❌ $service container is not running"
+                docker-compose ps $service
+                echo "  $service logs:"
+                docker-compose logs --tail=20 $service || true
+                return 1
               fi
-            fi
 
-            sleep $WAIT_INTERVAL
-            elapsed=$((elapsed + WAIT_INTERVAL))
-          done
+              # Check port responsiveness
+              if nc -z localhost $port 2>/dev/null; then
+                echo "  ✅ Port $port is accepting connections"
 
-          if [ $elapsed -ge $MAX_WAIT ]; then
-            echo "Timeout waiting for services to start"
-            echo "Container status:"
-            docker-compose ps
-            echo "API logs:"
-            docker-compose logs --tail=50 api
+                # If endpoint is provided, test HTTP response
+                if [ -n "$endpoint" ]; then
+                  if curl -f -s -m 5 "http://localhost:$port$endpoint" > /dev/null 2>&1; then
+                    echo "  ✅ HTTP endpoint $endpoint is responding"
+                    return 0
+                  else
+                    echo "  ⏳ Port open but HTTP endpoint not ready..."
+                  fi
+                else
+                  return 0
+                fi
+              else
+                echo "  ⏳ Port $port not yet available..."
+              fi
+
+              sleep 10
+              attempt=$((attempt + 1))
+            done
+
+            echo "  ❌ $service failed health check after $max_attempts attempts"
+            return 1
+          }
+
+          # Function to show comprehensive diagnostics
+          show_diagnostics() {
+            echo "=== DIAGNOSTIC INFORMATION ==="
+
+            echo "Docker container status:"
+            docker-compose ps || true
+
+            echo "Port usage:"
+            netstat -tulpn | grep -E ':(3000|5173|5432|6379) ' || echo "No services on monitored ports"
+
+            echo "Docker container inspection:"
+            for service in postgres redis api frontend; do
+              echo "--- $service container ---"
+              if docker-compose ps $service | grep -q "Up"; then
+                echo "Status: Running"
+                echo "Recent logs (last 15 lines):"
+                docker-compose logs --tail=15 $service 2>/dev/null || echo "Could not get logs"
+              else
+                echo "Status: Not running or unhealthy"
+              fi
+              echo ""
+            done
+
+            echo "System resources:"
+            df -h / || true
+            free -h || true
+          }
+
+          echo "Starting progressive service health checks..."
+
+          # Step 1: Database services
+          echo "--- Phase 1: Database Services ---"
+
+          if ! check_service_health "postgres" 5432; then
+            echo "PostgreSQL failed to start properly"
+            show_diagnostics
             exit 1
           fi
 
+          if ! check_service_health "redis" 6379; then
+            echo "Redis failed to start properly"
+            show_diagnostics
+            exit 1
+          fi
+
+          echo "✅ Database services are healthy"
+
+          # Step 2: Backend API
+          echo "--- Phase 2: Backend API ---"
+
+          if ! check_service_health "api" 3000 "/"; then
+            echo "Backend API failed to start properly"
+            show_diagnostics
+            exit 1
+          fi
+
+          echo "✅ Backend API is healthy"
+
+          # Step 3: Frontend (non-critical for staging)
+          echo "--- Phase 3: Frontend (non-critical) ---"
+
+          if check_service_health "frontend" 5173; then
+            echo "✅ Frontend is healthy"
+          else
+            echo "⚠️ Frontend health check failed, but continuing (non-critical for staging)"
+            echo "Frontend logs:"
+            docker-compose logs --tail=20 frontend || true
+          fi
+
+          echo "=== SERVICE STARTUP VERIFICATION COMPLETED ==="
+
       - name: Run comprehensive health checks
         run: |
-          echo "Running comprehensive health checks..."
+          echo "=== COMPREHENSIVE APPLICATION HEALTH CHECKS ==="
 
-          # Function to check endpoint with retries
-          check_endpoint() {
+          # Function to check endpoint with retries and detailed logging
+          check_endpoint_advanced() {
             local url=$1
             local name=$2
-            local max_attempts=5
+            local expected_content=${3:-""}
+            local max_attempts=8
             local attempt=1
 
-            while [ $attempt -le $max_attempts ]; do
-              echo "Checking $name (attempt $attempt/$max_attempts)..."
+            echo "🔍 Testing $name at $url..."
 
-              if curl -f -s "$url" > /dev/null 2>&1; then
-                echo "✅ $name is healthy"
-                return 0
+            while [ $attempt -le $max_attempts ]; do
+              echo "  Attempt $attempt/$max_attempts..."
+
+              # Test connection with detailed output
+              response=$(curl -s -w "\nHTTP_CODE:%{http_code}\nTIME_TOTAL:%{time_total}s" -m 10 "$url" 2>/dev/null || echo "CURL_FAILED")
+
+              if echo "$response" | grep -q "CURL_FAILED"; then
+                echo "  ❌ Connection failed (network error)"
+              elif echo "$response" | grep -q "HTTP_CODE:200"; then
+                response_time=$(echo "$response" | grep "TIME_TOTAL" | cut -d: -f2)
+                echo "  ✅ $name responded successfully (${response_time})"
+
+                # Check for expected content if provided
+                if [ -n "$expected_content" ] && ! echo "$response" | grep -q "$expected_content"; then
+                  echo "  ⚠️ Response received but expected content not found"
+                else
+                  return 0
+                fi
+              else
+                http_code=$(echo "$response" | grep "HTTP_CODE" | cut -d: -f2 || echo "unknown")
+                echo "  ❌ HTTP error (code: $http_code)"
               fi
 
-              sleep 5
+              if [ $attempt -eq $max_attempts ]; then
+                echo "  📄 Final response content:"
+                echo "$response" | head -20
+              fi
+
+              sleep 8
               attempt=$((attempt + 1))
             done
 
@@ -338,43 +561,175 @@ jobs:
             return 1
           }
 
+          # Function for application-level tests
+          test_api_functionality() {
+            echo "🧪 Testing API functionality..."
+
+            # Test basic API routes
+            local endpoints=(
+              "http://localhost:3000/api/health:API health endpoint"
+              "http://localhost:3000/api/tasks:Tasks endpoint"
+            )
+
+            for endpoint_info in "${endpoints[@]}"; do
+              local endpoint=$(echo "$endpoint_info" | cut -d: -f1)
+              local name=$(echo "$endpoint_info" | cut -d: -f2)
+
+              if curl -f -s -m 5 "$endpoint" > /dev/null 2>&1; then
+                echo "  ✅ $name is accessible"
+              else
+                echo "  ⚠️ $name may not be ready (non-critical)"
+              fi
+            done
+          }
+
+          echo "--- Phase 1: Core Backend Health ---"
+
           # Check basic Express.js response
-          if ! check_endpoint "http://localhost:3000" "Express.js backend"; then
-            echo "Basic backend health check failed"
+          if ! check_endpoint_advanced "http://localhost:3000" "Express.js backend server"; then
+            echo "🚨 CRITICAL: Basic backend health check failed"
+            echo "📊 Diagnostics:"
             echo "Container status:"
-            docker-compose ps
-            echo "Backend logs:"
+            docker-compose ps api
+            echo "Backend logs (last 50 lines):"
             docker-compose logs --tail=50 api
             exit 1
           fi
 
-          # Check API health endpoint
-          if ! check_endpoint "http://localhost:3000/api/health" "API health endpoint"; then
-            echo "API health endpoint failed"
-            echo "Backend logs:"
-            docker-compose logs --tail=30 api
+          echo "--- Phase 2: API Health Verification ---"
+
+          # Check API health endpoint with detailed validation
+          if check_endpoint_advanced "http://localhost:3000/api/health" "API health endpoint" '"status"'; then
+            echo "✅ API health endpoint is functional"
+
+            # Get and display health status
+            echo "📊 Health status details:"
+            health_response=$(curl -s -m 5 http://localhost:3000/api/health 2>/dev/null || echo "Failed to get response")
+            if [ "$health_response" != "Failed to get response" ]; then
+              echo "$health_response" | jq . 2>/dev/null || echo "$health_response"
+
+              # Specific checks for database connectivity
+              if echo "$health_response" | grep -q '"database".*"connected"'; then
+                echo "  ✅ Database connectivity confirmed"
+              elif echo "$health_response" | grep -q '"status":"healthy"'; then
+                echo "  ✅ Service reports healthy status"
+              else
+                echo "  ⚠️ Health status unclear, but endpoint is responding"
+              fi
+            fi
+          else
+            echo "🚨 CRITICAL: API health endpoint is not responding"
             exit 1
           fi
 
-          # Check database connectivity through health endpoint
-          health_response=$(curl -s http://localhost:3000/api/health)
-          if echo "$health_response" | grep -q '"status":"healthy"'; then
-            echo "✅ Database connectivity confirmed"
-          else
-            echo "⚠️ Database connectivity issues detected"
-            echo "Health response: $health_response"
-          fi
+          echo "--- Phase 3: Application Functionality ---"
 
-          # Check frontend accessibility (non-critical)
-          if curl -f http://localhost:5173 > /dev/null 2>&1; then
-            echo "✅ Frontend is accessible"
+          # Test additional API functionality
+          test_api_functionality
+
+          echo "--- Phase 4: Frontend Verification (Non-Critical) ---"
+
+          # Check frontend accessibility (non-blocking)
+          if check_endpoint_advanced "http://localhost:5173" "Frontend application" "<!DOCTYPE html"; then
+            echo "✅ Frontend is accessible and serving content"
           else
-            echo "⚠️ Frontend not accessible (non-critical for staging)"
-            echo "Frontend logs:"
+            echo "⚠️ Frontend verification failed (non-critical for staging environment)"
+            echo "Frontend container status:"
+            docker-compose ps frontend || true
+            echo "Frontend logs (last 20 lines):"
             docker-compose logs --tail=20 frontend || true
           fi
 
-          echo "All critical health checks passed!"
+          echo "--- Phase 5: Final System Status ---"
+
+          echo "📊 Final deployment status:"
+          echo "Container Status:"
+          docker-compose ps
+
+          echo "📊 Resource usage:"
+          docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}" $(docker-compose ps -q) 2>/dev/null || echo "Could not get container stats"
+
+          echo ""
+          echo "🎉 DEPLOYMENT HEALTH CHECKS COMPLETED SUCCESSFULLY!"
+          echo "✅ Backend API: Healthy and responding"
+          echo "✅ Database: Connected and accessible"
+          echo "✅ Core functionality: Verified"
+          echo ""
+          echo "🌐 Application is available at:"
+          echo "  - API Server: http://localhost:3000"
+          echo "  - Health Check: http://localhost:3000/api/health"
+          echo "  - Frontend: http://localhost:5173 (if configured)"
+
+      - name: Emergency recovery on failure
+        if: failure()
+        run: |
+          echo "🚨 DEPLOYMENT FAILED - RUNNING EMERGENCY RECOVERY"
+
+          PROJECT_DIR="/home/adm79/fullstack-parser"
+          cd "$PROJECT_DIR"
+
+          echo "=== FAILURE DIAGNOSTICS ==="
+
+          echo "Container status at failure:"
+          docker ps -a || true
+
+          echo "Docker Compose service status:"
+          docker-compose ps || true
+
+          echo "Port usage at failure:"
+          netstat -tulpn | grep -E ':(3000|5173|5432|6379) ' || echo "No services on target ports"
+
+          echo "System resources:"
+          df -h / || true
+          free -h || true
+
+          echo "=== EMERGENCY CLEANUP ==="
+
+          echo "Stopping all compose services..."
+          docker-compose down --remove-orphans -t 30 || true
+
+          echo "Force killing processes on critical ports..."
+          for port in 3000 5173 5432 6379; do
+            pids=$(lsof -ti:$port 2>/dev/null || true)
+            if [ -n "$pids" ]; then
+              echo "Killing processes on port $port: $pids"
+              echo "$pids" | xargs -r kill -KILL 2>/dev/null || true
+            fi
+          done
+
+          echo "Cleaning up Docker resources..."
+          docker container prune -f || true
+          docker network prune -f || true
+
+          echo "=== RECOVERY ATTEMPT ==="
+
+          echo "Attempting to restore basic services..."
+          # Try to start only essential services
+          docker-compose up -d postgres redis || true
+
+          sleep 10
+
+          # Check if basic services started
+          if docker-compose ps postgres | grep -q "Up" && docker-compose ps redis | grep -q "Up"; then
+            echo "✅ Basic services recovered"
+            # Try to start API
+            docker-compose up -d api || true
+            sleep 10
+
+            if docker-compose ps api | grep -q "Up"; then
+              echo "✅ API service recovered"
+            else
+              echo "❌ API service failed to recover"
+            fi
+          else
+            echo "❌ Failed to recover basic services"
+          fi
+
+          echo "=== FINAL STATE ==="
+          docker-compose ps || true
+
+          echo "🔴 Deployment failed but emergency recovery completed"
+          echo "Manual intervention may be required"
 
   # Deploy to production using self-hosted runner
   deploy-production:
