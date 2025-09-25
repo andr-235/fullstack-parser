@@ -65,17 +65,6 @@ The project uses **Express.js** as the primary backend implementation:
   - `src/config/` - Database configuration (db.js)
   - `src/utils/` - Utilities (logger.js)
 
-#### Frontend (Vue.js 3)
-- **Location**: `frontend/` directory
-- **Framework**: Vue.js 3 with Vite
-- **Port**: 5173 (development), 80 (Docker)
-- **Architecture**: Feature-based with:
-  - `src/auth/` - Complete authentication system (JWT-based)
-  - `src/components/` - Reusable UI components
-  - `src/views/` - Page components (Home, Profile, Admin, etc.)
-  - `src/stores/` - Pinia state management (comments, tasks)
-  - `src/router/` - Vue Router configuration with guards
-
 
 ### Key Components
 
@@ -106,16 +95,8 @@ The project uses **Express.js** as the primary backend implementation:
 #### Express.js Backend Tests
 ```bash
 cd backend/
-bun test         # Run Jest tests with Bun
-npm run test     # Alternative: Run with npm
-```
-
-#### Frontend Tests
-```bash
-cd frontend/
-bun run test     # Run Vue/Vite tests (configured to pass currently)
-bun run lint     # Run linting (placeholder)
-bun run type-check # Run TypeScript type checking (placeholder)
+npm test            # Run Jest tests
+npm run test:watch  # Run tests in watch mode (if configured)
 ```
 
 ### Database Operations
@@ -170,10 +151,8 @@ bun run type-check # Run TypeScript type checking (placeholder)
 
 ## API Endpoints and Health Checks
 - **Express.js API**: `http://localhost:3000`
-- **Frontend Dev Server**: `http://localhost:5173`
 - **Health endpoint**: `http://localhost:3000/` (basic status)
 - **API routes**: `http://localhost:3000/api/*`
-- **Frontend (Docker)**: `http://localhost:5173` (mapped to container port 80)
 - Check status: `make status`
 - View logs: `make logs`
 
@@ -195,11 +174,9 @@ cp env.example .env
 
 ### Service Ports
 - **Express.js API**: `3000` (Node.js backend)
-- **Frontend (Dev)**: `5173` (Vite dev server)
-- **Frontend (Docker)**: `5173` (mapped to container port 80)
 - **Database**: `5432` (PostgreSQL)
 - **Cache**: `6379` (Redis)
-- **Go API (Docker)**: `8080` (Legacy/Alternative backend)
+- **Monitoring**: `9090` (Prometheus)
 
 ## Scripts and Utilities
 
@@ -225,16 +202,6 @@ make security-scan  # Security scan (requires trivy)
 3. **Build failures**: Clean with `make clean-docker`
 4. **Log analysis**: Use `make logs` or specific service logs
 5. **Health checks**: `make health` or visit `/health` endpoint
-6. **Port conflicts**: Ensure ports 3000, 5173, 5432, 6379, 8080 are available
+6. **Port conflicts**: Ensure ports 3000, 5432, 6379 are available
 7. **CORS issues**: Frontend should run on `http://localhost:5173` (Vue.js)
-8. **API proxy issues**: Vite proxies `/api` to `http://localhost:8000` (check vite.config.ts)
-9. **Authentication**: Frontend includes complete JWT-based auth system
-10. **VK API**: Ensure `VK_ACCESS_TOKEN` is set in environment
-
-## Frontend Development Notes
-- **State Management**: Uses Pinia stores for comments and tasks
-- **Authentication**: Complete JWT auth system in `src/auth/`
-- **Routing**: Vue Router with authentication guards
-- **API Integration**: Axios with interceptors for auth headers
-- **Development**: Hot reload with Vite on port 5173
-- **Testing**: Jest tests configured but minimal implementation
+8. **VK API**: Ensure `VK_ACCESS_TOKEN` is set in environment

@@ -1,6 +1,7 @@
 const winston = require('winston');
-const logger = require('../utils/logger');
-const { sequelize, Task, Post, Comment } = require('../config/db');
+const logger = require('../utils/logger.js');
+
+const { sequelize, Task, Post, Comment } = require('../models/index.js');
 
 class DBRepo {
   constructor() {
@@ -18,17 +19,21 @@ class DBRepo {
     return task;
   }
 
-  async updateTask(taskId, status, metrics = null) {
-    const updateData = { status };
-    if (metrics) {
-      updateData.metrics = JSON.stringify(metrics);
+  async getTaskById(taskId) {
+    const task = await this.Task.findByPk(taskId);
+    if (!task) {
+      throw new Error(`Task with id ${taskId} not found`);
     }
-    const [updated] = await this.Task.update(updateData, {
+    return task;
+  }
+
+  async updateTask(taskId, updates) {
+    const [updated] = await this.Task.update(updates, {
       where: { id: taskId },
       returning: true,
     });
     if (!updated) {
-      _error('Failed to update task', { taskId, error: `Task with id ${taskId} not found` });
+      logger.error('Failed to update task', { taskId, error: `Task with id ${taskId} not found` });
       throw new Error(`Task with id ${taskId} not found`);
     }
     return await this.Task.findByPk(taskId);
@@ -52,13 +57,14 @@ class DBRepo {
     return createdComments;
   }
 
-  async getTaskStatus(taskId) {
-    const task = await this.Task.findByPk(taskId);
-    if (!task) {
-      _error('Failed to get task status', { taskId, error: `Task with id ${taskId} not found` });
-      throw new Error(`Task with id ${taskId} not found`);
-    }
-    return task;
+  async listTasks({ limit, offset }) {
+    const tasks = await this.Task.findAll({
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']],
+    });
+    const total = await this.Task.count();
+    return { tasks, total };
   }
 
   async getResults(taskId, groupId = null, postId = null) {
@@ -66,20 +72,16 @@ class DBRepo {
     if (postId) {
       whereClause.id = postId;
     }
-
-    let postInclude = {
-      model: Comment,
-      as: 'comments', // Предполагая ассоциацию Post.hasMany(Comment, {as: 'comments'})
-    };
-
     if (groupId) {
-      // Предполагая поле groupId в Post
       whereClause.groupId = groupId;
     }
 
     const posts = await this.Post.findAll({
       where: whereClause,
-      include: [postInclude],
+      include: [{
+        model: Comment,
+        as: 'comments'
+      }]
     });
 
     const totalComments = posts.reduce((sum, post) => sum + (post.comments?.length || 0), 0);
@@ -92,5 +94,3 @@ class DBRepo {
 }
 
 module.exports = new DBRepo();
-module.exports.default = module.exports;
-module.exports.__esModule = true;

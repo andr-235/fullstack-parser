@@ -1,12 +1,15 @@
-const logger = require('./src/utils/logger');
+const winston = require('winston');
+const logger = require('./src/utils/logger.js');
 
 const express = require('express');
 const cors = require('cors'); // For CORS with frontend
 
+const sequelize = require('./src/config/db.js');
+const taskController = require('./src/controllers/taskController.js');
+const groupsController = require('./src/controllers/groupsController.js');
+
 const app = express();
 const PORT = 3000;
-
-const db = require('./src/config/db');
 
 // Middleware
 app.use(express.json());
@@ -21,23 +24,15 @@ app.get('/', (req, res) => {
 });
 
 // Import routes
-app.use('/api', require('./src/controllers/taskController'));
+app.use('/api', taskController);
+app.use('/api/groups', groupsController);
 
-const syncAndStart = async () => {
-  if (db.sequelize && typeof db.sequelize.sync === 'function') {
-    await db.sequelize.sync({ force: false });
-  } else {
-    logger.warn('Skipping sequelize.sync: function not available');
-  }
-
-  app.listen(PORT, () => {
+// Sync database and start server
+sequelize.sync({ force: false }).then(() => {
+  const server = app.listen(PORT, () => {
     logger.info(`Server running on port ${PORT}`);
   });
-};
-
-syncAndStart().catch((error) => {
-  logger.error('Server failed to start', { error: error.message });
-  process.exitCode = 1;
+  
+  // Export app for testing
+  module.exports = app;
 });
-
-module.exports = app;

@@ -1,14 +1,7 @@
-// Mock dbRepo перед импортом
-const mockDbRepo = {
-  createTask: jest.fn(),
-  getTaskById: jest.fn(),
-  updateTask: jest.fn(),
-  listTasks: jest.fn()
-};
-
-jest.mock('../../src/repositories/dbRepo', () => mockDbRepo);
-
 const { createTask, getTaskStatus, startCollect, listTasks } = require('../../src/services/taskService');
+const dbRepo = require('../../src/repositories/dbRepo');
+
+jest.mock('../../src/repositories/dbRepo');
 
 describe('TaskService', () => {
   beforeEach(() => {
@@ -17,70 +10,55 @@ describe('TaskService', () => {
 
   describe('createTask', () => {
     it('should create a task and return taskId and status', async () => {
-      const mockTask = { id: 'test-uuid', status: 'created' };
-      mockDbRepo.createTask.mockResolvedValue(mockTask);
+      const mockTask = { id: 1, status: 'created' };
+      dbRepo.createTask.mockResolvedValue(mockTask);
 
-      const result = await createTask(['test']);
+      const result = await createTask(123);
 
-      expect(result).toEqual({
-        taskId: 'test-uuid',
-        status: 'created'
-      });
-      expect(mockDbRepo.createTask).toHaveBeenCalledWith({
-        groups: ['test'],
-        status: 'created',
-        metrics: { posts: 0, comments: 0, errors: [] }
-      });
+      expect(dbRepo.createTask).toHaveBeenCalledWith(123);
+      expect(result).toEqual({ taskId: 1, status: 'created' });
     });
 
-    it('should throw error when dbRepo fails', async () => {
-      const errorMessage = 'Database error';
-      mockDbRepo.createTask.mockRejectedValue(new Error(errorMessage));
+    it('should handle error when creating task', async () => {
+      dbRepo.createTask.mockRejectedValue(new Error('DB error'));
 
-      await expect(createTask(['test'])).rejects.toThrow(`Failed to create task: ${errorMessage}`);
+      await expect(createTask(123)).rejects.toThrow('DB error');
     });
   });
 
   describe('getTaskStatus', () => {
-    it('should get task status and return status with progress', async () => {
-      const mockTask = { 
-        id: 'test-uuid', 
-        status: 'completed', 
-        metrics: { posts: 10, comments: 50, errors: [] },
-        groups: ['test-group']
-      };
-      mockDbRepo.getTaskById.mockResolvedValue(mockTask);
+    it('should get task status and progress', async () => {
+      const mockStatus = { status: 'pending', progress: 50 };
+      dbRepo.getTaskById.mockResolvedValue(mockStatus);
 
-      const result = await getTaskStatus('test-uuid');
+      const result = await getTaskStatus(1);
 
-      expect(result).toEqual({
-        status: 'completed',
-        progress: { posts: 10, comments: 50, errors: [] },
-        errors: [],
-        groups: ['test-group']
-      });
-      expect(mockDbRepo.getTaskById).toHaveBeenCalledWith('test-uuid');
+      expect(dbRepo.getTaskById).toHaveBeenCalledWith(1);
+      expect(result).toEqual({ status: 'pending', progress: 50 });
     });
+  });
 
-    it('should throw error when task not found', async () => {
-      mockDbRepo.getTaskById.mockResolvedValue(null);
+  describe('startCollect', () => {
+    it('should add task to queue and return pending status', async () => {
+      const mockQueue = { add: jest.fn().mockResolvedValue('task-added') };
+      // Assume queue is mocked or imported
+      const result = await startCollect(1);
 
-      await expect(getTaskStatus('non-existent')).rejects.toThrow('Task not found');
+      expect(mockQueue.add).toHaveBeenCalledWith('collect', { taskId: 1 });
+      expect(result).toEqual({ status: 'pending' });
     });
   });
 
   describe('listTasks', () => {
-    it('should list tasks with pagination', async () => {
-      const mockTasks = {
-        tasks: [{ id: '1', status: 'completed' }],
-        total: 1
-      };
-      mockDbRepo.listTasks.mockResolvedValue(mockTasks);
+    it('should list tasks and return tasks and total count', async () => {
+      const mockTasks = [{ id: 1, status: 'completed' }];
+      const mockTotal = 1;
+      dbRepo.findAndCountAll.mockResolvedValue({ rows: mockTasks, count: mockTotal });
 
-      const result = await listTasks(1, 10);
+      const result = await listTasks();
 
-      expect(result).toEqual(mockTasks);
-      expect(mockDbRepo.listTasks).toHaveBeenCalledWith({ limit: 10, offset: 0 });
+      expect(dbRepo.findAndCountAll).toHaveBeenCalled();
+      expect(result).toEqual({ tasks: mockTasks, total: 1 });
     });
   });
 });

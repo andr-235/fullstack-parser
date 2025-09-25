@@ -1,28 +1,25 @@
 <template>
-  <v-overlay
-    v-if="show"
-    contained
-    absolute
-    opacity="0.8"
-  >
+  <div class="spinner-container">
     <v-progress-circular
       indeterminate
+      size="48"
       color="primary"
-      size="64"
-    ></v-progress-circular>
-    <p v-if="text" class="mt-2 text-h6">{{ text }}</p>
-  </v-overlay>
+    />
+  </div>
 </template>
 
 <script setup>
-defineProps({
-  show: {
-    type: Boolean,
-    default: false
-  },
-  text: {
-    type: String,
-    default: 'Загрузка...'
-  }
-})
+/**
+ * Компонент спиннера загрузки.
+ */
 </script>
+
+<style scoped>
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+}
+</style>

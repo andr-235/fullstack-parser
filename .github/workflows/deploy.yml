@@ -17,15 +17,39 @@ on:
           - production
 
 env:
-  BUN_VERSION: 'latest'
+  NODE_VERSION: '20'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # Test and build Bun backend
+  # Test and build Express.js backend
   backend-test:
-    runs-on: [self-hosted, linux, x64]
+    runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
 
     defaults:
       run:
@@ -35,41 +59,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup services in Docker
-        run: |
-          echo "🚀 Запуск сервисов в Docker контейнерах..."
-          
-          # Запускаем сервисы
-          ../scripts/manage-services.sh start
-          
-          # Проверяем доступность
-          ../scripts/manage-services.sh status
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: ${{ env.BUN_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
       - name: Run linting
-        run: bun run lint || echo "Linting step skipped - no lint script"
+        run: npm run lint || echo "Linting step skipped - no lint script"
 
       - name: Run tests
-        run: bun test --reporter=verbose || echo "Tests passed or skipped"
+        run: npm test || echo "Tests passed or skipped"
         env:
           NODE_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5434/test_db
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-secret-key
 
       - name: Build application
-        run: bun run build || echo "Build step completed or skipped"
+        run: npm run build || echo "Build step completed or skipped"
 
-  # Test and build Vue.js frontend with Bun
+  # Test and build Vue.js frontend
   frontend-test:
-    runs-on: [self-hosted, linux, x64]
+    runs-on: ubuntu-latest
 
     defaults:
       run:
@@ -79,25 +95,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: ${{ env.BUN_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
       - name: Run type checking
-        run: bun run type-check || echo "Type check completed"
+        run: npm run type-check || echo "Type check completed"
 
       - name: Run linting
-        run: bun run lint || echo "Linting completed"
+        run: npm run lint || echo "Linting completed"
 
       - name: Run tests
-        run: bun test || echo "Tests completed"
+        run: npm test || echo "Tests completed"
 
       - name: Build application
-        run: bun run build
+        run: npm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -192,7 +210,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to staging (Bun backend)
+      - name: Deploy to staging (Express.js)
         run: |
           echo "Current user: $(whoami)"
           echo "Current directory: $(pwd)"
@@ -215,14 +233,13 @@ jobs:
           ls -la
 
           echo "Stopping current services..."
-          docker-compose -f docker-compose.local.yml down || true
-          docker-compose -f docker-compose.services.yml down || true
+          docker-compose down || true
 
-          echo "Starting database services..."
-          ./scripts/manage-services.sh start
+          echo "Pulling latest images..."
+          docker-compose pull || true
 
-          echo "Starting application services..."
-          docker-compose -f docker-compose.local.yml up -d
+          echo "Starting services..."
+          docker-compose up -d
 
           echo "Cleaning up old images..."
           docker image prune -f || true
@@ -236,11 +253,11 @@ jobs:
         run: |
           echo "Running health checks..."
 
-          # Check Bun backend
+          # Check Express.js backend
           if curl -f http://localhost:3000 > /dev/null 2>&1; then
-            echo "✅ Bun backend is healthy"
+            echo "✅ Express.js backend is healthy"
           else
-            echo "❌ Bun backend health check failed"
+            echo "❌ Express.js backend health check failed"
             exit 1
           fi
 
@@ -303,11 +320,11 @@ jobs:
         run: |
           echo "Running comprehensive health checks..."
 
-          # Check Bun backend
+          # Check Express.js backend
           if curl -f http://localhost:3000 > /dev/null 2>&1; then
-            echo "✅ Bun backend is healthy"
+            echo "✅ Express.js backend is healthy"
           else
-            echo "❌ Bun backend health check failed"
+            echo "❌ Express.js backend health check failed"
             exit 1
           fi
 

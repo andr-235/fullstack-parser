@@ -1,34 +1,39 @@
-const logger = require('../utils/logger');
+const logger = require('../utils/logger.js');
 
 const { Router } = require('express');
 const Joi = require('joi');
-const { createTask, startCollect, getTaskStatus, listTasks } = require('../services/taskService');
-const { getResults: _getResults } = require('../services/vkService');
+const taskService = require('../services/taskService.js');
+const vkService = require('../services/vkService.js');
 
 const router = Router();
 
-// Validation schema for groups
-const groupsSchema = Joi.object({
-  groups: Joi.array()
-    .items(Joi.number().integer().required())
-    .min(1)
-    .required()
+// Validation schema for task creation
+const taskSchema = Joi.object({
+  ownerId: Joi.number().integer().negative().required(),
+  postId: Joi.number().integer().positive().required(),
+  token: Joi.string().required()
 });
 
-// POST /api/groups - Create task
-const postGroups = async (req, res) => {
+/**
+ * Создает задачу на сбор комментариев из VK.
+ * @param {Object} req - HTTP-запрос
+ * @param {Object} res - HTTP-ответ
+ * @returns {Promise<void>}
+ */
+const createTask = async (req, res) => {
   try {
-    const { error, value } = groupsSchema.validate(req.body);
+    const { error, value } = taskSchema.validate(req.body);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
-    const { taskId } = await createTask(value.groups);
+    const { ownerId, postId, token } = value;
+    const { taskId } = await taskService.createTask({ ownerId, postId, token });
     res.status(201).json({ taskId, status: 'created' });
   } catch (err) {
     if (err.name === 'ValidationError') {
       return res.status(400).json({ error: err.message });
     }
-    logger.error('Error in postGroups', { error: err.message });
+    logger.error('Error in createTask', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -36,13 +41,13 @@ const postGroups = async (req, res) => {
 // POST /api/collect/:taskId - Start collect
 const postCollect = async (req, res) => {
   try {
-    const taskId = Number(req.params.taskId);
-    if (!Number.isInteger(taskId) || taskId <= 0) {
-      return res.status(400).json({ error: 'Invalid taskId' });
+    const taskId = req.params.taskId;
+    const task = await taskService.getTaskById(taskId);
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
     }
-
-    const result = await startCollect(taskId);
-    res.status(202).json(result);
+    const { status, startedAt } = await taskService.startCollect(taskId);
+    res.status(202).json({ taskId, status: 'pending', startedAt });
   } catch (err) {
     if (err.message.includes('rate limit')) {
       return res.status(429).json({ error: 'Rate limit exceeded' });
@@ -58,12 +63,7 @@ const postCollect = async (req, res) => {
 // GET /api/tasks/:taskId - Get task status
 const getTask = async (req, res) => {
   try {
-    const taskId = Number(req.params.taskId);
-    if (!Number.isInteger(taskId) || taskId <= 0) {
-      return res.status(400).json({ error: 'Invalid taskId' });
-    }
-
-    const { status, progress, errors } = await getTaskStatus(taskId);
+    const { status, progress, errors } = await taskService.getTaskStatus(req.params.taskId);
     res.json({ status, progress, errors: errors || [] });
   } catch (err) {
     if (err.message.includes('not found')) {
@@ -79,7 +79,7 @@ const getTasks = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const { tasks, total } = await listTasks(page, limit);
+    const { tasks, total } = await taskService.listTasks(page, limit);
     res.json({ tasks, total });
   } catch (err) {
     logger.error('Error in getTasks', { page: req.query.page, limit: req.query.limit, error: err.message });
@@ -93,34 +93,22 @@ const getResults = async (req, res) => {
     const taskId = req.params.taskId;
     const groupId = req.query.groupId ? parseInt(req.query.groupId) : undefined;
     const postId = req.query.postId ? parseInt(req.query.postId) : undefined;
-    const results = await _getResults(taskId, groupId, postId);
+    const results = await vkService.getResults(taskId, groupId, postId);
     res.json(results);
   } catch (err) {
     if (err.message.includes('not found')) {
       return res.status(404).json({ error: 'Results not found' });
     }
-    logger.error('Error in getResults', {
-      taskId: req.params.taskId,
-      groupId: req.query.groupId,
-      postId: req.query.postId,
-      error: err.message
-    });
+    logger.error('Error in getResults', { taskId: req.params.taskId, groupId: req.query.groupId, postId: req.query.postId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
 // Routes
-router.post('/groups', postGroups);
+router.post('/tasks', createTask);
 router.post('/collect/:taskId', postCollect);
 router.get('/tasks/:taskId', getTask);
 router.get('/tasks', getTasks);
 router.get('/results/:taskId', getResults);
 
 module.exports = router;
-module.exports.postGroups = postGroups;
-module.exports.postCollect = postCollect;
-module.exports.getTask = getTask;
-module.exports.getTasks = getTasks;
-module.exports.getResults = getResults;
-module.exports.default = module.exports;
-module.exports.__esModule = true;

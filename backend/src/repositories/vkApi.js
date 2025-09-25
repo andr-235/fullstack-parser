@@ -1,7 +1,8 @@
-const logger = require('../utils/logger');
-const axios = require('axios');
-const { RateLimiterMemory } = require('rate-limiter-flexible');
-const axiosRetry = require('axios-retry').default || require('axios-retry');
+import logger from '../utils/logger.js';
+
+import axios from 'axios';
+import { RateLimiterMemory } from 'rate-limiter-flexible';
+import axiosRetry from 'axios-retry';
 
 class VKApi {
   constructor() {
@@ -122,8 +123,4 @@ class VKApi {
   }
 }
 
-const vkApiInstance = new VKApi();
-
-module.exports = vkApiInstance;
-module.exports.getPosts = vkApiInstance.getPosts.bind(vkApiInstance);
-module.exports.getComments = vkApiInstance.getComments.bind(vkApiInstance);
+export default new VKApi();
