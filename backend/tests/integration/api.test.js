@@ -69,6 +69,8 @@ jest.mock('../../src/services/taskService', () => {
   };
 });
 
+const mockTaskService = require('../../src/services/taskService');
+
 jest.mock('../../src/repositories/dbRepo', () => ({
   __esModule: false,
   default: {
