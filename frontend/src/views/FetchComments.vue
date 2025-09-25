@@ -1,96 +1,115 @@
 <template>
-  <div class="fetch-comments">
-    <h1>Получить комментарии</h1>
-    <form v-if="!loading && !error" @submit.prevent="submitForm">
-      <div class="form-group">
-        <label for="ownerId">ID владельца поста:</label>
-        <input
-          id="ownerId"
-          v-model="formData.ownerId"
-          type="number"
-          required
-        />
-      </div>
-      <div class="form-group">
-        <label for="postId">ID поста:</label>
-        <input
-          id="postId"
-          v-model="formData.postId"
-          type="number"
-          required
-        />
-      </div>
-      <div class="form-group">
-        <label for="access_token">Токен доступа VK:</label>
-        <input
-          id="access_token"
-          v-model="formData.access_token"
-          type="text"
-          required
-        />
-      </div>
-      <button type="submit" :disabled="loading">
-        Создать задачу
-      </button>
-    </form>
-    <LoadingSpinner v-else-if="loading" />
-    <ErrorMessage v-else-if="error" :message="error" />
-  </div>
+  <v-container fluid>
+    <v-card class="form-card" elevation="2" max-width="600">
+      <v-card-title>Создать и запустить задачу</v-card-title>
+      <v-card-text>
+        <v-form ref="form" @submit.prevent="handleSubmit">
+          <v-text-field
+            v-model="ownerId"
+            label="Owner ID (отрицательный для групп)"
+            :rules="ownerIdRules"
+            type="number"
+            variant="outlined"
+            density="compact"
+            class="mb-4"
+          />
+          <v-text-field
+            v-model="postId"
+            label="Post ID"
+            :rules="postIdRules"
+            type="number"
+            variant="outlined"
+            density="compact"
+            class="mb-4"
+          />
+          <v-btn
+            type="submit"
+            color="primary"
+            :loading="loading"
+            block
+          >
+            Создать и запустить
+          </v-btn>
+        </v-form>
+        <LoadingSpinner v-if="loading" class="mt-4" />
+      </v-card-text>
+    </v-card>
+    <v-snackbar
+      v-model="showError"
+      :color="errorType"
+      :text="errorMessage"
+      timeout="5000"
+      location="top"
+    />
+  </v-container>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
-import { useTasksStore } from "@/stores/tasks";
-import { useSnackbarStore } from "@/stores/snackbar";
-import LoadingSpinner from "@/components/LoadingSpinner.vue";
-import ErrorMessage from "@/components/ErrorMessage.vue";
+import { ref, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import { useTasksStore } from '@/stores/tasks';
+import { useLocalStorage } from '@vueuse/core';
 
+/**
+ * Компонент формы для создания задачи на сбор комментариев.
+ */
 const router = useRouter();
-const tasksStore = useTasksStore();
-const snackbarStore = useSnackbarStore();
-
-const formData = ref({
-  ownerId: "",
-  postId: "",
-  access_token: ""
-});
+const store = useTasksStore();
+const form = ref(null);
 const loading = ref(false);
-const error = ref(null);
+const ownerId = ref('');
+const postId = ref('');
+const errorMessage = ref('');
+const errorType = ref('error');
+const showError = ref(false);
 
-/**
- * Сбрасывает форму.
- */
-const resetForm = () => {
-  formData.value = {
-    ownerId: "",
-    postId: "",
-    access_token: ""
-  };
-  error.value = null;
-};
+const ownerIdRules = [
+  (v) => !!v || 'Обязательное поле',
+  (v) => !isNaN(v) || 'Должно быть числом',
+  (v) => true || 'Для групп используйте отрицательное значение'
+];
+const postIdRules = [
+  (v) => !!v || 'Обязательное поле',
+  (v) => !isNaN(v) || 'Должно быть числом',
+  (v) => v > 0 || 'Должно быть положительным'
+];
 
-onMounted(() => {
-  resetForm();
+
+watch(() => store.errors, (errors) => {
+  if (errors.length > 0) {
+    errorMessage.value = errors[0];
+    showError.value = true;
+  }
 });
 
 /**
- * Отправляет форму для создания задачи.
+ * Обработка отправки формы.
  * @returns {Promise<void>}
- * @example
- * submitForm();
  */
-const submitForm = async () => {
-  try {
+async function handleSubmit() {
+  const { valid } = await form.value.validate();
+  if (valid) {
     loading.value = true;
-    error.value = null;
-    const taskId = await tasksStore.createTask(formData.value);
-    router.push(`/task/${taskId}`);
-    snackbarStore.show("Задача создана!");
-  } catch (err) {
-    error.value = err.message;
-  } finally {
-    loading.value = false;
+    try {
+      await store.createTask({
+        ownerId: Number(ownerId.value),
+        postId: Number(postId.value)
+      });
+      await store.startCollect(store.taskId);
+      router.push(`/task/${store.taskId}`);
+    } catch (error) {
+      errorMessage.value = error.message || 'Ошибка создания задачи';
+      showError.value = true;
+    } finally {
+      loading.value = false;
+    }
   }
-};
+}
 </script>
+
+<style scoped>
+.form-card {
+  margin: 16px auto;
+  padding: 16px;
+}
+</style>

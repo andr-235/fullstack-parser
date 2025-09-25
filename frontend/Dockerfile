@@ -1,10 +1,9 @@
-FROM node:20-alpine as builder
+FROM oven/bun:1.1.0-alpine as builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN bun install
 COPY . .
-RUN npm run build
+RUN bun run build
 
 FROM nginx:alpine as runner
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
