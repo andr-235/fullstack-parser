@@ -1,80 +1,92 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
-import { postTask, getTaskStatus } from "@/services/api";
+import { ref } from "vue";
+import { postCreateTask, postStartCollect, getTaskStatus } from "@/services/api";
 
-/**
- * Pinia store для управления задачами.
- */
 export const useTasksStore = defineStore("tasks", () => {
-  /**
-   * Текущее состояние задачи.
-   */
-  const currentTask = ref({
-    id: null,
-    status: null,
-    progress: 0,
-    error: null
-  });
+  const taskId = ref(null);
+  const status = ref("");
+  const progress = ref({ posts: 0, comments: 0 });
+  const errors = ref([]);
+  const intervalId = ref(null);
 
   /**
-   * Создает новую задачу и обновляет состояние.
-   * @param {Object} data - Данные для создания задачи.
-   * @param {number} data.ownerId - ID владельца поста.
-   * @param {number} data.postId - ID поста.
-   * @param {string} data.access_token - Токен доступа VK.
+   * Создает новую задачу.
+   * @param {Object} data - {ownerId, postId, token}
    * @returns {Promise<void>}
-   * @throws {Error} При ошибке создания задачи.
-   * @example
-   * await createTask({ ownerId: 1, postId: 1, access_token: "token" });
    */
   const createTask = async (data) => {
     try {
-      currentTask.value.id = await postTask(data);
-      currentTask.value.status = "pending";
-      currentTask.value.progress = 0;
-      currentTask.value.error = null;
-    } catch (err) {
-      currentTask.value.error = err.message;
-      throw err;
+      const response = await postCreateTask(data);
+      taskId.value = response.data.taskId;
+      status.value = "created";
+      errors.value = [];
+    } catch (error) {
+      errors.value.push(error.message);
+      throw error;
     }
   };
 
   /**
-   * Получает и обновляет статус задачи.
-   * @param {number} taskId - ID задачи.
+   * Запускает сбор данных и polling статуса.
    * @returns {Promise<void>}
-   * @throws {Error} При ошибке получения статуса.
-   * @example
-   * await fetchStatus(1);
    */
-  const fetchStatus = async (taskId) => {
+  const startCollect = async () => {
+    if (!taskId.value) {
+      throw new Error("Task ID не установлен");
+    }
     try {
-      const data = await getTaskStatus(taskId);
-      currentTask.value.status = data.status;
-      currentTask.value.progress = data.progress;
-      currentTask.value.error = null;
-    } catch (err) {
-      currentTask.value.error = err.message;
+      await postStartCollect(taskId.value);
+      status.value = "pending";
+      pollStatus();
+    } catch (error) {
+      errors.value.push(error.message);
+      throw error;
     }
   };
 
   /**
-   * Getter для отформатированного статуса на русском языке.
+   * Поллинг статуса задачи каждые 5 секунд.
+   * @returns {void}
    */
-  const getFormattedStatus = computed(() => {
-    const statusMap = {
-      "pending": "Ожидание",
-      "processing": "В обработке",
-      "completed": "Завершено",
-      "error": "Ошибка"
-    };
-    return statusMap[currentTask.value.status] || currentTask.value.status;
-  });
+  const pollStatus = () => {
+    if (intervalId.value) {
+      clearInterval(intervalId.value);
+    }
+    intervalId.value = setInterval(async () => {
+      try {
+        const response = await getTaskStatus(taskId.value);
+        status.value = response.data.status;
+        progress.value = response.data.progress;
+        errors.value = response.data.errors || [];
+        if (["completed", "failed"].includes(status.value)) {
+          clearInterval(intervalId.value);
+          intervalId.value = null;
+        }
+      } catch (error) {
+        errors.value.push(error.message);
+      }
+    }, 5000);
+  };
+
+  /**
+   * Останавливает polling.
+   * @returns {void}
+   */
+  const stopPolling = () => {
+    if (intervalId.value) {
+      clearInterval(intervalId.value);
+      intervalId.value = null;
+    }
+  };
 
   return {
-    currentTask,
+    taskId,
+    status,
+    progress,
+    errors,
     createTask,
-    fetchStatus,
-    getFormattedStatus
+    startCollect,
+    pollStatus,
+    stopPolling
   };
 });

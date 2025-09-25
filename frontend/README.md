@@ -58,7 +58,7 @@ bun format
 ### Основные страницы
 
 - **/fetch** ([src/views/FetchComments.vue](src/views/FetchComments.vue)): Форма для запуска задачи.
-  - Поля: `ownerId` (ID сообщества, e.g. -123), `postId` (ID поста, e.g. 456), `access_token` (из localStorage или ручной ввод).
+  - Поля: `ownerId` (ID сообщества, e.g. -123), `postId` (ID поста, e.g. 456).
   - Кнопка "Запустить задачу" отправляет POST на `/api/tasks`.
   - Успех: Показ taskId, редирект на `/task/:taskId`.
   - Пример: Заполните форму и нажмите кнопку — получите ID задачи для мониторинга.
@@ -75,11 +75,9 @@ bun format
   - Фильтры: Поиск по тексту, dropdown для sentiment, пагинация.
   - Пример: Добавьте `?taskId=abc-123` в URL — загрузится список с анализом.
 
-### Аутентификация и токен
+### Аутентификация
 
-- Токен VK сохраняется в localStorage через VK OAuth (кнопка в хедере).
-- Если токен недействителен, редирект на авторизацию.
-- Ручной ввод токена в форме `/fetch` для тестирования.
+- Токен VK загружается в backend из переменных окружения.
 
 ### Компоненты
 
@@ -92,7 +90,7 @@ bun format
 - [tasks.js](src/stores/tasks.js): Статус задач.
 - [comments.js](src/stores/comments.js): Список, фильтры.
 
-Пример навигации: Откройте `http://localhost:5173/fetch`, авторизуйтесь, запустите задачу, перейдите на `/comments`.
+Пример навигации: Откройте `http://localhost:5173/fetch`, запустите задачу, перейдите на `/comments`.
 
 ## Интеграция с backend
 
@@ -100,7 +98,7 @@ Backend — Node.js/Express приложение с BullMQ для асинхро
 
 ### Эндпоинты API
 
-- `POST /api/tasks`: `{ "ownerId": -123, "postId": 456, "access_token": "token" }` → `{ "taskId": "uuid" }`.
+- `POST /api/tasks`: `{ "ownerId": -123, "postId": 456 }` → `{ "taskId": "uuid" }`.
 - `GET /api/tasks/:taskId`: `{ "status": "completed", "progress": 100 }`.
 - `GET /api/comments?taskId=uuid&limit=20&offset=0`: `{ "comments": [...], "total": 100 }`.
 

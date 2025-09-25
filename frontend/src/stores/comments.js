@@ -1,105 +1,81 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
-import { getComments } from "@/services/api";
+import { ref } from "vue";
+import { getResults } from "@/services/api";
 
-/**
- * Pinia store для управления комментариями.
- */
 export const useCommentsStore = defineStore("comments", () => {
-  /**
-   * Список комментариев.
-   */
-  const list = ref([]);
-
-  /**
-   * Статус загрузки.
-   */
-  const loading = ref(false);
-
-  /**
-   * Ошибка.
-   */
-  const error = ref(null);
-
-  /**
-   * Фильтры.
-   */
+  const results = ref([]);
+  const total = ref(0);
+  const currentTaskId = ref(null);
   const filters = ref({
-    sentiment: null,
-    keyword: ""
+    groupId: null,
+    postId: null,
+    sentiment: ""
   });
-
-  /**
-   * Пагинация.
-   */
   const pagination = ref({
-    currentPage: 1,
-    itemsPerPage: 20,
-    total: 0
+    limit: 20,
+    offset: 0
   });
 
   /**
-   * Загружает комментарии для задачи с фильтрами и пагинацией.
-   * @param {number} taskId - ID задачи.
-   * @param {Object} [filtersData={}] - Фильтры (sentiment, keyword).
-   * @param {number} [page=1] - Номер страницы.
+   * Загружает комментарии с фильтрами и пагинацией.
+   * @param {string|number} taskId - ID задачи
+   * @param {Object} [filters={}] - Фильтры: groupId, postId, sentiment
    * @returns {Promise<void>}
-   * @throws {Error} При ошибке загрузки.
-   * @example
-   * await fetchComments(1, { sentiment: "positive", keyword: "test" }, 1);
    */
-  const fetchComments = async (taskId, filtersData = {}, page = 1) => {
-    loading.value = true;
-    error.value = null;
+  const fetchComments = async (taskId, filtersParam = {}) => {
+    currentTaskId.value = taskId;
+    const mergedFilters = {
+      ...filters.value,
+      ...filtersParam
+    };
+    const params = {
+      ...mergedFilters,
+      ...pagination.value
+    };
     try {
-      pagination.value.currentPage = page;
-      const params = {
-        ...filtersData,
-        page,
-        limit: pagination.value.itemsPerPage
-      };
-      const data = await getComments(taskId, params);
-      list.value = data.comments;
-      pagination.value.total = data.total;
-    } catch (err) {
-      error.value = err.message;
-    } finally {
-      loading.value = false;
+      const response = await getResults(taskId, params);
+      results.value = response.data.results || [];
+      total.value = response.data.total || 0;
+    } catch (error) {
+      console.error("Ошибка загрузки комментариев:", error);
+      results.value = [];
+      total.value = 0;
     }
   };
 
   /**
-   * Getter для отфильтрованных комментариев (client-side фильтрация).
+   * Обновляет фильтры и сбрасывает пагинацию.
+   * @param {Object} newFilters - Новые фильтры
+   * @returns {void}
    */
-  const filteredComments = computed(() => {
-    let result = list.value;
-    if (filters.value.sentiment) {
-      result = result.filter(comment => comment.sentiment === filters.value.sentiment);
+  const updateFilters = (newFilters) => {
+    filters.value = { ...filters.value, ...newFilters };
+    pagination.value.offset = 0;
+    if (currentTaskId.value) {
+      fetchComments(currentTaskId.value);
     }
-    if (filters.value.keyword) {
-      const keyword = filters.value.keyword.toLowerCase();
-      result = result.filter(comment => comment.text.toLowerCase().includes(keyword));
-    }
-    return result;
-  });
+  };
 
   /**
-   * Getter для пагинированных комментариев (client-side срез).
+   * Обновляет пагинацию и загружает данные.
+   * @param {number} newOffset - Новый offset
+   * @returns {void}
    */
-  const paginatedComments = computed(() => {
-    const start = (pagination.value.currentPage - 1) * pagination.value.itemsPerPage;
-    const end = start + pagination.value.itemsPerPage;
-    return filteredComments.value.slice(start, end);
-  });
+  const updatePagination = (newOffset) => {
+    pagination.value.offset = newOffset;
+    if (currentTaskId.value) {
+      fetchComments(currentTaskId.value);
+    }
+  };
 
   return {
-    list,
-    loading,
-    error,
+    results,
+    total,
     filters,
     pagination,
+    currentTaskId,
     fetchComments,
-    filteredComments,
-    paginatedComments
+    updateFilters,
+    updatePagination
   };
 });
