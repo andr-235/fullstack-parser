@@ -23,6 +23,31 @@ app.get('/', (req, res) => {
   res.json({ message: 'Express VK Backend is running!' });
 });
 
+// Health check endpoint for deployment monitoring
+app.get('/api/health', async (req, res) => {
+  try {
+    // Check database connection
+    await sequelize.authenticate();
+
+    res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      services: {
+        database: 'connected',
+        server: 'running'
+      },
+      uptime: process.uptime()
+    });
+  } catch (error) {
+    logger.error('Health check failed', { error: error.message });
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
+
 // Import routes
 app.use('/api', taskController);
 app.use('/api/groups', groupsController);

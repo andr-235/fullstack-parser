@@ -206,6 +206,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Log in to Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
       - name: Deploy to staging (Express.js)
         run: |
           echo "Current user: $(whoami)"
@@ -218,24 +222,57 @@ jobs:
           else
             echo "Project directory not found: $PROJECT_DIR"
             echo "Available directories in /home/adm79:"
-            ls -la /home/adm79/
+            ls -la /home/adm79/ || echo "Cannot list /home/adm79/"
             exit 1
           fi
 
+          echo "Checking directory permissions..."
+          ls -la "$PROJECT_DIR"
+
           echo "Pulling latest changes..."
-          git pull origin main
+          git pull origin main || {
+            echo "Git pull failed, checking git status..."
+            git status
+            git remote -v
+            exit 1
+          }
 
           echo "Current project structure:"
           ls -la
 
+          echo "Checking for running services on ports..."
+          netstat -tulpn | grep -E ':(3000|5173|5432|6379) ' || echo "No conflicting services found"
+
           echo "Stopping current services..."
-          docker-compose down || true
+          docker-compose down --remove-orphans || true
 
-          echo "Pulling latest images..."
-          docker-compose pull || true
+          echo "Pulling latest Docker images from registry..."
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:main || echo "Backend image pull failed, will use local build"
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:main || echo "Frontend image pull failed, will use local build"
 
-          echo "Starting services..."
-          docker-compose up -d
+          echo "Creating Docker Compose override for registry images..."
+          cat > docker-compose.override.yml << 'EOF'
+          services:
+            api:
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:main
+              build: null
+            frontend:
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:main
+              build: null
+          EOF
+
+          echo "Starting services with updated images..."
+          docker-compose up -d --force-recreate
+
+          echo "Waiting for containers to start..."
+          sleep 10
+
+          echo "Checking container status..."
+          docker-compose ps
+
+          echo "Checking container logs..."
+          docker-compose logs --tail=20 api || true
+          docker-compose logs --tail=20 frontend || true
 
           echo "Cleaning up old images..."
           docker image prune -f || true
@@ -243,26 +280,101 @@ jobs:
       - name: Wait for services to start
         run: |
           echo "Waiting for services to start..."
-          sleep 30
 
-      - name: Run health checks
-        run: |
-          echo "Running health checks..."
+          # Progressive waiting with health checks
+          MAX_WAIT=120
+          WAIT_INTERVAL=10
+          elapsed=0
 
-          # Check Express.js backend
-          if curl -f http://localhost:3000 > /dev/null 2>&1; then
-            echo "✅ Express.js backend is healthy"
-          else
-            echo "❌ Express.js backend health check failed"
+          while [ $elapsed -lt $MAX_WAIT ]; do
+            echo "Waiting... ($elapsed/${MAX_WAIT}s)"
+
+            # Check if API container is running
+            if docker-compose ps api | grep -q "Up"; then
+              echo "API container is running, checking HTTP response..."
+              if curl -f http://localhost:3000 > /dev/null 2>&1; then
+                echo "API is responding to HTTP requests"
+                break
+              fi
+            fi
+
+            sleep $WAIT_INTERVAL
+            elapsed=$((elapsed + WAIT_INTERVAL))
+          done
+
+          if [ $elapsed -ge $MAX_WAIT ]; then
+            echo "Timeout waiting for services to start"
+            echo "Container status:"
+            docker-compose ps
+            echo "API logs:"
+            docker-compose logs --tail=50 api
             exit 1
           fi
 
-          # Check if API endpoints are working
-          if curl -f http://localhost:3000/api/health > /dev/null 2>&1; then
-            echo "✅ API health endpoint is working"
-          else
-            echo "⚠️ API health endpoint not available (may not be implemented yet)"
+      - name: Run comprehensive health checks
+        run: |
+          echo "Running comprehensive health checks..."
+
+          # Function to check endpoint with retries
+          check_endpoint() {
+            local url=$1
+            local name=$2
+            local max_attempts=5
+            local attempt=1
+
+            while [ $attempt -le $max_attempts ]; do
+              echo "Checking $name (attempt $attempt/$max_attempts)..."
+
+              if curl -f -s "$url" > /dev/null 2>&1; then
+                echo "✅ $name is healthy"
+                return 0
+              fi
+
+              sleep 5
+              attempt=$((attempt + 1))
+            done
+
+            echo "❌ $name health check failed after $max_attempts attempts"
+            return 1
+          }
+
+          # Check basic Express.js response
+          if ! check_endpoint "http://localhost:3000" "Express.js backend"; then
+            echo "Basic backend health check failed"
+            echo "Container status:"
+            docker-compose ps
+            echo "Backend logs:"
+            docker-compose logs --tail=50 api
+            exit 1
           fi
+
+          # Check API health endpoint
+          if ! check_endpoint "http://localhost:3000/api/health" "API health endpoint"; then
+            echo "API health endpoint failed"
+            echo "Backend logs:"
+            docker-compose logs --tail=30 api
+            exit 1
+          fi
+
+          # Check database connectivity through health endpoint
+          health_response=$(curl -s http://localhost:3000/api/health)
+          if echo "$health_response" | grep -q '"status":"healthy"'; then
+            echo "✅ Database connectivity confirmed"
+          else
+            echo "⚠️ Database connectivity issues detected"
+            echo "Health response: $health_response"
+          fi
+
+          # Check frontend accessibility (non-critical)
+          if curl -f http://localhost:5173 > /dev/null 2>&1; then
+            echo "✅ Frontend is accessible"
+          else
+            echo "⚠️ Frontend not accessible (non-critical for staging)"
+            echo "Frontend logs:"
+            docker-compose logs --tail=20 frontend || true
+          fi
+
+          echo "All critical health checks passed!"
 
   # Deploy to production using self-hosted runner
   deploy-production:
