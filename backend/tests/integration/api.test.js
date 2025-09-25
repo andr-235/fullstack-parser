@@ -69,6 +69,20 @@ jest.mock('../../src/services/taskService', () => {
   };
 });
 
+jest.mock('../../src/repositories/dbRepo', () => ({
+  __esModule: false,
+  default: {
+    createTask: jest.fn(),
+    getTaskById: jest.fn(),
+    updateTask: jest.fn(),
+    listTasks: jest.fn()
+  },
+  createTask: jest.fn(),
+  getTaskById: jest.fn(),
+  updateTask: jest.fn(),
+  listTasks: jest.fn()
+}));
+
 const request = require('supertest');
 
 // Мок базы данных перед импортом server.js
@@ -152,7 +166,7 @@ describe('API Integration Tests', () => {
 
       const response = await request(server)
         .post('/api/groups')
-        .send({ groupId: 123 })
+        .send({ groups: [123] })
         .expect(500);
 
       expect(response.body.error).toBeDefined();
