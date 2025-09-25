@@ -1,8 +1,7 @@
-const winston = require('winston');
 const logger = require('../utils/logger');
 
 const { Router } = require('express');
-const { object, array, number } = require('joi');
+const Joi = require('joi');
 const {
   createTask,
   getTaskById,
@@ -15,8 +14,8 @@ const { getResults: _getResults } = require('../services/vkService');
 const router = Router();
 
 // Validation schema for groups
-const groupsSchema = object({
-  groups: array().items(number().negative()).required()
+const groupsSchema = Joi.object({
+  groups: Joi.array().items(Joi.number().negative()).required()
 });
 
 // POST /api/groups - Create task
