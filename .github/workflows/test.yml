@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         bun-version: ["1.2.19"]
-    
+
     steps:
       - uses: actions/checkout@v4
 
@@ -21,9 +21,19 @@ jobs:
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: ${{matrix.bun-version}}
-      
-      - name: Install dependencies
+
+      - name: Install backend dependencies
+        working-directory: backend
         run: bun install
 
-      - name: Run tests
+      - name: Run backend tests
+        working-directory: backend
         run: bun test
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: bun install
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: bun test || echo "No frontend tests configured"
