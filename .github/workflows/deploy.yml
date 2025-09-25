@@ -35,33 +35,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup local services
+      - name: Setup services in Docker
         run: |
-          # Проверяем и запускаем локальные сервисы
-          echo "🔄 Запуск локальных сервисов..."
+          echo "🚀 Запуск сервисов в Docker контейнерах..."
           
-          # PostgreSQL
-          sudo systemctl start postgresql || echo "PostgreSQL уже запущен"
-          if ! pg_isready -h localhost -p 5432; then
-            echo "❌ PostgreSQL недоступен"
-            sudo systemctl status postgresql --no-pager || true
-            exit 1
-          fi
-          echo "✅ PostgreSQL доступен"
+          # Запускаем сервисы
+          ./scripts/manage-services.sh start
           
-          # Redis - сначала пробуем systemctl, потом ручной запуск
-          if ! redis-cli ping 2>/dev/null | grep -q PONG; then
-            echo "🔄 Запускаем Redis..."
-            sudo systemctl start redis-server || echo "systemctl не сработал"
-            sleep 2
-            
-            # Если systemctl не помог, запускаем вручную
-            if ! redis-cli ping 2>/dev/null | grep -q PONG; then
-              echo "🔄 Ручной запуск Redis..."
-              ./scripts/start-redis-manual.sh || exit 1
-            fi
-          fi
-          echo "✅ Redis доступен"
+          # Проверяем доступность
+          ./scripts/manage-services.sh status
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -78,7 +60,7 @@ jobs:
         run: bun test || echo "Tests passed or skipped"
         env:
           NODE_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+          DATABASE_URL: postgres://postgres:postgres@localhost:5433/test_db
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-secret-key
 
@@ -234,9 +216,10 @@ jobs:
 
           echo "Stopping current services..."
           docker-compose -f docker-compose.local.yml down || true
+          docker-compose -f docker-compose.services.yml down || true
 
-          echo "Starting local services..."
-          ./scripts/setup-local-env.sh || echo "Локальные сервисы уже настроены"
+          echo "Starting database services..."
+          ./scripts/manage-services.sh start
 
           echo "Starting application services..."
           docker-compose -f docker-compose.local.yml up -d
