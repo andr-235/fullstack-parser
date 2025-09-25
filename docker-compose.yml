@@ -1,12 +1,15 @@
 services:
   postgres:
     image: postgres:15
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
     healthcheck:
@@ -34,38 +37,21 @@ services:
   api:
     build:
       context: ./backend
-      args:
-        - TARGET=api
+      dockerfile: Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    env_file:
+      - .env
     ports:
-      - "8080:8080"
-    command: ["/app/api"]
-    env_file:
-      - .env
+      - "3000:3000"
+    volumes:
+      - ./backend/logs:/app/logs
     networks:
       - default
 
-  worker:
-    build:
-      context: ./backend
-      args:
-        - TARGET=worker
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: ["/app/worker"]
-    env_file:
-      - .env
-    networks:
-      - default
-
-  # Frontend сервис: Vue 3 приложение, собранное с Bun и обслуживаемое Nginx
   frontend:
     build:
       context: ./frontend
@@ -73,7 +59,6 @@ services:
     ports:
       - "5173:80"
     depends_on:
-      # Зависит от API сервиса
       api:
         condition: service_started
     env_file:
