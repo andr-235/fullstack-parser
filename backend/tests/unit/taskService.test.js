@@ -2,10 +2,8 @@
 const mockDbRepo = {
   createTask: jest.fn(),
   getTaskById: jest.fn(),
-  updateTaskStatus: jest.fn(),
-  saveResults: jest.fn(),
-  getTaskResults: jest.fn(),
-  getTasks: jest.fn()
+  updateTask: jest.fn(),
+  listTasks: jest.fn()
 };
 
 jest.mock('../../src/repositories/dbRepo', () => mockDbRepo);
@@ -22,33 +20,44 @@ describe('TaskService', () => {
       const mockTask = { id: 'test-uuid', status: 'created' };
       mockDbRepo.createTask.mockResolvedValue(mockTask);
 
-      const result = await createTask(['test'], 'test-group');
+      const result = await createTask(['test']);
 
       expect(result).toEqual({
         taskId: 'test-uuid',
         status: 'created'
       });
-      expect(mockDbRepo.createTask).toHaveBeenCalledWith(['test'], 'test-group');
+      expect(mockDbRepo.createTask).toHaveBeenCalledWith({
+        groups: ['test'],
+        status: 'created',
+        metrics: { posts: 0, comments: 0, errors: [] }
+      });
     });
 
     it('should throw error when dbRepo fails', async () => {
       const errorMessage = 'Database error';
       mockDbRepo.createTask.mockRejectedValue(new Error(errorMessage));
 
-      await expect(createTask(['test'], 'test-group')).rejects.toThrow(`Failed to create task: ${errorMessage}`);
+      await expect(createTask(['test'])).rejects.toThrow(`Failed to create task: ${errorMessage}`);
     });
   });
 
   describe('getTaskStatus', () => {
     it('should get task status and return status with progress', async () => {
-      const mockTask = { id: 'test-uuid', status: 'completed', progress: 100 };
+      const mockTask = { 
+        id: 'test-uuid', 
+        status: 'completed', 
+        metrics: { posts: 10, comments: 50, errors: [] },
+        groups: ['test-group']
+      };
       mockDbRepo.getTaskById.mockResolvedValue(mockTask);
 
       const result = await getTaskStatus('test-uuid');
 
       expect(result).toEqual({
         status: 'completed',
-        progress: 100
+        progress: { posts: 10, comments: 50 },
+        errors: [],
+        groups: ['test-group']
       });
       expect(mockDbRepo.getTaskById).toHaveBeenCalledWith('test-uuid');
     });
@@ -66,12 +75,12 @@ describe('TaskService', () => {
         tasks: [{ id: '1', status: 'completed' }],
         total: 1
       };
-      mockDbRepo.getTasks.mockResolvedValue(mockTasks);
+      mockDbRepo.listTasks.mockResolvedValue(mockTasks);
 
       const result = await listTasks(1, 10);
 
       expect(result).toEqual(mockTasks);
-      expect(mockDbRepo.getTasks).toHaveBeenCalledWith(1, 10);
+      expect(mockDbRepo.listTasks).toHaveBeenCalledWith({ limit: 10, offset: 0 });
     });
   });
 });

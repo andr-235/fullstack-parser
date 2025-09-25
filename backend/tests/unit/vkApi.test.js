@@ -11,7 +11,11 @@ jest.mock('axios', () => ({
   ...mockAxios
 }));
 
-jest.mock('axios-retry', () => jest.fn());
+jest.mock('axios-retry', () => ({
+  __esModule: true,
+  default: jest.fn(),
+  exponentialDelay: jest.fn()
+}));
 
 const axios = require('axios');
 

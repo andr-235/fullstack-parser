@@ -1,4 +1,31 @@
-// Mock mockTaskService перед импортом
+// Mock всех зависимостей
+jest.mock('../../src/repositories/vkApi', () => ({
+  getPosts: jest.fn(),
+  getComments: jest.fn()
+}));
+
+jest.mock('../../src/config/queue', () => ({
+  queue: {
+    add: jest.fn()
+  }
+}));
+
+jest.mock('axios-retry', () => ({
+  __esModule: true,
+  default: jest.fn(),
+  exponentialDelay: jest.fn()
+}));
+
+jest.mock('axios', () => ({
+  default: {
+    get: jest.fn(),
+    interceptors: {
+      request: { use: jest.fn() },
+      response: { use: jest.fn() }
+    }
+  }
+}));
+
 const mockTaskService = {
   createTask: jest.fn(),
   getTaskStatus: jest.fn(),
@@ -9,6 +36,18 @@ const mockTaskService = {
 jest.mock('../../src/services/taskService', () => mockTaskService);
 
 const request = require('supertest');
+
+// Мок базы данных перед импортом server.js
+jest.mock('../../src/config/db', () => ({
+  sequelize: {
+    authenticate: jest.fn().mockResolvedValue(),
+    close: jest.fn().mockResolvedValue()
+  },
+  Task: {},
+  Post: {},
+  Comment: {}
+}));
+
 const app = require('../../server.js');
 
 describe('API Integration Tests', () => {
