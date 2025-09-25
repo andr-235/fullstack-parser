@@ -1,9 +1,9 @@
-import logger from '../utils/logger.js';
+const logger = require('../utils/logger');
 
-import vkApi from '../repositories/vkApi.js';
-import dbRepo from '../repositories/dbRepo.js';
-import pLimit from 'p-limit';
-import taskService from './taskService.js';
+const vkApi = require('../repositories/vkApi.js');
+const dbRepo = require('../repositories/dbRepo.js');
+const pLimit = require('p-limit');
+const taskService = require('./taskService.js');
 
 class VKService {
   constructor(vkApiInstance, dbRepoInstance) {
@@ -96,4 +96,9 @@ class VKService {
   }
 }
 
-export default new VKService();
+const vkServiceInstance = new VKService();
+
+module.exports = vkServiceInstance;
+module.exports.collectForTask = vkServiceInstance.collectForTask.bind(vkServiceInstance);
+module.exports.default = module.exports;
+module.exports.__esModule = true;
