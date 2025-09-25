@@ -40,10 +40,10 @@ jobs:
           echo "🚀 Запуск сервисов в Docker контейнерах..."
           
           # Запускаем сервисы
-          ./scripts/manage-services.sh start
+          ../scripts/manage-services.sh start
           
           # Проверяем доступность
-          ./scripts/manage-services.sh status
+          ../scripts/manage-services.sh status
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
