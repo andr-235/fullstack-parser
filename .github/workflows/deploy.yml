@@ -60,7 +60,7 @@ jobs:
         run: bun test || echo "Tests passed or skipped"
         env:
           NODE_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5433/test_db
+          DATABASE_URL: postgres://postgres:postgres@localhost:5434/test_db
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-secret-key
 

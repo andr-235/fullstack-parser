@@ -27,7 +27,7 @@ case "$1" in
         echo "✅ Все сервисы запущены и готовы!"
         echo "📋 Подключения:"
         echo "   PostgreSQL (main): localhost:5432"
-        echo "   PostgreSQL (test): localhost:5433"
+        echo "   PostgreSQL (test): localhost:5434"
         echo "   Redis: localhost:6379"
         ;;
         
@@ -84,18 +84,26 @@ case "$1" in
         echo "✅ Данные очищены"
         ;;
         
+    force-stop)
+        echo "🛑 Принудительная остановка всех контейнеров проекта..."
+        docker stop vk_parser_postgres vk_parser_postgres_test vk_parser_redis 2>/dev/null || true
+        docker rm vk_parser_postgres vk_parser_postgres_test vk_parser_redis 2>/dev/null || true
+        echo "✅ Все контейнеры остановлены"
+        ;;
+        
     *)
         echo "Управление сервисами PostgreSQL и Redis"
         echo ""
-        echo "Использование: $0 {start|stop|restart|status|logs|clean}"
+        echo "Использование: $0 {start|stop|restart|status|logs|clean|force-stop}"
         echo ""
         echo "Команды:"
-        echo "  start   - Запустить сервисы"
-        echo "  stop    - Остановить сервисы"
-        echo "  restart - Перезапустить сервисы"
-        echo "  status  - Показать статус сервисов"
-        echo "  logs    - Показать логи сервисов"
-        echo "  clean   - Остановить и удалить данные"
+        echo "  start      - Запустить сервисы"
+        echo "  stop       - Остановить сервисы"
+        echo "  restart    - Перезапустить сервисы"
+        echo "  status     - Показать статус сервисов"
+        echo "  logs       - Показать логи сервисов"
+        echo "  clean      - Остановить и удалить данные"
+        echo "  force-stop - Принудительно остановить все контейнеры"
         exit 1
         ;;
 esac
