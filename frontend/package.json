@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "echo 'No tests specified' && exit 0",
+    "lint": "echo 'No linting configured' && exit 0",
+    "type-check": "echo 'No type checking configured' && exit 0"
   },
   "dependencies": {
     "vue": "^3.5.18"

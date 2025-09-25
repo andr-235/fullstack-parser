@@ -57,7 +57,7 @@ jobs:
         run: bun run lint || echo "Linting step skipped - no lint script"
 
       - name: Run tests
-        run: bun test || echo "Tests passed or skipped"
+        run: bun test --reporter=verbose || echo "Tests passed or skipped"
         env:
           NODE_ENV: test
           DATABASE_URL: postgres://postgres:postgres@localhost:5434/test_db

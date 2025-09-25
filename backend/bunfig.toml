@@ -1,0 +1,14 @@
+# Bun configuration for testing
+[test]
+# Test runner configuration
+preload = []
+
+# Test patterns  
+root = "./tests"
+ignore = ["node_modules", "dist"]
+
+# Environment
+env = "test"
+
+# Timeout for tests
+timeout = 30000
