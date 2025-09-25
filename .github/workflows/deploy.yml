@@ -38,12 +38,30 @@ jobs:
       - name: Setup local services
         run: |
           # Проверяем и запускаем локальные сервисы
-          sudo systemctl start postgresql || echo "PostgreSQL уже запущен"
-          sudo systemctl start redis-server || echo "Redis уже запущен"
+          echo "🔄 Запуск локальных сервисов..."
           
-          # Проверяем подключения
-          pg_isready -h localhost -p 5432 || exit 1
-          redis-cli ping || exit 1
+          # PostgreSQL
+          sudo systemctl start postgresql || echo "PostgreSQL уже запущен"
+          if ! pg_isready -h localhost -p 5432; then
+            echo "❌ PostgreSQL недоступен"
+            sudo systemctl status postgresql --no-pager || true
+            exit 1
+          fi
+          echo "✅ PostgreSQL доступен"
+          
+          # Redis - сначала пробуем systemctl, потом ручной запуск
+          if ! redis-cli ping 2>/dev/null | grep -q PONG; then
+            echo "🔄 Запускаем Redis..."
+            sudo systemctl start redis-server || echo "systemctl не сработал"
+            sleep 2
+            
+            # Если systemctl не помог, запускаем вручную
+            if ! redis-cli ping 2>/dev/null | grep -q PONG; then
+              echo "🔄 Ручной запуск Redis..."
+              ./scripts/start-redis-manual.sh || exit 1
+            fi
+          fi
+          echo "✅ Redis доступен"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1

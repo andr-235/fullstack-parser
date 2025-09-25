@@ -33,12 +33,32 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     
     # Устанавливаем Redis
     echo "📦 Установка Redis..."
-    sudo apt-get install -y redis-server
+    sudo apt-get install -y redis-server redis-tools
+    
+    # Проверяем конфигурацию Redis
+    echo "🔧 Настройка Redis..."
+    
+    # Создаем директорию для данных Redis если не существует
+    sudo mkdir -p /var/lib/redis
+    sudo chown redis:redis /var/lib/redis
+    
+    # Проверяем права на конфигурационный файл
+    if [ -f /etc/redis/redis.conf ]; then
+        sudo chown redis:redis /etc/redis/redis.conf
+        # Убеждаемся что Redis слушает на localhost
+        sudo sed -i 's/^bind 127.0.0.1/bind 127.0.0.1/' /etc/redis/redis.conf
+    fi
+    
+    # Останавливаем если уже запущен
+    sudo systemctl stop redis-server 2>/dev/null || true
     
     # Запускаем Redis
     echo "▶️ Запуск Redis..."
     sudo systemctl start redis-server
     sudo systemctl enable redis-server
+    
+    # Ждем немного для запуска
+    sleep 2
     
     # Проверяем подключения
     echo "🔍 Проверка подключений..."
@@ -52,11 +72,36 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     fi
     
     # Проверяем Redis
-    if redis-cli ping | grep -q PONG; then
+    echo "🔍 Проверка Redis..."
+    if redis-cli ping 2>/dev/null | grep -q PONG; then
         echo "✅ Redis доступен"
     else
-        echo "❌ Redis недоступен"
-        exit 1
+        echo "⚠️ Redis не отвечает через systemctl, пробуем альтернативный запуск..."
+        
+        # Показываем статус для диагностики
+        echo "📋 Статус Redis:"
+        sudo systemctl status redis-server --no-pager || true
+        
+        # Пробуем запустить Redis вручную в фоне
+        echo "🔄 Пробуем запустить Redis вручную..."
+        sudo pkill redis-server 2>/dev/null || true
+        sleep 1
+        
+        # Запуск Redis в фоне
+        sudo -u redis redis-server /etc/redis/redis.conf --daemonize yes 2>/dev/null || \
+        sudo redis-server /etc/redis/redis.conf --daemonize yes 2>/dev/null || \
+        redis-server --daemonize yes --port 6379 --bind 127.0.0.1 2>/dev/null &
+        
+        sleep 3
+        
+        # Проверяем еще раз
+        if redis-cli ping 2>/dev/null | grep -q PONG; then
+            echo "✅ Redis доступен (запущен вручную)"
+        else
+            echo "❌ Redis недоступен даже после ручного запуска"
+            echo "💡 Попробуйте запустить вручную: redis-server --port 6379"
+            exit 1
+        fi
     fi
     
     echo "🎉 Локальное окружение настроено успешно!"
