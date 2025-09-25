@@ -1,8 +1,17 @@
-const nock = require('nock');
-const axios = require('axios');
-const { getPosts, getComments } = require('../../src/repositories/vkApi');
+// Mock axios перед импортом
+const mockAxios = {
+  get: jest.fn(),
+  defaults: { baseURL: '', timeout: 30000 },
+  interceptors: {
+    request: { use: jest.fn() },
+    response: { use: jest.fn() }
+  }
+};
 
-jest.mock('axios');
+jest.doMock('axios', () => mockAxios);
+jest.doMock('axios-retry', () => jest.fn());
+
+const { getPosts, getComments } = require('../../src/repositories/vkApi');
 
 describe('VKApi', () => {
   const mockToken = 'test-token';

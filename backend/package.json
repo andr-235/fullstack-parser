@@ -21,6 +21,7 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "joi": "^18.0.1",
+    "p-limit": "^5.0.0",
     "pg": "^8.16.3",
     "rate-limiter-flexible": "^7.3.2",
     "redis": "^4.7.0",
