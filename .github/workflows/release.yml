@@ -43,6 +43,9 @@ jobs:
         id: version
         if: steps.check.outputs.should_release == 'true'
         run: |
+          # Ensure local tag list is up to date to avoid stale collisions
+          git fetch --tags --force
+
           # Get current version from package.json (assuming frontend drives version)
           CURRENT_VERSION=$(jq -r '.version' frontend/package.json)
           echo "Current version: $CURRENT_VERSION"
@@ -71,6 +74,13 @@ jobs:
           TAG="v$NEW_VERSION"
           echo "New version: $NEW_VERSION"
           echo "New tag: $TAG"
+
+          # Guard against accidental reuse of an existing tag
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::error::Git tag $TAG уже существует. Убедитесь, что версия в frontend/package.json инкрементирована, и запустите пайплайн заново." >&2
+            exit 1
+          fi
+
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
@@ -184,6 +194,14 @@ jobs:
 
       - name: Create git tag
         run: |
+          # Sync tags to reduce race conditions when multiple releases run concurrently
+          git fetch --tags --force
+
+          if git rev-parse -q --verify "refs/tags/${{ needs.should-release.outputs.tag }}" >/dev/null; then
+            echo "::error::Git tag ${{ needs.should-release.outputs.tag }} уже существует. Проверьте вычисление версии и перезапустите пайплайн." >&2
+            exit 1
+          fi
+
           git tag ${{ needs.should-release.outputs.tag }}
           git push origin ${{ needs.should-release.outputs.tag }}
 
