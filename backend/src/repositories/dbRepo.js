@@ -1,8 +1,6 @@
-import winston from 'winston';
-import { error as _error } from '../utils/logger';
-
-import { sequelize } from '../config/db';
-import { Task, Post, Comment } from '../models';
+const winston = require('winston');
+const logger = require('../utils/logger');
+const { sequelize, Task, Post, Comment } = require('../config/db');
 
 class DBRepo {
   constructor() {
@@ -93,4 +91,4 @@ class DBRepo {
   }
 }
 
-export default new DBRepo();
+module.exports = new DBRepo();

@@ -1,13 +1,13 @@
-import { readdirSync } from 'fs';
-import { basename as _basename, join } from 'path';
-import Sequelize from 'sequelize';
+const { readdirSync } = require('fs');
+const { basename: _basename, join } = require('path');
+const Sequelize = require('sequelize');
 const basename = _basename(__filename);
 const db = {};
 
 let sequelize;
 let DataTypes;
 
-export default (sequelizeInstance, dataTypesInstance) => {
+module.exports = (sequelizeInstance, dataTypesInstance) => {
   sequelize = sequelizeInstance;
   DataTypes = dataTypesInstance;
 

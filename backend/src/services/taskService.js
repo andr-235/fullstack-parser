@@ -1,6 +1,5 @@
-import logger from '../utils/logger.js';
-
-import dbRepo from '../repositories/dbRepo.js';
+const logger = require('../utils/logger');
+const dbRepo = require('../repositories/dbRepo');
 
 class TaskService {
   constructor(dbRepoInstance) {
@@ -76,4 +75,10 @@ class TaskService {
   }
 }
 
-export default new TaskService();
+const taskServiceInstance = new TaskService();
+
+module.exports = taskServiceInstance;
+module.exports.createTask = taskServiceInstance.createTask.bind(taskServiceInstance);
+module.exports.getTaskStatus = taskServiceInstance.getTaskStatus.bind(taskServiceInstance);
+module.exports.startCollect = taskServiceInstance.startCollect.bind(taskServiceInstance);
+module.exports.listTasks = taskServiceInstance.listTasks.bind(taskServiceInstance);

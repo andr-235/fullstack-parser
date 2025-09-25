@@ -1,6 +1,6 @@
-import { DataTypes } from 'sequelize';
+const { DataTypes } = require('sequelize');
 
-export default (sequelize) => {
+module.exports = (sequelize) => {
   const Comment = sequelize.define('Comment', {
     id: {
       type: DataTypes.INTEGER,
