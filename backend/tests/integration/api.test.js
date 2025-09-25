@@ -1,43 +1,73 @@
 // Mock всех зависимостей
-jest.mock('../../src/repositories/vkApi', () => ({
-  default: {
+jest.mock('../../src/repositories/vkApi', () => {
+  const mocked = {
     getPosts: jest.fn(),
     getComments: jest.fn()
-  },
-  getPosts: jest.fn(),
-  getComments: jest.fn()
-}));
+  };
+  return {
+    __esModule: false,
+    default: mocked,
+    ...mocked
+  };
+});
 
 jest.mock('../../src/config/queue', () => ({
+  __esModule: false,
+  default: {
+    queue: {
+      add: jest.fn()
+    }
+  },
   queue: {
     add: jest.fn()
   }
 }));
 
-jest.mock('axios-retry', () => ({
-  __esModule: true,
-  default: jest.fn(),
-  exponentialDelay: jest.fn()
-}));
+jest.mock('axios-retry', () => {
+  const retry = jest.fn();
+  retry.exponentialDelay = jest.fn();
 
-jest.mock('axios', () => ({
-  default: {
+  return {
+    __esModule: false,
+    default: retry,
+    exponentialDelay: retry.exponentialDelay
+  };
+});
+
+jest.mock('axios', () => {
+  const axiosInstance = {
     get: jest.fn(),
     interceptors: {
-      request: { use: jest.fn() },
-      response: { use: jest.fn() }
+      request: { use: jest.fn((fn) => fn({})) },
+      response: { use: jest.fn((fn) => fn({})) }
     }
-  }
-}));
+  };
 
-const mockTaskService = {
-  createTask: jest.fn(),
-  getTaskStatus: jest.fn(),
-  startCollect: jest.fn(),
-  listTasks: jest.fn()
-};
+  const axios = {
+    create: jest.fn(() => axiosInstance)
+  };
 
-jest.mock('../../src/services/taskService', () => mockTaskService);
+  return {
+    __esModule: false,
+    default: axios,
+    ...axios,
+    __INSTANCE__: axiosInstance
+  };
+});
+
+jest.mock('../../src/services/taskService', () => {
+  const service = {
+    createTask: jest.fn(async () => ({ taskId: 1, status: 'created' })),
+    getTaskStatus: jest.fn(async () => ({ status: 'completed', progress: { posts: 1, comments: 0 }, errors: [] })),
+    startCollect: jest.fn(async () => ({ status: 'pending' })),
+    listTasks: jest.fn(async () => ({ tasks: [], total: 0 }))
+  };
+  return {
+    __esModule: false,
+    default: service,
+    ...service
+  };
+});
 
 const request = require('supertest');
 
@@ -53,6 +83,7 @@ jest.mock('../../src/config/db', () => ({
 }));
 
 const app = require('../../server.js');
+const server = app.default || app;
 
 describe('API Integration Tests', () => {
   beforeEach(() => {
@@ -64,13 +95,13 @@ describe('API Integration Tests', () => {
       const mockTask = { taskId: 1 };
       mockTaskService.createTask.mockResolvedValue(mockTask);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/groups')
-        .send({ groupId: 123 })
+        .send({ groups: [123] })
         .expect(201);
 
-      expect(response.body).toEqual({ taskId: 1 });
-      expect(mockTaskService.createTask).toHaveBeenCalledWith(123);
+      expect(response.body).toEqual({ taskId: 1, status: 'created' });
+      expect(mockTaskService.createTask).toHaveBeenCalledWith([123]);
     });
   });
 
@@ -78,7 +109,7 @@ describe('API Integration Tests', () => {
     it('should start collection and return 202', async () => {
       mockTaskService.startCollect.mockResolvedValue({ status: 'pending' });
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/collect/1')
         .expect(202);
 
@@ -89,10 +120,10 @@ describe('API Integration Tests', () => {
 
   describe('GET /api/tasks/:taskId', () => {
     it('should get task status and return 200', async () => {
-      const mockStatus = { status: 'completed', progress: 100 };
+      const mockStatus = { status: 'completed', progress: { posts: 1, comments: 2 }, errors: [] };
       mockTaskService.getTaskStatus.mockResolvedValue(mockStatus);
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/tasks/1')
         .expect(200);
 
@@ -106,12 +137,12 @@ describe('API Integration Tests', () => {
       const mockList = { tasks: [], total: 0 };
       mockTaskService.listTasks.mockResolvedValue(mockList);
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/tasks')
         .expect(200);
 
       expect(response.body).toEqual(mockList);
-      expect(mockTaskService.listTasks).toHaveBeenCalled();
+      expect(mockTaskService.listTasks).toHaveBeenCalledWith(1, 10);
     });
   });
 
@@ -119,7 +150,7 @@ describe('API Integration Tests', () => {
     it('should return 500 on service error', async () => {
       mockTaskService.createTask.mockRejectedValue(new Error('Service error'));
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/groups')
         .send({ groupId: 123 })
         .expect(500);

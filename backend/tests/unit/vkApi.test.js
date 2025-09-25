@@ -1,111 +1,102 @@
-// Mock модулей перед импортом
-const nock = require('nock');
+process.env.VK_TOKEN = 'test-token';
 
-// Mock axios
-const mockAxios = {
-  get: jest.fn()
+const mockAxiosInstance = {
+  get: jest.fn(),
+  interceptors: {
+    request: { use: jest.fn() },
+    response: { use: jest.fn() }
+  }
 };
 
-jest.mock('axios', () => ({
-  default: mockAxios,
-  ...mockAxios
-}));
+const mockAxios = {
+  create: jest.fn(() => mockAxiosInstance)
+};
 
-jest.mock('axios-retry', () => ({
-  __esModule: true,
-  default: jest.fn(),
-  exponentialDelay: jest.fn()
-}));
+jest.mock('axios', () => mockAxios);
 
-const axios = require('axios');
+const retryFn = jest.fn();
+retryFn.exponentialDelay = jest.fn((attempt) => attempt * 100);
 
-const { getPosts, getComments } = require('../../src/repositories/vkApi');
+jest.mock('axios-retry', () => {
+  const patch = (...args) => retryFn(...args);
+  patch.exponentialDelay = retryFn.exponentialDelay;
+  patch.default = patch;
+  return patch;
+});
+
+const vkApi = require('../../src/repositories/vkApi');
 
 describe('VKApi', () => {
-  const mockToken = 'test-token';
-  const mockGroupId = -123;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    nock.cleanAll();
-  });
-
-  afterEach(() => {
-    nock.cleanAll();
+    mockAxiosInstance.get.mockReset();
+    mockAxios.create.mockImplementation(() => mockAxiosInstance);
   });
 
   describe('getPosts', () => {
-    it('should fetch and map posts from VK API', async () => {
+    it('возвращает объект с постами', async () => {
       const mockResponse = {
         response: {
           items: [
-            { id: 1, text: 'Post 1' },
-            { id: 2, text: 'Post 2' }
+            { id: 1, text: 'Post 1', date: 170, likes: { count: 5 } },
+            { id: 2, text: 'Post 2', date: 180, likes: { count: 7 } }
           ]
         }
       };
-      mockAxios.get.mockResolvedValue({ data: mockResponse });
 
-      const result = await getPosts(mockGroupId, mockToken);
+      mockAxiosInstance.get.mockResolvedValue({ data: mockResponse });
 
-      expect(mockAxios.get).toHaveBeenCalledWith(
-        expect.stringContaining('https://api.vk.com/method/wall.get'),
-        expect.objectContaining({
-          params: expect.objectContaining({
-            owner_id: mockGroupId,
-            access_token: mockToken,
-            v: '5.131'
-          })
-        })
-      );
-      expect(result).toEqual([
-        expect.objectContaining({ id: 1, text: 'Post 1' }),
-        expect.objectContaining({ id: 2, text: 'Post 2' })
-      ]);
+      const result = await vkApi.getPosts(123);
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('wall.get', {
+        params: expect.objectContaining({ owner_id: -123, access_token: 'test-token', v: '5.199' })
+      });
+      expect(result).toEqual({
+        posts: [
+          expect.objectContaining({ id: 1, likes: 5 }),
+          expect.objectContaining({ id: 2, likes: 7 })
+        ]
+      });
     });
 
-    it('should handle API error', async () => {
-      mockAxios.get.mockRejectedValue(new Error('VK API error'));
+    it('пробрасывает ошибки API', async () => {
+      mockAxiosInstance.get.mockRejectedValue(new Error('fail'));
 
-      await expect(getPosts(mockGroupId, mockToken)).rejects.toThrow('VK API error');
+      await expect(vkApi.getPosts(123)).rejects.toThrow('fail');
     });
   });
 
   describe('getComments', () => {
-    it('should fetch comments from multiple pages', async () => {
+    it('агрегирует страницы комментариев', async () => {
       const firstPage = {
         response: {
-          items: [{ id: 1, text: 'Comment 1' }, { id: 2, text: 'Comment 2' }],
-          count: 150
+          items: [{ id: 1, text: 'Comment 1', likes: { count: 1 } }]
         }
       };
       const secondPage = {
         response: {
-          items: [{ id: 101, text: 'Comment 101' }],
-          count: 150
+          items: [{ id: 2, text: 'Comment 2', likes: { count: 2 } }]
         }
       };
 
-      nock('https://api.vk.com')
-        .get('/method/wall.getComments')
-        .query({ offset: 0, count: 100, owner_id: mockGroupId, post_id: 1, access_token: mockToken, v: '5.131' })
-        .reply(200, firstPage);
+      mockAxiosInstance.get
+        .mockResolvedValueOnce({ data: firstPage })
+        .mockResolvedValueOnce({ data: secondPage });
 
-      nock('https://api.vk.com')
-        .get('/method/wall.getComments')
-        .query({ offset: 100, count: 100, owner_id: mockGroupId, post_id: 1, access_token: mockToken, v: '5.131' })
-        .reply(200, secondPage);
+      const result = await vkApi.getComments(123, 1);
 
-      const result = await getComments(mockGroupId, 1, mockToken);
-
-      expect(result).toHaveLength(3);
-      expect(result).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ id: 1, text: 'Comment 1' }),
-          expect.objectContaining({ id: 2, text: 'Comment 2' }),
-          expect.objectContaining({ id: 101, text: 'Comment 101' })
+      expect(mockAxiosInstance.get).toHaveBeenNthCalledWith(1, 'wall.getComments', expect.objectContaining({
+        params: expect.objectContaining({ offset: 0 })
+      }));
+      expect(mockAxiosInstance.get).toHaveBeenNthCalledWith(2, 'wall.getComments', expect.objectContaining({
+        params: expect.objectContaining({ offset: 100 })
+      }));
+      expect(result).toEqual({
+        comments: expect.arrayContaining([
+          expect.objectContaining({ id: 1, likes: 1 }),
+          expect.objectContaining({ id: 2, likes: 2 })
         ])
-      );
+      });
     });
   });
 });
