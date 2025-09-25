@@ -11,7 +11,7 @@ services:
       - "8080:8080"
     environment:
       # Подключение к контейнерным сервисам
-      DATABASE_URL: postgres://postgres:postgres@host.docker.internal:5432/vk_parser
+      DATABASE_URL: postgres://postgres:postgres@host.docker.internal:5435/vk_parser
       REDIS_URL: redis://host.docker.internal:6379
       JWT_SECRET: ${JWT_SECRET:-dev-secret-key}
     extra_hosts:
@@ -26,7 +26,7 @@ services:
       args:
         - TARGET=worker
     environment:
-      DATABASE_URL: postgres://postgres:postgres@host.docker.internal:5432/vk_parser
+      DATABASE_URL: postgres://postgres:postgres@host.docker.internal:5435/vk_parser
       REDIS_URL: redis://host.docker.internal:6379
       JWT_SECRET: ${JWT_SECRET:-dev-secret-key}
     extra_hosts:
