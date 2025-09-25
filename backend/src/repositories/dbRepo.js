@@ -92,3 +92,4 @@ class DBRepo {
 }
 
 module.exports = new DBRepo();
+module.exports.default = module.exports;
