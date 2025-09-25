@@ -1,10 +1,16 @@
-import winston from 'winston';
-import { error as _error } from '../utils/logger';
+const winston = require('winston');
+const logger = require('../utils/logger');
 
-import { Router } from 'express';
-import { object, array, number } from 'joi';
-import { createTask, getTaskById, startCollect, getTaskStatus, listTasks } from '../services/taskService';
-import { getResults as _getResults } from '../services/vkService';
+const { Router } = require('express');
+const { object, array, number } = require('joi');
+const {
+  createTask,
+  getTaskById,
+  startCollect,
+  getTaskStatus,
+  listTasks
+} = require('../services/taskService');
+const { getResults: _getResults } = require('../services/vkService');
 
 const router = Router();
 
@@ -26,7 +32,7 @@ const postGroups = async (req, res) => {
     if (err.name === 'ValidationError') {
       return res.status(400).json({ error: err.message });
     }
-    _error('Error in postGroups', { error: err.message });
+    logger.error('Error in postGroups', { error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -48,7 +54,7 @@ const postCollect = async (req, res) => {
     if (err.name === 'ValidationError') {
       return res.status(400).json({ error: err.message });
     }
-    _error('Error in postCollect', { taskId: req.params.taskId, error: err.message });
+    logger.error('Error in postCollect', { taskId: req.params.taskId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -62,7 +68,7 @@ const getTask = async (req, res) => {
     if (err.message.includes('not found')) {
       return res.status(404).json({ error: 'Task not found' });
     }
-    _error('Error in getTask', { taskId: req.params.taskId, error: err.message });
+    logger.error('Error in getTask', { taskId: req.params.taskId, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -75,7 +81,7 @@ const getTasks = async (req, res) => {
     const { tasks, total } = await listTasks(page, limit);
     res.json({ tasks, total });
   } catch (err) {
-    _error('Error in getTasks', { page: req.query.page, limit: req.query.limit, error: err.message });
+    logger.error('Error in getTasks', { page: req.query.page, limit: req.query.limit, error: err.message });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -92,7 +98,12 @@ const getResults = async (req, res) => {
     if (err.message.includes('not found')) {
       return res.status(404).json({ error: 'Results not found' });
     }
-    _error('Error in getResults', { taskId: req.params.taskId, groupId: req.query.groupId, postId: req.query.postId, error: err.message });
+    logger.error('Error in getResults', {
+      taskId: req.params.taskId,
+      groupId: req.query.groupId,
+      postId: req.query.postId,
+      error: err.message
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -104,4 +115,11 @@ router.get('/tasks/:taskId', getTask);
 router.get('/tasks', getTasks);
 router.get('/results/:taskId', getResults);
 
-export default router;
+module.exports = router;
+module.exports.postGroups = postGroups;
+module.exports.postCollect = postCollect;
+module.exports.getTask = getTask;
+module.exports.getTasks = getTasks;
+module.exports.getResults = getResults;
+module.exports.default = module.exports;
+module.exports.__esModule = true;
