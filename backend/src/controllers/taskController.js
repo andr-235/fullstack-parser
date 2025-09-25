@@ -2,20 +2,17 @@ const logger = require('../utils/logger');
 
 const { Router } = require('express');
 const Joi = require('joi');
-const {
-  createTask,
-  getTaskById,
-  startCollect,
-  getTaskStatus,
-  listTasks
-} = require('../services/taskService');
+const { createTask, startCollect, getTaskStatus, listTasks } = require('../services/taskService');
 const { getResults: _getResults } = require('../services/vkService');
 
 const router = Router();
 
 // Validation schema for groups
 const groupsSchema = Joi.object({
-  groups: Joi.array().items(Joi.number().negative()).required()
+  groups: Joi.array()
+    .items(Joi.number().integer().required())
+    .min(1)
+    .required()
 });
 
 // POST /api/groups - Create task
@@ -39,13 +36,13 @@ const postGroups = async (req, res) => {
 // POST /api/collect/:taskId - Start collect
 const postCollect = async (req, res) => {
   try {
-    const taskId = req.params.taskId;
-    const task = await getTaskById(taskId); // Assume getTaskById exists in taskService
-    if (!task) {
-      return res.status(404).json({ error: 'Task not found' });
+    const taskId = Number(req.params.taskId);
+    if (!Number.isInteger(taskId) || taskId <= 0) {
+      return res.status(400).json({ error: 'Invalid taskId' });
     }
-    const { status, startedAt } = await startCollect(taskId);
-    res.status(202).json({ taskId, status: 'pending', startedAt });
+
+    const result = await startCollect(taskId);
+    res.status(202).json(result);
   } catch (err) {
     if (err.message.includes('rate limit')) {
       return res.status(429).json({ error: 'Rate limit exceeded' });
@@ -61,7 +58,12 @@ const postCollect = async (req, res) => {
 // GET /api/tasks/:taskId - Get task status
 const getTask = async (req, res) => {
   try {
-    const { status, progress, errors } = await getTaskStatus(req.params.taskId);
+    const taskId = Number(req.params.taskId);
+    if (!Number.isInteger(taskId) || taskId <= 0) {
+      return res.status(400).json({ error: 'Invalid taskId' });
+    }
+
+    const { status, progress, errors } = await getTaskStatus(taskId);
     res.json({ status, progress, errors: errors || [] });
   } catch (err) {
     if (err.message.includes('not found')) {

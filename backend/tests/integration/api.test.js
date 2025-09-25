@@ -123,13 +123,13 @@ describe('API Integration Tests', () => {
 
   describe('POST /api/collect/:taskId', () => {
     it('should start collection and return 202', async () => {
-      mockTaskService.startCollect.mockResolvedValue({ status: 'pending' });
+      mockTaskService.startCollect.mockResolvedValue({ status: 'pending', startedAt: '2025-01-01T00:00:00.000Z' });
 
       const response = await request(server)
         .post('/api/collect/1')
         .expect(202);
 
-      expect(response.body).toEqual({ status: 'pending' });
+      expect(response.body).toMatchObject({ status: 'pending' });
       expect(mockTaskService.startCollect).toHaveBeenCalledWith(1);
     });
   });
