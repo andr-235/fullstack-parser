@@ -57,7 +57,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "5173:80"
+      - "8080:80"
     depends_on:
       api:
         condition: service_started

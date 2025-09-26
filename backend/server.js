@@ -14,7 +14,7 @@ const PORT = 3000;
 // Middleware
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:5173', // Allow Vue frontend
+  origin: ['http://localhost:5173', 'http://212.34.143.223:5173', 'http://frontend:5173', 'http://192.168.88.1:5173' ], // Allow Vue frontend local, external, Docker
   credentials: true
 }));
 
