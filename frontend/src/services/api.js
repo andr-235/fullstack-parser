@@ -1,12 +1,8 @@
 import axios from "axios";
 
-const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const apiUrl = import.meta.env.MODE === 'production' ? '' : (import.meta.env.VITE_API_BASE || 'http://localhost:3000');
 const api = axios.create({
-<<<<<<< HEAD
-  baseURL: apiUrl.endsWith("/") ? `${apiUrl}api` : `${apiUrl}/api`
-=======
-  baseURL: "/api"
->>>>>>> 98972264104a009b00edea543ff7af034375ea00
+  baseURL: apiUrl
 });
 
 api.interceptors.response.use(
