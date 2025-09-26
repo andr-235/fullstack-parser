@@ -4,6 +4,7 @@ const { Router } = require('express');
 const Joi = require('joi');
 const taskService = require('../services/taskService.js');
 const vkService = require('../services/vkService.js');
+const vkApi = require('../repositories/vkApi.js');
 const { queue } = require('../../config/queue.js');
 
 const router = Router();
@@ -18,13 +19,17 @@ const taskSchema = Joi.object({
 // Validation schema for VK collect task creation
 const vkCollectSchema = Joi.object({
   groups: Joi.array().items(
-    Joi.object({
-      id: Joi.alternatives().try(
-        Joi.number().integer().positive(),
-        Joi.string().pattern(/^\d+$/).custom((value) => parseInt(value))
-      ).required(),
-      name: Joi.string().required()
-    })
+    Joi.alternatives().try(
+      Joi.number().integer().positive(),
+      Joi.string().pattern(/^\d+$/).custom((value) => parseInt(value)),
+      Joi.object({
+        id: Joi.alternatives().try(
+          Joi.number().integer().positive(),
+          Joi.string().pattern(/^\d+$/).custom((value) => parseInt(value))
+        ).required(),
+        name: Joi.string().required()
+      })
+    )
   ).min(1).required()
 });
 
@@ -97,23 +102,63 @@ const createVkCollectTask = async (req, res) => {
     const { groups } = value;
 
     // Нормализуем группы - убираем дубли и приводим к нужному формату
-    const uniqueGroups = [];
+    const uniqueGroupIds = [];
     const seenIds = new Set();
 
     for (const group of groups) {
-      const groupId = parseInt(group.id);
+      let groupId;
+
+      if (typeof group === 'object' && group.id) {
+        groupId = parseInt(group.id);
+      } else {
+        groupId = parseInt(group);
+      }
+
       if (!seenIds.has(groupId)) {
         seenIds.add(groupId);
-        uniqueGroups.push({
-          id: groupId,
-          name: group.name.trim()
-        });
+        uniqueGroupIds.push(groupId);
       }
+    }
+
+    let groupsWithNames = [];
+
+    try {
+      // Получаем информацию о группах из VK API
+      const groupsInfo = await vkApi.getGroupsInfo(uniqueGroupIds);
+
+      // Создаем map для быстрого поиска
+      const groupInfoMap = new Map(groupsInfo.map(g => [g.id, g]));
+
+      groupsWithNames = uniqueGroupIds.map(id => {
+        const info = groupInfoMap.get(id);
+        return {
+          id,
+          name: info ? info.name : `Группа ${id}`
+        };
+      });
+
+      logger.info('Groups info fetched from VK API', {
+        requested: uniqueGroupIds.length,
+        found: groupsInfo.length,
+        id: requestId
+      });
+    } catch (vkError) {
+      logger.warn('Failed to fetch groups info from VK API, using fallback names', {
+        error: vkError.message,
+        groupIds: uniqueGroupIds,
+        id: requestId
+      });
+
+      // Fallback: используем ID как имена
+      groupsWithNames = uniqueGroupIds.map(id => ({
+        id,
+        name: `Группа ${id}`
+      }));
     }
 
     // Create task in database
     const { taskId } = await taskService.createTask({
-      groups: uniqueGroups,
+      groups: groupsWithNames,
       status: 'created',
       metrics: { posts: 0, comments: 0, errors: [] }
     });
@@ -130,7 +175,12 @@ const createVkCollectTask = async (req, res) => {
       removeOnFail: 50
     });
 
-    logger.info('VK collect task created and queued', { taskId, groupsCount: groups.length, id: requestId });
+    logger.info('VK collect task created and queued', {
+      taskId,
+      originalGroupsCount: groups.length,
+      uniqueGroupsCount: groupsWithNames.length,
+      id: requestId
+    });
     res.status(201).json({ taskId, status: 'created' });
 
   } catch (err) {

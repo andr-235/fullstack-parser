@@ -150,6 +150,42 @@ class VKApi {
 
     return { comments: allComments, hasMore: false };
   }
+
+  async getGroupsInfo(groupIds) {
+    if (!groupIds || groupIds.length === 0) {
+      return [];
+    }
+
+    // Конвертируем в положительные ID для VK API
+    const positiveIds = groupIds.map(id => Math.abs(id));
+
+    const params = {
+      group_ids: positiveIds.join(','),
+      fields: 'name,screen_name,description'
+    };
+
+    try {
+      const response = await this._makeRequest('groups.getById', params);
+
+      if (!response || !Array.isArray(response)) {
+        logger.warn('Invalid response from groups.getById', { groupIds });
+        return [];
+      }
+
+      return response.map(group => ({
+        id: Math.abs(group.id), // Возвращаем положительный ID
+        name: group.name,
+        screen_name: group.screen_name,
+        description: group.description
+      }));
+    } catch (error) {
+      logger.error('Error fetching groups info', {
+        groupIds,
+        error: error.message
+      });
+      throw error;
+    }
+  }
 }
 
 module.exports = new VKApi();
