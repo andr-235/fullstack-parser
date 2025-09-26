@@ -9,7 +9,8 @@ import { aliases, mdi } from 'vuetify/iconsets/mdi'
 import '@mdi/font/css/materialdesignicons.css'
 
 import router from "./router"
-import pinia from "./stores"
+import { createPinia } from "./stores"
+const pinia = createPinia()
 
 const vuetify = createVuetify({
   components,

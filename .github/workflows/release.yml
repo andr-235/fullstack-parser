@@ -110,10 +110,9 @@ jobs:
           jq ".version = \"$NEW_VERSION\"" frontend/package.json > frontend/package.json.tmp
           mv frontend/package.json.tmp frontend/package.json
 
-          # Update backend version (if applicable)
-          if [ -f "backend/pyproject.toml" ]; then
-            sed -i "s/version = \".*\"/version = \"$NEW_VERSION\"/" backend/pyproject.toml
-          fi
+          # Update backend version
+          jq ".version = \"$NEW_VERSION\"" backend/package.json > backend/package.json.tmp
+          mv backend/package.json.tmp backend/package.json
 
       - name: Generate changelog
         id: changelog
@@ -187,9 +186,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add frontend/package.json
-          if [ -f "backend/pyproject.toml" ]; then
-            git add backend/pyproject.toml
-          fi
+          git add backend/package.json
           git commit -m "chore: bump version to ${{ needs.should-release.outputs.version }}" || echo "No changes to commit"
 
       - name: Create git tag
