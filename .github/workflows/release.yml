@@ -306,25 +306,3 @@ jobs:
           docker image prune -f
 
           echo "🎉 Release ${{ needs.should-release.outputs.tag }} deployed successfully!"
-
-      - name: Notify release success
-        if: success() && env.SLACK_WEBHOOK_URL != ''
-        uses: 8398a7/action-slack@v3
-        with:
-          status: success
-          text: "🚀 Release Deployed Successfully"
-          fields: repo,message,commit,author,action,eventName,ref,workflow
-        env:
-          # yamllint disable-line rule:truthy
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Notify deployment failure
-        if: failure() && env.SLACK_WEBHOOK_URL != ''
-        uses: 8398a7/action-slack@v3
-        with:
-          status: failure
-          text: "❌ Release Deployment Failed"
-          fields: repo,message,commit,author,action,eventName,ref,workflow
-        env:
-          # yamllint disable-line rule:truthy
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
