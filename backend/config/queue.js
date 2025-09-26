@@ -5,7 +5,10 @@ const { Redis } = require('ioredis');
 const taskService = require('../src/services/taskService.js');
 const vkService = require('../src/services/vkService.js');
 
-const redisConnection = new Redis(process.env.REDIS_URL);
+const redisConnection = new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: null });
+
+// Log options for debugging
+logger.info('Redis connection options:', redisConnection.options);
 
 // Redis connection event handlers
 redisConnection.on('error', (err) => {
