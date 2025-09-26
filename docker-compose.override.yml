@@ -1,0 +1,7 @@
+services:
+  api:
+    image: ghcr.io/andr-235/fullstack-parser/backend:main
+    build: null
+  frontend:
+    image: ghcr.io/andr-235/fullstack-parser/frontend:main
+    build: null

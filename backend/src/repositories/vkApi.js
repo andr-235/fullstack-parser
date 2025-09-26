@@ -2,7 +2,7 @@ const logger = require('../utils/logger.js');
 
 const axios = require('axios');
 const { RateLimiterMemory } = require('rate-limiter-flexible');
-const axiosRetry = require('axios-retry');
+const axiosRetry = require('axios-retry').default;
 
 class VKApi {
   constructor() {
