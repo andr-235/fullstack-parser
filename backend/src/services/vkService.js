@@ -35,7 +35,9 @@ class VKService {
           logger.info('Processing group', { groupId, taskId });
 
           // Get posts from VK API (already normalized)
-          const { posts } = await this.vkApi.getPosts(groupId);
+          const result = await this.vkApi.getPosts(groupId);
+          const posts = result?.posts || [];
+          logger.info('Posts received for processing', { groupId, taskId, count: posts.length });
 
           // Take only first 10 posts as required
           const postsToProcess = posts.slice(0, 10);

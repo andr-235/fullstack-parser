@@ -74,6 +74,13 @@ class VKApi {
 
     const response = await this._makeRequest('wall.get', params);
 
+    if (!response || !response.items) {
+      logger.warn('No items in VK posts response', { groupId, ownerId });
+      return { posts: [] };
+    }
+
+    logger.info('VK posts response received', { groupId, count: response.items.length });
+
     const posts = response.items.map(post => ({
       vk_post_id: post.id,
       owner_id: ownerId,
