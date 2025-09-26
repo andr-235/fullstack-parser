@@ -1,7 +1,7 @@
-const request = require('supertest');
-const fs = require('fs');
-const path = require('path');
-const app = require('../../server.js');
+import request from 'supertest';
+import fs from 'fs';
+import path from 'path';
+import app from '../../server';
 
 describe('Groups API Integration Tests', () => {
   const testFilePath = path.join(__dirname, '../../test-groups.txt');

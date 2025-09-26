@@ -1,11 +1,11 @@
-const VKValidator = require('../../src/utils/vkValidator.js');
+import VKValidator from '../../src/utils/vkValidator';
 
 // Мокаем axios
-const axios = require('axios');
+import axios from 'axios';
 const originalGet = axios.get;
 
 describe('VKValidator Unit Tests', () => {
-  let vkValidator;
+  let vkValidator: VKValidator;
   
   beforeEach(() => {
     vkValidator = new VKValidator('test-token');

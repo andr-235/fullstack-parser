@@ -1,5 +1,5 @@
-const { createTask, getTaskStatus, startCollect, listTasks } = require('../../src/services/taskService');
-const dbRepo = require('../../src/repositories/dbRepo');
+import { createTask, getTaskStatus, startCollect, listTasks } from '../../src/services/taskService';
+import dbRepo from '../../src/repositories/dbRepo';
 
 jest.mock('../../src/repositories/dbRepo');
 

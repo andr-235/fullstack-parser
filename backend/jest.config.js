@@ -9,6 +9,22 @@ module.exports = {
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
+  globals: {
+    'ts-jest': {
+      useESM: true,
+      tsconfig: {
+        module: 'esnext',
+        target: 'es2020'
+      }
+    }
+  },
+  extensionsToTreatAsEsm: ['.ts'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^(\\.{1,2}/.*)\\.js$': '$1'
+  },
+  maxWorkers: 1,
+  forceExit: true,
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
@@ -16,10 +32,7 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1'
-  },
-  setupFilesAfterEnv: [],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testTimeout: 30000,
   coverageThreshold: {
     global: {

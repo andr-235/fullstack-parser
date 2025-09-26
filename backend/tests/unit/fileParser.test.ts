@@ -1,6 +1,6 @@
-const FileParser = require('../../src/utils/fileParser.js');
-const fs = require('fs').promises;
-const path = require('path');
+import FileParser from '../../src/utils/fileParser.js';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 describe('FileParser Unit Tests', () => {
   const testDir = path.join(__dirname, '../temp');
@@ -56,8 +56,7 @@ group_name_2  # Еще одна группа с именем
     });
     
     it('should handle UTF-8 encoding with mock fs', async () => {
-      const mockFs = require('fs').promises;
-      const mockReadFile = jest.spyOn(mockFs, 'readFile').mockResolvedValue(Buffer.from('-123456\n-789012\ninvalid\n', 'utf-8'));
+      const mockReadFile = jest.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('-123456\n-789012\ninvalid\n', 'utf-8'));
       
       const result = await FileParser.parseGroupsFile('mock/path.txt', 'utf-8');
       

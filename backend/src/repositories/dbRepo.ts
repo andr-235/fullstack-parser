@@ -1,5 +1,5 @@
-import logger from '../utils/logger.js';
-import { sequelize, Task, Post, Comment } from '../models/index.js';
+import logger from '../utils/logger';
+import { sequelize, Task, Post, Comment } from '../models/index';
 import {
   TaskAttributes,
   TaskCreationAttributes,
@@ -7,8 +7,7 @@ import {
   PostCreationAttributes,
   CommentAttributes,
   CommentCreationAttributes
-} from '../models/index.js';
-import { TaskStatus, TaskType } from '../types/task.js';
+} from '../models/index';
 
 // Интерфейсы для запросов
 interface ListTasksOptions {
@@ -29,7 +28,7 @@ interface GetResultsResult {
 }
 
 interface TaskUpdateData {
-  status?: TaskStatus;
+  status?: string;
   progress?: number;
   error?: string;
   result?: Record<string, any>;
@@ -265,16 +264,13 @@ class DBRepo {
    */
   async deleteTaskData(taskId: number): Promise<void> {
     try {
-      // Сначала найдем все посты задачи
-      const posts = await this.Post.findAll({ where: { taskId } });
-      const postIds = posts.map(post => post.id);
-
       // Удаляем комментарии для всех постов задачи
-      if (postIds.length > 0) {
-        await this.Comment.destroy({
-          where: { postId: postIds }
-        });
-      }
+      await this.Comment.destroy({
+        include: [{
+          model: Post,
+          where: { taskId }
+        }]
+      });
 
       // Удаляем посты задачи
       await this.Post.destroy({ where: { taskId } });

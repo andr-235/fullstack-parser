@@ -1,4 +1,4 @@
-const dbRepo = require('../../src/repositories/dbRepo.js');
+import dbRepo from '../../src/repositories/dbRepo';
 
 // Mock Sequelize models
 const mockPost = {
@@ -24,10 +24,10 @@ const mockLogger = {
   error: jest.fn()
 };
 
-jest.mock('../../src/utils/logger.js', () => mockLogger);
+jest.mock('../../src/utils/logger.ts', () => mockLogger);
 
 // Mock Sequelize models
-jest.mock('../../src/models/index.js', () => ({
+jest.mock('../../src/models/index.ts', () => ({
   sequelize: {},
   Post: mockPost,
   Comment: mockComment,

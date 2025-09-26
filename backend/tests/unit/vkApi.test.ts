@@ -1,6 +1,6 @@
-const nock = require('nock');
-const axios = require('axios');
-const { getPosts, getComments } = require('../../src/repositories/vkApi');
+import nock from 'nock';
+import axios from 'axios';
+import { getPosts, getComments } from '../../src/repositories/vkApi';
 
 jest.mock('axios');
 

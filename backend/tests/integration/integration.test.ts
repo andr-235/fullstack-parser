@@ -2,11 +2,11 @@
 describe('Integration Test', () => {
   it('should load all main modules without errors', () => {
     expect(() => {
-      const dbRepo = require('../../src/repositories/dbRepo.js');
-      const vkService = require('../../src/services/vkService.js');
-      const taskService = require('../../src/services/taskService.js');
-      const { queue, worker } = require('../../config/queue.js');
-      const taskController = require('../../src/controllers/taskController.js');
+      const dbRepo = require('../../src/repositories/dbRepo');
+      const vkService = require('../../src/services/vkService');
+      const taskService = require('../../src/services/taskService');
+      const { queue, worker } = require('../../config/queue');
+      const taskController = require('../../src/controllers/taskController');
 
       // Basic checks
       expect(dbRepo).toBeDefined();
@@ -27,7 +27,7 @@ describe('Integration Test', () => {
 
   it('should load models without errors', () => {
     expect(() => {
-      const { sequelize, Post, Comment, Task } = require('../../src/models/index.js');
+      const { sequelize, Post, Comment, Task } = require('../../src/models/index');
 
       expect(sequelize).toBeDefined();
       expect(Post).toBeDefined();

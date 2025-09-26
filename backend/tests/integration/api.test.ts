@@ -1,6 +1,6 @@
-const request = require('supertest');
-const app = require('../../server.js');
-const taskService = require('../../src/services/taskService');
+import request from 'supertest';
+import app from '../../server';
+import * as taskService from '../../src/services/taskService';
 
 jest.mock('../../src/services/taskService');
 

@@ -5,14 +5,14 @@ const mockVKService = {
 };
 
 // Mock dependencies modules with factories
-jest.mock('../../src/repositories/vkApi.js', () => ({
+jest.mock('../../src/repositories/vkApi.ts', () => ({
   default: {
     getPosts: jest.fn(),
     getComments: jest.fn()
   }
 }));
 
-jest.mock('../../src/repositories/dbRepo.js', () => ({
+jest.mock('../../src/repositories/dbRepo.ts', () => ({
   default: {
     getTaskById: jest.fn(),
     upsertPosts: jest.fn(),
@@ -21,7 +21,7 @@ jest.mock('../../src/repositories/dbRepo.js', () => ({
   }
 }));
 
-jest.mock('../../src/utils/logger.js', () => ({
+jest.mock('../../src/utils/logger.ts', () => ({
   default: {
     info: jest.fn(),
     error: jest.fn(),
@@ -29,13 +29,13 @@ jest.mock('../../src/utils/logger.js', () => ({
   }
 }));
 
-const VKService = require('../../src/services/vkService.js').default;
-const vkApi = require('../../src/repositories/vkApi.js').default;
-const dbRepo = require('../../src/repositories/dbRepo.js').default;
-const logger = require('../../src/utils/logger.js').default;
+import VKService from '../../src/services/vkService';
+import vkApi from '../../src/repositories/vkApi';
+import dbRepo from '../../src/repositories/dbRepo';
+import logger from '../../src/utils/logger';
 
 describe('VKService', () => {
-  let vkService;
+  let vkService: VKService;
 
   beforeEach(() => {
     jest.clearAllMocks();

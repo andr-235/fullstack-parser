@@ -1,6 +1,6 @@
-import { Group, GroupAttributes, GroupCreationAttributes, GroupStatus } from '../models/group.js';
+import { Group, GroupAttributes, GroupCreationAttributes, GroupStatus } from '../models/group';
 import { Op } from 'sequelize';
-import logger from '../utils/logger.js';
+import logger from '../utils/logger';
 
 // Интерфейсы для запросов
 interface GetGroupsParams {
@@ -96,7 +96,7 @@ class GroupsRepository {
 
       // Поиск по ID или названию
       if (search) {
-        where[Op.or as any] = [
+        where[Op.or] = [
           { id: { [Op.like]: `%${search}%` } },
           { name: { [Op.like]: `%${search}%` } }
         ];
