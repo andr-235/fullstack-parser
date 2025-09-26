@@ -130,7 +130,7 @@ export const useTasksStore = defineStore("tasks", () => {
 
   /**
    * Создает новую VK collect задачу.
-   * @param {Object} data - {groups: number[], token: string}
+   * @param {Object} data - {groups: number[]}
    * @returns {Promise<Object>} Ответ с taskId
    */
   const createVkCollectTask = async (data) => {

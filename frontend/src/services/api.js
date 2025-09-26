@@ -81,7 +81,7 @@ export const tasksApi = {
 
   /**
    * Создает новую VK collect задачу.
-   * @param {Object} data - Данные: {groups: number[], token: string}
+   * @param {Object} data - Данные: {groups: number[]}
    * @returns {Promise<Object>} Ответ с taskId
    */
   createVkCollectTask: (data) =>
@@ -139,5 +139,12 @@ export const groupsApi = {
    * @returns {Promise<Object>} Ответ сервера
    */
   deleteGroups: (groupIds) =>
-    api.delete('/api/groups/batch', { data: { groupIds }})
+    api.delete('/api/groups/batch', { data: { groupIds }}),
+
+  /**
+   * Получает все группы без пагинации (для селектов и форм).
+   * @returns {Promise<Object>} {groups: [...]}
+   */
+  getAllGroups: () =>
+    api.get('/api/groups', { params: { limit: 10000, page: 1 } })
 };

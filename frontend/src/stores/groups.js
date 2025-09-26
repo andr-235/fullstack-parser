@@ -129,6 +129,19 @@ export const useGroupsStore = defineStore('groups', () => {
     fetchGroups()
   }
 
+  const getAllGroups = async () => {
+    loading.value = true
+    try {
+      const response = await groupsApi.getAllGroups()
+      return response.data.groups || []
+    } catch (err) {
+      error.value = err.message
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   const clearError = () => {
     error.value = null
   }
@@ -141,13 +154,14 @@ export const useGroupsStore = defineStore('groups', () => {
     error,
     filters,
     pagination,
-    
+
     // Getters
     filteredGroups,
-    
+
     // Actions
     uploadGroups,
     fetchGroups,
+    getAllGroups,
     pollTaskStatus,
     deleteGroup,
     deleteGroups,
