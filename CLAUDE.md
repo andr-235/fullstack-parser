@@ -13,8 +13,11 @@ npm test         # Run Jest tests
 npm run migrate  # Run database migrations
 node server.js   # Start server directly
 
+# Code Quality
+npx eslint .     # Run ESLint for code linting
+
 # Dependencies
-npm install      # Install dependencies
+npm install      # Install dependencies (or use 'bun install' if Bun is available)
 ```
 
 ### Frontend (Vue.js 3)
@@ -25,8 +28,16 @@ npm run dev      # Start Vite dev server on port 5173
 npm run build    # Build for production
 npm run preview  # Preview production build
 
+# Testing
+npm run test     # Run Vitest unit tests (placeholder)
+npx playwright test  # Run Playwright E2E tests
+
+# Code Quality
+npx eslint .     # Run ESLint for code linting
+npx prettier --write . # Format code with Prettier
+
 # Dependencies
-npm install      # Install dependencies
+npm install      # Install dependencies (or use 'bun install' if Bun is available)
 ```
 
 ### Docker Services
@@ -103,19 +114,33 @@ This is a **Vue.js 3 + Express.js** full-stack application for VK (VKontakte) so
 cd backend/
 npm test                    # Run all Jest tests
 npm test -- --watch        # Run tests in watch mode
+npm test -- --coverage      # Run tests with coverage report
 npm test fileParser.test.js # Run specific test file
+node test-integration.js    # Run integration tests
 ```
+
+Test configuration:
+- **Coverage threshold**: 80% for branches, functions, lines, statements
+- **Test environment**: Node.js
+- **Module mapping**: `@/` alias for `src/` directory
 
 Test structure:
 - `tests/unit/` - Unit tests for utilities and services
 - `tests/integration/` - Integration tests for API endpoints
+- `src/**/__tests__/` - Component-level tests
 
 #### Frontend Tests
 ```bash
 cd frontend/
-npm run test               # Run Vitest tests (currently placeholder)
+npm run test               # Run Vitest unit tests
+npx vitest --ui            # Run Vitest with UI
 npx playwright test        # Run Playwright E2E tests
+npx playwright test --ui   # Run Playwright with UI
 ```
+
+Test structure:
+- `src/**/__tests__/` - Component and store unit tests
+- `e2e/` - End-to-end test scenarios
 
 ### Database Operations
 ```bash
@@ -141,13 +166,14 @@ npm run migrate
 ### Key Technologies
 
 #### Backend Stack
-- **Node.js** with Express.js 5.1.0
+- **Node.js** with Express.js 5.1.0 (compatible with Bun runtime)
 - **Sequelize ORM** for PostgreSQL operations
 - **BullMQ** for background job processing
 - **Redis** for caching and job queues
 - **Winston** for structured logging
 - **Joi** for request validation
 - **Multer** for file upload handling
+- **Axios** with retry mechanism for external API calls
 
 #### Frontend Stack
 - **Vue.js 3** with Composition API
@@ -156,6 +182,9 @@ npm run migrate
 - **Vue Router 4** for navigation
 - **Vite** for build tooling
 - **Axios** for API communication
+- **VueUse** for composition utilities
+- **Playwright** for E2E testing
+- **Vitest** for unit testing
 
 ### Important Files
 
@@ -223,6 +252,7 @@ Available deployment scripts in `scripts/` directory:
 ./scripts/manage-services.sh   # Service management utilities
 ./scripts/quick-deploy-adm79.sh # Quick deployment script
 ./scripts/rollback.sh          # Rollback deployment
+./scripts/backup-db.sh         # Database backup script
 ```
 
 ## Common Development Tasks
@@ -272,12 +302,25 @@ npx playwright test
 - **Database access**: `docker-compose exec postgres psql -U postgres -d vk_analyzer`
 - **Redis access**: `docker-compose exec redis redis-cli`
 
+## Runtime and Development Environment
+
+### Runtime Support
+- **Primary**: Node.js with npm
+- **Alternative**: Bun runtime supported (check bun.lock files)
+- **Development OS**: Windows
+- **Production OS**: Debian
+
+### Code Quality and Linting
+- **Backend**: ESLint with @eslint/js recommended config
+- **Frontend**: ESLint + Vue plugin + Prettier integration
+- **Coverage**: Jest with 80% threshold for all metrics
+
 ## AI Assistant Guidelines
 
-
 * Разработка ведется на OC Windows, сервер на Debian
-* Ты должен общаться нарусском языке
+* Ты должен общаться на русском языке
 * Не редактируй .env файл - лишь говори какие переменные нужно туда добавить
 * Используй Context7 для доступа к документациям библиотек
-* Для реализации любых фич с использованием интеграций с внешним api/библиотеками изучай документацию с помощью context7
+* Для реализации любых фич с использованием интеграций с внешним api/библиотеками изучай документацию с помощью Context7
 * После изменений делай коммиты
+* Запускай линтеры и тесты перед коммитами

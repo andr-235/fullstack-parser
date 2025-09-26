@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const apiUrl = import.meta.env.MODE === 'production' ? '' : (import.meta.env.VITE_API_BASE || 'http://localhost:3000');
+const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE || (import.meta.env.MODE === 'production' ? '' : 'http://localhost:3000');
 const api = axios.create({
   baseURL: apiUrl
 });
