@@ -17,7 +17,15 @@ const taskSchema = Joi.object({
 
 // Validation schema for VK collect task creation
 const vkCollectSchema = Joi.object({
-  groups: Joi.array().items(Joi.number().integer().positive()).min(1).required()
+  groups: Joi.array().items(
+    Joi.object({
+      id: Joi.alternatives().try(
+        Joi.number().integer().positive(),
+        Joi.string().pattern(/^\d+$/).custom((value) => parseInt(value))
+      ).required(),
+      name: Joi.string().required()
+    })
+  ).min(1).required()
 });
 
 /**
@@ -88,9 +96,24 @@ const createVkCollectTask = async (req, res) => {
 
     const { groups } = value;
 
+    // Нормализуем группы - убираем дубли и приводим к нужному формату
+    const uniqueGroups = [];
+    const seenIds = new Set();
+
+    for (const group of groups) {
+      const groupId = parseInt(group.id);
+      if (!seenIds.has(groupId)) {
+        seenIds.add(groupId);
+        uniqueGroups.push({
+          id: groupId,
+          name: group.name.trim()
+        });
+      }
+    }
+
     // Create task in database
     const { taskId } = await taskService.createTask({
-      groups,
+      groups: uniqueGroups,
       status: 'created',
       metrics: { posts: 0, comments: 0, errors: [] }
     });

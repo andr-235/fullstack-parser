@@ -17,10 +17,11 @@ class VKService {
     let totalPosts = 0;
     let totalComments = 0;
     const errors = [];
+    let task = null;
 
     try {
       // Получаем задачу и переводим в статус processing
-      const task = await this.dbRepo.getTaskById(taskId);
+      task = await this.dbRepo.getTaskById(taskId);
       if (!task) {
         throw new Error(`Task with id ${taskId} not found`);
       }
@@ -124,7 +125,7 @@ class VKService {
 
       logger.info('Task completed', {
         taskId,
-        status: finalStatus,
+        status: task.status,
         totalPosts,
         totalComments,
         errorsCount: errors.length
@@ -134,11 +135,13 @@ class VKService {
       logger.error('General error in collectForTask', { taskId, error: error.message });
       errors.push(`General error in collectForTask: ${error.message}`);
 
-      await task.markAsFailed(error);
+      if (task) {
+        await task.markAsFailed(error);
 
-      // Update error metrics
-      task.metrics = { posts: totalPosts, comments: totalComments, errors };
-      await task.save(['metrics']);
+        // Update error metrics
+        task.metrics = { posts: totalPosts, comments: totalComments, errors };
+        await task.save(['metrics']);
+      }
 
       throw error;
     }
