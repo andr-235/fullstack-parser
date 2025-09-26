@@ -27,19 +27,38 @@ const vkCollectSchema = Joi.object({
  * @returns {Promise<void>}
  */
 const createTask = async (req, res) => {
+  const requestId = req.id;
   try {
+    logger.info('Processing createTask request', {
+      ownerId: req.body.ownerId,
+      postId: req.body.postId,
+      id: requestId
+    });
+
     const { error, value } = taskSchema.validate(req.body);
     if (error) {
+      logger.warn('Validation error in createTask', {
+        details: error.details[0].message,
+        id: requestId
+      });
       return res.status(400).json({ error: error.details[0].message });
     }
     const { ownerId, postId, token } = value;
     const { taskId } = await taskService.createTask({ ownerId, postId, token });
+    logger.info('Task created successfully', { taskId, status: 'created', id: requestId });
     res.status(201).json({ taskId, status: 'created' });
   } catch (err) {
     if (err.name === 'ValidationError') {
+      logger.warn('Validation error in createTask', {
+        message: err.message,
+        id: requestId
+      });
       return res.status(400).json({ error: err.message });
     }
-    logger.error('Error in createTask', { error: err.message });
+    logger.error('Error in createTask', {
+      error: err.stack,
+      id: requestId
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -51,9 +70,19 @@ const createTask = async (req, res) => {
  * @returns {Promise<void>}
  */
 const createVkCollectTask = async (req, res) => {
+  const requestId = req.id;
   try {
+    logger.info('Processing createVkCollectTask request', {
+      groupsCount: req.body.groups?.length,
+      id: requestId
+    });
+
     const { error, value } = vkCollectSchema.validate(req.body);
     if (error) {
+      logger.warn('Validation error in createVkCollectTask', {
+        details: error.details[0].message,
+        id: requestId
+      });
       return res.status(400).json({ error: error.details[0].message });
     }
 
@@ -78,33 +107,47 @@ const createVkCollectTask = async (req, res) => {
       removeOnFail: 50
     });
 
-    logger.info('VK collect task created and queued', { taskId, groups });
+    logger.info('VK collect task created and queued', { taskId, groupsCount: groups.length, id: requestId });
     res.status(201).json({ taskId, status: 'created' });
 
   } catch (err) {
-    logger.error('Error in createVkCollectTask', { error: err.message });
+    logger.error('Error in createVkCollectTask', {
+      error: err.stack,
+      id: requestId
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
 // POST /api/collect/:taskId - Start collect
 const postCollect = async (req, res) => {
+  const requestId = req.id;
   try {
     const taskId = req.params.taskId;
+    logger.info('Processing postCollect request', { taskId, id: requestId });
+
     const task = await taskService.getTaskById(taskId);
     if (!task) {
+      logger.warn('Task not found in postCollect', { taskId, id: requestId });
       return res.status(404).json({ error: 'Task not found' });
     }
     const { status, startedAt } = await taskService.startCollect(taskId);
+    logger.info('Collect started', { taskId, status, startedAt, id: requestId });
     res.status(202).json({ taskId, status: 'pending', startedAt });
   } catch (err) {
     if (err.message.includes('rate limit')) {
+      logger.warn('Rate limit in postCollect', { taskId: req.params.taskId, id: requestId });
       return res.status(429).json({ error: 'Rate limit exceeded' });
     }
     if (err.name === 'ValidationError') {
+      logger.warn('Validation error in postCollect', { message: err.message, id: requestId });
       return res.status(400).json({ error: err.message });
     }
-    logger.error('Error in postCollect', { taskId: req.params.taskId, error: err.message });
+    logger.error('Error in postCollect', {
+      taskId: req.params.taskId,
+      error: err.stack,
+      id: requestId
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -123,15 +166,74 @@ const getTask = async (req, res) => {
   }
 };
 
-// GET /api/tasks - List tasks
+/**
+ * Получает список задач с пагинацией и фильтрами.
+ * @param {Object} req - HTTP-запрос с query params: page, limit, status?, type?
+ * @param {Object} res - HTTP-ответ
+ * @returns {Promise<void>}
+ */
 const getTasks = async (req, res) => {
+  const requestId = req.id;
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const { tasks, total } = await taskService.listTasks(page, limit);
-    res.json({ tasks, total });
+    logger.info('Processing getTasks request', {
+      page: req.query.page,
+      limit: req.query.limit,
+      status: req.query.status,
+      type: req.query.type,
+      id: requestId
+    });
+
+    // Validation schema for query params
+    const querySchema = Joi.object({
+      page: Joi.number().integer().min(1).default(1),
+      limit: Joi.number().integer().min(1).max(100).default(10),
+      status: Joi.string().valid('pending', 'processing', 'completed', 'failed').allow(null),
+      type: Joi.string().valid('fetch_comments', 'process_groups', 'analyze_posts').allow(null)
+    });
+
+    const { error, value } = querySchema.validate(req.query);
+    if (error) {
+      logger.warn('Validation error in getTasks', {
+        details: error.details[0].message,
+        id: requestId
+      });
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const { page, limit, status, type } = value;
+    const { tasks, total } = await taskService.listTasks(page, limit, status, type);
+
+    logger.info('Tasks listed successfully', {
+      page,
+      limit,
+      status,
+      type,
+      total,
+      id: requestId
+    });
+
+    res.json({
+      tasks,
+      total,
+      page,
+      limit
+    });
   } catch (err) {
-    logger.error('Error in getTasks', { page: req.query.page, limit: req.query.limit, error: err.message });
+    if (err.name === 'ValidationError') {
+      logger.warn('Validation error in getTasks', {
+        message: err.message,
+        id: requestId
+      });
+      return res.status(400).json({ error: err.message });
+    }
+    logger.error('Error in getTasks', {
+      page: req.query.page,
+      limit: req.query.limit,
+      status: req.query.status,
+      type: req.query.type,
+      error: err.message,
+      id: requestId
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 };

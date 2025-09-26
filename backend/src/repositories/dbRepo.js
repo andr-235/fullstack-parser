@@ -99,14 +99,33 @@ class DBRepo {
     }
   }
 
-  async listTasks({ limit, offset }) {
+  /**
+   * Получает список задач с пагинацией и опциональными фильтрами.
+   * @param {Object} options - Опции запроса
+   * @param {number} options.limit - Лимит задач на страницу
+   * @param {number} options.offset - Смещение для пагинации
+   * @param {string} [options.status] - Фильтр по статусу (pending, processing, completed, failed)
+   * @param {string} [options.type] - Фильтр по типу (fetch_comments, process_groups, analyze_posts)
+   * @returns {Promise<{tasks: Array, total: number}>} Список задач и общее количество
+   */
+  async listTasks({ limit, offset, status, type }) {
+    const where = {};
+    if (status) {
+      where.status = status;
+    }
+    if (type) {
+      where.type = type;
+    }
+
     const tasks = await this.Task.findAll({
+      where,
       limit,
       offset,
       order: [['createdAt', 'DESC']],
     });
-    const total = await this.Task.count();
-    return { tasks, total };
+
+    const totalCount = await this.Task.count({ where });
+    return { tasks, total: totalCount };
   }
 
   async getResults(taskId, groupId = null, postId = null) {

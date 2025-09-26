@@ -84,13 +84,26 @@ class TaskService {
     }
   }
 
-  async listTasks(page = 1, limit = 10) {
+  /**
+   * Получает список задач с пагинацией и фильтрами.
+   * @param {number} page - Номер страницы
+   * @param {number} limit - Количество задач на странице
+   * @param {string} [status] - Фильтр по статусу (pending, processing, completed, failed)
+   * @param {string} [type] - Фильтр по типу (fetch_comments, process_groups, analyze_posts)
+   * @returns {Promise<{tasks: Array, total: number}>} Список задач и общее количество
+   */
+  async listTasks(page = 1, limit = 10, status, type) {
     try {
       const offset = (page - 1) * limit;
-      const { tasks, total } = await this.dbRepo.listTasks({ limit, offset });
+      const { tasks, total } = await this.dbRepo.listTasks({
+        limit,
+        offset,
+        status,
+        type
+      });
       return { tasks, total };
     } catch (error) {
-      logger.error('Failed to list tasks', { page, limit, error: error.message });
+      logger.error('Failed to list tasks', { page, limit, status, type, error: error.message });
       throw new Error(`Failed to list tasks: ${error.message}`);
     }
   }

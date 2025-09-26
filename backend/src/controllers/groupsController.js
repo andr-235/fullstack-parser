@@ -21,17 +21,32 @@ router.post('/upload', upload, handleUploadError, async (req, res) => {
         message: 'No file uploaded'
       });
     }
+
+    logger.info('Groups upload started', {
+      filename: req.file.filename,
+      size: req.file.size
+    });
     
     const encoding = req.query.encoding || 'utf-8';
+    logger.info('Processing file with groupsService', { encoding });
+    
     const result = await groupsService.uploadGroups(req.file.buffer, encoding);
     
     if (result.success) {
+      logger.info('Groups upload successful', {
+        taskId: result.taskId,
+        count: result.count || 0
+      });
       res.status(200).json(result);
     } else {
+      logger.info('Groups upload failed', result);
       res.status(400).json(result);
     }
   } catch (error) {
-    logger.error('Upload groups controller error', { error: error.message });
+    logger.error('Upload groups controller error', {
+      filename: req.file?.filename,
+      error: error.message
+    });
     res.status(500).json({
       success: false,
       error: 'INTERNAL_ERROR',

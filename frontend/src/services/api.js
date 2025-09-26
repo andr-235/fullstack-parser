@@ -32,7 +32,7 @@ api.interceptors.response.use(
  * @returns {Promise<Object>} Ответ с taskId
  */
 export const postCreateTask = async (data) => {
-  return api.post("/tasks", data);
+  return api.post("/api/tasks", data);
 };
 
 /**
@@ -41,7 +41,7 @@ export const postCreateTask = async (data) => {
  * @returns {Promise<Object>} Ответ с taskId и status
  */
 export const postStartCollect = async (taskId) => {
-  return api.post(`/collect/${taskId}`);
+  return api.post(`/api/collect/${taskId}`);
 };
 
 /**
@@ -50,7 +50,7 @@ export const postStartCollect = async (taskId) => {
  * @returns {Promise<Object>} {status, progress, errors}
  */
 export const getTaskStatus = async (taskId) => {
-  return api.get(`/tasks/${taskId}`);
+  return api.get(`/api/tasks/${taskId}`);
 };
 
 /**
@@ -61,11 +61,12 @@ export const getTaskStatus = async (taskId) => {
  */
 export const getResults = async (taskId, params = {}) => {
   const defaultParams = {
+    task_id: taskId,
     limit: 20,
     offset: 0,
     ...params
   };
-  return api.get(`/results/${taskId}`, { params: defaultParams });
+  return api.get('/api/comments', { params: defaultParams });
 };
 
 // Tasks API
@@ -76,7 +77,7 @@ export const tasksApi = {
    * @returns {Promise<Object>} {tasks: [...], total, page, totalPages}
    */
   getTasks: (params = {}) =>
-    api.get('/tasks', { params }),
+    api.get('/api/tasks', { params }),
 
   /**
    * Создает новую VK collect задачу.
@@ -84,7 +85,7 @@ export const tasksApi = {
    * @returns {Promise<Object>} Ответ с taskId
    */
   createVkCollectTask: (data) =>
-    api.post('/tasks/collect', data),
+    api.post('/api/tasks/collect', data),
 
   /**
    * Получает детальную информацию о задаче.
@@ -92,7 +93,7 @@ export const tasksApi = {
    * @returns {Promise<Object>} Детальная информация о задаче
    */
   getTaskDetails: (taskId) =>
-    api.get(`/tasks/${taskId}`)
+    api.get(`/api/tasks/${taskId}`)
 };
 
 // Groups API
@@ -103,10 +104,9 @@ export const groupsApi = {
    * @param {string} encoding - Кодировка файла
    * @returns {Promise<Object>} Ответ с taskId
    */
-  uploadGroups: (formData, encoding = 'utf-8') => 
-    api.post('/groups/upload', formData, { 
-      headers: { 'Content-Type': 'multipart/form-data' },
-      params: { encoding }
+  uploadGroups: (formData) =>
+    api.post('/api/groups/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     }),
   
   /**
@@ -114,30 +114,30 @@ export const groupsApi = {
    * @param {string|number} taskId - ID задачи
    * @returns {Promise<Object>} {status, progress, errors}
    */
-  getTaskStatus: (taskId) => 
-    api.get(`/groups/upload/${taskId}/status`),
+  getTaskStatus: (taskId) =>
+    api.get(`/api/groups/upload/${taskId}/status`),
   
   /**
    * Получает список групп.
    * @param {Object} [params={}] - Параметры: page, limit, status, search, sortBy, sortOrder
    * @returns {Promise<Object>} {groups: [...], total}
    */
-  getGroups: (params = {}) => 
-    api.get('/groups', { params }),
+  getGroups: (params = {}) =>
+    api.get('/api/groups', { params }),
   
   /**
    * Удаляет группу.
    * @param {string|number} groupId - ID группы
    * @returns {Promise<Object>} Ответ сервера
    */
-  deleteGroup: (groupId) => 
-    api.delete(`/groups/${groupId}`),
+  deleteGroup: (groupId) =>
+    api.delete(`/api/groups/${groupId}`),
   
   /**
    * Массовое удаление групп.
    * @param {Array} groupIds - Массив ID групп
    * @returns {Promise<Object>} Ответ сервера
    */
-  deleteGroups: (groupIds) => 
-    api.delete('/groups/batch', { data: { groupIds }})
+  deleteGroups: (groupIds) =>
+    api.delete('/api/groups/batch', { data: { groupIds }})
 };
