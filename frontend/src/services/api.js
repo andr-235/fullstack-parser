@@ -104,8 +104,8 @@ export const groupsApi = {
    * @param {string} encoding - Кодировка файла
    * @returns {Promise<Object>} Ответ с taskId
    */
-  uploadGroups: (formData) =>
-    api.post('/api/groups/upload', formData, {
+  uploadGroups: (formData, encoding = 'utf-8') =>
+    api.post(`/api/groups/upload?encoding=${encodeURIComponent(encoding)}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }),
   

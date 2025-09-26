@@ -233,7 +233,7 @@ const handleUpload = async () => {
     const response = await groupsApi.uploadGroups(formData, encoding.value)
 
     // Emit success event
-    emit('upload-started', response.data)
+    emit('upload-started', response.data.data)
 
     // Clear form
     clearFile()
