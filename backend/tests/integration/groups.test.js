@@ -27,24 +27,37 @@ group_name_2  # Еще одна группа с именем`;
     }
   });
   
+  jest.mock('../../src/repositories/groupsRepo.js', () => ({
+    createGroups: jest.fn().mockResolvedValue(5),
+    groupExists: jest.fn().mockResolvedValue(false),
+    getGroups: jest.fn().mockResolvedValue({ groups: [], total: 0 }),
+    deleteGroup: jest.fn().mockResolvedValue(true),
+    deleteGroups: jest.fn().mockResolvedValue(1),
+    getGroupsStats: jest.fn().mockResolvedValue({ total: 0, valid: 0, invalid: 0, duplicate: 0 })
+  }));
+
+  const groupsRepo = require('../../src/repositories/groupsRepo.js');
+
   describe('POST /api/groups/upload', () => {
-    it('should upload groups file successfully', async () => {
+    it('should upload groups file successfully with query encoding', async () => {
       const response = await request(app)
         .post('/api/groups/upload')
         .attach('file', testFilePath)
-        .field('encoding', 'utf-8');
+        .query({ encoding: 'utf-8' });
       
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveProperty('taskId');
       expect(response.body.data).toHaveProperty('totalGroups');
       expect(response.body.data.totalGroups).toBeGreaterThan(0);
+      expect(groupsRepo.createGroups).toHaveBeenCalled();
     });
     
     it('should reject non-txt files', async () => {
       const response = await request(app)
         .post('/api/groups/upload')
-        .attach('file', Buffer.from('test content'), 'test.txt');
+        .attach('file', Buffer.from('test content'), 'test.js')
+        .query({ encoding: 'utf-8' });
       
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -53,7 +66,8 @@ group_name_2  # Еще одна группа с именем`;
     
     it('should reject requests without file', async () => {
       const response = await request(app)
-        .post('/api/groups/upload');
+        .post('/api/groups/upload')
+        .query({ encoding: 'utf-8' });
       
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);

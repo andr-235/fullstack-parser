@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs').promises;
 const path = require('path');
+const os = require('os');
 
 const FileParser = require('../utils/fileParser.js');
 const VKValidator = require('../utils/vkValidator.js');
@@ -29,19 +30,17 @@ class GroupsService {
    */
   async uploadGroups(filePath, encoding = 'utf-8') {
     const taskId = uuidv4();
+    let tempPath = null;
     
     try {
       // Если это Buffer, сохраняем во временный файл
       let actualFilePath = filePath;
       if (Buffer.isBuffer(filePath)) {
-        const fs = require('fs').promises;
-        const path = require('path');
-        
         // Создаем папку для временных файлов
-        const tempDir = '/tmp/uploads';
+        const tempDir = path.join(os.tmpdir(), 'vk-uploads');
         await fs.mkdir(tempDir, { recursive: true });
         
-        const tempPath = path.join(tempDir, `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.txt`);
+        tempPath = path.join(tempDir, `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.txt`);
         await fs.writeFile(tempPath, filePath);
         actualFilePath = tempPath;
       }
@@ -75,8 +74,10 @@ class GroupsService {
           this.updateTaskStatus(taskId, 'failed', { error: error.message });
         });
       
-      // Удаляем временный файл
-      await this.cleanupFile(filePath);
+      // Удаляем временный файл если был создан
+      if (tempPath) {
+        await fs.unlink(tempPath);
+      }
       
       return {
         success: true,
@@ -91,8 +92,14 @@ class GroupsService {
     } catch (error) {
       logger.error('Upload groups failed', { filePath, error: error.message });
       
-      // Удаляем временный файл
-      await this.cleanupFile(filePath);
+      // Удаляем временный файл если был создан
+      if (tempPath) {
+        try {
+          await fs.unlink(tempPath);
+        } catch (unlinkError) {
+          logger.warn('Failed to cleanup temp file', { tempPath, error: unlinkError.message });
+        }
+      }
       
       return {
         success: false,
@@ -253,18 +260,6 @@ class GroupsService {
     }
   }
   
-  /**
-   * Удаляет временный файл
-   * @param {string} filePath - Путь к файлу
-   */
-  async cleanupFile(filePath) {
-    try {
-      await fs.unlink(filePath);
-      logger.info('Temporary file cleaned up', { filePath });
-    } catch (error) {
-      logger.warn('Failed to cleanup temporary file', { filePath, error: error.message });
-    }
-  }
   
   /**
    * Удаляет группу

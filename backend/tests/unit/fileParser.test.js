@@ -55,9 +55,19 @@ group_name_2  # Еще одна группа с именем
       expect(result.errors.length).toBeGreaterThan(0);
     });
     
-    it('should handle different encodings', async () => {
-      const result = await FileParser.parseGroupsFile(testFilePath, 'utf-8');
-      expect(result).toHaveProperty('groups');
+    it('should handle UTF-8 encoding with mock fs', async () => {
+      const mockFs = require('fs').promises;
+      const mockReadFile = jest.spyOn(mockFs, 'readFile').mockResolvedValue(Buffer.from('-123456\n-789012\ninvalid\n', 'utf-8'));
+      
+      const result = await FileParser.parseGroupsFile('mock/path.txt', 'utf-8');
+      
+      expect(mockReadFile).toHaveBeenCalledWith('mock/path.txt', 'utf-8');
+      expect(result.groups).toHaveLength(2);
+      expect(result.groups[0].id).toBe(-123456);
+      expect(result.groups[1].id).toBe(-789012);
+      expect(result.errors).toHaveLength(1);
+      
+      mockReadFile.mockRestore();
     });
     
     it('should throw error for non-existent file', async () => {

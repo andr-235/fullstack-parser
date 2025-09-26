@@ -8,6 +8,9 @@ const router = express.Router();
 /**
  * POST /api/groups/upload
  * Загрузка файла с группами
+ * @param {Object} req - HTTP-запрос с FormData и query params
+ * @param {Object} res - HTTP-ответ
+ * @returns {Promise<void>}
  */
 router.post('/upload', upload, handleUploadError, async (req, res) => {
   try {
@@ -19,7 +22,7 @@ router.post('/upload', upload, handleUploadError, async (req, res) => {
       });
     }
     
-    const encoding = req.body.encoding || 'utf-8';
+    const encoding = req.query.encoding || 'utf-8';
     const result = await groupsService.uploadGroups(req.file.buffer, encoding);
     
     if (result.success) {
