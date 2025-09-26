@@ -1,0 +1,93 @@
+services:
+  postgres:
+    image: postgres:15
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: deps  # Используем stage с зависимостями для разработки
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      # Проверяем наличие .env.dev, если нет - используем .env
+      - .env.dev
+      - .env
+    ports:
+      - "3000:3000"
+    volumes:
+      # Монтируем исходный код для горячей перезагрузки
+      - ./backend:/app
+      - /app/node_modules  # Исключаем node_modules из монтирования
+      # Сохраняем директорию логов
+      - ./backend/logs:/app/logs
+    environment:
+      - NODE_ENV=development
+      - BUN_ENV=development
+    # Добавляем команду для запуска в режиме разработки
+    command: ["bun", "run", "dev"]
+    networks:
+      - default
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    depends_on:
+      api:
+        condition: service_started
+    env_file:
+      # Проверяем наличие .env.dev, если нет - используем .env
+      - .env.dev
+      - .env
+    volumes:
+      # Монтируем исходный код для горячей перезагрузки
+      - ./frontend:/app
+      - /app/node_modules  # Исключаем node_modules из монтирования
+    environment:
+      - NODE_ENV=development
+      - BUN_ENV=development
+    # Команда уже указана в Dockerfile.dev
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge

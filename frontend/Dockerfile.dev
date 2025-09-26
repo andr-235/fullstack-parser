@@ -1,0 +1,22 @@
+FROM oven/bun:1.1.0-alpine
+
+WORKDIR /app
+
+# Копируем файлы зависимостей
+COPY package*.json ./
+
+# Устанавливаем все зависимости (включая devDependencies)
+RUN bun install
+
+# Копируем остальные файлы проекта
+COPY . .
+
+# Устанавливаем переменные окружения для разработки
+ENV NODE_ENV=development
+ENV BUN_ENV=development
+
+# Экспонируем порт, который использует Vite
+EXPOSE 5173
+
+# Запускаем Vite в режиме разработки с настройками для Docker
+CMD ["bun", "run", "dev", "--host", "0.0.0.0"]

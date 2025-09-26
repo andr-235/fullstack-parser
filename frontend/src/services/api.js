@@ -1,6 +1,26 @@
 import axios from "axios";
 
-const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE || (import.meta.env.MODE === 'production' ? '' : 'http://localhost:3000');
+// Определяем URL для API в зависимости от окружения
+// В Docker-окружении nginx проксирует /api/ запросы, поэтому используем относительный путь
+const isDevelopment = import.meta.env.MODE === 'development' ||
+                     (typeof window !== 'undefined' && (
+                       window.location.hostname === 'localhost' ||
+                       window.location.hostname === '127.0.0.1' ||
+                       window.location.hostname === '[::1]' ||
+                       window.location.hostname.startsWith('192.168.') // Для локальной сети
+                     ));
+
+// Проверяем, запущено ли приложение в Docker-контейнере
+const isDockerEnvironment = typeof process !== 'undefined' && process.env && process.env.DOCKER_ENV === 'true';
+
+// В production режиме (Docker) используем пустую строку для относительных путей
+// В development режиме используем http://localhost:3000 или http://host.docker.internal:3000 в зависимости от окружения
+const apiUrl = import.meta.env.VITE_API_URL ||
+               import.meta.env.VITE_API_BASE ||
+               (isDevelopment ?
+                 (isDockerEnvironment ? 'http://host.docker.internal:3000' : 'http://localhost:3000')
+                 : '');
+
 const api = axios.create({
   baseURL: apiUrl
 });
@@ -9,19 +29,34 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    
+    // Обработка ошибки 429 (Too Many Requests) с экспоненциальной задержкой
     if (error.response?.status === 429 && !originalRequest._retry) {
       originalRequest._retry = true;
       const retryCount = originalRequest.retryCount || 0;
+      
+      // Ограничиваем количество повторных попыток до 3
       if (retryCount < 3) {
         originalRequest.retryCount = retryCount + 1;
+        
+        // Экспоненциальная задержка: 1с, 2с, 4с
         const delay = Math.pow(2, retryCount) * 1000;
         await new Promise((resolve) => setTimeout(resolve, delay));
         return api(originalRequest);
       }
     }
+    
+    // Логируем ошибки 400 и 500 для отладки
     if (error.response && [400, 500].includes(error.response.status)) {
       console.error("API Error:", error.response.data || error.message);
     }
+    
+    // Обработка сетевых ошибок (ERR_NAME_NOT_RESOLVED, ECONNABORTED и т.д.)
+    if (!error.response) {
+      console.error("Network Error:", error.message);
+      // Можно добавить уведомление для пользователя о сетевой проблеме
+    }
+    
     return Promise.reject(error);
   }
 );

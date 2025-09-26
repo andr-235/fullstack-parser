@@ -3,11 +3,12 @@
   "version": "0.0.2",
   "private": true,
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build --mode production",
-    "preview": "vite preview"
-  },
+   "scripts": {
+     "dev": "vite",
+     "dev:local": "vite --mode development",
+     "build": "vite build --mode production",
+     "preview": "vite preview"
+   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
     "@vueuse/core": "^13.9.0",

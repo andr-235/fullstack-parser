@@ -32,6 +32,13 @@ bun dev
 
 Сервер запустится на `http://localhost:5173`. В режиме разработки запросы к `/api` проксируются на backend (`http://localhost:3000`) через [vite.config.js](vite.config.js).
 
+Для явного запуска в режиме разработки с локальным бэкендом используйте:
+```sh
+bun run dev:local
+```
+
+Для переключения в режим разработки убедитесь, что в файле `.env` или `.env.development` установлена переменная `VITE_API_URL=http://localhost:3000`.
+
 ### Сборка для production
 
 ```sh

@@ -2,32 +2,148 @@
  * Утилита для мониторинга производительности PostgreSQL базы данных
  * Предоставляет методы для анализа производительности, статистики и оптимизации
  */
-const sequelize = require('../config/db');
+
+import { Sequelize, QueryTypes } from 'sequelize';
+import logger from './logger';
+
+interface PoolStats {
+  size: number;
+  available: number;
+  using: number;
+  waiting: number;
+  max: number;
+  min: number;
+}
+
+interface SlowQuery {
+  query: string;
+  calls: number;
+  total_time: number;
+  mean_time: number;
+  min_time: number;
+  max_time: number;
+  stddev_time: number;
+  rows: number;
+}
+
+interface IndexUsage {
+  schemaname: string;
+  tablename: string;
+  indexname: string;
+  idx_tup_read: number;
+  idx_tup_fetch: number;
+  idx_scan: number;
+  usage_status: string;
+}
+
+interface TableSize {
+  schemaname: string;
+  tablename: string;
+  total_size: string;
+  table_size: string;
+  indexes_size: string;
+  total_bytes: number;
+}
+
+interface TableActivity {
+  schemaname: string;
+  tablename: string;
+  inserts: number;
+  updates: number;
+  deletes: number;
+  hot_updates: number;
+  seq_scan: number;
+  seq_tup_read: number;
+  idx_scan: number;
+  idx_tup_fetch: number;
+  live_tuples: number;
+  dead_tuples: number;
+  last_vacuum: Date | null;
+  last_autovacuum: Date | null;
+  last_analyze: Date | null;
+  last_autoanalyze: Date | null;
+}
+
+interface ActiveConnection {
+  pid: number;
+  usename: string;
+  application_name: string;
+  client_addr: string;
+  state: string;
+  query_start: Date;
+  state_change: Date;
+  current_query: string;
+}
+
+interface BlockingQuery {
+  blocked_pid: number;
+  blocked_user: string;
+  blocking_pid: number;
+  blocking_user: string;
+  blocked_statement: string;
+  blocking_statement: string;
+  blocked_application: string;
+  blocking_application: string;
+}
+
+interface OptimizationRecommendation {
+  type: 'unused_indexes' | 'vacuum_needed' | 'large_tables' | 'connection_pool';
+  priority: 'low' | 'medium' | 'high' | 'info';
+  description: string;
+  details: string[];
+  suggestion: string;
+}
+
+interface HealthCheck {
+  timestamp: Date;
+  database: string;
+  status: 'healthy' | 'warning' | 'critical' | 'error';
+  connection?: 'ok' | 'error';
+  poolStats?: PoolStats;
+  tableSizes?: TableSize[];
+  activeConnections?: number;
+  blockingQueries?: number;
+  recommendations?: OptimizationRecommendation[];
+  error?: string;
+}
+
+interface BenchmarkResult {
+  operation: string;
+  duration: number;
+}
+
+interface Benchmark {
+  timestamp: Date;
+  results: BenchmarkResult[];
+  averageLatency: number;
+}
 
 class DatabaseMonitor {
-  constructor() {
+  private sequelize: Sequelize;
+
+  constructor(sequelize: Sequelize) {
     this.sequelize = sequelize;
   }
 
   /**
    * Получить статистику использования connection pool
    */
-  async getPoolStats() {
-    const pool = this.sequelize.connectionManager.pool;
+  async getPoolStats(): Promise<PoolStats> {
+    const pool = (this.sequelize.connectionManager as any).pool;
     return {
-      size: pool.size,
-      available: pool.available,
-      using: pool.using,
-      waiting: pool.waiting,
-      max: pool.max,
-      min: pool.min
+      size: pool.size || 0,
+      available: pool.available || 0,
+      using: pool.using || 0,
+      waiting: pool.waiting || 0,
+      max: pool.max || 0,
+      min: pool.min || 0
     };
   }
 
   /**
    * Анализ медленных запросов
    */
-  async getSlowQueries(limit = 10) {
+  async getSlowQueries(limit = 10): Promise<SlowQuery[]> {
     const query = `
       SELECT
         query,
@@ -45,13 +161,14 @@ class DatabaseMonitor {
     `;
 
     try {
-      const [results] = await this.sequelize.query(query, {
+      const results = await this.sequelize.query(query, {
         replacements: { limit },
-        type: this.sequelize.QueryTypes.SELECT
-      });
+        type: QueryTypes.SELECT
+      }) as SlowQuery[];
       return results;
     } catch (error) {
-      console.warn('pg_stat_statements extension не активирована:', error.message);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.warn('pg_stat_statements extension не активирована', { error: errorMsg });
       return [];
     }
   }
@@ -59,7 +176,7 @@ class DatabaseMonitor {
   /**
    * Анализ использования индексов
    */
-  async getIndexUsage(tableName = null) {
+  async getIndexUsage(tableName?: string): Promise<IndexUsage[]> {
     const whereClause = tableName ? 'AND schemaname = :schema AND tablename = :tableName' : '';
     const query = `
       SELECT
@@ -79,17 +196,17 @@ class DatabaseMonitor {
       ORDER BY idx_scan DESC;
     `;
 
-    const [results] = await this.sequelize.query(query, {
+    const results = await this.sequelize.query(query, {
       replacements: { schema: 'public', tableName },
-      type: this.sequelize.QueryTypes.SELECT
-    });
+      type: QueryTypes.SELECT
+    }) as IndexUsage[];
     return results;
   }
 
   /**
    * Размеры таблиц и индексов
    */
-  async getTableSizes() {
+  async getTableSizes(): Promise<TableSize[]> {
     const query = `
       SELECT
         schemaname,
@@ -103,16 +220,16 @@ class DatabaseMonitor {
       ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
     `;
 
-    const [results] = await this.sequelize.query(query, {
-      type: this.sequelize.QueryTypes.SELECT
-    });
+    const results = await this.sequelize.query(query, {
+      type: QueryTypes.SELECT
+    }) as TableSize[];
     return results;
   }
 
   /**
    * Статистика активности таблиц
    */
-  async getTableActivity() {
+  async getTableActivity(): Promise<TableActivity[]> {
     const query = `
       SELECT
         schemaname,
@@ -136,16 +253,16 @@ class DatabaseMonitor {
       ORDER BY (n_tup_ins + n_tup_upd + n_tup_del) DESC;
     `;
 
-    const [results] = await this.sequelize.query(query, {
-      type: this.sequelize.QueryTypes.SELECT
-    });
+    const results = await this.sequelize.query(query, {
+      type: QueryTypes.SELECT
+    }) as TableActivity[];
     return results;
   }
 
   /**
    * Активные соединения и блокировки
    */
-  async getActiveConnections() {
+  async getActiveConnections(): Promise<ActiveConnection[]> {
     const query = `
       SELECT
         pid,
@@ -165,16 +282,16 @@ class DatabaseMonitor {
       ORDER BY query_start DESC;
     `;
 
-    const [results] = await this.sequelize.query(query, {
-      type: this.sequelize.QueryTypes.SELECT
-    });
+    const results = await this.sequelize.query(query, {
+      type: QueryTypes.SELECT
+    }) as ActiveConnection[];
     return results;
   }
 
   /**
    * Детектор блокировок
    */
-  async getBlockingQueries() {
+  async getBlockingQueries(): Promise<BlockingQuery[]> {
     const query = `
       SELECT
         blocked_locks.pid AS blocked_pid,
@@ -205,17 +322,17 @@ class DatabaseMonitor {
       WHERE NOT blocked_locks.GRANTED;
     `;
 
-    const [results] = await this.sequelize.query(query, {
-      type: this.sequelize.QueryTypes.SELECT
-    });
+    const results = await this.sequelize.query(query, {
+      type: QueryTypes.SELECT
+    }) as BlockingQuery[];
     return results;
   }
 
   /**
    * Рекомендации по оптимизации
    */
-  async getOptimizationRecommendations() {
-    const recommendations = [];
+  async getOptimizationRecommendations(): Promise<OptimizationRecommendation[]> {
+    const recommendations: OptimizationRecommendation[] = [];
 
     // 1. Проверяем неиспользуемые индексы
     const indexUsage = await this.getIndexUsage();
@@ -258,7 +375,7 @@ class DatabaseMonitor {
       recommendations.push({
         type: 'large_tables',
         priority: 'info',
-        description: `Найдены крупные таблицы (>${tableSizes[0].total_size})`,
+        description: `Найдены крупные таблицы (>${tableSizes[0]?.total_size})`,
         details: largeTables.map(table => `${table.tablename}: ${table.total_size}`),
         suggestion: 'Рассмотрите партиционирование или архивирование старых данных'
       });
@@ -266,7 +383,7 @@ class DatabaseMonitor {
 
     // 4. Проверяем connection pool
     const poolStats = await this.getPoolStats();
-    if (poolStats.using / poolStats.max > 0.8) {
+    if (poolStats.max > 0 && poolStats.using / poolStats.max > 0.8) {
       recommendations.push({
         type: 'connection_pool',
         priority: 'medium',
@@ -282,8 +399,8 @@ class DatabaseMonitor {
   /**
    * Комплексная проверка здоровья базы данных
    */
-  async healthCheck() {
-    const health = {
+  async healthCheck(): Promise<HealthCheck> {
+    const health: HealthCheck = {
       timestamp: new Date(),
       database: this.sequelize.getDatabaseName(),
       status: 'healthy'
@@ -313,7 +430,7 @@ class DatabaseMonitor {
 
     } catch (error) {
       health.status = 'error';
-      health.error = error.message;
+      health.error = error instanceof Error ? error.message : String(error);
     }
 
     return health;
@@ -322,17 +439,17 @@ class DatabaseMonitor {
   /**
    * Выполнение EXPLAIN ANALYZE для запроса
    */
-  async explainQuery(query, params = {}) {
+  async explainQuery(query: string, params: Record<string, any> = {}): Promise<any> {
     const explainQuery = `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${query}`;
 
     try {
-      const [results] = await this.sequelize.query(explainQuery, {
+      const results = await this.sequelize.query(explainQuery, {
         replacements: params,
-        type: this.sequelize.QueryTypes.SELECT
+        type: QueryTypes.SELECT
       });
       return results[0];
     } catch (error) {
-      console.error('Ошибка при выполнении EXPLAIN:', error);
+      logger.error('Ошибка при выполнении EXPLAIN', { error });
       throw error;
     }
   }
@@ -340,51 +457,71 @@ class DatabaseMonitor {
   /**
    * Бенчмарк для типичных запросов VK аналитики
    */
-  async runBenchmark() {
-    const benchmarks = [];
+  async runBenchmark(): Promise<Benchmark> {
+    const benchmarks: BenchmarkResult[] = [];
 
-    // 1. Тест создания задачи
-    const taskCreateStart = Date.now();
-    await this.sequelize.query(`
-      INSERT INTO tasks (status, type, priority, progress, "createdAt", "updatedAt")
-      VALUES ('pending', 'fetch_comments', 1, 0, NOW(), NOW())
-    `);
-    benchmarks.push({
-      operation: 'create_task',
-      duration: Date.now() - taskCreateStart
-    });
+    try {
+      // 1. Тест создания задачи
+      const taskCreateStart = Date.now();
+      await this.sequelize.query(`
+        INSERT INTO tasks (status, type, priority, progress, "createdAt", "updatedAt")
+        VALUES ('pending', 'fetch_comments', 1, 0, NOW(), NOW())
+      `);
+      benchmarks.push({
+        operation: 'create_task',
+        duration: Date.now() - taskCreateStart
+      });
 
-    // 2. Тест поиска задач по статусу
-    const taskSearchStart = Date.now();
-    await this.sequelize.query(`
-      SELECT * FROM tasks WHERE status = 'pending' ORDER BY priority DESC, "createdAt" ASC LIMIT 10
-    `);
-    benchmarks.push({
-      operation: 'search_pending_tasks',
-      duration: Date.now() - taskSearchStart
-    });
+      // 2. Тест поиска задач по статусу
+      const taskSearchStart = Date.now();
+      await this.sequelize.query(`
+        SELECT * FROM tasks WHERE status = 'pending' ORDER BY priority DESC, "createdAt" ASC LIMIT 10
+      `);
+      benchmarks.push({
+        operation: 'search_pending_tasks',
+        duration: Date.now() - taskSearchStart
+      });
 
-    // 3. Тест поиска комментариев с join
-    const commentsSearchStart = Date.now();
-    await this.sequelize.query(`
-      SELECT c.*, p.text as post_text
-      FROM comments c
-      JOIN posts p ON c.post_vk_id = p.vk_post_id
-      WHERE c.date >= NOW() - INTERVAL '7 days'
-      ORDER BY c.date DESC
-      LIMIT 100
-    `);
-    benchmarks.push({
-      operation: 'search_recent_comments_with_posts',
-      duration: Date.now() - commentsSearchStart
-    });
+      // 3. Тест поиска комментариев с join
+      const commentsSearchStart = Date.now();
+      await this.sequelize.query(`
+        SELECT c.*, p.text as post_text
+        FROM comments c
+        JOIN posts p ON c.post_vk_id = p.vk_post_id
+        WHERE c.date >= NOW() - INTERVAL '7 days'
+        ORDER BY c.date DESC
+        LIMIT 100
+      `);
+      benchmarks.push({
+        operation: 'search_recent_comments_with_posts',
+        duration: Date.now() - commentsSearchStart
+      });
+    } catch (error) {
+      logger.error('Benchmark execution failed', { error });
+    }
 
     return {
       timestamp: new Date(),
       results: benchmarks,
-      averageLatency: benchmarks.reduce((sum, b) => sum + b.duration, 0) / benchmarks.length
+      averageLatency: benchmarks.length > 0
+        ? benchmarks.reduce((sum, b) => sum + b.duration, 0) / benchmarks.length
+        : 0
     };
   }
 }
 
-module.exports = new DatabaseMonitor();
+export default DatabaseMonitor;
+export { DatabaseMonitor };
+export type {
+  PoolStats,
+  SlowQuery,
+  IndexUsage,
+  TableSize,
+  TableActivity,
+  ActiveConnection,
+  BlockingQuery,
+  OptimizationRecommendation,
+  HealthCheck,
+  BenchmarkResult,
+  Benchmark
+};

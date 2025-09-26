@@ -43,11 +43,12 @@
     />
   </v-container>
 </template>
-
 <script setup>
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useTasksStore } from '@/stores/tasks';
+import LoadingSpinner from '@/components/LoadingSpinner.vue';
+
 import { useLocalStorage } from '@vueuse/core';
 
 /**
