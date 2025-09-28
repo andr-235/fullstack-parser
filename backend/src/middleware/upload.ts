@@ -1,24 +1,17 @@
-import multer, { MulterError, File } from 'multer';
+import multer, { MulterError } from 'multer';
 import path from 'path';
 import { Request, Response, NextFunction } from 'express';
 import logger from '@/utils/logger';
 import { ApiResponse } from '@/types/express';
 
-// Extend Request type to include file - переопределяем полностью
-declare global {
-  namespace Express {
-    interface Request {
-      file?: File;
-    }
-  }
-}
+// Используем стандартный тип Express.Multer.File вместо импорта File из multer
 
 
 // Настройка multer для загрузки файлов
 const storage = multer.memoryStorage();
 
 // Фильтр для проверки типа файла
-const fileFilter = (req: Request, file: File, cb: multer.FileFilterCallback): void => {
+const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback): void => {
   if (file.mimetype === 'text/plain' || path.extname(file.originalname).toLowerCase() === '.txt') {
     cb(null, true);
   } else {
