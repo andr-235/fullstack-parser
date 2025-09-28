@@ -296,8 +296,12 @@ export class VkCollectWorker {
         throw new Error(`Invalid group ID: ${groupId}`);
       }
 
-      // Получаем посты группы
-      const postsResult = await vkApi.getPosts(numericGroupId);
+      // Получаем посты группы с обработкой таймаутов
+      const postsResult = await this.executeWithTimeout(
+        () => vkApi.getPosts(numericGroupId),
+        60000, // 1 минута на получение постов
+        `Получение постов для группы ${groupId}`
+      );
       const posts = postsResult?.posts || [];
 
       if (posts.length === 0) {
@@ -316,7 +320,11 @@ export class VkCollectWorker {
       // Обрабатываем комментарии для каждого поста
       for (const post of postsToProcess) {
         try {
-          const commentsResult = await vkApi.getComments(numericGroupId, post.vk_post_id);
+          const commentsResult = await this.executeWithTimeout(
+            () => vkApi.getComments(numericGroupId, post.vk_post_id),
+            90000, // 1.5 минуты на получение комментариев
+            `Получение комментариев для поста ${post.vk_post_id}`
+          );
           const comments = commentsResult?.comments || [];
 
           if (comments.length > 0) {
@@ -548,6 +556,31 @@ export class VkCollectWorker {
    */
   getWorkerInstance(): TypedWorker<VkCollectJobData, VkCollectJobResult> {
     return this.worker;
+  }
+
+  /**
+   * Выполняет операцию с таймаутом для предотвращения зависания
+   */
+  private async executeWithTimeout<T>(
+    operation: () => Promise<T>,
+    timeoutMs: number,
+    operationName: string
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error(`${operationName} превысило таймаут ${timeoutMs}мс`));
+      }, timeoutMs);
+
+      operation()
+        .then((result) => {
+          clearTimeout(timeout);
+          resolve(result);
+        })
+        .catch((error) => {
+          clearTimeout(timeout);
+          reject(error);
+        });
+    });
   }
 
   /**

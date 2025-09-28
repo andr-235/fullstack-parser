@@ -12,8 +12,13 @@ function getRedisConfig(): QueueRedisConfig {
     password: process.env.REDIS_PASSWORD,
     db: parseInt(process.env.REDIS_DB || '0', 10),
     maxRetriesPerRequest: null, // Required for BullMQ
-    connectTimeout: 10000,
-    commandTimeout: 5000,
+    connectTimeout: 30000, // Увеличен до 30 секунд
+    commandTimeout: 300000, // Увеличен до 5 минут для VK API
+    retryDelayOnFailover: 100,
+    enableOfflineQueue: false,
+    maxRetriesPerRequest: null,
+    lazyConnect: true,
+    keepAlive: 30000, // Keep-alive каждые 30 секунд
   };
 }
 
@@ -31,8 +36,16 @@ export function createRedisConnection(config?: Partial<QueueRedisConfig>): IORed
     maxRetriesPerRequest: redisConfig.maxRetriesPerRequest,
     connectTimeout: redisConfig.connectTimeout,
     commandTimeout: redisConfig.commandTimeout,
-    lazyConnect: true,
-    enableReadyCheck: true
+    retryDelayOnFailover: redisConfig.retryDelayOnFailover,
+    enableOfflineQueue: redisConfig.enableOfflineQueue,
+    lazyConnect: redisConfig.lazyConnect,
+    keepAlive: redisConfig.keepAlive,
+    enableReadyCheck: true,
+    // Настройки retry для стабильности
+    retryStrategy: (times) => {
+      const delay = Math.min(times * 50, 2000);
+      return delay;
+    }
   });
 
   // Обработчики событий для логирования

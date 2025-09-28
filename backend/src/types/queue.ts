@@ -101,6 +101,10 @@ export interface QueueRedisConfig {
   maxRetriesPerRequest?: number | null;
   connectTimeout?: number;
   commandTimeout?: number;
+  retryDelayOnFailover?: number;
+  enableOfflineQueue?: boolean;
+  lazyConnect?: boolean;
+  keepAlive?: number;
 }
 
 /**
