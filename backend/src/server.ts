@@ -81,7 +81,16 @@ app.use(cors({
   origin: corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'expires']
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-API-Key',
+    'expires',
+    'cache-control',
+    'pragma',
+    'if-modified-since',
+    'x-requested-with'
+  ]
 }));
 
 // Request timeout middleware
