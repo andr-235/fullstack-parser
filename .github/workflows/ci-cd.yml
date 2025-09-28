@@ -43,37 +43,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: "1.2.19"
-          # docs: /oven-sh/setup-bun
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: Install TypeScript explicitly
-        run: bun add -D typescript@^5.9.2
+      - name: Install TypeScript globally
+        run: npm install -g typescript@^5.9.2
 
-      - name: Cache Bun dependencies
+      - name: Cache npm dependencies
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-bun-
-        # docs: /actions/cache
+            ${{ runner.os }}-npm-
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
       - name: Verify TypeScript setup
         run: |
           pwd
           echo "TypeScript version:"
-          bun x tsc --version
+          npx tsc --version
           echo "TypeScript config:"
           cat tsconfig.json | grep -A 10 "paths"
           echo "Checking module resolution:"
-          bun x tsc -p tsconfig.json --showConfig | grep -A 5 -B 5 "paths"
+          npx tsc -p tsconfig.json --showConfig | grep -A 5 -B 5 "paths"
           echo "Listing shared/lib contents:"
           ls -la ./shared/lib || true
         # uses local tsc resolved from devDependencies
@@ -81,44 +80,44 @@ jobs:
       - name: Verify module resolution
         run: |
           echo "Testing module resolution:"
-          bun x tsc -p tsconfig.json --noEmit --listFiles | head -20
+          npx tsc -p tsconfig.json --noEmit --listFiles | head -20
           echo "Module resolution test completed"
 
       - name: Auto-fix ESLint issues
-        run: bun run lint --fix
+        run: npm run lint -- --fix
 
       - name: Auto-fix formatting
-        run: bun run format
+        run: npm run format
 
       - name: Run ESLint
         run: |
           echo "::add-matcher::.github/eslint-matcher.json"
-          bun run lint
+          npm run lint
         continue-on-error: false
 
       - name: Run TypeScript check
-        run: bun x tsc -p tsconfig.json --noEmit
+        run: npx tsc -p tsconfig.json --noEmit
 
       - name: Run tests (skip if none)
         run: |
           echo "Searching for test files..."
           if git ls-files | grep -E '\\.(test|spec)\\.(ts|tsx|js|jsx)$' > /dev/null; then
-            echo "Tests found. Running Bun tests with coverage..."
-            bun test --coverage
+            echo "Tests found. Running npm tests with coverage..."
+            npm test -- --coverage
           else
-            echo "No tests found. Skipping Bun test step."
+            echo "No tests found. Skipping npm test step."
           fi
         env:
           CI: true
 
       - name: Build application
-        run: bun run build
+        run: npm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: ./frontend/.next/
+          path: ./frontend/dist/
           retention-days: 7
 
       - name: Upload coverage reports

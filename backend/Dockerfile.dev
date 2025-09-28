@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Копируем файлы зависимостей
+COPY package.json package-lock.json ./
+
+# Устанавливаем все зависимости (включая devDependencies для разработки)
+RUN npm install
+
+# Копируем остальные файлы проекта
+COPY . .
+
+# Убеждаемся что Prisma Client генерируется при старте
+EXPOSE 3000
+
+# Запускаем генерацию Prisma и затем сервер в режиме разработки
+CMD ["sh", "-c", "npx prisma generate && npm run dev:watch"]

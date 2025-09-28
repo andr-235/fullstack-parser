@@ -20,7 +20,7 @@ color: cyan
 Для текущего fullstack проекта:
 - **Containers**: PostgreSQL, Redis, Express.js API, Vue.js frontend
 - **Orchestration**: Docker Compose с development/production profiles
-- **Build Tools**: Vite (frontend), Bun (backend), multi-stage Dockerfiles
+- **Build Tools**: Vite (frontend), npm (backend), multi-stage Dockerfiles
 - **CI/CD**: GitHub Actions для automated testing и deployment
 - **Environment**: Development, staging, production configurations
 - **Deployment**: Script-based deployment с rollback capabilities
@@ -32,7 +32,7 @@ Docker Architecture:
    - Proper networking и service discovery
 
 2. **Application Services**:
-   - Express.js API с Bun runtime
+   - Express.js API с Node.js runtime
    - Vue.js frontend с Nginx для production serving
    - Environment-specific configurations
 

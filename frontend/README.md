@@ -17,7 +17,7 @@
 ### Установка зависимостей
 
 ```sh
-bun install
+npm install
 ```
 
 Зависимости (из [package.json](package.json)):
@@ -27,14 +27,14 @@ bun install
 ### Запуск в режиме разработки (с hot-reload)
 
 ```sh
-bun dev
+npm run dev
 ```
 
 Сервер запустится на `http://localhost:5173`. В режиме разработки запросы к `/api` проксируются на backend (`http://localhost:3000`) через [vite.config.js](vite.config.js).
 
 Для явного запуска в режиме разработки с локальным бэкендом используйте:
 ```sh
-bun run dev:local
+npm run dev:local
 ```
 
 Для переключения в режим разработки убедитесь, что в файле `.env` или `.env.development` установлена переменная `VITE_API_URL=http://localhost:3000`.
@@ -42,20 +42,23 @@ bun run dev:local
 ### Сборка для production
 
 ```sh
-bun run build
+npm run build
 ```
 
 Сгенерированные файлы в `dist/`. Для деплоя используйте Nginx (см. раздел "Интеграция с backend").
 
-### Линтинг
+### Проверка типов
 
 ```sh
-bun lint
+npm run type-check          # Проверка TypeScript типов
+npm run type-check:watch    # Проверка типов в режиме watch
 ```
 
-Форматирование:
+### Линтинг и форматирование
+
 ```sh
-bun format
+npx eslint .                # Линтинг кода
+npx prettier --write .      # Форматирование кода
 ```
 
 ## Использование
@@ -70,7 +73,7 @@ bun format
   - Успех: Показ taskId, редирект на `/task/:taskId`.
   - Пример: Заполните форму и нажмите кнопку — получите ID задачи для мониторинга.
 
-- **/task/:taskId** ([src/views/TaskStatus.vue](src/views/TaskStatus.vue)): Мониторинг статуса.
+- **/tasks/:taskId** ([src/views/TaskDetailsView.vue](src/views/TaskDetailsView.vue)): Детали задачи и мониторинг статуса.
   - Polling каждые 5 сек на GET `/api/tasks/:taskId`.
   - Отображает статус (Ожидание, Обработка, Завершено, Ошибка), прогресс.
   - При завершении: Редирект на `/comments?taskId=...`.
@@ -120,7 +123,7 @@ docker-compose up
 
 Это запустит PostgreSQL (5432), Redis (6379), backend (3000), worker. Настройте `.env` для секретов (DB_URL, VK_TOKEN).
 
-В dev-режиме фронтенда proxy автоматически перенаправляет `/api` на backend. Для production: Соберите фронтенд (`bun build`), добавьте Nginx в docker-compose (прокси `/api` на backend:3000, статические файлы из dist/).
+В dev-режиме фронтенда proxy автоматически перенаправляет `/api` на backend. Для production: Соберите фронтенд (`npm run build`), добавьте Nginx в docker-compose (прокси `/api` на backend:3000, статические файлы из dist/).
 
 Пример nginx.conf:
 ```
@@ -141,7 +144,9 @@ server {
 ### Unit-тесты (Vitest)
 
 ```sh
-bun test:unit
+npx vitest                  # Запуск unit тестов
+npx vitest --ui             # Запуск с UI интерфейсом
+npx vitest --coverage       # Запуск с отчетом о покрытии
 ```
 
 Тесты для views, components, stores (>80% покрытие). Примеры: [src/views/__tests__/FetchComments.spec.js](src/views/__tests__/FetchComments.spec.js).
@@ -153,19 +158,19 @@ bun test:unit
 npx playwright install
 
 # Сборка проекта (для CI)
-bun run build
+npm run build
 
 # Запуск тестов
-bun test:e2e
+npx playwright test
 
 # Только Chromium
-bun test:e2e --project=chromium
+npx playwright test --project=chromium
 
 # Конкретный файл
-bun test:e2e e2e/vue.spec.js
+npx playwright test e2e/vue.spec.js
 
 # Debug-режим
-bun test:e2e --debug
+npx playwright test --debug
 ```
 
 Тесты сценариев: авторизация, запуск задачи, просмотр списка. Файлы: [e2e/vue.spec.js](e2e/vue.spec.js).

@@ -1,22 +1,24 @@
-FROM oven/bun:1.1.0-alpine
+FROM node:20-alpine
 
 WORKDIR /app
+
+# Устанавливаем build dependencies для Alpine
+RUN apk add --no-cache python3 make g++
 
 # Копируем файлы зависимостей
 COPY package*.json ./
 
 # Устанавливаем все зависимости (включая devDependencies)
-RUN bun install
+RUN npm install && npm install @rollup/rollup-linux-x64-musl
 
 # Копируем остальные файлы проекта
 COPY . .
 
 # Устанавливаем переменные окружения для разработки
 ENV NODE_ENV=development
-ENV BUN_ENV=development
 
 # Экспонируем порт, который использует Vite
 EXPOSE 5173
 
-# Запускаем Vite в режиме разработки с настройками для Docker
-CMD ["bun", "run", "dev", "--host", "0.0.0.0"]
+# Запускаем Vite в режиме разработки с доступом извне контейнера
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

@@ -77,7 +77,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { useTasksStore } from '@/stores/tasks.js'
+import { useTasksStore } from '@/stores/tasks'
 
 /**
  * Компонент боковой панели (AppSidebar)

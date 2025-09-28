@@ -1,16 +1,16 @@
 # Tech
 
 ## Technologies used
-- **Backend**: Node.js (с Bun для package management), Express (web framework), pg или Sequelize (ORM для PostgreSQL), redis (client для Redis), axios или node-fetch (HTTP client для VK API).
+- **Backend**: Node.js с npm для package management, Express (web framework), pg или Sequelize (ORM для PostgreSQL), redis (client для Redis), axios или node-fetch (HTTP client для VK API).
 - **Database**: PostgreSQL (persistent storage), Redis (cache, tokens, queues).
 - **Frontend**: Vue.js 3 (UI framework), Pinia (state management), Vue Router (navigation), Vite (build tool).
 - **Testing**: Jest (unit/integration для backend), Vitest (для frontend).
-- **Other**: Docker (containerization), .env (configuration), Bun lock для dependencies.
+- **Other**: Docker (containerization), .env (configuration), package-lock.json для dependencies.
 
 ## Development setup
-- **Build**: bun install (или npm install) в backend/ и frontend/, bun build или tsc если TS.
-- **Run**: docker-compose up (PostgreSQL, Redis, backend, frontend; env_file .env, ports 5432, 6379, 3000 для backend, 8080 для frontend); node backend/server.js (API на :3000), bun run dev в frontend/ (Vite dev server).
-- **Testing**: bun test (Jest в backend/), bun test (Vitest в frontend/), coverage с nyc или встроенным.
+- **Build**: npm install в backend/ и frontend/, npm run build или tsc если TS.
+- **Run**: docker-compose up (PostgreSQL, Redis, backend, frontend; env_file .env, ports 5432, 6379, 3000 для backend, 8080 для frontend); node backend/server.js (API на :3000), npm run dev в frontend/ (Vite dev server).
+- **Testing**: npm test (Jest в backend/), npm test (Vitest в frontend/), coverage с nyc или встроенным.
 - **Deployment**: Docker images для backend/frontend, nginx.conf для serving frontend, PM2 или Docker Swarm для scaling.
 
 ## Technical constraints

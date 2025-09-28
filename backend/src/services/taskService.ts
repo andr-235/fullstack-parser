@@ -1,24 +1,19 @@
 import logger from '@/utils/logger';
-import { DatabaseRepository } from '@/repositories/dbRepo';
-import { Task } from '@/models/task';
+import dbRepo, { DBRepo } from '@/repositories/dbRepo';
+import type { Prisma } from '@prisma/client';
 import {
-  TaskAttributes,
-  TaskCreationAttributes,
-  TaskStatus,
-  TaskType,
-  TaskResponse,
   CreateTaskRequest
 } from '@/types/task';
 
 interface ListTasksOptions {
   limit: number;
   offset: number;
-  status?: TaskStatus;
-  type?: TaskType;
+  status?: "pending" | "processing" | "completed" | "failed";
+  type?: "fetch_comments" | "process_groups" | "analyze_posts";
 }
 
 interface ListTasksResult {
-  tasks: Task[];
+  tasks: any[];
   total: number;
 }
 
@@ -29,8 +24,8 @@ interface TaskMetrics {
 }
 
 interface TaskStatusResponse {
-  status: TaskStatus;
-  type: TaskType;
+  status: "pending" | "processing" | "completed" | "failed";
+  type: "fetch_comments" | "process_groups" | "analyze_posts";
   priority: number;
   progress: number;
   metrics: TaskMetrics;
@@ -49,27 +44,27 @@ interface TaskStatusResponse {
 
 interface CreateTaskResponse {
   taskId: number;
-  status: TaskStatus;
+  status: "pending" | "processing" | "completed" | "failed";
 }
 
 interface StartCollectResponse {
-  status: TaskStatus;
+  status: "pending" | "processing" | "completed" | "failed";
   startedAt: Date | null;
 }
 
 class TaskService {
-  private dbRepo: DatabaseRepository;
+  private dbRepo: DBRepo;
 
-  constructor(dbRepoInstance?: DatabaseRepository) {
-    this.dbRepo = dbRepoInstance || new DatabaseRepository();
+  constructor(dbRepoInstance?: DBRepo) {
+    this.dbRepo = dbRepoInstance || dbRepo;
   }
 
   async createTask(taskData: CreateTaskRequest): Promise<CreateTaskResponse> {
     try {
       // Создаем задачу с новой структурой данных
-      const taskCreationData: Partial<TaskAttributes> = {
-        type: taskData.type || 'fetch_comments',
-        priority: 0, // Будет установлен в модели по умолчанию
+      const taskCreationData = {
+        type: taskData.type || ('fetch_comments' as "fetch_comments" | "process_groups" | "analyze_posts"),
+        priority: 0,
         groups: taskData.groupIds || [],
         parameters: taskData.options || {},
         metadata: {
@@ -77,7 +72,8 @@ class TaskService {
           groupIds: taskData.groupIds,
           postUrls: taskData.postUrls
         },
-        status: 'pending' // Начальный статус
+        status: 'pending' as "pending" | "processing" | "completed" | "failed",
+        createdBy: 'system'
       };
 
       const task = await this.dbRepo.createTask(taskCreationData);
@@ -89,7 +85,7 @@ class TaskService {
     }
   }
 
-  async getTaskById(taskId: number): Promise<Task | null> {
+  async getTaskById(taskId: number): Promise<any | null> {
     try {
       return await this.dbRepo.getTaskById(taskId);
     } catch (error) {
@@ -109,13 +105,17 @@ class TaskService {
         throw new Error('Task is not in pending status');
       }
 
-      // Используем новый метод модели Task для установки статуса processing
-      await task.markAsProcessing();
+      // Обновляем статус задачи на processing
+      await this.dbRepo.updateTask(taskId, {
+        status: 'processing',
+        startedAt: new Date()
+      });
 
       // Note: Background collection is now handled by BullMQ queue
       // This method is for manual task starts if needed
 
-      return { status: 'processing', startedAt: task.startedAt };
+      const updatedTask = await this.dbRepo.getTaskById(taskId);
+      return { status: 'processing', startedAt: updatedTask.startedAt };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to start collect', { taskId, error: errorMsg });
@@ -130,12 +130,12 @@ class TaskService {
         throw new Error('Task not found');
       }
 
-      // Безопасно извлекаем метрики из metadata
-      const metadata = task.metadata || {};
+      // Безопасно извлекаем метрики из metrics JSON поля
+      const metricsData = task.metrics as any || {};
       const metrics: TaskMetrics = {
-        posts: metadata.posts || 0,
-        comments: metadata.comments || 0,
-        errors: metadata.errors || []
+        posts: metricsData.posts || 0,
+        comments: metricsData.comments || 0,
+        errors: metricsData.errors || []
       };
 
       return {
@@ -145,8 +145,8 @@ class TaskService {
         progress: task.progress,
         metrics,
         errors: metrics.errors,
-        groups: task.groups || [],
-        parameters: task.parameters || {},
+        groups: (task.groups as any) || [],
+        parameters: (task.parameters as any) || {},
         result: task.result,
         error: task.error,
         executionTime: task.executionTime,
@@ -169,16 +169,16 @@ class TaskService {
   async listTasks(
     page = 1,
     limit = 10,
-    status?: TaskStatus,
-    type?: TaskType
+    status?: "pending" | "processing" | "completed" | "failed",
+    type?: "fetch_comments" | "process_groups" | "analyze_posts"
   ): Promise<ListTasksResult> {
     try {
       const offset = (page - 1) * limit;
       const options: ListTasksOptions = {
         limit,
         offset,
-        status,
-        type
+        ...(status && { status }),
+        ...(type && { type })
       };
 
       const result = await this.dbRepo.listTasks(options);
@@ -200,13 +200,16 @@ class TaskService {
         throw new Error('Task not found');
       }
 
-      task.progress = Math.min(100, Math.max(0, progress));
+      const updateData: any = {
+        progress: Math.min(100, Math.max(0, progress))
+      };
 
       if (metadata) {
-        task.metadata = { ...task.metadata, ...metadata };
+        const currentMetrics = (task.metrics as any) || {};
+        updateData.metrics = { ...currentMetrics, ...metadata };
       }
 
-      await task.save();
+      await this.dbRepo.updateTask(taskId, updateData);
 
       logger.info('Task progress updated', { taskId, progress, metadata });
     } catch (error) {
@@ -226,7 +229,12 @@ class TaskService {
         throw new Error('Task not found');
       }
 
-      await task.markAsCompleted(result);
+      await this.dbRepo.updateTask(taskId, {
+        status: 'completed',
+        result,
+        finishedAt: new Date(),
+        progress: 100
+      });
       logger.info('Task completed', { taskId });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -245,7 +253,11 @@ class TaskService {
         throw new Error('Task not found');
       }
 
-      await task.markAsFailed(errorMessage);
+      await this.dbRepo.updateTask(taskId, {
+        status: 'failed',
+        error: errorMessage,
+        finishedAt: new Date()
+      });
       logger.error('Task failed', { taskId, error: errorMessage });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -257,13 +269,46 @@ class TaskService {
   /**
    * Получает статистику по задачам
    */
-  async getTaskStats(): Promise<Record<TaskStatus, number>> {
+  async getTaskStats(): Promise<Record<"pending" | "processing" | "completed" | "failed", number>> {
     try {
       return await this.dbRepo.getTaskStats();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to get task stats', { error: errorMsg });
       throw new Error(`Failed to get task stats: ${errorMsg}`);
+    }
+  }
+
+  /**
+   * Обновляет статус задачи с временной меткой
+   * Используется BullMQ worker для обновления статуса
+   */
+  async updateTaskStatus(taskId: number, status: "pending" | "processing" | "completed" | "failed", timestamp?: Date): Promise<void> {
+    try {
+      const task = await this.dbRepo.getTaskById(taskId);
+      if (!task) {
+        throw new Error('Task not found');
+      }
+
+      const updateData: any = { status };
+
+      // Устанавливаем временные метки в зависимости от статуса
+      if (status === 'processing' && !task.startedAt) {
+        updateData.startedAt = timestamp || new Date();
+      } else if (status === 'completed' || status === 'failed') {
+        updateData.finishedAt = timestamp || new Date();
+        if (status === 'completed') {
+          updateData.progress = 100;
+        }
+      }
+
+      await this.dbRepo.updateTask(taskId, updateData);
+
+      logger.info('Task status updated', { taskId, status, timestamp });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to update task status', { taskId, status, error: errorMsg });
+      throw new Error(`Failed to update task status: ${errorMsg}`);
     }
   }
 }

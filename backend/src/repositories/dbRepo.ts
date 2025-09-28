@@ -1,65 +1,77 @@
 import logger from '../utils/logger';
-import { sequelize, Task, Post, Comment } from '../models/index';
-import {
-  TaskAttributes,
-  TaskCreationAttributes,
-  PostAttributes,
-  PostCreationAttributes,
-  CommentAttributes,
-  CommentCreationAttributes
-} from '../models/index';
+import { prisma } from '../config/prisma';
+import type {
+  Prisma
+} from '@prisma/client';
+
+// Временные типы для корректной работы
+type tasks = any;
+type posts = any;
+type comments = any;
+type TaskStatus = "pending" | "processing" | "completed" | "failed";
+type TaskType = "fetch_comments" | "process_groups" | "analyze_posts";
 
 // Интерфейсы для запросов
 interface ListTasksOptions {
   limit: number;
   offset: number;
-  status?: string;
-  type?: string;
+  status?: TaskStatus;
+  type?: TaskType;
 }
 
 interface ListTasksResult {
-  tasks: Task[];
+  tasks: tasks[];
   total: number;
 }
 
 interface GetResultsResult {
-  posts: Post[];
+  posts: (posts & { comments: comments[] })[];
   totalComments: number;
 }
 
 interface TaskUpdateData {
-  status?: string;
+  status?: TaskStatus;
   progress?: number;
   error?: string;
-  result?: Record<string, any>;
+  result?: any;
   finishedAt?: Date;
-  [key: string]: any;
+  metrics?: any;
+  parameters?: any;
+  executionTime?: number;
+  startedAt?: Date;
+}
+
+interface CreateTaskData {
+  type?: TaskType;
+  priority?: number;
+  groups?: any;
+  parameters?: any;
+  metadata?: any;
+  status?: TaskStatus;
+  createdBy?: string;
 }
 
 class DBRepo {
-  private sequelize: typeof sequelize;
-  private Task: typeof Task;
-  private Post: typeof Post;
-  private Comment: typeof Comment;
-
   constructor() {
-    this.sequelize = sequelize;
-    this.Task = Task;
-    this.Post = Post;
-    this.Comment = Comment;
+    // Prisma Client используется напрямую через импорт
   }
 
   /**
    * Создает новую задачу
    */
-  async createTask(groups: Array<{ id: number; name: string }>): Promise<Task> {
-    const task = await this.Task.create({
-      type: 'fetch_comments',
-      status: 'pending',
-      groups: groups,
-      progress: 0,
-      priority: 0,
-      createdBy: 'system'
+  async createTask(taskData: CreateTaskData): Promise<tasks> {
+    const task = await prisma.tasks.create({
+      data: {
+        type: taskData.type || 'fetch_comments',
+        status: taskData.status || 'pending',
+        groups: taskData.groups || [],
+        parameters: taskData.parameters || {},
+        metrics: taskData.metadata || {},
+        progress: 0,
+        priority: taskData.priority || 0,
+        createdBy: taskData.createdBy || 'system',
+        updatedAt: new Date()
+      }
     });
     return task;
   }
@@ -67,8 +79,10 @@ class DBRepo {
   /**
    * Получает задачу по ID
    */
-  async getTaskById(taskId: number): Promise<Task> {
-    const task = await this.Task.findByPk(taskId);
+  async getTaskById(taskId: number): Promise<tasks> {
+    const task = await prisma.tasks.findUnique({
+      where: { id: taskId }
+    });
     if (!task) {
       throw new Error(`Task with id ${taskId} not found`);
     }
@@ -78,63 +92,115 @@ class DBRepo {
   /**
    * Обновляет задачу
    */
-  async updateTask(taskId: number, updates: TaskUpdateData): Promise<Task> {
-    const [updatedCount] = await this.Task.update(updates, {
-      where: { id: taskId },
-      returning: true,
-    });
-
-    if (updatedCount === 0) {
-      logger.error('Failed to update task', { taskId, error: `Task with id ${taskId} not found` });
-      throw new Error(`Task with id ${taskId} not found`);
+  async updateTask(taskId: number, updates: TaskUpdateData): Promise<tasks> {
+    try {
+      const updatedTask = await prisma.tasks.update({
+        where: { id: taskId },
+        data: {
+          ...(updates.status && { status: updates.status }),
+          ...(updates.progress !== undefined && { progress: updates.progress }),
+          ...(updates.error !== undefined && { error: updates.error }),
+          ...(updates.result !== undefined && { result: updates.result as any }),
+          ...(updates.finishedAt && { finishedAt: updates.finishedAt }),
+          ...(updates.metrics !== undefined && { metrics: updates.metrics as any }),
+          ...(updates.parameters !== undefined && { parameters: updates.parameters as any }),
+          ...(updates.executionTime !== undefined && { executionTime: updates.executionTime }),
+          ...(updates.startedAt && { startedAt: updates.startedAt }),
+          updatedAt: new Date()
+        }
+      });
+      return updatedTask;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Record to update not found')) {
+        logger.error('Failed to update task', { taskId, error: `Task with id ${taskId} not found` });
+        throw new Error(`Task with id ${taskId} not found`);
+      }
+      throw error;
     }
-
-    const updatedTask = await this.Task.findByPk(taskId);
-    if (!updatedTask) {
-      throw new Error(`Task with id ${taskId} not found after update`);
-    }
-    return updatedTask;
   }
 
   /**
    * Создает посты для задачи
    */
-  async createPosts(taskId: number, posts: Partial<PostCreationAttributes>[]): Promise<Post[]> {
-    const taskPosts = posts.map(post => ({
-      ...post,
-      taskId,
-    }));
-    const createdPosts = await this.Post.bulkCreate(taskPosts as PostCreationAttributes[]);
+  async createPosts(taskId: number, postsData: Partial<any>[]): Promise<posts[]> {
+    const createdPosts = await prisma.$transaction(
+      postsData.map(postData =>
+        prisma.posts.create({
+          data: {
+            vk_post_id: postData.vk_post_id!,
+            owner_id: postData.owner_id!,
+            group_id: postData.group_id!,
+            text: postData.text || '',
+            date: postData.date!,
+            likes: postData.likes || 0,
+            task_id: taskId,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        })
+      )
+    );
     return createdPosts;
   }
 
   /**
    * Создает комментарии для поста
    */
-  async createComments(postId: number, comments: Partial<CommentCreationAttributes>[]): Promise<Comment[]> {
-    const postComments = comments.map(comment => ({
-      ...comment,
-      postId,
-    }));
-    const createdComments = await this.Comment.bulkCreate(postComments as CommentCreationAttributes[]);
+  async createComments(postId: number, commentsData: Partial<any>[]): Promise<comments[]> {
+    const createdComments = await prisma.$transaction(
+      commentsData.map(commentData =>
+        prisma.comments.create({
+          data: {
+            vk_comment_id: commentData.vk_comment_id!,
+            post_vk_id: commentData.post_vk_id!,
+            owner_id: commentData.owner_id!,
+            author_id: commentData.author_id!,
+            author_name: commentData.author_name!,
+            text: commentData.text || '',
+            date: commentData.date!,
+            likes: commentData.likes || 0,
+            post_id: postId,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        })
+      )
+    );
     return createdComments;
   }
 
   /**
    * Создает или обновляет посты (upsert)
    */
-  async upsertPosts(taskId: number, posts: Partial<PostCreationAttributes>[]): Promise<Post[]> {
-    const taskPosts = posts.map(post => ({
-      ...post,
-      taskId,
-    }));
-
+  async upsertPosts(taskId: number, postsData: Partial<any>[]): Promise<posts[]> {
     try {
-      const createdPosts = await this.Post.bulkCreate(taskPosts as PostCreationAttributes[], {
-        updateOnDuplicate: ['text', 'date', 'likes', 'owner_id', 'group_id', 'updatedAt'],
-        ignoreDuplicates: false
-      });
-      return createdPosts;
+      const upsertedPosts = await prisma.$transaction(
+        postsData.map(postData =>
+          prisma.posts.upsert({
+            where: { vk_post_id: postData.vk_post_id! },
+            update: {
+              text: postData.text || '',
+              date: postData.date!,
+              likes: postData.likes || 0,
+              owner_id: postData.owner_id!,
+              group_id: postData.group_id!,
+              updatedAt: new Date()
+            },
+            create: {
+              vk_post_id: postData.vk_post_id!,
+              owner_id: postData.owner_id!,
+              group_id: postData.group_id!,
+              text: postData.text || '',
+              date: postData.date!,
+              likes: postData.likes || 0,
+              task_id: taskId,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            }
+          })
+        )
+      );
+      return upsertedPosts;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to upsert posts', { taskId, error: errorMsg });
@@ -145,26 +211,45 @@ class DBRepo {
   /**
    * Создает или обновляет комментарии (upsert)
    */
-  async upsertComments(postVkId: number, comments: Partial<CommentCreationAttributes>[]): Promise<Comment[]> {
+  async upsertComments(postVkId: number, commentsData: Partial<any>[]): Promise<comments[]> {
     try {
       // Найти пост по vk_post_id для связи с комментариями
-      const post = await this.Post.findOne({ where: { vk_post_id: postVkId } });
+      const post = await prisma.posts.findUnique({
+        where: { vk_post_id: postVkId }
+      });
       if (!post) {
         throw new Error(`Post with vk_post_id ${postVkId} not found`);
       }
 
-      // Добавить postId к комментариям для корректной ассоциации
-      const commentsWithPostId = comments.map(comment => ({
-        ...comment,
-        postId: post.id, // Связь через внутренний ID поста
-        post_id: post.id  // Новая связь через post_id
-      }));
-
-      const createdComments = await this.Comment.bulkCreate(commentsWithPostId as CommentCreationAttributes[], {
-        updateOnDuplicate: ['text', 'date', 'likes', 'author_id', 'author_name', 'updatedAt'],
-        ignoreDuplicates: false
-      });
-      return createdComments;
+      const upsertedComments = await prisma.$transaction(
+        commentsData.map(commentData =>
+          prisma.comments.upsert({
+            where: { vk_comment_id: commentData.vk_comment_id! },
+            update: {
+              text: commentData.text || '',
+              date: commentData.date!,
+              likes: commentData.likes || 0,
+              author_id: commentData.author_id!,
+              author_name: commentData.author_name!,
+              updatedAt: new Date()
+            },
+            create: {
+              vk_comment_id: commentData.vk_comment_id!,
+              post_vk_id: postVkId,
+              owner_id: commentData.owner_id!,
+              author_id: commentData.author_id!,
+              author_name: commentData.author_name!,
+              text: commentData.text || '',
+              date: commentData.date!,
+              likes: commentData.likes || 0,
+              post_id: post.id,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            }
+          })
+        )
+      );
+      return upsertedComments;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to upsert comments', { postVkId, error: errorMsg });
@@ -176,7 +261,7 @@ class DBRepo {
    * Получает список задач с пагинацией и опциональными фильтрами
    */
   async listTasks({ limit, offset, status, type }: ListTasksOptions): Promise<ListTasksResult> {
-    const where: Record<string, any> = {};
+    const where: any = {};
     if (status) {
       where.status = status;
     }
@@ -184,45 +269,49 @@ class DBRepo {
       where.type = type;
     }
 
-    const tasks = await this.Task.findAll({
-      where,
-      limit,
-      offset,
-      order: [['createdAt', 'DESC']],
-    });
+    const [tasks, total] = await prisma.$transaction([
+      prisma.tasks.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.tasks.count({ where })
+    ]);
 
-    const totalCount = await this.Task.count({ where });
-    return { tasks, total: totalCount };
+    return { tasks, total };
   }
 
   /**
    * Получает результаты задачи с постами и комментариями
    */
   async getResults(taskId: number, groupId: number | null = null, postId: number | null = null): Promise<GetResultsResult> {
-    let whereClause: Record<string, any> = { taskId };
+    const where: any = { task_id: taskId };
 
     if (postId) {
-      whereClause.id = postId;
+      where.id = postId;
     }
     if (groupId) {
-      whereClause.groupId = groupId;
+      where.group_id = groupId;
     }
 
-    const posts = await this.Post.findAll({
-      where: whereClause,
-      include: [{
-        model: Comment,
-        as: 'comments'
-      }]
+    const posts = await prisma.posts.findMany({
+      where,
+      include: {
+        comments_comments_post_idToposts: true
+      }
     });
 
     const totalComments = posts.reduce((sum, post) => {
-      const commentsCount = (post as any).comments?.length || 0;
+      const commentsCount = post.comments_comments_post_idToposts?.length || 0;
       return sum + commentsCount;
     }, 0);
 
     return {
-      posts,
+      posts: posts.map(post => ({
+        ...post,
+        comments: post.comments_comments_post_idToposts || []
+      })),
       totalComments,
     };
   }
@@ -230,24 +319,23 @@ class DBRepo {
   /**
    * Получает статистику по задаче
    */
-  async getTaskStats(taskId: number): Promise<{
+  async getTaskStatsByTaskId(taskId: number): Promise<{
     postsCount: number;
     commentsCount: number;
     avgLikesPerPost: number;
     avgCommentsPerPost: number;
   }> {
-    const posts = await this.Post.findAll({
-      where: { taskId },
-      include: [{
-        model: Comment,
-        as: 'comments'
-      }]
+    const posts = await prisma.posts.findMany({
+      where: { task_id: taskId },
+      include: {
+        comments_comments_post_idToposts: true
+      }
     });
 
     const postsCount = posts.length;
     const totalLikes = posts.reduce((sum, post) => sum + post.likes, 0);
     const totalComments = posts.reduce((sum, post) => {
-      const commentsCount = (post as any).comments?.length || 0;
+      const commentsCount = post.comments_comments_post_idToposts?.length || 0;
       return sum + commentsCount;
     }, 0);
 
@@ -264,16 +352,21 @@ class DBRepo {
    */
   async deleteTaskData(taskId: number): Promise<void> {
     try {
-      // Удаляем комментарии для всех постов задачи
-      await this.Comment.destroy({
-        include: [{
-          model: Post,
-          where: { taskId }
-        }]
-      });
+      await prisma.$transaction(async (tx) => {
+        // Удаляем комментарии для всех постов задачи
+        await tx.comments.deleteMany({
+          where: {
+            posts_comments_post_idToposts: {
+              task_id: taskId
+            }
+          }
+        });
 
-      // Удаляем посты задачи
-      await this.Post.destroy({ where: { taskId } });
+        // Удаляем посты задачи
+        await tx.posts.deleteMany({
+          where: { task_id: taskId }
+        });
+      });
 
       logger.info('Task data deleted successfully', { taskId });
     } catch (error) {
@@ -282,6 +375,65 @@ class DBRepo {
       throw new Error(`Failed to delete task data: ${errorMsg}`);
     }
   }
+
+  /**
+   * Получает последние задачи по типу
+   */
+  async getRecentTasks(limit: number, type: string): Promise<tasks[]> {
+    try {
+      return await prisma.tasks.findMany({
+        where: { type: type as TaskType },
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get recent tasks', { limit, type, error: errorMsg });
+      throw new Error(`Failed to get recent tasks: ${errorMsg}`);
+    }
+  }
+
+  /**
+   * Получает статистику задач по статусам
+   */
+  async getTaskStats(): Promise<Record<TaskStatus, number>> {
+    try {
+      const stats = await prisma.tasks.groupBy({
+        by: ['status'],
+        _count: {
+          id: true
+        }
+      });
+
+      const result: Record<TaskStatus, number> = {
+        pending: 0,
+        processing: 0,
+        completed: 0,
+        failed: 0
+      };
+
+      stats.forEach(stat => {
+        result[stat.status] = stat._count.id;
+      });
+
+      return result;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get task stats', { error: errorMsg });
+      throw new Error(`Failed to get task stats: ${errorMsg}`);
+    }
+  }
 }
 
+// Экспорт класса и экземпляра репозитория
+export { DBRepo };
 export default new DBRepo();
+
+// Экспорт типов для совместимости
+export type {
+  ListTasksOptions,
+  ListTasksResult,
+  GetResultsResult,
+  TaskUpdateData,
+  CreateTaskData
+};

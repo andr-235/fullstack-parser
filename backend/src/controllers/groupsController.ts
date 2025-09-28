@@ -2,8 +2,13 @@ import express, { Request, Response } from 'express';
 import { uploadSingle, handleUploadError, validateUploadedFile, logFileUpload } from '@/middleware/upload';
 import groupsService from '@/services/groupsService';
 import logger from '@/utils/logger';
-import { ApiResponse, PaginationParams } from '@/types/express';
+import { ApiResponse, PaginationParams, ErrorCodes } from '@/types/express';
 import { GetGroupsParams } from '@/services/groupsService';
+import {
+  GroupsUploadResponse,
+  GroupsListResponse,
+  GroupsStatsResponse
+} from '@/types/api';
 
 const router = express.Router();
 
@@ -15,7 +20,7 @@ interface GetGroupsQuery extends PaginationParams {
   status?: string;
   search?: string;
   sortBy?: string;
-  sortOrder?: 'ASC' | 'DESC';
+  sortOrder?: 'ASC' | 'DESC' | 'asc' | 'desc';
 }
 
 interface BatchDeleteBody {
@@ -28,17 +33,13 @@ interface BatchDeleteBody {
  */
 router.post('/upload',
   logFileUpload,
-  upload,
+  uploadSingle,
   handleUploadError,
   validateUploadedFile,
   async (req: Request<{}, ApiResponse, {}, UploadQuery>, res: Response): Promise<void> => {
     try {
       if (!req.file) {
-        res.status(400).json({
-          success: false,
-          error: 'NO_FILE',
-          message: 'No file uploaded'
-        });
+        res.error('Файл не был загружен', 400);
         return;
       }
 
@@ -58,10 +59,10 @@ router.post('/upload',
           taskId: result.data?.taskId,
           totalGroups: result.data?.totalGroups || 0
         });
-        res.status(200).json(result);
+        res.success(result.data, 'Файл с группами успешно загружен');
       } else {
         logger.info('Groups upload failed', { error: result.error, message: result.message });
-        res.status(400).json(result);
+        res.error(result.message || 'Ошибка обработки файла', 400);
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -69,10 +70,9 @@ router.post('/upload',
         filename: req.file?.originalname,
         error: errorMsg
       });
-      res.status(500).json({
-        success: false,
-        error: 'INTERNAL_ERROR',
-        message: 'Internal server error'
+      res.error('Ошибка загрузки файла', 500, {
+        filename: req.file?.originalname,
+        originalError: errorMsg
       });
     }
   }
@@ -88,9 +88,11 @@ router.get('/upload/:taskId/status', async (req: Request<{ taskId: string }>, re
     const result = groupsService.getUploadStatus(taskId);
 
     if (result.success) {
-      res.status(200).json(result);
+      res.success(result.data, 'Статус загрузки получен');
     } else {
-      res.status(404).json(result);
+      res.error('Задача загрузки не найдена', 404, {
+        taskId
+      });
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -98,10 +100,9 @@ router.get('/upload/:taskId/status', async (req: Request<{ taskId: string }>, re
       taskId: req.params.taskId,
       error: errorMsg
     });
-    res.status(500).json({
-      success: false,
-      error: 'INTERNAL_ERROR',
-      message: 'Internal server error'
+    res.error('Ошибка получения статуса загрузки', 500, {
+      taskId: req.params.taskId,
+      originalError: errorMsg
     });
   }
 });
@@ -118,7 +119,7 @@ router.get('/', async (req: Request<{}, ApiResponse, {}, GetGroupsQuery>, res: R
       status = 'all',
       search = '',
       sortBy = 'uploadedAt',
-      sortOrder = 'DESC'
+      sortOrder = 'desc'
     } = req.query;
 
     // Валидация параметров
@@ -126,19 +127,19 @@ router.get('/', async (req: Request<{}, ApiResponse, {}, GetGroupsQuery>, res: R
     const limitNum = Number(limit);
 
     if (isNaN(pageNum) || pageNum < 1) {
-      res.status(400).json({
-        success: false,
-        error: 'INVALID_PAGE',
-        message: 'Page must be a positive number'
+      res.error('Номер страницы должен быть положительным числом', 400, {
+        field: 'page',
+        value: page,
+        constraint: 'positive integer'
       });
       return;
     }
 
-    if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
-      res.status(400).json({
-        success: false,
-        error: 'INVALID_LIMIT',
-        message: 'Limit must be between 1 and 100'
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 10000) {
+      res.error('Лимит должен быть от 1 до 10000', 400, {
+        field: 'limit',
+        value: limit,
+        constraint: '1 <= limit <= 10000'
       });
       return;
     }
@@ -156,12 +157,19 @@ router.get('/', async (req: Request<{}, ApiResponse, {}, GetGroupsQuery>, res: R
     const result = await groupsService.getGroups(params);
 
     if (result.success) {
-      res.status(200).json({
-        success: true,
-        data: result.data
-      });
+      // Используем пагинированный ответ для списка групп
+      const pagination = {
+        page: pageNum,
+        limit: limitNum,
+        total: result.data?.totalCount || 0,
+        totalPages: Math.ceil((result.data?.totalCount || 0) / limitNum),
+        hasNext: pageNum * limitNum < (result.data?.totalCount || 0),
+        hasPrev: pageNum > 1
+      };
+
+      res.paginated(result.data?.groups || [], pagination);
     } else {
-      res.status(400).json(result);
+      res.error(result.message || 'Ошибка получения списка групп', 500);
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -169,10 +177,9 @@ router.get('/', async (req: Request<{}, ApiResponse, {}, GetGroupsQuery>, res: R
       query: req.query,
       error: errorMsg
     });
-    res.status(500).json({
-      success: false,
-      error: 'INTERNAL_ERROR',
-      message: 'Internal server error'
+    res.error('Ошибка получения списка групп', 500, {
+      query: req.query,
+      originalError: errorMsg
     });
   }
 });
@@ -188,10 +195,10 @@ router.delete('/:groupId', async (req: Request<{ groupId: string }>, res: Respon
     // Валидация ID
     const groupIdNum = Number(groupId);
     if (isNaN(groupIdNum) || groupIdNum <= 0) {
-      res.status(400).json({
-        success: false,
-        error: 'INVALID_GROUP_ID',
-        message: 'Group ID must be a positive number'
+      res.error('ID группы должен быть положительным числом', 400, {
+        field: 'groupId',
+        value: groupId,
+        constraint: 'positive number'
       });
       return;
     }
@@ -199,10 +206,11 @@ router.delete('/:groupId', async (req: Request<{ groupId: string }>, res: Respon
     const result = await groupsService.deleteGroup(groupId);
 
     if (result.success) {
-      res.status(200).json(result);
+      res.success(result.data, 'Группа успешно удалена');
     } else {
+      const errorCode = result.error === 'GROUP_NOT_FOUND' ? ErrorCodes.NOT_FOUND : ErrorCodes.INTERNAL_ERROR;
       const statusCode = result.error === 'GROUP_NOT_FOUND' ? 404 : 400;
-      res.status(statusCode).json(result);
+      res.error(result.message || 'Ошибка удаления группы', statusCode, { groupId });
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -210,10 +218,9 @@ router.delete('/:groupId', async (req: Request<{ groupId: string }>, res: Respon
       groupId: req.params.groupId,
       error: errorMsg
     });
-    res.status(500).json({
-      success: false,
-      error: 'INTERNAL_ERROR',
-      message: 'Internal server error'
+    res.error('Ошибка удаления группы', 500, {
+      groupId: req.params.groupId,
+      originalError: errorMsg
     });
   }
 });
@@ -227,19 +234,18 @@ router.delete('/batch', async (req: Request<{}, ApiResponse, BatchDeleteBody>, r
     const { groupIds } = req.body;
 
     if (!groupIds || !Array.isArray(groupIds)) {
-      res.status(400).json({
-        success: false,
-        error: 'INVALID_GROUP_IDS',
-        message: 'groupIds must be an array'
+      res.error('groupIds должен быть массивом', 400, {
+        field: 'groupIds',
+        value: groupIds,
+        constraint: 'array'
       });
       return;
     }
 
     if (groupIds.length === 0) {
-      res.status(400).json({
-        success: false,
-        error: 'EMPTY_GROUP_IDS',
-        message: 'groupIds array cannot be empty'
+      res.error('Массив groupIds не может быть пустым', 400, {
+        field: 'groupIds',
+        constraint: 'non-empty array'
       });
       return;
     }
@@ -249,10 +255,10 @@ router.delete('/batch', async (req: Request<{}, ApiResponse, BatchDeleteBody>, r
     for (const id of groupIds) {
       const numId = Number(id);
       if (isNaN(numId) || numId <= 0) {
-        res.status(400).json({
-          success: false,
-          error: 'INVALID_GROUP_ID',
-          message: `Invalid group ID: ${id}. All IDs must be positive numbers`
+        res.error(`Некорректный ID группы: ${id}. Все ID должны быть положительными числами`, 400, {
+          field: 'groupIds',
+          invalidId: id,
+          constraint: 'positive numbers'
         });
         return;
       }
@@ -272,11 +278,7 @@ router.delete('/batch', async (req: Request<{}, ApiResponse, BatchDeleteBody>, r
       groupIds: req.body.groupIds,
       error: errorMsg
     });
-    res.status(500).json({
-      success: false,
-      error: 'INTERNAL_ERROR',
-      message: 'Internal server error'
-    });
+    res.error('Внутренняя ошибка сервера', 500);
   }
 });
 
@@ -290,23 +292,16 @@ router.get('/stats', async (req: Request, res: Response): Promise<void> => {
     const result = await groupsService.getGroupsStats();
 
     if (result.success) {
-      res.status(200).json({
-        success: true,
-        data: result.data
-      });
+      res.success(result.data, 'Операция выполнена успешно');
     } else {
-      res.status(400).json(result);
+      res.error(result.message || 'Ошибка выполнения операции', 500);
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     logger.error('Get groups stats controller error', {
       error: errorMsg
     });
-    res.status(500).json({
-      success: false,
-      error: 'INTERNAL_ERROR',
-      message: 'Internal server error'
-    });
+    res.error('Внутренняя ошибка сервера', 500);
   }
 });
 
@@ -331,12 +326,9 @@ router.get('/:taskId/stats', async (req: Request<{ taskId: string }>, res: Respo
     const result = await groupsService.getGroupsStats(taskId);
 
     if (result.success) {
-      res.status(200).json({
-        success: true,
-        data: result.data
-      });
+      res.success(result.data, 'Операция выполнена успешно');
     } else {
-      res.status(400).json(result);
+      res.error(result.message || 'Ошибка выполнения операции', 500);
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -344,11 +336,7 @@ router.get('/:taskId/stats', async (req: Request<{ taskId: string }>, res: Respo
       taskId: req.params.taskId,
       error: errorMsg
     });
-    res.status(500).json({
-      success: false,
-      error: 'INTERNAL_ERROR',
-      message: 'Internal server error'
-    });
+    res.error('Внутренняя ошибка сервера', 500);
   }
 });
 

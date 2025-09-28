@@ -159,7 +159,7 @@
           </v-row>
 
           <!-- Progress Metrics -->
-          <v-row v-if="task.progress" class="mt-4">
+          <v-row v-if="task.progress && (task.progress.processed > 0 || task.progress.total > 0)" class="mt-4">
             <v-col cols="12" md="4">
               <v-card variant="tonal" color="info">
                 <v-card-text class="text-center py-3">
@@ -186,6 +186,36 @@
             </v-col>
           </v-row>
 
+          <!-- Adaptive Polling Status -->
+          <v-row v-if="polling.isPolling.value" class="mt-4">
+            <v-col cols="12">
+              <v-card variant="tonal" color="info">
+                <v-card-text class="py-3">
+                  <div class="d-flex align-center">
+                    <v-icon class="me-2" color="info" size="small">mdi-clock-outline</v-icon>
+                    <div class="text-body-2">
+                      <strong>Адаптивный polling активен</strong>
+                      <div class="text-caption text-medium-emphasis">
+                        Интервал: {{ Math.round(polling.currentInterval.value / 1000) }}с
+                        <span v-if="polling.retryCount.value > 0">
+                          • Попыток с ошибкой: {{ polling.retryCount.value }}
+                        </span>
+                      </div>
+                    </div>
+                    <v-spacer />
+                    <v-chip
+                      :color="polling.lastError.value ? 'warning' : 'success'"
+                      variant="tonal"
+                      size="small"
+                    >
+                      {{ polling.lastError.value ? 'С ошибками' : 'Работает' }}
+                    </v-chip>
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+
           <!-- Timestamps -->
           <v-row class="mt-4">
             <v-col cols="12" md="6">
@@ -201,19 +231,31 @@
       </v-card>
 
       <!-- Errors List -->
-      <v-card v-if="task.errors && task.errors.length > 0" class="mb-6" elevation="2">
+      <v-card v-if="(task.errors && task.errors.length > 0) || task.error" class="mb-6" elevation="2">
         <v-card-title class="d-flex align-center">
           <v-icon class="me-2" color="error">mdi-alert-circle</v-icon>
           Ошибки выполнения
           <v-spacer />
           <v-chip color="error" variant="tonal" size="small">
-            {{ task.errors.length }}
+            {{ (task.errors ? task.errors.length : 0) + (task.error ? 1 : 0) }}
           </v-chip>
         </v-card-title>
         <v-card-text>
           <v-list>
+            <!-- Основная ошибка задачи -->
+            <v-list-item v-if="task.error">
+              <template #prepend>
+                <v-icon color="error" size="small">mdi-alert-circle-outline</v-icon>
+              </template>
+              <v-list-item-title class="text-wrap">
+                {{ task.error }}
+              </v-list-item-title>
+              <v-list-item-subtitle>Основная ошибка</v-list-item-subtitle>
+            </v-list-item>
+
+            <!-- Дополнительные ошибки -->
             <v-list-item
-              v-for="(error, index) in task.errors"
+              v-for="(error, index) in task.errors || []"
               :key="index"
               :subtitle="error.timestamp ? formatDate(error.timestamp) : undefined"
             >
@@ -271,6 +313,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { tasksApi } from '@/services/api'
+import { useAdaptivePolling } from '@/composables/useAdaptivePolling'
 import ResultsTable from '@/components/tasks/ResultsTable.vue'
 
 const route = useRoute()
@@ -281,10 +324,15 @@ const task = ref(null)
 const loading = ref(false)
 const error = ref('')
 const startingTask = ref(false)
-const pollingInterval = ref(null)
 
 // Computed
 const taskId = computed(() => route.params.taskId)
+
+// Адаптивный polling
+const polling = useAdaptivePolling(
+  computed(() => String(taskId.value)),
+  'general' // Для детального просмотра задач используем general конфиг
+)
 
 // Methods
 const loadTask = async () => {
@@ -295,11 +343,19 @@ const loadTask = async () => {
     const response = await tasksApi.getTaskDetails(taskId.value)
     task.value = response.data
 
-    // Start polling if task is in progress
+    // Запускаем адаптивный polling если задача выполняется
     if (['pending', 'processing'].includes(task.value.status)) {
-      startPolling()
+      await polling.startPolling(async () => {
+        const statusResponse = await tasksApi.getTaskDetails(taskId.value)
+        task.value = statusResponse.data
+        return {
+          status: statusResponse.data.status,
+          progress: statusResponse.data.progress,
+          ...statusResponse.data
+        }
+      })
     } else {
-      stopPolling()
+      polling.stopPolling()
     }
   } catch (err) {
     if (err.response?.status === 404) {
@@ -330,32 +386,8 @@ const startTask = async () => {
   }
 }
 
-const startPolling = () => {
-  if (pollingInterval.value) {
-    clearInterval(pollingInterval.value)
-  }
-
-  pollingInterval.value = setInterval(async () => {
-    try {
-      const response = await tasksApi.getTaskDetails(taskId.value)
-      task.value = response.data
-
-      // Stop polling if task is completed
-      if (['completed', 'failed'].includes(task.value.status)) {
-        stopPolling()
-      }
-    } catch (err) {
-      console.error('Error polling task status:', err)
-    }
-  }, 5000) // Poll every 5 seconds
-}
-
-const stopPolling = () => {
-  if (pollingInterval.value) {
-    clearInterval(pollingInterval.value)
-    pollingInterval.value = null
-  }
-}
+// Методы polling теперь управляются через useAdaptivePolling composable
+// polling.startPolling() и polling.stopPolling() вызываются автоматически
 
 const downloadResult = () => {
   if (!task.value?.result) return
@@ -459,7 +491,7 @@ const getProgressText = (task) => {
   if (total === 0) return '0%'
 
   const percentage = Math.round((processed / total) * 100)
-  return `${percentage}%`
+  return `${processed}/${total} (${percentage}%)`
 }
 
 const formatDate = (dateString) => {
@@ -478,7 +510,7 @@ const formatDate = (dateString) => {
 // Watch for route changes
 watch(() => route.params.taskId, (newTaskId) => {
   if (newTaskId) {
-    stopPolling()
+    polling.stopPolling()
     loadTask()
   }
 })
@@ -489,7 +521,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  stopPolling()
+  polling.stopPolling()
 })
 </script>
 

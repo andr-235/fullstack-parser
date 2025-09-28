@@ -1,5 +1,6 @@
 <template>
-  <v-card elevation="2">
+  <div>
+    <v-card elevation="2">
     <v-card-title class="d-flex align-center">
       <v-icon class="me-2" color="primary">mdi-table</v-icon>
       Список групп
@@ -111,36 +112,26 @@
       :items-per-page-options="[10, 25, 50, 100]"
     >
       <!-- Group ID Column -->
-      <template #item.groupId="{ item }">
+      <template v-slot:[`item.id`]="{ item }">
         <v-chip
           size="small"
           variant="tonal"
           color="primary"
           class="font-mono"
         >
-          {{ item.groupId }}
+          {{ item.id }}
         </v-chip>
       </template>
 
       <!-- Name Column -->
-      <template #item.name="{ item }">
-        <div class="d-flex align-center">
-          <v-avatar v-if="item.avatar" size="24" class="me-2">
-            <v-img :src="item.avatar" />
-          </v-avatar>
-          <div>
-            <div class="text-body-2 font-weight-medium">
-              {{ item.name || 'Без названия' }}
-            </div>
-            <div v-if="item.description" class="text-caption text-medium-emphasis text-truncate" style="max-width: 200px">
-              {{ item.description }}
-            </div>
-          </div>
+      <template v-slot:[`item.name`]="{ item }">
+        <div class="text-body-2 font-weight-medium">
+          {{ item.name || 'Без названия' }}
         </div>
       </template>
 
       <!-- Status Column -->
-      <template #item.status="{ item }">
+      <template v-slot:[`item.status`]="{ item }">
         <v-chip
           size="small"
           :color="getStatusColor(item.status)"
@@ -154,35 +145,26 @@
       </template>
 
       <!-- Upload Date Column -->
-      <template #item.uploadedAt="{ item }">
+      <template v-slot:[`item.uploaded_at`]="{ item }">
         <div class="text-body-2">
-          {{ formatDate(item.uploadedAt) }}
+          {{ formatDate(item.uploaded_at) }}
         </div>
       </template>
 
-      <!-- Last Checked Column -->
-      <template #item.lastCheckedAt="{ item }">
-        <div class="text-body-2">
-          {{ formatDate(item.lastCheckedAt) }}
-        </div>
-      </template>
-
-      <!-- Errors Count Column -->
-      <template #item.errorsCount="{ item }">
+      <!-- Task ID Column -->
+      <template v-slot:[`item.task_id`]="{ item }">
         <v-chip
-          v-if="item.errorsCount > 0"
           size="small"
-          color="error"
-          variant="tonal"
+          variant="outlined"
+          color="info"
+          class="font-mono"
         >
-          <v-icon start size="small">mdi-alert-circle</v-icon>
-          {{ item.errorsCount }}
+          {{ item.task_id.substring(0, 8) }}...
         </v-chip>
-        <span v-else class="text-medium-emphasis">0</span>
       </template>
 
       <!-- Actions Column -->
-      <template #item.actions="{ item }">
+      <template v-slot:[`item.actions`]="{ item }">
         <div class="d-flex align-center gap-1">
           <v-tooltip text="Просмотреть детали">
             <template #activator="{ props }">
@@ -218,47 +200,48 @@
         Показано {{ getDisplayRangeText() }} из {{ pagination.total }} групп
       </div>
     </v-card-actions>
-  </v-card>
-
-  <!-- Single Delete Confirmation Dialog -->
-  <v-dialog
-    v-model="singleDeleteDialog.show"
-    max-width="500px"
-  >
-    <v-card>
-      <v-card-title class="d-flex align-center">
-        <v-icon class="me-2" color="error">mdi-alert-circle</v-icon>
-        Подтверждение удаления
-      </v-card-title>
-      <v-card-text>
-        <p class="mb-4">
-          Вы действительно хотите удалить группу
-          <strong>{{ singleDeleteDialog.group?.name || singleDeleteDialog.group?.groupId }}</strong>?
-        </p>
-        <p class="text-body-2 text-medium-emphasis">
-          Это действие необратимо.
-        </p>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          variant="text"
-          @click="singleDeleteDialog.show = false"
-          :disabled="singleDeleteDialog.loading"
-        >
-          Отмена
-        </v-btn>
-        <v-btn
-          color="error"
-          variant="flat"
-          @click="confirmSingleDelete"
-          :loading="singleDeleteDialog.loading"
-        >
-          Удалить
-        </v-btn>
-      </v-card-actions>
     </v-card>
-  </v-dialog>
+
+    <!-- Single Delete Confirmation Dialog -->
+    <v-dialog
+      v-model="singleDeleteDialog.show"
+      max-width="500px"
+    >
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <v-icon class="me-2" color="error">mdi-alert-circle</v-icon>
+          Подтверждение удаления
+        </v-card-title>
+        <v-card-text>
+          <p class="mb-4">
+            Вы действительно хотите удалить группу
+            <strong>{{ singleDeleteDialog.group?.name || singleDeleteDialog.group?.id }}</strong>?
+          </p>
+          <p class="text-body-2 text-medium-emphasis">
+            Это действие необратимо.
+          </p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="singleDeleteDialog.show = false"
+            :disabled="singleDeleteDialog.loading"
+          >
+            Отмена
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
+            @click="confirmSingleDelete"
+            :loading="singleDeleteDialog.loading"
+          >
+            Удалить
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </div>
 </template>
 
 <script setup>
@@ -295,12 +278,11 @@ const hasFilters = computed(() =>
 
 // Data
 const headers = [
-  { title: 'ID группы', key: 'groupId', width: '120px', sortable: false },
+  { title: 'ID группы', key: 'id', width: '120px', sortable: false },
   { title: 'Название', key: 'name', sortable: false },
   { title: 'Статус', key: 'status', width: '120px', sortable: false },
-  { title: 'Загружена', key: 'uploadedAt', width: '140px', sortable: false },
-  { title: 'Проверена', key: 'lastCheckedAt', width: '140px', sortable: false },
-  { title: 'Ошибки', key: 'errorsCount', width: '100px', sortable: false },
+  { title: 'Загружена', key: 'uploaded_at', width: '140px', sortable: false },
+  { title: 'Задача', key: 'task_id', width: '140px', sortable: false },
   { title: 'Действия', key: 'actions', width: '120px', sortable: false }
 ]
 

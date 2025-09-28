@@ -1,48 +1,104 @@
-# Environment variables
+# ===========================================
+# Environment & Configuration
+# ===========================================
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
 
-# Dependencies
+# ===========================================
+# Dependencies & Package Managers
+# ===========================================
 node_modules/
 backend/node_modules/
 frontend/node_modules/
 
-# Build outputs
-dist/
-build/
-frontend/dist/
-backend/dist/
+# Package manager lock files (except package-lock.json for npm)
+yarn.lock
+pnpm-lock.yaml
 
 # Bun specific
 .bun/
 bun.lockb
 
-# Database
+# ===========================================
+# Build Outputs & Compiled Files
+# ===========================================
+dist/
+build/
+frontend/dist/
+backend/dist/
+*.tsbuildinfo
+
+# TypeScript incremental compilation cache
+*.tsbuildinfo
+
+# ===========================================
+# Database & Data Storage
+# ===========================================
 *.db
 *.db-journal
+*.sqlite
+*.sqlite3
 postgres_data/
+mysql_data/
+mongodb_data/
 
+# ===========================================
+# Cache & Temporary Storage
+# ===========================================
 # Redis
 redis_data/
 
-# Logs
+# Cache directories
+.cache/
+.parcel-cache/
+.npm/
+.yarn/
+.pnpm/
+
+# ===========================================
+# Logs & Debug Files
+# ===========================================
 *.log
 logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Runtime data
+# Winston logs
+combined.log
+error.log
+exceptions.log
+rejections.log
+
+# ===========================================
+# Runtime Data & Process Files
+# ===========================================
 pids
 *.pid
 *.seed
 *.pid.lock
 
-# Coverage
+# ===========================================
+# Testing & Coverage
+# ===========================================
 coverage/
 .nyc_output/
+test-results/
+playwright-report/
+.jest/
 
+# Playwright screenshots & videos
+test-results/
+playwright-report/
+
+# ===========================================
+# Framework Specific
+# ===========================================
 # Next.js
 .next/
 out/
@@ -51,23 +107,124 @@ out/
 .nuxt/
 .static/
 
-# Temporary files
-*.tmp
-*.temp
-.DS_Store
-Thumbs.db
+# Vue.js
+.vuepress/dist
 
-# IDE
+# SvelteKit
+.svelte-kit/
+
+# ===========================================
+# Development Tools & IDE
+# ===========================================
+# VSCode
 .vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IntelliJ IDEA
 .idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim
 *.swp
 *.swo
 *~
 
-# OS
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ===========================================
+# Operating System Files
+# ===========================================
+# macOS
+.DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
+Icon?
+
+# Windows
 Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ===========================================
+# Temporary & Backup Files
+# ===========================================
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+*.rej
+
+# ===========================================
+# Security & Sensitive Data
+# ===========================================
+# SSH keys
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# SSL certificates
+*.crt
+*.cert
+*.p12
+*.pfx
+
+# API keys and secrets
+secrets.json
+credentials.json
+.secrets/
+
+# ===========================================
+# Docker & Containerization
+# ===========================================
+# Docker volumes data
+*_data/
+docker-data/
+
+# ===========================================
+# Analytics & Monitoring
+# ===========================================
+.sentry-cli/
+
+# ===========================================
+# Claude Code Configuration
+# ===========================================
+.claude/settings.local.json
+.claude/cache/
+
+# ===========================================
+# Project Specific
+# ===========================================
+# VK API response cache
+vk_cache/
+api_cache/
+
+# Uploaded files processing
+uploads/temp/
+processing/
+
+# Generated reports
+reports/generated/
+exports/temp/

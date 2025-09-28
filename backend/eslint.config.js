@@ -4,6 +4,16 @@ const typescriptEslint = require("@typescript-eslint/eslint-plugin");
 const parser = require("@typescript-eslint/parser");
 
 module.exports = [
+  // Ignore patterns
+  {
+    ignores: [
+      "src/generated/**/*",
+      "node_modules/**/*",
+      "dist/**/*",
+      "coverage/**/*"
+    ]
+  },
+
   // JavaScript files
   {
     files: ["**/*.{js,mjs,cjs}"],

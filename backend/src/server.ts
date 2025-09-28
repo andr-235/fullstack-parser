@@ -3,10 +3,19 @@ import express, { Request, Response, NextFunction, Application } from 'express';
 import cors from 'cors';
 
 import logger from '@/utils/logger';
-import sequelize, { testConnection, healthCheck } from '@/config/db';
+import { PrismaService, testConnection, healthCheck } from '@/config/db';
+import { queueService } from '@/services/queueService';
 import taskController from '@/controllers/taskController';
 import groupsController from '@/controllers/groupsController';
 import { ApiResponse } from '@/types/express';
+import {
+  requestIdMiddleware,
+  responseFormatter,
+  errorHandler,
+  notFoundHandler,
+  responseLogger,
+  responseHeaders
+} from '@/middleware/responseFormatter';
 
 const app: Application = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
@@ -27,64 +36,25 @@ interface HealthCheckResponse {
   error?: string;
 }
 
-// Middleware для логирования входящих запросов
-app.use((req: RequestWithId, res: Response, next: NextFunction): void => {
-  const requestId = crypto.randomUUID();
-  req.id = requestId;
+// === СТАНДАРТИЗИРОВАННЫЕ MIDDLEWARE ===
 
-  // Санитизация body: маскировка токенов
-  const sanitizedBody: any = { ...req.body };
-  if (sanitizedBody.token) {
-    sanitizedBody.token = '***';
-  }
-  if (sanitizedBody.access_token) {
-    sanitizedBody.access_token = '***';
-  }
+// Request ID и контекст запроса
+app.use(requestIdMiddleware);
 
-  // Санитизация headers: удаление Authorization если есть
-  const sanitizedHeaders: any = { ...req.headers };
-  if (sanitizedHeaders.authorization) {
-    sanitizedHeaders.authorization = '***';
-  }
-  if (sanitizedHeaders['x-api-key']) {
-    sanitizedHeaders['x-api-key'] = '***';
-  }
+// Стандартные заголовки ответа
+app.use(responseHeaders);
 
-  logger.info('Incoming request', {
-    method: req.method,
-    url: req.url,
-    query: req.query,
-    body: Object.keys(sanitizedBody).length > 0 ? sanitizedBody : undefined,
-    userAgent: req.get('User-Agent'),
-    ip: req.ip,
-    id: requestId
-  });
+// Логирование ответов (опционально, для отладки)
+if (process.env.NODE_ENV === 'development') {
+  app.use(responseLogger);
+}
 
-  // Логируем завершение запроса
-  const startTime = Date.now();
-  res.on('finish', () => {
-    const duration = Date.now() - startTime;
-    logger.info('Request completed', {
-      method: req.method,
-      url: req.url,
-      statusCode: res.statusCode,
-      duration: `${duration}ms`,
-      id: requestId
-    });
-  });
-
-  next();
-});
+// Форматирование ответов API
+app.use(responseFormatter);
 
 // Middleware для обработки ошибок JSON
 app.use((err: Error, req: Request, res: Response, next: NextFunction): void => {
   if (err instanceof SyntaxError && 'body' in err) {
-    const response: ApiResponse = {
-      success: false,
-      error: 'INVALID_JSON',
-      message: 'Invalid JSON in request body'
-    };
-
     logger.warn('Invalid JSON in request', {
       url: req.url,
       method: req.method,
@@ -92,7 +62,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction): void => {
       id: (req as RequestWithId).id
     });
 
-    res.status(400).json(response);
+    res.error('Invalid JSON in request body', 400);
     return;
   }
   next(err);
@@ -119,12 +89,7 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
   const timeout = 30000; // 30 seconds
   const timer = setTimeout(() => {
     if (!res.headersSent) {
-      const response: ApiResponse = {
-        success: false,
-        error: 'REQUEST_TIMEOUT',
-        message: 'Request timeout'
-      };
-      res.status(408).json(response);
+      res.error('Request timeout', 408);
     }
   }, timeout);
 
@@ -135,29 +100,23 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
 // Rate limiting would go here if needed
 // app.use(rateLimitMiddleware);
 
-// Basic route
+// Basic route с использованием стандартизированного ответа
 app.get('/', (req: Request, res: Response): void => {
-  const response: ApiResponse = {
-    success: true,
-    message: 'Express VK Backend is running!',
-    data: {
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development'
-    }
-  };
-  res.json(response);
+  res.success({
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime()
+  }, 'Express VK Backend is running!');
 });
 
-// Health check endpoint for deployment monitoring
+// Health check endpoint для мониторинга развертывания
 app.get('/api/health', async (req: Request, res: Response): Promise<void> => {
   try {
-    // Check database connection
+    // Проверяем соединение с базой данных
     const dbHealth = await healthCheck();
 
-    const healthResponse: HealthCheckResponse = {
+    const healthData = {
       status: dbHealth.status === 'healthy' ? 'healthy' : 'unhealthy',
-      timestamp: new Date().toISOString(),
       services: {
         database: dbHealth.status === 'healthy' ? 'connected' : 'disconnected',
         server: 'running'
@@ -165,30 +124,27 @@ app.get('/api/health', async (req: Request, res: Response): Promise<void> => {
       uptime: process.uptime()
     };
 
-    const statusCode = dbHealth.status === 'healthy' ? 200 : 503;
-    res.status(statusCode).json(healthResponse);
+    if (dbHealth.status === 'healthy') {
+      res.success(healthData, 'Service is healthy');
+    } else {
+      res.error('Service is unhealthy', 503, {
+        dbError: dbHealth.error
+      });
+    }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    logger.error('Health check failed', { error: errorMsg });
-
-    const errorResponse: HealthCheckResponse = {
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      error: errorMsg
-    };
-
-    res.status(503).json(errorResponse);
+    res.error('Health check failed', 503, { originalError: errorMsg });
   }
 });
 
-// Detailed health check endpoint
+// Детальный health check endpoint
 app.get('/api/health/detailed', async (req: Request, res: Response): Promise<void> => {
   try {
     const dbHealth = await healthCheck();
+    const queueHealth = await queueService.healthCheck();
 
-    const response = {
-      status: dbHealth.status === 'healthy' ? 'healthy' : 'unhealthy',
-      timestamp: new Date().toISOString(),
+    const detailedHealthData = {
+      status: dbHealth.status === 'healthy' && queueHealth.status === 'healthy' ? 'healthy' : 'unhealthy',
       version: process.env.npm_package_version || '1.0.0',
       uptime: process.uptime(),
       environment: process.env.NODE_ENV || 'development',
@@ -197,6 +153,14 @@ app.get('/api/health/detailed', async (req: Request, res: Response): Promise<voi
           status: dbHealth.status === 'healthy' ? 'connected' : 'disconnected',
           latency: dbHealth.latency,
           error: dbHealth.error
+        },
+        queue: {
+          status: queueHealth.status,
+          initialized: queueHealth.details.initialized,
+          queuesCount: queueHealth.details.queuesCount,
+          workersCount: queueHealth.details.workersCount,
+          workers: queueHealth.details.workers,
+          totalJobs: queueHealth.details.totalJobs
         },
         server: {
           status: 'running',
@@ -207,16 +171,15 @@ app.get('/api/health/detailed', async (req: Request, res: Response): Promise<voi
       }
     };
 
-    const statusCode = dbHealth.status === 'healthy' ? 200 : 503;
-    res.status(statusCode).json(response);
+    const overallHealthy = dbHealth.status === 'healthy' && queueHealth.status === 'healthy';
+    if (overallHealthy) {
+      res.success(detailedHealthData, 'Detailed health check completed');
+    } else {
+      res.error('Service unhealthy', 503, detailedHealthData);
+    }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    logger.error('Detailed health check failed', { error: errorMsg });
-    res.status(503).json({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      error: errorMsg
-    });
+    res.error('Detailed health check failed', 503, { originalError: errorMsg });
   }
 });
 
@@ -224,56 +187,25 @@ app.get('/api/health/detailed', async (req: Request, res: Response): Promise<voi
 app.use('/api', taskController);
 app.use('/api/groups', groupsController);
 
-// Глобальный middleware для 404 ошибок
-app.use((req: Request, res: Response, next: NextFunction): void => {
-  logger.warn('404 Not Found', {
-    method: req.method,
-    url: req.url,
-    query: req.query,
-    id: (req as RequestWithId).id
-  });
+// === СТАНДАРТИЗИРОВАННЫЕ ОБРАБОТЧИКИ ОШИБОК ===
 
-  const response: ApiResponse = {
-    success: false,
-    error: 'NOT_FOUND',
-    message: `Route ${req.method} ${req.url} not found`
-  };
-
-  res.status(404).json(response);
-});
+// 404 - маршрут не найден
+app.use(notFoundHandler);
 
 // Глобальный обработчик ошибок
-app.use((error: Error, req: Request, res: Response, next: NextFunction): void => {
-  logger.error('Unhandled server error', {
-    error: error.message,
-    stack: error.stack,
-    method: req.method,
-    url: req.url,
-    id: (req as RequestWithId).id
-  });
-
-  if (res.headersSent) {
-    return next(error);
-  }
-
-  const response: ApiResponse = {
-    success: false,
-    error: 'INTERNAL_SERVER_ERROR',
-    message: process.env.NODE_ENV === 'production'
-      ? 'Internal server error'
-      : error.message
-  };
-
-  res.status(500).json(response);
-});
+app.use(errorHandler);
 
 // Graceful shutdown handler
 const gracefulShutdown = async (signal: string): Promise<void> => {
   logger.info(`Received ${signal}, starting graceful shutdown`);
 
   try {
+    // Close queue service and workers
+    await queueService.cleanup();
+    logger.info('Queue service and workers stopped');
+
     // Close database connections
-    await sequelize.close();
+    await PrismaService.disconnect();
     logger.info('Database connections closed');
 
     // Exit process
@@ -290,7 +222,7 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+process.on('unhandledRejection', (reason: any) => {
   logger.error('Unhandled Rejection', {
     reason: reason?.toString(),
     stack: reason?.stack
@@ -311,15 +243,20 @@ async function startServer(): Promise<void> {
   try {
     logger.info('Starting server initialization...');
 
+    // Connect to database via Prisma
+    await PrismaService.connect();
+    logger.info('Prisma connected to database');
+
     // Test database connection
     const connected = await testConnection();
     if (!connected) {
       throw new Error('Failed to connect to database');
     }
 
-    // Sync database models
-    await sequelize.sync({ force: false });
-    logger.info('Database models synchronized');
+    // Initialize queue service and workers
+    logger.info('Initializing BullMQ queue service and workers...');
+    await queueService.initialize();
+    logger.info('BullMQ queue service and workers initialized successfully');
 
     // Start HTTP server
     const server = app.listen(PORT, () => {
@@ -336,12 +273,26 @@ async function startServer(): Promise<void> {
       logger.error('Server error', { error: error.message });
     });
 
+    // Verify queue service health after startup
+    const queueHealth = await queueService.healthCheck();
+    logger.info('Queue service health check after startup', queueHealth);
+
     // Export app for testing
     module.exports = app;
 
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     logger.error('Failed to start server', { error: errorMsg });
+
+    // Attempt cleanup on startup failure
+    try {
+      await queueService.cleanup();
+    } catch (cleanupError) {
+      logger.error('Failed to cleanup after startup failure', {
+        error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
+      });
+    }
+
     process.exit(1);
   }
 }

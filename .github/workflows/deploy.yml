@@ -17,7 +17,7 @@ on:
           - production
 
 env:
-  BUN_VERSION: '1.2.19'
+  NODE_VERSION: '20'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -59,19 +59,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: ${{ env.BUN_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
       - name: Run linting
-        run: bun run lint || echo "Linting step skipped - no lint script"
+        run: npm run lint || echo "Linting step skipped - no lint script"
 
       - name: Run tests
-        run: bun test || echo "Tests passed or skipped"
+        run: npm test || echo "Tests passed or skipped"
         env:
           NODE_ENV: test
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
@@ -79,7 +80,7 @@ jobs:
           JWT_SECRET: test-secret-key
 
       - name: Build application
-        run: bun run build || echo "Build step completed or skipped"
+        run: npm run build || echo "Build step completed or skipped"
 
   # Test and build Vue.js frontend
   frontend-test:
@@ -93,25 +94,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: ${{ env.BUN_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
       - name: Run type checking
-        run: bun run type-check || echo "Type check completed"
+        run: npm run type-check || echo "Type check completed"
 
       - name: Run linting
-        run: bun run lint || echo "Linting completed"
+        run: npm run lint || echo "Linting completed"
 
       - name: Run tests
-        run: bun test || echo "Tests completed"
+        run: npm test || echo "Tests completed"
 
       - name: Build application
-        run: bun run build
+        run: npm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

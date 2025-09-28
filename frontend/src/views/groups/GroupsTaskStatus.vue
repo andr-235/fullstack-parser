@@ -41,20 +41,26 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, computed } from 'vue'
+import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGroupsStore } from '@/stores/groups'
+import { useAdaptivePolling } from '@/composables/useAdaptivePolling'
+import { groupsApi } from '@/services/api'
 import { storeToRefs } from 'pinia'
 import TaskProgress from '@/components/groups/TaskProgress.vue'
 
 const route = useRoute()
 const router = useRouter()
 const groupsStore = useGroupsStore()
-const { currentTask } = storeToRefs(groupsStore)
-
-let pollInterval = null
 
 const taskId = computed(() => route.params.taskId)
+const currentTask = ref(null)
+
+// Адаптивный polling для статуса задачи групп
+const polling = useAdaptivePolling(
+  taskId,
+  'general' // Для статуса задач групп используем general конфигурацию
+)
 
 const goToGroupsList = () => {
   router.push('/groups')
@@ -64,28 +70,24 @@ const goToUpload = () => {
   router.push('/groups/upload')
 }
 
-const startPolling = () => {
-  if (pollInterval) return
-  
-  pollInterval = setInterval(async () => {
-    try {
-      const status = await groupsStore.pollTaskStatus(taskId.value)
-      if (status.status === 'completed' || status.status === 'failed') {
-        clearInterval(pollInterval)
-        pollInterval = null
-      }
-    } catch (error) {
-      console.error('Ошибка опроса статуса:', error)
-    }
-  }, 2000)
-}
-
 onMounted(async () => {
   if (taskId.value) {
     try {
-      await groupsStore.pollTaskStatus(taskId.value)
-      if (currentTask.value?.status === 'processing') {
-        startPolling()
+      // Получаем первоначальный статус задачи
+      const response = await groupsApi.getTaskStatus(taskId.value)
+      currentTask.value = response.data.data
+
+      // Запускаем адаптивный polling если задача выполняется
+      if (['pending', 'processing'].includes(currentTask.value?.status)) {
+        await polling.startPolling(async () => {
+          const statusResponse = await groupsApi.getTaskStatus(taskId.value)
+          currentTask.value = statusResponse.data.data
+          return {
+            status: statusResponse.data.data.status,
+            progress: statusResponse.data.data.progress,
+            ...statusResponse.data.data
+          }
+        })
       }
     } catch (error) {
       console.error('Ошибка загрузки статуса задачи:', error)
@@ -94,8 +96,6 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  if (pollInterval) {
-    clearInterval(pollInterval)
-  }
+  polling.stopPolling()
 })
 </script>

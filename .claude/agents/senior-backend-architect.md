@@ -25,7 +25,7 @@ When reviewing code or architecture:
 5. Assess error handling, logging, and monitoring strategies
 6. Consider maintainability and technical debt implications
 
-For the current VK Analytics backend context (Express 5 + Bun runtime):
+For the current VK Analytics backend context (Express 5 + Node.js TypeScript):
 - **Architecture**: MVC pattern с services/repositories в `backend/src/` структуре
 - **Models**: Sequelize ORM с Task, Post, Comment, Group моделями в PostgreSQL
 - **Queue System**: BullMQ (`backend/config/queue.js`) для асинхронной обработки VK данных
@@ -33,7 +33,7 @@ For the current VK Analytics backend context (Express 5 + Bun runtime):
 - **Logging**: Unified Winston logging (`backend/src/utils/logger.js`) для structured error tracking
 - **Validation**: Joi schemas для API payload validation и data sanitization
 - **Security**: CORS configuration, input sanitization, secrets management
-- **Testing**: Bun test runner с Jest compatibility для unit/integration tests
+- **Testing**: Jest с TypeScript support для unit/integration tests
 - **File Processing**: Multer middleware для группы uploads с validation
 - **Background Jobs**: Idempotent BullMQ jobs с proper error handling и retry logic
 

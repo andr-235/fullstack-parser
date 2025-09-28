@@ -1,0 +1,138 @@
+{
+  "commands": {
+    "dev": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && echo \"🚀 Запускаю среду разработки...\" && docker-compose up -d && echo \"✅ Все сервисы запущены!\" && echo \"📍 Backend: http://localhost:3000\" && echo \"📍 Frontend: http://localhost:5173\" && echo \"📍 PostgreSQL: localhost:5432\" && echo \"📍 Redis: localhost:6379\"",
+      "description": "Запускает все сервисы разработки через Docker Compose"
+    },
+
+    "stop": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && echo \"🛑 Останавливаю все сервисы...\" && docker-compose down && echo \"✅ Все сервисы остановлены\"",
+      "description": "Останавливает все Docker сервисы"
+    },
+
+    "backend-dev": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/backend\" && echo \"⚙️ Запускаю backend в режиме разработки...\" && npm run dev:watch",
+      "description": "Запускает backend сервер с автоперезагрузкой"
+    },
+
+    "frontend-dev": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/frontend\" && echo \"🎨 Запускаю frontend в режиме разработки...\" && npm run dev",
+      "description": "Запускает frontend Vite dev server"
+    },
+
+    "test-backend": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/backend\" && echo \"🧪 Запускаю тесты backend...\" && npm test",
+      "description": "Запускает Jest тесты для backend"
+    },
+
+    "test-frontend": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/frontend\" && echo \"🧪 Запускаю E2E тесты frontend...\" && npx playwright test",
+      "description": "Запускает Playwright тесты для frontend"
+    },
+
+    "test-all": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && echo \"🧪 Запускаю все тесты...\" && cd backend && npm test && cd ../frontend && npx playwright test && echo \"✅ Все тесты завершены\"",
+      "description": "Запускает все тесты проекта"
+    },
+
+    "lint-backend": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/backend\" && echo \"🔍 Проверяю код backend ESLint...\" && npx eslint . && echo \"✅ ESLint проверка завершена\"",
+      "description": "Запускает ESLint для backend"
+    },
+
+    "lint-frontend": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/frontend\" && echo \"🔍 Проверяю код frontend ESLint...\" && npx eslint . && echo \"✅ ESLint проверка завершена\"",
+      "description": "Запускает ESLint для frontend"
+    },
+
+    "lint-all": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && echo \"🔍 Проверяю код во всем проекте...\" && cd backend && npx eslint . && cd ../frontend && npx eslint . && echo \"✅ Проверка кода завершена\"",
+      "description": "Запускает линтинг для всего проекта"
+    },
+
+    "format-frontend": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/frontend\" && echo \"💅 Форматирую код frontend...\" && npx prettier --write . && echo \"✅ Код отформатирован\"",
+      "description": "Форматирует код frontend с помощью Prettier"
+    },
+
+    "build-backend": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/backend\" && echo \"🔨 Компилирую TypeScript...\" && npm run build && echo \"✅ Backend скомпилирован\"",
+      "description": "Компилирует TypeScript код backend"
+    },
+
+    "build-frontend": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/frontend\" && echo \"🔨 Собираю production build frontend...\" && npm run build && echo \"✅ Frontend собран\"",
+      "description": "Собирает production build frontend"
+    },
+
+    "build-all": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && echo \"🔨 Собираю весь проект...\" && cd backend && npm run build && cd ../frontend && npm run build && echo \"✅ Проект собран полностью\"",
+      "description": "Собирает весь проект"
+    },
+
+    "typecheck-backend": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/backend\" && echo \"🔧 Проверяю типы TypeScript...\" && npx tsc --noEmit && echo \"✅ Типы проверены\"",
+      "description": "Проверяет типы TypeScript в backend"
+    },
+
+    "typecheck-frontend": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/frontend\" && echo \"🔧 Проверяю типы Vue TypeScript...\" && npm run type-check && echo \"✅ Типы проверены\"",
+      "description": "Проверяет типы TypeScript в frontend"
+    },
+
+    "typecheck-all": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && echo \"🔧 Проверяю типы во всем проекте...\" && cd backend && npx tsc --noEmit && cd ../frontend && npm run type-check && echo \"✅ Все типы проверены\"",
+      "description": "Проверяет типы TypeScript во всем проекте"
+    },
+
+    "db-migrate": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/backend\" && echo \"🗄️ Применяю миграции базы данных...\" && npm run prisma:migrate && echo \"✅ Миграции применены\"",
+      "description": "Применяет миграции базы данных"
+    },
+
+    "db-studio": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/backend\" && echo \"🎛️ Открываю Prisma Studio...\" && npm run prisma:studio",
+      "description": "Открывает Prisma Studio для работы с БД"
+    },
+
+    "db-reset": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT/backend\" && echo \"⚠️ Сброс базы данных...\" && npm run prisma:reset && echo \"✅ База данных сброшена\"",
+      "description": "Сбрасывает базу данных (ОСТОРОЖНО!)"
+    },
+
+    "logs-api": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && echo \"📋 Логи API сервиса:\" && docker-compose logs -f api",
+      "description": "Показывает логи API сервиса"
+    },
+
+    "logs-frontend": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && echo \"📋 Логи frontend сервиса:\" && docker-compose logs -f frontend",
+      "description": "Показывает логи frontend сервиса"
+    },
+
+    "logs-db": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && echo \"📋 Логи PostgreSQL:\" && docker-compose logs -f postgres",
+      "description": "Показывает логи PostgreSQL"
+    },
+
+    "status": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && echo \"📊 Статус проекта:\" && echo \"===================\" && docker-compose ps && echo \"\" && echo \"🔧 Проверка TypeScript:\" && cd backend && npx tsc --noEmit && echo \"✅ Backend типы в порядке\" && cd ../frontend && npm run type-check && echo \"✅ Frontend типы в порядке\"",
+      "description": "Показывает статус всех сервисов и проверяет типы"
+    },
+
+    "install": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && echo \"📦 Установка зависимостей...\" && cd backend && npm install && echo \"✅ Backend зависимости установлены\" && cd ../frontend && npm install && echo \"✅ Frontend зависимости установлены\" && echo \"🎉 Все зависимости установлены!\"",
+      "description": "Устанавливает зависимости для backend и frontend"
+    },
+
+    "clean": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && echo \"🧹 Очистка проекта...\" && docker-compose down && docker system prune -f && cd backend && rm -rf node_modules dist && cd ../frontend && rm -rf node_modules dist && echo \"✅ Проект очищен\"",
+      "description": "Очищает проект от временных файлов и контейнеров"
+    },
+
+    "health": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && echo \"🏥 Проверка здоровья системы:\" && echo \"Backend API:\" && curl -s http://localhost:3000/api/health || echo \"❌ Backend недоступен\" && echo \"\" && echo \"Frontend:\" && curl -s http://localhost:5173 > /dev/null && echo \"✅ Frontend доступен\" || echo \"❌ Frontend недоступен\"",
+      "description": "Проверяет доступность сервисов"
+    }
+  }
+}

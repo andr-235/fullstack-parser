@@ -67,6 +67,29 @@
               />
             </div>
 
+            <!-- Success message with redirect countdown -->
+            <div v-if="uploadTask.status === 'completed' && redirectCountdown > 0" class="mb-4">
+              <v-alert
+                type="success"
+                variant="tonal"
+                density="compact"
+              >
+                <div class="d-flex justify-space-between align-center">
+                  <div class="d-flex align-center">
+                    <v-icon class="me-2">mdi-check-circle</v-icon>
+                    <span>Файл успешно обработан! Переход к списку групп через {{ redirectCountdown }} сек...</span>
+                  </div>
+                  <v-btn
+                    variant="text"
+                    size="small"
+                    @click="stopRedirectCountdown"
+                  >
+                    Отменить
+                  </v-btn>
+                </div>
+              </v-alert>
+            </div>
+
             <!-- Action Buttons -->
             <div class="d-flex gap-2">
               <v-btn
@@ -147,9 +170,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { groupsApi } from '@/services/api'
+import { useAdaptivePolling } from '@/composables/useAdaptivePolling'
 import GroupsUploadForm from '@/components/groups/GroupsUploadForm.vue'
 
 const router = useRouter()
@@ -163,10 +187,17 @@ const uploadTask = ref({
   message: ''
 })
 const refreshing = ref(false)
-const pollingInterval = ref(null)
+const redirectCountdown = ref(0)
+const redirectInterval = ref(null)
+
+// Адаптивный polling для загрузки групп
+const polling = useAdaptivePolling(
+  computed(() => String(uploadTask.value.taskId || '')),
+  'general' // Для загрузки групп используем general конфигурацию
+)
 
 // Methods
-const onUploadStarted = (response) => {
+const onUploadStarted = async (response) => {
   uploadTask.value = {
     taskId: response.taskId,
     status: 'pending',
@@ -174,7 +205,19 @@ const onUploadStarted = (response) => {
     errors: [],
     message: 'Файл загружен, начинается обработка...'
   }
-  startPolling()
+
+  // Запускаем адаптивный polling
+  await polling.startPolling(async () => {
+    const statusResponse = await groupsApi.getTaskStatus(uploadTask.value.taskId)
+    const data = statusResponse.data.data
+    updateTaskStatus(data)
+    return {
+      status: data.status,
+      progress: data.progress,
+      errors: data.errors,
+      ...data
+    }
+  })
 }
 
 const refreshStatus = async () => {
@@ -183,7 +226,8 @@ const refreshStatus = async () => {
   refreshing.value = true
   try {
     const response = await groupsApi.getTaskStatus(uploadTask.value.taskId)
-    updateTaskStatus(response.data)
+    console.log('Raw API response:', response.data)
+    updateTaskStatus(response.data.data)
   } catch (error) {
     console.error('Error refreshing status:', error)
   } finally {
@@ -192,6 +236,15 @@ const refreshStatus = async () => {
 }
 
 const updateTaskStatus = (data) => {
+  const previousStatus = uploadTask.value.status
+
+  console.log('Updating task status:', {
+    taskId: uploadTask.value.taskId,
+    previousStatus,
+    newStatus: data.status,
+    data
+  })
+
   uploadTask.value = {
     ...uploadTask.value,
     status: data.status || uploadTask.value.status,
@@ -202,30 +255,40 @@ const updateTaskStatus = (data) => {
 
   // Stop polling if task is complete
   if (['completed', 'failed'].includes(data.status)) {
-    stopPolling()
-  }
-}
+    console.log('Task completed, stopping polling and starting redirect')
+    polling.stopPolling()
 
-const startPolling = () => {
-  if (pollingInterval.value) {
-    clearInterval(pollingInterval.value)
-  }
-
-  pollingInterval.value = setInterval(async () => {
-    try {
-      const response = await groupsApi.getTaskStatus(uploadTask.value.taskId)
-      updateTaskStatus(response.data)
-    } catch (error) {
-      console.error('Error polling task status:', error)
+    // Auto-redirect to groups page when task completes successfully
+    if (data.status === 'completed' && previousStatus !== 'completed') {
+      startRedirectCountdown()
     }
-  }, 3000) // Poll every 3 seconds
+  }
 }
 
-const stopPolling = () => {
-  if (pollingInterval.value) {
-    clearInterval(pollingInterval.value)
-    pollingInterval.value = null
+// Старые методы polling удалены, используется useAdaptivePolling
+
+const startRedirectCountdown = () => {
+  redirectCountdown.value = 3 // Start with 3 seconds
+
+  redirectInterval.value = setInterval(() => {
+    redirectCountdown.value--
+
+    if (redirectCountdown.value <= 0) {
+      clearInterval(redirectInterval.value)
+      redirectInterval.value = null
+      router.push('/groups')
+    }
+  }, 1000)
+}
+
+// stopPolling удален, используется polling.stopPolling() из useAdaptivePolling
+
+const stopRedirectCountdown = () => {
+  if (redirectInterval.value) {
+    clearInterval(redirectInterval.value)
+    redirectInterval.value = null
   }
+  redirectCountdown.value = 0
 }
 
 const downloadErrorReport = () => {
@@ -316,16 +379,31 @@ const getMessageType = (status) => {
 }
 
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
   // Check if we have a task ID from route query
   if (router.currentRoute.value.query.taskId) {
     uploadTask.value.taskId = router.currentRoute.value.query.taskId
-    refreshStatus()
-    startPolling()
+    await refreshStatus()
+
+    // Запускаем адаптивный polling если задача еще выполняется
+    if (['pending', 'processing'].includes(uploadTask.value.status)) {
+      await polling.startPolling(async () => {
+        const statusResponse = await groupsApi.getTaskStatus(uploadTask.value.taskId)
+        const data = statusResponse.data.data
+        updateTaskStatus(data)
+        return {
+          status: data.status,
+          progress: data.progress,
+          errors: data.errors,
+          ...data
+        }
+      })
+    }
   }
 })
 
 onUnmounted(() => {
-  stopPolling()
+  polling.stopPolling()
+  stopRedirectCountdown()
 })
 </script>

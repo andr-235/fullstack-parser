@@ -1,9 +1,9 @@
 /**
- * Утилита для мониторинга производительности PostgreSQL базы данных
+ * Утилита для мониторинга производительности PostgreSQL базы данных с Prisma
  * Предоставляет методы для анализа производительности, статистики и оптимизации
  */
 
-import { Sequelize, QueryTypes } from 'sequelize';
+import { PrismaClient } from '@prisma/client';
 import logger from './logger';
 
 interface PoolStats {
@@ -119,52 +119,77 @@ interface Benchmark {
 }
 
 class DatabaseMonitor {
-  private sequelize: Sequelize;
+  private prisma: PrismaClient;
 
-  constructor(sequelize: Sequelize) {
-    this.sequelize = sequelize;
+  constructor(prisma: PrismaClient) {
+    this.prisma = prisma;
   }
 
   /**
    * Получить статистику использования connection pool
    */
   async getPoolStats(): Promise<PoolStats> {
-    const pool = (this.sequelize.connectionManager as any).pool;
-    return {
-      size: pool.size || 0,
-      available: pool.available || 0,
-      using: pool.using || 0,
-      waiting: pool.waiting || 0,
-      max: pool.max || 0,
-      min: pool.min || 0
-    };
+    // Prisma управляет пулом соединений внутренне
+    // Возвращаем статистику из PostgreSQL
+    try {
+      const result = await this.prisma.$queryRaw<Array<{
+        total_connections: number;
+        active_connections: number;
+        idle_connections: number;
+        max_connections: number;
+      }>>`
+        SELECT
+          count(*) as total_connections,
+          count(*) FILTER (WHERE state = 'active') as active_connections,
+          count(*) FILTER (WHERE state = 'idle') as idle_connections,
+          setting::int as max_connections
+        FROM pg_stat_activity, pg_settings
+        WHERE name = 'max_connections'
+          AND datname = current_database()
+        GROUP BY setting
+      `;
+
+      const stats = result[0] || {
+        total_connections: 0,
+        active_connections: 0,
+        idle_connections: 0,
+        max_connections: 100
+      };
+
+      return {
+        size: stats.total_connections,
+        available: stats.idle_connections,
+        using: stats.active_connections,
+        waiting: 0, // PostgreSQL не предоставляет эту информацию напрямую
+        max: stats.max_connections,
+        min: 0
+      };
+    } catch (error) {
+      logger.error('Failed to get pool stats', error);
+      return { size: 0, available: 0, using: 0, waiting: 0, max: 0, min: 0 };
+    }
   }
 
   /**
    * Анализ медленных запросов
    */
   async getSlowQueries(limit = 10): Promise<SlowQuery[]> {
-    const query = `
-      SELECT
-        query,
-        calls,
-        total_time,
-        mean_time,
-        min_time,
-        max_time,
-        stddev_time,
-        rows
-      FROM pg_stat_statements
-      WHERE calls > 1
-      ORDER BY mean_time DESC
-      LIMIT :limit;
-    `;
-
     try {
-      const results = await this.sequelize.query(query, {
-        replacements: { limit },
-        type: QueryTypes.SELECT
-      }) as SlowQuery[];
+      const results = await this.prisma.$queryRaw<SlowQuery[]>`
+        SELECT
+          query,
+          calls,
+          total_time,
+          mean_time,
+          min_time,
+          max_time,
+          stddev_time,
+          rows
+        FROM pg_stat_statements
+        WHERE calls > 1
+        ORDER BY mean_time DESC
+        LIMIT ${limit}
+      `;
       return results;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -177,37 +202,52 @@ class DatabaseMonitor {
    * Анализ использования индексов
    */
   async getIndexUsage(tableName?: string): Promise<IndexUsage[]> {
-    const whereClause = tableName ? 'AND schemaname = :schema AND tablename = :tableName' : '';
-    const query = `
-      SELECT
-        schemaname,
-        tablename,
-        indexname,
-        idx_tup_read,
-        idx_tup_fetch,
-        idx_scan,
-        CASE
-          WHEN idx_scan = 0 THEN 'Never used'
-          WHEN idx_scan < 10 THEN 'Rarely used'
-          ELSE 'Actively used'
-        END as usage_status
-      FROM pg_stat_user_indexes
-      WHERE schemaname = 'public' ${whereClause}
-      ORDER BY idx_scan DESC;
-    `;
-
-    const results = await this.sequelize.query(query, {
-      replacements: { schema: 'public', tableName },
-      type: QueryTypes.SELECT
-    }) as IndexUsage[];
-    return results;
+    if (tableName) {
+      const results = await this.prisma.$queryRaw<IndexUsage[]>`
+        SELECT
+          schemaname,
+          tablename,
+          indexname,
+          idx_tup_read,
+          idx_tup_fetch,
+          idx_scan,
+          CASE
+            WHEN idx_scan = 0 THEN 'Never used'
+            WHEN idx_scan < 10 THEN 'Rarely used'
+            ELSE 'Actively used'
+          END as usage_status
+        FROM pg_stat_user_indexes
+        WHERE schemaname = 'public' AND tablename = ${tableName}
+        ORDER BY idx_scan DESC
+      `;
+      return results;
+    } else {
+      const results = await this.prisma.$queryRaw<IndexUsage[]>`
+        SELECT
+          schemaname,
+          tablename,
+          indexname,
+          idx_tup_read,
+          idx_tup_fetch,
+          idx_scan,
+          CASE
+            WHEN idx_scan = 0 THEN 'Never used'
+            WHEN idx_scan < 10 THEN 'Rarely used'
+            ELSE 'Actively used'
+          END as usage_status
+        FROM pg_stat_user_indexes
+        WHERE schemaname = 'public'
+        ORDER BY idx_scan DESC
+      `;
+      return results;
+    }
   }
 
   /**
    * Размеры таблиц и индексов
    */
   async getTableSizes(): Promise<TableSize[]> {
-    const query = `
+    const results = await this.prisma.$queryRaw<TableSize[]>`
       SELECT
         schemaname,
         tablename,
@@ -217,12 +257,8 @@ class DatabaseMonitor {
         pg_total_relation_size(schemaname||'.'||tablename) AS total_bytes
       FROM pg_tables
       WHERE schemaname = 'public'
-      ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+      ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
     `;
-
-    const results = await this.sequelize.query(query, {
-      type: QueryTypes.SELECT
-    }) as TableSize[];
     return results;
   }
 
@@ -230,7 +266,7 @@ class DatabaseMonitor {
    * Статистика активности таблиц
    */
   async getTableActivity(): Promise<TableActivity[]> {
-    const query = `
+    const results = await this.prisma.$queryRaw<TableActivity[]>`
       SELECT
         schemaname,
         tablename,
@@ -250,12 +286,8 @@ class DatabaseMonitor {
         last_autoanalyze
       FROM pg_stat_user_tables
       WHERE schemaname = 'public'
-      ORDER BY (n_tup_ins + n_tup_upd + n_tup_del) DESC;
+      ORDER BY (n_tup_ins + n_tup_upd + n_tup_del) DESC
     `;
-
-    const results = await this.sequelize.query(query, {
-      type: QueryTypes.SELECT
-    }) as TableActivity[];
     return results;
   }
 
@@ -263,7 +295,7 @@ class DatabaseMonitor {
    * Активные соединения и блокировки
    */
   async getActiveConnections(): Promise<ActiveConnection[]> {
-    const query = `
+    const results = await this.prisma.$queryRaw<ActiveConnection[]>`
       SELECT
         pid,
         usename,
@@ -279,12 +311,8 @@ class DatabaseMonitor {
       FROM pg_stat_activity
       WHERE datname = current_database()
         AND pid <> pg_backend_pid()
-      ORDER BY query_start DESC;
+      ORDER BY query_start DESC
     `;
-
-    const results = await this.sequelize.query(query, {
-      type: QueryTypes.SELECT
-    }) as ActiveConnection[];
     return results;
   }
 
@@ -292,7 +320,7 @@ class DatabaseMonitor {
    * Детектор блокировок
    */
   async getBlockingQueries(): Promise<BlockingQuery[]> {
-    const query = `
+    const results = await this.prisma.$queryRaw<BlockingQuery[]>`
       SELECT
         blocked_locks.pid AS blocked_pid,
         blocked_activity.usename AS blocked_user,
@@ -319,12 +347,8 @@ class DatabaseMonitor {
         AND blocking_locks.pid != blocked_locks.pid
       JOIN pg_catalog.pg_stat_activity blocking_activity
         ON blocking_activity.pid = blocking_locks.pid
-      WHERE NOT blocked_locks.GRANTED;
+      WHERE NOT blocked_locks.GRANTED
     `;
-
-    const results = await this.sequelize.query(query, {
-      type: QueryTypes.SELECT
-    }) as BlockingQuery[];
     return results;
   }
 
@@ -402,13 +426,13 @@ class DatabaseMonitor {
   async healthCheck(): Promise<HealthCheck> {
     const health: HealthCheck = {
       timestamp: new Date(),
-      database: this.sequelize.getDatabaseName(),
+      database: 'vk_analyzer',
       status: 'healthy'
     };
 
     try {
       // Проверяем подключение
-      await this.sequelize.authenticate();
+      await this.prisma.$queryRaw`SELECT 1`;
       health.connection = 'ok';
 
       // Получаем основные метрики
@@ -443,11 +467,10 @@ class DatabaseMonitor {
     const explainQuery = `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${query}`;
 
     try {
-      const results = await this.sequelize.query(explainQuery, {
-        replacements: params,
-        type: QueryTypes.SELECT
-      });
-      return results[0];
+      // Prisma не поддерживает динамические запросы с EXPLAIN напрямую
+      // Нужно использовать $queryRawUnsafe для динамических SQL
+      const results = await this.prisma.$queryRawUnsafe(explainQuery, ...Object.values(params));
+      return Array.isArray(results) ? results[0] : results;
     } catch (error) {
       logger.error('Ошибка при выполнении EXPLAIN', { error });
       throw error;
@@ -463,10 +486,15 @@ class DatabaseMonitor {
     try {
       // 1. Тест создания задачи
       const taskCreateStart = Date.now();
-      await this.sequelize.query(`
-        INSERT INTO tasks (status, type, priority, progress, "createdAt", "updatedAt")
-        VALUES ('pending', 'fetch_comments', 1, 0, NOW(), NOW())
-      `);
+      await this.prisma.tasks.create({
+        data: {
+          status: 'pending',
+          type: 'fetch_comments',
+          progress: 0,
+          parameters: {},
+          updatedAt: new Date()
+        }
+      });
       benchmarks.push({
         operation: 'create_task',
         duration: Date.now() - taskCreateStart
@@ -474,24 +502,26 @@ class DatabaseMonitor {
 
       // 2. Тест поиска задач по статусу
       const taskSearchStart = Date.now();
-      await this.sequelize.query(`
-        SELECT * FROM tasks WHERE status = 'pending' ORDER BY priority DESC, "createdAt" ASC LIMIT 10
-      `);
+      await this.prisma.tasks.findMany({
+        where: { status: 'pending' },
+        orderBy: [{ createdAt: 'asc' }],
+        take: 10
+      });
       benchmarks.push({
         operation: 'search_pending_tasks',
         duration: Date.now() - taskSearchStart
       });
 
-      // 3. Тест поиска комментариев с join
+      // 3. Тест поиска комментариев с join (через raw SQL из-за специфической логики)
       const commentsSearchStart = Date.now();
-      await this.sequelize.query(`
+      await this.prisma.$queryRaw`
         SELECT c.*, p.text as post_text
         FROM comments c
-        JOIN posts p ON c.post_vk_id = p.vk_post_id
+        JOIN posts p ON c.post_id = p.id
         WHERE c.date >= NOW() - INTERVAL '7 days'
         ORDER BY c.date DESC
         LIMIT 100
-      `);
+      `;
       benchmarks.push({
         operation: 'search_recent_comments_with_posts',
         duration: Date.now() - commentsSearchStart

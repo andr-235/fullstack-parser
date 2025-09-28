@@ -1,7 +1,13 @@
-import { Optional, Model } from 'sequelize';
+// Переиспользуем типы из Prisma Client
+export type {
+  posts as PostAttributes,
+  comments as CommentAttributes,
+  groups as GroupAttributes,
+  tasks as TaskAttributes
+} from '@prisma/client';
 
-export interface PostAttributes {
-  id: number;
+// Типы для создания записей (без полей автогенерации)
+export interface PostCreationAttributes {
   vk_id: number;
   owner_id: number;
   from_id: number;
@@ -13,14 +19,9 @@ export interface PostAttributes {
   views_count: number;
   attachments: any[];
   task_id: number;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
-export interface PostCreationAttributes extends Optional<PostAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
-
-export interface CommentAttributes {
-  id: number;
+export interface CommentCreationAttributes {
   vk_id: number;
   post_id: number;
   from_id: number;
@@ -31,45 +32,78 @@ export interface CommentAttributes {
   likes_count: number;
   thread_count: number;
   attachments: any[];
-  createdAt: Date;
-  updatedAt: Date;
 }
 
-export interface CommentCreationAttributes extends Optional<CommentAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
-
-export interface GroupAttributes {
-  id: number;
+export interface GroupCreationAttributes {
   vk_id: number;
   name: string;
   screen_name: string;
   type: string;
   is_closed: number;
-  photo_url: string | null;
-  description: string | null;
-  members_count: number | null;
-  source_file: string | null;
-  task_id: number | null;
-  createdAt: Date;
-  updatedAt: Date;
+  photo_url?: string | null;
+  description?: string | null;
+  members_count?: number | null;
+  source_file?: string | null;
+  task_id?: number | null;
 }
 
-export interface GroupCreationAttributes extends Optional<GroupAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+export interface TaskCreationAttributes {
+  type: string;
+  status: string;
+  progress: number;
+  error_message?: string | null;
+  data: any;
+}
 
-export interface ModelWithTimestamps extends Model {
+// Базовый интерфейс для моделей с timestamps
+export interface ModelWithTimestamps {
   createdAt: Date;
   updatedAt: Date;
 }
 
 export type Environment = 'development' | 'production' | 'test';
 
-export interface SequelizeConfig {
+// Обновленная конфигурация для Prisma
+export interface DatabaseConfig {
   username: string;
   password: string;
   database: string;
   host: string;
   port: number;
-  dialect: 'postgres' | 'mysql' | 'sqlite' | 'mariadb' | 'mssql';
+  dialect: 'postgresql' | 'mysql' | 'sqlite';
   logging?: boolean | ((sql: string) => void);
-  pool?: any;
-  define?: any;
+  pool?: {
+    max: number;
+    min: number;
+    acquire: number;
+    idle: number;
+    evict?: number;
+  };
+  define?: {
+    timestamps: boolean;
+    underscored: boolean;
+    freezeTableName: boolean;
+  };
 }
+
+// Типы для пагинации и фильтрации
+export interface PaginationOptions {
+  page?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface SortOptions {
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface FilterOptions {
+  status?: string;
+  search?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
+// Псевдоним для совместимости с существующим кодом
+export type SequelizeConfig = DatabaseConfig;

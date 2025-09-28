@@ -1,0 +1,123 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres", "postgresqlExtensions"]
+  binaryTargets   = ["native", "debian-openssl-1.1.x"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DB_URL")
+  extensions = [pg_trgm]
+}
+
+model comments {
+  id                            Int      @id @default(autoincrement())
+  vk_comment_id                 Int      @unique
+  post_vk_id                    Int
+  owner_id                      Int
+  author_id                     Int
+  author_name                   String   @db.VarChar(255)
+  text                          String   @default("")
+  date                          DateTime
+  likes                         Int      @default(0)
+  userId                        Int?
+  postId                        Int?
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime
+  post_id                       Int?
+  posts_comments_postIdToposts  posts?   @relation("comments_postIdToposts", fields: [postId], references: [id], onDelete: Cascade)
+  posts_comments_post_idToposts posts?   @relation("comments_post_idToposts", fields: [post_id], references: [id], onDelete: Cascade)
+
+  @@index([author_id], map: "idx_comment_author")
+  @@index([date], map: "idx_comment_date")
+  @@index([postId], map: "idx_comment_legacy_post")
+  @@index([likes], map: "idx_comment_likes")
+  @@index([owner_id], map: "idx_comment_owner")
+  @@index([post_id], map: "idx_comment_post")
+  @@index([post_vk_id], map: "idx_comment_post_vk")
+  @@index([vk_comment_id], map: "idx_comment_vk_id")
+}
+
+model groups {
+  id          Int         @id @default(autoincrement())
+  name        String?
+  task_id     String      @db.Uuid
+  uploaded_at DateTime    @default(now())
+  status      GroupStatus @default(valid)
+
+  @@index([name], map: "idx_group_name")
+  @@index([status], map: "idx_group_status")
+  @@index([task_id], map: "idx_group_task")
+  @@index([uploaded_at], map: "idx_group_uploaded")
+}
+
+model posts {
+  id                               Int        @id @default(autoincrement())
+  vk_post_id                       Int        @unique
+  owner_id                         Int
+  group_id                         Int
+  text                             String     @default("")
+  date                             DateTime
+  likes                            Int        @default(0)
+  ownerId                          Int?
+  groupId                          Int?
+  createdAt                        DateTime   @default(now())
+  updatedAt                        DateTime
+  task_id                          Int
+  comments_comments_postIdToposts  comments[] @relation("comments_postIdToposts")
+  comments_comments_post_idToposts comments[] @relation("comments_post_idToposts")
+  tasks                            tasks      @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@index([date], map: "idx_post_date")
+  @@index([group_id], map: "idx_post_group")
+  @@index([likes], map: "idx_post_likes")
+  @@index([owner_id], map: "idx_post_owner")
+  @@index([task_id], map: "idx_post_task")
+  @@index([vk_post_id], map: "idx_post_vk_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tasks {
+  id            Int        @id @default(autoincrement())
+  priority      Int        @default(0) @db.SmallInt
+  progress      Int        @default(0) @db.SmallInt
+  groups        Json?
+  metrics       Json?
+  parameters    Json?
+  result        Json?
+  error         String?
+  executionTime Int?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdBy     String     @default("system") @db.VarChar(100)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime
+  status        TaskStatus @default(pending)
+  type          TaskType   @default(fetch_comments)
+  posts         posts[]
+
+  @@index([createdAt], map: "tasks_created_at")
+  @@index([status])
+  @@index([status, priority])
+  @@index([type])
+  @@index([type, status])
+}
+
+enum GroupStatus {
+  valid
+  invalid
+  duplicate
+}
+
+enum TaskStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum TaskType {
+  fetch_comments
+  process_groups
+  analyze_posts
+}

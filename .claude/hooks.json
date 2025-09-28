@@ -1,0 +1,35 @@
+{
+  "userPromptSubmitHook": {
+    "command": "echo \"🔍 Проверяю код перед выполнением задачи...\"",
+    "description": "Информирует о начале проверки кода"
+  },
+
+  "beforeToolUse": {
+    "Edit": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && if [[ \"$CLAUDE_TOOL_ARGS\" == *\"backend/\"* ]]; then echo \"⚙️ Редактирую backend файл: $(echo \"$CLAUDE_TOOL_ARGS\" | grep -o '\"file_path\":\"[^\"]*\"' | cut -d'\"' -f4 | sed 's|.*/||')\"; elif [[ \"$CLAUDE_TOOL_ARGS\" == *\"frontend/\"* ]]; then echo \"🎨 Редактирую frontend файл: $(echo \"$CLAUDE_TOOL_ARGS\" | grep -o '\"file_path\":\"[^\"]*\"' | cut -d'\"' -f4 | sed 's|.*/||')\"; fi",
+      "description": "Показывает какой файл редактируется"
+    },
+
+    "Write": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && if [[ \"$CLAUDE_TOOL_ARGS\" == *\"backend/\"* ]]; then echo \"📝 Создаю backend файл: $(echo \"$CLAUDE_TOOL_ARGS\" | grep -o '\"file_path\":\"[^\"]*\"' | cut -d'\"' -f4 | sed 's|.*/||')\"; elif [[ \"$CLAUDE_TOOL_ARGS\" == *\"frontend/\"* ]]; then echo \"📝 Создаю frontend файл: $(echo \"$CLAUDE_TOOL_ARGS\" | grep -o '\"file_path\":\"[^\"]*\"' | cut -d'\"' -f4 | sed 's|.*/||')\"; fi",
+      "description": "Показывает какой файл создается"
+    }
+  },
+
+  "afterToolUse": {
+    "Edit": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && if [[ \"$CLAUDE_TOOL_ARGS\" == *\"backend/\"* ]] && [[ \"$CLAUDE_TOOL_ARGS\" == *\".ts\"* ]]; then echo \"🔧 Проверяю TypeScript код...\" && cd backend && npm run build --silent 2>/dev/null && echo \"✅ TypeScript компиляция успешна\" || echo \"❌ Ошибки TypeScript компиляции\"; fi",
+      "description": "Проверяет TypeScript код после редактирования backend файлов"
+    },
+
+    "Write": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && if [[ \"$CLAUDE_TOOL_ARGS\" == *\"backend/\"* ]] && [[ \"$CLAUDE_TOOL_ARGS\" == *\".ts\"* ]]; then echo \"🔧 Проверяю новый TypeScript файл...\" && cd backend && npm run build --silent 2>/dev/null && echo \"✅ TypeScript компиляция успешна\" || echo \"❌ Ошибки TypeScript компиляции\"; fi",
+      "description": "Проверяет TypeScript код после создания backend файлов"
+    },
+
+    "MultiEdit": {
+      "command": "cd \"$CLAUDE_PROJECT_ROOT\" && if [[ \"$CLAUDE_TOOL_ARGS\" == *\"backend/\"* ]]; then echo \"🔧 Проверяю множественные изменения в backend...\" && cd backend && npm run build --silent 2>/dev/null && echo \"✅ TypeScript компиляция успешна\" || echo \"❌ Ошибки TypeScript компиляции\"; fi",
+      "description": "Проверяет TypeScript код после множественных изменений"
+    }
+  }
+}

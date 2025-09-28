@@ -49,25 +49,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: "1.2.19"
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
       - name: Check code formatting
-        run: bun run format:check
+        run: npm run format:check
 
       - name: Run linter
-        run: bun run lint
+        run: npm run lint
 
       - name: Run type check
-        run: bun run type-check
+        run: npm run type-check
 
       - name: Run tests with coverage
-        run: bun run test -- --coverage --watchAll=false --passWithNoTests
+        run: npm test -- --coverage --watchAll=false --passWithNoTests
         env:
           CI: true
 
@@ -174,16 +175,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Bun for frontend security
-        uses: oven-sh/setup-bun@v1
+      - name: Setup Node.js for frontend security
+        uses: actions/setup-node@v4
         with:
-          bun-version: "1.2.19"
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Frontend security audit
         run: |
           cd frontend
-          # Note: Bun doesn't have built-in audit like npm, so we'll use a placeholder
-          echo "Security audit completed with Bun" || true
+          npm audit --audit-level=moderate || true
+          npm audit --json > audit-results.json || echo '{"vulnerabilities":{}}' > audit-results.json
 
       - name: Setup Python for backend security
         uses: actions/setup-python@v4
@@ -263,26 +266,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: "1.2.19"
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: |
           cd frontend
-          bun install
+          npm ci
 
       - name: Build and check bundle size
         run: |
           cd frontend
-          bun run build
+          npm run build
           # Check bundle size (adjust thresholds as needed)
-          BUNDLE_SIZE=$(du -sh .next | cut -f1)
+          BUNDLE_SIZE=$(du -sh dist | cut -f1)
           echo "Bundle size: $BUNDLE_SIZE"
 
           # You can add size thresholds here
-          # if [ $(stat -f%z .next/static/chunks/main-*.js 2>/dev/null || echo "0") -gt 1000000 ]; then
+          # if [ $(stat -f%z dist/assets/main-*.js 2>/dev/null || echo "0") -gt 1000000 ]; then
           #   echo "❌ Main bundle is too large (>1MB)"
           #   exit 1
           # fi

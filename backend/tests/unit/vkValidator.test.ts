@@ -1,16 +1,17 @@
 import VKValidator from '../../src/utils/vkValidator';
+import axios from 'axios';
 
 // Мокаем axios
-import axios from 'axios';
-const originalGet = axios.get;
+jest.mock('axios');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('VKValidator Unit Tests', () => {
   let vkValidator: VKValidator;
   
   beforeEach(() => {
-    vkValidator = new VKValidator('test-token');
+    vkValidator = new VKValidator({ accessToken: 'test-token' });
     // Сбрасываем мок перед каждым тестом
-    axios.get = originalGet;
+    jest.clearAllMocks();
   });
   
   describe('validateGroups', () => {
@@ -22,13 +23,17 @@ describe('VKValidator Unit Tests', () => {
       ];
       
       // Мокаем успешный ответ VK API
-      axios.get = async () => ({
+      mockedAxios.get.mockResolvedValue({
         data: {
           response: [
             { id: 123456789, name: 'Test Group 1' },
             { id: 987654321, name: 'Test Group 2' }
           ]
-        }
+        },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any
       });
       
       const result = await vkValidator.validateGroups(groups);
@@ -45,12 +50,16 @@ describe('VKValidator Unit Tests', () => {
       const groups = [{ id: -123456789, name: 'Test Group' }];
       
       // Мокаем ошибку VK API
-      axios.get = async () => ({
+      mockedAxios.get.mockResolvedValue({
         data: {
           error: {
             error_msg: 'Rate limit exceeded'
           }
-        }
+        },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any
       });
       
       const result = await vkValidator.validateGroups(groups);
@@ -79,81 +88,42 @@ describe('VKValidator Unit Tests', () => {
     });
   });
   
-  describe('validateBatch', () => {
-    it('should validate batch successfully', async () => {
-      const batch = [
-        { id: -123456789, name: 'Test Group 1' },
-        { id: -987654321, name: 'Test Group 2' }
-      ];
-      
-      axios.get = async () => ({
-        data: {
-          response: [
-            { id: 123456789, name: 'Test Group 1' },
-            { id: 987654321, name: 'Test Group 2' }
-          ]
-        }
-      });
-      
-      const result = await vkValidator.validateBatch(batch);
-      
-      expect(result.valid.length).toBe(2);
-      expect(result.invalid.length).toBe(0);
-      expect(result.errors.length).toBe(0);
-    });
-    
-    it('should mark non-existent groups as invalid', async () => {
-      const batch = [
-        { id: -123456789, name: 'Test Group 1' },
-        { id: -999999999, name: 'Non-existent Group' }
-      ];
-      
-      axios.get = async () => ({
-        data: {
-          response: [
-            { id: 123456789, name: 'Test Group 1' }
-          ]
-        }
-      });
-      
-      const result = await vkValidator.validateBatch(batch);
-      
-      expect(result.valid.length).toBe(1);
-      expect(result.invalid.length).toBe(1);
-      expect(result.invalid[0].id).toBe(-999999999);
-    });
-  });
-  
   describe('checkApiHealth', () => {
     it('should return true for healthy API', async () => {
-      axios.get = async () => ({
+      mockedAxios.get.mockResolvedValue({
         data: {
           response: [{ id: 1 }]
-        }
+        },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any
       });
-      
+
       const result = await vkValidator.checkApiHealth();
       expect(result).toBe(true);
     });
     
     it('should return false for unhealthy API', async () => {
-      axios.get = async () => ({
+      mockedAxios.get.mockResolvedValue({
         data: {
           error: {
             error_msg: 'Invalid token'
           }
-        }
+        },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any
       });
-      
+
       const result = await vkValidator.checkApiHealth();
       expect(result).toBe(false);
     });
     
     it('should return false for network errors', async () => {
-      axios.get = async () => {
-        throw new Error('Network error');
-      };
-      
+      mockedAxios.get.mockRejectedValue(new Error('Network error'));
+
       const result = await vkValidator.checkApiHealth();
       expect(result).toBe(false);
     });

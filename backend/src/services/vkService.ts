@@ -1,9 +1,10 @@
 import logger from '@/utils/logger';
-import { VkApiRepository } from '@/repositories/vkApi';
-import { DatabaseRepository } from '@/repositories/dbRepo';
-import { Task } from '@/models/task';
+import vkApi from '@/repositories/vkApi';
+import dbRepo from '@/repositories/dbRepo';
 import { VkPost, VkComment } from '@/types/vk';
-import { TaskStatus } from '@/types/task';
+// Временные типы для корректной работы
+type Task = any;
+type TaskStatus = "pending" | "processing" | "completed" | "failed";
 
 interface CollectResult {
   totalPosts: number;
@@ -32,13 +33,29 @@ interface TaskCompletionResult {
   completedAt: string;
 }
 
+// Используем правильные типы для репозиториев
+interface VkApiRepository {
+  getPosts(groupId: number): Promise<{ posts: VkPost[] }>;
+  getComments(groupId: number, postId: number): Promise<{ comments: VkComment[] }>;
+}
+
+interface DatabaseRepository {
+  getTaskById(taskId: number): Promise<Task | null>;
+  updateTask(taskId: number, updates: any): Promise<Task>;
+  upsertPosts(taskId: number, posts: any[]): Promise<any[]>;
+  upsertComments(postId: number, comments: any[]): Promise<any[]>;
+  getResults(taskId: number, groupId?: number, postId?: number): Promise<any>;
+  getRecentTasks(limit: number, type: string): Promise<Task[]>;
+}
+
 class VKService {
   private vkApi: VkApiRepository;
   private dbRepo: DatabaseRepository;
 
   constructor(vkApiInstance?: VkApiRepository, dbRepoInstance?: DatabaseRepository) {
-    this.vkApi = vkApiInstance || new VkApiRepository();
-    this.dbRepo = dbRepoInstance || new DatabaseRepository();
+    // Временное решение - используем приведение типов для совместимости
+    this.vkApi = (vkApiInstance || vkApi) as VkApiRepository;
+    this.dbRepo = (dbRepoInstance || dbRepo) as DatabaseRepository;
   }
 
   async getResults(taskId: number, groupId?: number, postId?: number): Promise<any> {
@@ -64,7 +81,11 @@ class VKService {
         throw new Error(`Task with id ${taskId} not found`);
       }
 
-      await task.markAsProcessing();
+      // Обновляем статус на processing через dbRepo
+      await this.dbRepo.updateTask(taskId, {
+        status: 'processing' as TaskStatus,
+        startedAt: new Date()
+      });
 
       // Convert groups to positive numbers if needed
       const normalizedGroups = groups.map(group => Math.abs(Number(group))).filter(Boolean);
@@ -99,10 +120,10 @@ class VKService {
             // Process comments for each post
             for (const post of postsToProcess) {
               try {
-                const { comments }: { comments: VkComment[] } = await this.vkApi.getComments(groupId, post.id);
+                const { comments }: { comments: VkComment[] } = await this.vkApi.getComments(groupId, post.id || 0);
 
                 if (comments.length > 0) {
-                  await this.dbRepo.upsertComments(post.id, comments);
+                  await this.dbRepo.upsertComments(post.id || 0, comments);
                   groupComments += comments.length;
                 }
               } catch (commentError) {
@@ -112,7 +133,7 @@ class VKService {
                   postId: post.id,
                   error: errorMsg
                 });
-                errors.push(`Error getting comments for group ${groupId}, post ${post.id}: ${errorMsg}`);
+                errors.push(`Error getting comments for group ${groupId}, post ${post.id || 0}: ${errorMsg}`);
               }
             }
           }
@@ -129,7 +150,6 @@ class VKService {
 
           // Update progress and metrics periodically for UI tracking
           const progressPercent = Math.min(90, Math.round(((i + 1) / normalizedGroups.length) * 90));
-          task.progress = progressPercent;
 
           // Update metrics using metadata field
           const currentMetrics: TaskMetrics = {
@@ -138,15 +158,18 @@ class VKService {
             errors: [...errors]
           };
 
-          task.metadata = {
-            ...task.metadata,
+          const updatedMetrics = {
             ...currentMetrics,
             processedGroups: i + 1,
             totalGroups: normalizedGroups.length,
             currentGroupId: groupId
           };
 
-          await task.save();
+          // Обновляем задачу через dbRepo
+          await this.dbRepo.updateTask(taskId, {
+            progress: progressPercent,
+            metrics: updatedMetrics
+          });
 
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : String(error);
@@ -165,7 +188,12 @@ class VKService {
       if (errors.length > 0 && totalPosts === 0) {
         // Complete failure - no posts processed
         const errorMessage = errors.join('; ');
-        await task.markAsFailed(errorMessage);
+        await this.dbRepo.updateTask(taskId, {
+          status: 'failed' as TaskStatus,
+          error: errorMessage,
+          finishedAt: new Date(),
+          metrics: finalMetrics
+        });
 
         return {
           totalPosts,
@@ -182,15 +210,19 @@ class VKService {
           completedAt: new Date().toISOString()
         };
 
-        await task.markAsCompleted(result);
-
         // Final metadata update
-        task.metadata = {
-          ...task.metadata,
+        const finalMetadata = {
           ...finalMetrics,
           result
         };
-        await task.save();
+
+        await this.dbRepo.updateTask(taskId, {
+          status: 'completed' as TaskStatus,
+          result: result,
+          finishedAt: new Date(),
+          progress: 100,
+          metrics: finalMetadata
+        });
 
         logger.info('Task completed successfully', {
           taskId,
@@ -214,8 +246,6 @@ class VKService {
       errors.push(`General error in collectForTask: ${errorMsg}`);
 
       if (task) {
-        await task.markAsFailed(errorMsg);
-
         // Update error metadata
         const errorMetrics = {
           posts: totalPosts,
@@ -223,11 +253,12 @@ class VKService {
           errors
         };
 
-        task.metadata = {
-          ...task.metadata,
-          ...errorMetrics
-        };
-        await task.save();
+        await this.dbRepo.updateTask(taskId, {
+          status: 'failed' as TaskStatus,
+          error: errorMsg,
+          finishedAt: new Date(),
+          metrics: errorMetrics
+        });
       }
 
       throw new Error(errorMsg);
@@ -244,7 +275,7 @@ class VKService {
         return null;
       }
 
-      const metadata = task.metadata || {};
+      const metadata = (task.metrics as any) || {};
 
       return {
         progress: task.progress,
@@ -273,7 +304,11 @@ class VKService {
         throw new Error('Task is not currently processing');
       }
 
-      await task.markAsFailed('Task cancelled by user');
+      await this.dbRepo.updateTask(taskId, {
+        status: 'failed' as TaskStatus,
+        error: 'Task cancelled by user',
+        finishedAt: new Date()
+      });
 
       logger.info('Task cancelled', { taskId });
       return true;
@@ -295,9 +330,9 @@ class VKService {
         taskId: task.id,
         status: task.status,
         progress: task.progress,
-        posts: task.metadata?.posts || 0,
-        comments: task.metadata?.comments || 0,
-        errors: task.metadata?.errors?.length || 0,
+        posts: (task.metrics as any)?.posts || 0,
+        comments: (task.metrics as any)?.comments || 0,
+        errors: (task.metrics as any)?.errors?.length || 0,
         startedAt: task.startedAt,
         finishedAt: task.finishedAt,
         executionTime: task.executionTime,

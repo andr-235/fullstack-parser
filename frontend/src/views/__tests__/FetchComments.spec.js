@@ -27,7 +27,7 @@ const mockRouter = {
 }
 const createTestRouter = () => createRouter({
   history: createWebHistory(),
-  routes: [{ path: '/task/:id', name: 'Task' }]
+  routes: [{ path: '/tasks/:id', name: 'Task' }]
 })
 
 describe('FetchComments.vue', () => {
@@ -117,7 +117,7 @@ describe('FetchComments.vue', () => {
       owner_id: 123,
       post_id: 456
     })
-    expect(mockRouter.push).toHaveBeenCalledWith('/task/123')
+    expect(mockRouter.push).toHaveBeenCalledWith('/tasks/123')
   })
 
   it('handles submit error', async () => {

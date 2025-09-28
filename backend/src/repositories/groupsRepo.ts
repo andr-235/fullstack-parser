@@ -1,19 +1,19 @@
-import { Group, GroupAttributes, GroupCreationAttributes, GroupStatus } from '../models/group';
-import { Op } from 'sequelize';
+import { prisma } from '../config/prisma';
+import { groups, Prisma, $Enums } from '@prisma/client';
 import logger from '../utils/logger';
 
 // Интерфейсы для запросов
 interface GetGroupsParams {
   limit?: number;
   offset?: number;
-  status?: string;
-  search?: string;
+  status?: string | undefined;
+  search?: string | undefined;
   sortBy?: string;
   sortOrder?: string;
 }
 
 interface GroupsResponse {
-  groups: Group[];
+  groups: groups[];
   total: number;
   pagination: {
     limit: number;
@@ -32,32 +32,40 @@ interface GroupsStats {
 interface CreateGroupInput {
   id?: number;
   name: string;
-  status?: GroupStatus;
+  status?: $Enums.GroupStatus;
 }
 
 class GroupsRepository {
-  private Group: typeof Group;
-
   constructor() {
-    this.Group = Group;
+    // Prisma Client используется напрямую через импорт
   }
 
   /**
    * Создает группы в базе данных
    */
-  async createGroups(groups: CreateGroupInput[], taskId: string): Promise<Group[]> {
+  async createGroups(groupsData: CreateGroupInput[], taskId: string): Promise<groups[]> {
     try {
-      const groupsToCreate = groups.map(group => ({
-        id: group.id,
-        name: group.name,
-        status: group.status || 'valid' as GroupStatus,
-        taskId: taskId,
-        uploadedAt: new Date()
-      }));
-
-      const createdGroups = await this.Group.bulkCreate(groupsToCreate as GroupCreationAttributes[], {
-        ignoreDuplicates: true
-      });
+      const createdGroups = await prisma.$transaction(
+        groupsData.map(group =>
+          prisma.groups.upsert({
+            where: {
+              id: group.id || 0  // fallback for groups without ID
+            },
+            update: {
+              name: group.name,
+              status: group.status || 'valid',
+              uploaded_at: new Date()
+            },
+            create: {
+              ...(group.id && { id: group.id }),
+              name: group.name,
+              status: group.status || 'valid',
+              task_id: taskId,
+              uploaded_at: new Date()
+            }
+          })
+        )
+      );
 
       logger.info('Groups created successfully', {
         taskId,
@@ -82,43 +90,72 @@ class GroupsRepository {
         offset = 0,
         status = 'all',
         search = '',
-        sortBy = 'uploadedAt',
+        sortBy = 'uploaded_at',
         sortOrder = 'desc'
       } = params;
 
       // Строим условия WHERE
-      const where: Record<string, any> = {};
+      const where: Prisma.groupsWhereInput = {};
 
       // Фильтр по статусу
       if (status !== 'all') {
-        where.status = status;
+        where.status = status as $Enums.GroupStatus;
       }
 
       // Поиск по ID или названию
       if (search) {
-        where[Op.or] = [
-          { id: { [Op.like]: `%${search}%` } },
-          { name: { [Op.like]: `%${search}%` } }
-        ];
+        const searchConditions = [];
+
+        // Поиск по ID если это число
+        if (!isNaN(Number(search))) {
+          searchConditions.push({
+            id: {
+              equals: Number(search)
+            }
+          });
+        }
+
+        // Поиск по названию
+        searchConditions.push({
+          name: {
+            contains: search,
+            mode: 'insensitive' as const
+          }
+        });
+
+        where.OR = searchConditions;
       }
 
-      // Сортировка
-      const order: [string, string][] = [[sortBy, sortOrder.toUpperCase()]];
+      // Подготовка сортировки
+      const prismaOrder = (sortOrder === 'asc' || sortOrder === 'ASC') ? Prisma.SortOrder.asc : Prisma.SortOrder.desc;
+      const orderBy: Prisma.groupsOrderByWithRelationInput = {};
+      if (sortBy === 'uploaded_at' || sortBy === 'uploadedAt') {
+        orderBy.uploaded_at = prismaOrder;
+      } else if (sortBy === 'name') {
+        orderBy.name = prismaOrder;
+      } else if (sortBy === 'status') {
+        orderBy.status = prismaOrder;
+      } else {
+        orderBy.uploaded_at = Prisma.SortOrder.desc;
+      }
 
-      const { count, rows } = await this.Group.findAndCountAll({
-        where,
-        limit: parseInt(String(limit)),
-        offset: parseInt(String(offset)),
-        order
-      });
+      const [groups, total] = await prisma.$transaction([
+        prisma.groups.findMany({
+          where,
+          take: parseInt(String(limit)),
+          skip: parseInt(String(offset)),
+          orderBy
+        }),
+        prisma.groups.count({ where })
+      ]);
 
       return {
-        groups: rows,
-        total: count,
+        groups,
+        total,
         pagination: {
           limit: parseInt(String(limit)),
           offset: parseInt(String(offset)),
-          hasMore: offset + rows.length < count
+          hasMore: offset + groups.length < total
         }
       };
     } catch (error) {
@@ -133,20 +170,25 @@ class GroupsRepository {
    */
   async getGroupsByTaskId(taskId: string, limit: number = 20, offset: number = 0): Promise<GroupsResponse> {
     try {
-      const { count, rows } = await this.Group.findAndCountAll({
-        where: { taskId },
-        limit: parseInt(String(limit)),
-        offset: parseInt(String(offset)),
-        order: [['uploadedAt', 'DESC']]
-      });
+      const [groups, total] = await prisma.$transaction([
+        prisma.groups.findMany({
+          where: { task_id: taskId },
+          take: parseInt(String(limit)),
+          skip: parseInt(String(offset)),
+          orderBy: { uploaded_at: 'desc' }
+        }),
+        prisma.groups.count({
+          where: { task_id: taskId }
+        })
+      ]);
 
       return {
-        groups: rows,
-        total: count,
+        groups,
+        total,
         pagination: {
           limit: parseInt(String(limit)),
           offset: parseInt(String(offset)),
-          hasMore: offset + rows.length < count
+          hasMore: offset + groups.length < total
         }
       };
     } catch (error) {
@@ -159,9 +201,11 @@ class GroupsRepository {
   /**
    * Получает группу по ID
    */
-  async getGroupById(groupId: number): Promise<Group | null> {
+  async getGroupById(groupId: number): Promise<groups | null> {
     try {
-      return await this.Group.findByPk(groupId);
+      return await prisma.groups.findUnique({
+        where: { id: groupId }
+      });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to get group by ID', { groupId, error: errorMsg });
@@ -172,24 +216,18 @@ class GroupsRepository {
   /**
    * Обновляет статус группы
    */
-  async updateGroupStatus(groupId: number, status: GroupStatus): Promise<Group> {
+  async updateGroupStatus(groupId: number, status: $Enums.GroupStatus): Promise<groups> {
     try {
-      const [affectedRows] = await this.Group.update(
-        { status },
-        { where: { id: groupId } }
-      );
-
-      if (affectedRows === 0) {
-        throw new Error('Group not found');
-      }
-
-      const updatedGroup = await this.getGroupById(groupId);
-      if (!updatedGroup) {
-        throw new Error('Group not found after update');
-      }
+      const updatedGroup = await prisma.groups.update({
+        where: { id: groupId },
+        data: { status }
+      });
 
       return updatedGroup;
     } catch (error) {
+      if (error instanceof Error && error.message.includes('Record to update not found')) {
+        throw new Error('Group not found');
+      }
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to update group status', { groupId, status, error: errorMsg });
       throw new Error(`Failed to update group status: ${errorMsg}`);
@@ -201,13 +239,17 @@ class GroupsRepository {
    */
   async deleteGroup(groupId: number): Promise<boolean> {
     try {
-      const deletedCount = await this.Group.destroy({
+      const deletedGroup = await prisma.groups.delete({
         where: { id: groupId }
       });
 
-      logger.info('Group deleted successfully', { groupId, deleted: deletedCount > 0 });
-      return deletedCount > 0;
+      logger.info('Group deleted successfully', { groupId, deleted: !!deletedGroup });
+      return !!deletedGroup;
     } catch (error) {
+      if (error instanceof Error && error.message.includes('Record to delete does not exist')) {
+        logger.info('Group not found for deletion', { groupId });
+        return false;
+      }
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to delete group', { groupId, error: errorMsg });
       throw new Error(`Failed to delete group: ${errorMsg}`);
@@ -219,12 +261,16 @@ class GroupsRepository {
    */
   async deleteGroups(groupIds: number[]): Promise<number> {
     try {
-      const deletedCount = await this.Group.destroy({
-        where: { id: { [Op.in]: groupIds } }
+      const deleteResult = await prisma.groups.deleteMany({
+        where: {
+          id: {
+            in: groupIds
+          }
+        }
       });
 
-      logger.info('Groups deleted successfully', { groupIds, count: deletedCount });
-      return deletedCount;
+      logger.info('Groups deleted successfully', { groupIds, count: deleteResult.count });
+      return deleteResult.count;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to delete groups', { groupIds, error: errorMsg });
@@ -237,12 +283,12 @@ class GroupsRepository {
    */
   async deleteGroupsByTaskId(taskId: string): Promise<number> {
     try {
-      const deletedCount = await this.Group.destroy({
-        where: { taskId }
+      const deleteResult = await prisma.groups.deleteMany({
+        where: { task_id: taskId }
       });
 
-      logger.info('Groups deleted successfully', { taskId, count: deletedCount });
-      return deletedCount;
+      logger.info('Groups deleted successfully', { taskId, count: deleteResult.count });
+      return deleteResult.count;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to delete groups by task ID', { taskId, error: errorMsg });
@@ -253,17 +299,17 @@ class GroupsRepository {
   /**
    * Получает статистику по группам
    */
-  async getGroupsStats(taskId: string): Promise<GroupsStats> {
+  async getGroupsStats(taskId?: string): Promise<GroupsStats> {
     try {
-      const stats = await Group.findAll({
-        where: { taskId },
-        attributes: [
-          'status',
-          [Group.sequelize!.fn('COUNT', Group.sequelize!.col('id')), 'count']
-        ],
-        group: ['status'],
-        raw: true
-      }) as any[];
+      const where: Prisma.groupsWhereInput = taskId ? { task_id: taskId } : {};
+
+      const stats = await prisma.groups.groupBy({
+        by: ['status'],
+        where,
+        _count: {
+          id: true
+        }
+      });
 
       const result: GroupsStats = {
         total: 0,
@@ -272,8 +318,8 @@ class GroupsRepository {
         duplicate: 0
       };
 
-      stats.forEach((stat: any) => {
-        const count = parseInt(stat.count);
+      stats.forEach((stat) => {
+        const count = stat._count.id;
         result.total += count;
         if (stat.status === 'valid') result.valid = count;
         else if (stat.status === 'invalid') result.invalid = count;
@@ -293,11 +339,12 @@ class GroupsRepository {
    */
   async groupExists(groupId: number): Promise<boolean> {
     try {
-      const count = await this.Group.count({
-        where: { id: groupId }
+      const group = await prisma.groups.findUnique({
+        where: { id: groupId },
+        select: { id: true }
       });
 
-      return count > 0;
+      return !!group;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to check group existence', { groupId, error: errorMsg });
@@ -310,11 +357,10 @@ class GroupsRepository {
    */
   async getAllGroupIds(taskId?: string): Promise<number[]> {
     try {
-      const where = taskId ? { taskId } : {};
-      const groups = await this.Group.findAll({
+      const where: Prisma.groupsWhereInput = taskId ? { task_id: taskId } : {};
+      const groups = await prisma.groups.findMany({
         where,
-        attributes: ['id'],
-        raw: true
+        select: { id: true }
       });
 
       return groups.map(group => group.id).filter(id => id !== null) as number[];
@@ -328,24 +374,18 @@ class GroupsRepository {
   /**
    * Обновляет имя группы
    */
-  async updateGroupName(groupId: number, name: string): Promise<Group> {
+  async updateGroupName(groupId: number, name: string): Promise<groups> {
     try {
-      const [affectedRows] = await this.Group.update(
-        { name },
-        { where: { id: groupId } }
-      );
-
-      if (affectedRows === 0) {
-        throw new Error('Group not found');
-      }
-
-      const updatedGroup = await this.getGroupById(groupId);
-      if (!updatedGroup) {
-        throw new Error('Group not found after update');
-      }
+      const updatedGroup = await prisma.groups.update({
+        where: { id: groupId },
+        data: { name }
+      });
 
       return updatedGroup;
     } catch (error) {
+      if (error instanceof Error && error.message.includes('Record to update not found')) {
+        throw new Error('Group not found');
+      }
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to update group name', { groupId, name, error: errorMsg });
       throw new Error(`Failed to update group name: ${errorMsg}`);
@@ -353,4 +393,14 @@ class GroupsRepository {
   }
 }
 
+// Экспорт класса и экземпляра репозитория
+export { GroupsRepository };
 export default new GroupsRepository();
+
+// Экспорт типов для совместимости
+export type {
+  GetGroupsParams,
+  GroupsResponse,
+  GroupsStats,
+  CreateGroupInput
+};

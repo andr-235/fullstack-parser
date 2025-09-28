@@ -7,16 +7,13 @@ module.exports = {
     '**/?(*.)+(spec|test).ts'
   ],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
-  },
-  globals: {
-    'ts-jest': {
+    '^.+\\.ts$': ['ts-jest', {
       useESM: true,
       tsconfig: {
         module: 'esnext',
         target: 'es2020'
       }
-    }
+    }],
   },
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {

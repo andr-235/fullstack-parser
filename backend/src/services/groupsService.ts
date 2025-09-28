@@ -5,10 +5,9 @@ import os from 'os';
 
 import FileParser from '@/utils/fileParser';
 import VKValidator from '@/utils/vkValidator';
-import { GroupsRepository } from '@/repositories/groupsRepo';
+import groupsRepo, { GroupsRepository } from '@/repositories/groupsRepo';
 import logger from '@/utils/logger';
-import { ProcessedGroup, ValidationResult } from '@/types/common';
-import { GroupAttributes } from '@/types/database';
+import { ProcessedGroup } from '@/types/common';
 
 interface UploadTask {
   taskId: string;
@@ -55,10 +54,10 @@ interface TaskStatusResult {
 interface GetGroupsParams {
   limit?: number;
   offset?: number;
-  status?: string;
-  search?: string;
+  status?: string | undefined;
+  search?: string | undefined;
   sortBy?: string;
-  sortOrder?: 'ASC' | 'DESC';
+  sortOrder?: 'ASC' | 'DESC' | 'asc' | 'desc';
 }
 
 interface GetGroupsResult {
@@ -91,7 +90,7 @@ class GroupsService {
   private groupsRepo: GroupsRepository;
 
   constructor() {
-    this.groupsRepo = new GroupsRepository();
+    this.groupsRepo = groupsRepo;
   }
 
   /**
@@ -211,7 +210,7 @@ class GroupsService {
         // Без VK валидации все группы считаем валидными
         validGroups = groups.map(group => ({
           ...group,
-          error: undefined
+          error: group.error || ''
         }));
       }
 

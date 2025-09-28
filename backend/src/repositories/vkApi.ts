@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import axiosRetry from 'axios-retry';
 
@@ -143,7 +143,7 @@ class VKApi {
     });
 
     // Interceptor для rate limiting
-    this.client.interceptors.request.use(async (config: AxiosRequestConfig) => {
+    this.client.interceptors.request.use(async (config: any) => {
       await this.rateLimiter.consume('vk-api');
       return config;
     });
@@ -383,7 +383,7 @@ class VKApi {
     return {
       points: this.rateLimiter.points,
       duration: this.rateLimiter.duration,
-      remainingPoints: this.rateLimiter.getTokensRemaining()
+      remainingPoints: (this.rateLimiter as any).getTokensRemaining() || 0
     };
   }
 }

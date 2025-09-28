@@ -97,7 +97,7 @@ async function handleSubmit() {
         postId: Number(postId.value)
       });
       await store.startCollect(store.taskId);
-      router.push(`/task/${store.taskId}`);
+      router.push(`/tasks/${store.taskId}`);
     } catch (error) {
       errorMessage.value = error.message || 'Ошибка создания задачи';
       showError.value = true;

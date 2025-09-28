@@ -1,14 +1,28 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import logger from '@/utils/logger';
 import taskService from '@/services/taskService';
 import vkService from '@/services/vkService';
-import { VkApiRepository } from '@/repositories/vkApi';
+import { queueService } from '@/services/queueService';
+import vkApi from '@/repositories/vkApi';
 import { TaskStatus, TaskType, CreateTaskRequest } from '@/types/task';
-import { ApiResponse, PaginationParams, PaginatedResponse } from '@/types/express';
+import { ApiResponse, PaginationParams, PaginatedResponse, ErrorCodes } from '@/types/express';
+import { ProgressCalculator } from '@/services/progressCalculator';
+import {
+  TaskCreateResponse,
+  TaskProgressResponse,
+  TaskListResponse
+} from '@/types/api';
+import {
+  ValidationError,
+  TaskError,
+  VkApiError,
+  NotFoundError,
+  RateLimitError,
+  ErrorUtils
+} from '@/utils/errors';
 
 const router = Router();
-const vkApi = new VkApiRepository();
 
 // Validation schema for task creation
 const taskSchema = Joi.object({
@@ -63,7 +77,7 @@ interface GetResultsQuery {
  * Создает задачу на сбор комментариев из VK.
  */
 const createTask = async (req: Request<{}, ApiResponse, CreateTaskRequestBody>, res: Response): Promise<void> => {
-  const requestId = req.id;
+  const requestId = (req as any).id;
   try {
     logger.info('Processing createTask request', {
       ownerId: req.body.ownerId,
@@ -74,13 +88,17 @@ const createTask = async (req: Request<{}, ApiResponse, CreateTaskRequestBody>, 
     const { error, value } = taskSchema.validate(req.body);
     if (error) {
       logger.warn('Validation error in createTask', {
-        details: error.details[0].message,
+        details: error.details[0]?.message || 'Validation failed',
         id: requestId
       });
-      res.status(400).json({
-        success: false,
-        error: error.details[0].message
-      });
+
+      const validationErrors = error.details.map(detail => ({
+        field: detail.path.join('.'),
+        message: detail.message,
+        value: detail.context?.value
+      }));
+
+      res.validationError(validationErrors);
       return;
     }
 
@@ -94,10 +112,12 @@ const createTask = async (req: Request<{}, ApiResponse, CreateTaskRequestBody>, 
     const { taskId } = await taskService.createTask(taskData);
     logger.info('Task created successfully', { taskId, status: 'created', id: requestId });
 
-    res.status(201).json({
-      success: true,
-      data: { taskId, status: 'created' }
-    });
+    res.status(201).success({
+      taskId,
+      status: 'created',
+      type: taskData.type,
+      createdAt: new Date().toISOString()
+    }, 'Задача успешно создана');
   } catch (err) {
     const error = err as Error;
     if (error.name === 'ValidationError') {
@@ -105,28 +125,22 @@ const createTask = async (req: Request<{}, ApiResponse, CreateTaskRequestBody>, 
         message: error.message,
         id: requestId
       });
-      res.status(400).json({
-        success: false,
-        error: error.message
-      });
+      res.error(error.message, 400);
       return;
     }
     logger.error('Error in createTask', {
       error: error.stack,
       id: requestId
     });
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
+    res.error('Ошибка создания задачи', 500);
   }
 };
 
 /**
  * Создает задачу на сбор постов и комментариев из VK групп через очередь BullMQ.
  */
-const createVkCollectTask = async (req: Request<{}, ApiResponse, VkCollectRequestBody>, res: Response): Promise<void> => {
-  const requestId = req.id;
+const createVkCollectTask = async (req: Request<{}, ApiResponse, VkCollectRequestBody>, res: Response, next: NextFunction): Promise<void> => {
+  const requestId = (req as any).id;
   try {
     logger.info('Processing createVkCollectTask request', {
       groupsCount: req.body.groups?.length,
@@ -135,15 +149,12 @@ const createVkCollectTask = async (req: Request<{}, ApiResponse, VkCollectReques
 
     const { error, value } = vkCollectSchema.validate(req.body);
     if (error) {
+      const validationError = ValidationError.fromJoi(error).setRequestId(requestId);
       logger.warn('Validation error in createVkCollectTask', {
-        details: error.details[0].message,
+        details: validationError.details,
         id: requestId
       });
-      res.status(400).json({
-        success: false,
-        error: error.details[0].message
-      });
-      return;
+      throw validationError;
     }
 
     const { groups } = value;
@@ -213,17 +224,29 @@ const createVkCollectTask = async (req: Request<{}, ApiResponse, VkCollectReques
 
     const { taskId } = await taskService.createTask(taskData);
 
-    // TODO: Add job to BullMQ queue when queue is migrated to TypeScript
-    // await queue.add('vk-collect', { taskId }, {
-    //   delay: 1000,
-    //   attempts: 3,
-    //   backoff: {
-    //     type: 'exponential',
-    //     delay: 5000,
-    //   },
-    //   removeOnComplete: 100,
-    //   removeOnFail: 50
-    // });
+    // Add job to BullMQ via QueueService (type-safe wrapper)
+    try {
+      // QueueService expects job data without taskId (it will be appended internally)
+      const vkGroups = groupsWithNames.map(g => ({ vkId: String(g.id), name: g.name }));
+
+      await queueService.addVkCollectJob(
+        {
+          type: 'fetch_comments',
+          metadata: {
+            groups: vkGroups,
+            options: {}
+          }
+        },
+        taskId
+      );
+    } catch (queueErr) {
+      const errorMsg = queueErr instanceof Error ? queueErr.message : String(queueErr);
+      logger.warn('Failed to enqueue VK collect job, task will still be created', {
+        taskId,
+        error: errorMsg,
+        id: requestId
+      });
+    }
 
     logger.info('VK collect task created', {
       taskId,
@@ -232,49 +255,67 @@ const createVkCollectTask = async (req: Request<{}, ApiResponse, VkCollectReques
       id: requestId
     });
 
-    res.status(201).json({
-      success: true,
-      data: { taskId, status: 'created' }
-    });
+    res.status(201).success({
+      taskId,
+      status: 'created',
+      type: taskData.type,
+      groupsCount: groupsWithNames.length,
+      createdAt: new Date().toISOString()
+    }, 'Задача сбора VK комментариев создана');
 
-  } catch (err) {
-    const error = err as Error;
+  } catch (error) {
+    // Обработка VK API ошибок
+    if (error instanceof VkApiError) {
+      logger.warn('VK API error in createVkCollectTask', {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        id: requestId
+      });
+      throw error;
+    }
+
+    // Обработка валидационных ошибок
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    // Общая ошибка
+    const err = error as Error;
     logger.error('Error in createVkCollectTask', {
-      error: error.stack,
+      error: err.message,
+      stack: err.stack,
       id: requestId
     });
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
+
+    const appError = ErrorUtils.toAppError(err, 'Ошибка создания задачи VK').setRequestId(requestId);
+    throw appError;
   }
 };
 
 /**
  * POST /api/collect/:taskId - Start collect
  */
-const postCollect = async (req: Request<{ taskId: string }>, res: Response): Promise<void> => {
-  const requestId = req.id;
+const postCollect = async (req: Request<{ taskId: string }>, res: Response, next: NextFunction): Promise<void> => {
+  const requestId = (req as any).id;
   try {
     const taskId = Number(req.params.taskId);
     logger.info('Processing postCollect request', { taskId, id: requestId });
 
     if (isNaN(taskId)) {
-      res.status(400).json({
-        success: false,
-        error: 'Invalid task ID'
-      });
-      return;
+      throw new ValidationError('Invalid task ID format', [
+        {
+          field: 'taskId',
+          message: 'Task ID must be a valid number',
+          value: req.params.taskId
+        }
+      ]).setRequestId(requestId);
     }
 
     const task = await taskService.getTaskById(taskId);
     if (!task) {
       logger.warn('Task not found in postCollect', { taskId, id: requestId });
-      res.status(404).json({
-        success: false,
-        error: 'Task not found'
-      });
-      return;
+      throw TaskError.notFound(String(taskId)).setRequestId(requestId);
     }
 
     const { status, startedAt } = await taskService.startCollect(taskId);
@@ -284,81 +325,141 @@ const postCollect = async (req: Request<{ taskId: string }>, res: Response): Pro
       success: true,
       data: { taskId, status: 'pending', startedAt }
     });
-  } catch (err) {
-    const error = err as Error;
-    if (error.message.includes('rate limit')) {
+  } catch (error) {
+    // Обработка rate limit ошибок
+    if (error instanceof Error && error.message.includes('rate limit')) {
       logger.warn('Rate limit in postCollect', { taskId: req.params.taskId, id: requestId });
-      res.status(429).json({
-        success: false,
-        error: 'Rate limit exceeded'
-      });
-      return;
+      throw new RateLimitError('Rate limit exceeded for VK API').setRequestId(requestId);
     }
-    if (error.name === 'ValidationError') {
-      logger.warn('Validation error in postCollect', { message: error.message, id: requestId });
-      res.status(400).json({
-        success: false,
-        error: error.message
-      });
-      return;
+
+    // Передаем уже обработанные AppError дальше
+    if (error instanceof ValidationError || error instanceof TaskError) {
+      throw error;
     }
+
+    // Общая обработка ошибок
+    const err = error as Error;
     logger.error('Error in postCollect', {
       taskId: req.params.taskId,
-      error: error.stack,
+      error: err.message,
+      stack: err.stack,
       id: requestId
     });
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
+
+    const appError = ErrorUtils.toAppError(err, 'Ошибка запуска сбора данных').setRequestId(requestId);
+    throw appError;
   }
 };
 
 /**
- * GET /api/tasks/:taskId - Get task status
+ * GET /api/tasks/:taskId - Get task details
  */
-const getTask = async (req: Request<{ taskId: string }>, res: Response): Promise<void> => {
+const getTask = async (req: Request<{ taskId: string }>, res: Response, next: NextFunction): Promise<void> => {
+  const requestId = (req as any).id;
   try {
     const taskId = Number(req.params.taskId);
     if (isNaN(taskId)) {
-      res.status(400).json({
-        success: false,
-        error: 'Invalid task ID'
-      });
-      return;
+      logger.warn('Invalid task ID provided', { taskId: req.params.taskId, id: requestId });
+      throw new ValidationError('Invalid task ID format', [
+        {
+          field: 'taskId',
+          message: 'Task ID must be a valid number',
+          value: req.params.taskId
+        }
+      ]).setRequestId(requestId);
     }
 
     const taskStatus = await taskService.getTaskStatus(taskId);
+
+    // Создаем метрики для расчета прогресса
+    const metrics = ProgressCalculator.createMetricsFromTask(taskStatus);
+
+    // Валидируем метрики для отладки
+    const validationErrors = ProgressCalculator.validateMetrics(metrics);
+    if (validationErrors.length > 0) {
+      logger.warn('Progress metrics validation warnings', {
+        taskId,
+        errors: validationErrors,
+        metrics,
+        id: requestId
+      });
+    }
+
+    // Рассчитываем точный прогресс
+    const progressResult = ProgressCalculator.calculateProgress(metrics);
+
+    logger.debug('Task progress calculated', {
+      taskId,
+      progressResult,
+      metrics,
+      id: requestId
+    });
+
+    // Возвращаем полную информацию о задаче с точным прогрессом
     res.json({
       success: true,
       data: {
+        id: taskId,
         status: taskStatus.status,
-        progress: taskStatus.progress,
-        errors: taskStatus.errors || []
+        type: taskStatus.type,
+        priority: taskStatus.priority,
+        progress: {
+          processed: progressResult.processed,
+          total: progressResult.total,
+          percentage: progressResult.percentage,
+          phase: progressResult.phase,
+          phases: progressResult.phases
+        },
+        metrics: {
+          posts: taskStatus.metrics?.posts || 0,
+          comments: taskStatus.metrics?.comments || 0,
+          errors: taskStatus.metrics?.errors || 0
+        },
+        errors: taskStatus.errors || [],
+        groups: taskStatus.groups,
+        parameters: taskStatus.parameters,
+        result: taskStatus.result,
+        error: taskStatus.error,
+        executionTime: taskStatus.executionTime,
+        startedAt: taskStatus.startedAt,
+        finishedAt: taskStatus.finishedAt,
+        completedAt: taskStatus.finishedAt, // Alias для совместимости с frontend
+        createdBy: taskStatus.createdBy,
+        createdAt: taskStatus.createdAt,
+        updatedAt: taskStatus.updatedAt
       }
     });
-  } catch (err) {
-    const error = err as Error;
-    if (error.message.includes('not found')) {
-      res.status(404).json({
-        success: false,
-        error: 'Task not found'
-      });
-      return;
+  } catch (error) {
+    // Обработка ошибки "задача не найдена"
+    if (error instanceof Error && error.message.includes('not found')) {
+      logger.warn('Task not found', { taskId: req.params.taskId, id: requestId });
+      throw TaskError.notFound(req.params.taskId).setRequestId(requestId);
     }
-    logger.error('Error in getTask', { taskId: req.params.taskId, error: error.message });
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
+
+    // Передаем уже обработанные ошибки дальше
+    if (error instanceof ValidationError || error instanceof TaskError) {
+      throw error;
+    }
+
+    // Общая обработка ошибок
+    const err = error as Error;
+    logger.error('Error in getTask', {
+      taskId: req.params.taskId,
+      error: err.message,
+      stack: err.stack,
+      id: requestId
     });
+
+    const appError = ErrorUtils.toAppError(err, 'Ошибка получения информации о задаче').setRequestId(requestId);
+    throw appError;
   }
 };
 
 /**
  * Получает список задач с пагинацией и фильтрами.
  */
-const getTasks = async (req: Request<{}, PaginatedResponse<any>, {}, GetTasksQuery>, res: Response): Promise<void> => {
-  const requestId = req.id;
+const getTasks = async (req: Request<{}, PaginatedResponse<any>, {}, GetTasksQuery>, res: Response, next: NextFunction): Promise<void> => {
+  const requestId = (req as any).id;
   try {
     logger.info('Processing getTasks request', {
       page: req.query.page,
@@ -378,19 +479,16 @@ const getTasks = async (req: Request<{}, PaginatedResponse<any>, {}, GetTasksQue
 
     const { error, value } = querySchema.validate(req.query);
     if (error) {
+      const validationError = ValidationError.fromJoi(error).setRequestId(requestId);
       logger.warn('Validation error in getTasks', {
-        details: error.details[0].message,
+        details: validationError.details,
         id: requestId
       });
-      res.status(400).json({
-        success: false,
-        error: error.details[0].message
-      });
-      return;
+      throw validationError;
     }
 
-    const { page, limit, status, type } = value;
-    const { tasks, total } = await taskService.listTasks(page, limit, status, type);
+  const { page = 1, limit = 20, status, type } = value as { page?: number; limit?: number; status?: any; type?: any };
+  const { tasks, total } = await taskService.listTasks(page, limit, status, type);
 
     logger.info('Tasks listed successfully', {
       page,
@@ -401,13 +499,18 @@ const getTasks = async (req: Request<{}, PaginatedResponse<any>, {}, GetTasksQue
       id: requestId
     });
 
+    const totalPages = Math.max(1, Math.ceil(total / limit));
     const response: PaginatedResponse<any> = {
+      success: true,
+      timestamp: new Date().toISOString(),
       data: tasks,
       pagination: {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
       }
     };
 
@@ -415,46 +518,44 @@ const getTasks = async (req: Request<{}, PaginatedResponse<any>, {}, GetTasksQue
       success: true,
       ...response
     });
-  } catch (err) {
-    const error = err as Error;
-    if (error.name === 'ValidationError') {
-      logger.warn('Validation error in getTasks', {
-        message: error.message,
-        id: requestId
-      });
-      res.status(400).json({
-        success: false,
-        error: error.message
-      });
-      return;
+  } catch (error) {
+    // Передаем валидационные ошибки дальше
+    if (error instanceof ValidationError) {
+      throw error;
     }
+
+    // Общая обработка ошибок
+    const err = error as Error;
     logger.error('Error in getTasks', {
       page: req.query.page,
       limit: req.query.limit,
       status: req.query.status,
       type: req.query.type,
-      error: error.message,
+      error: err.message,
+      stack: err.stack,
       id: requestId
     });
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
+
+    const appError = ErrorUtils.toAppError(err, 'Ошибка получения списка задач').setRequestId(requestId);
+    throw appError;
   }
 };
 
 /**
  * GET /api/results/:taskId - Get results
  */
-const getResults = async (req: Request<{ taskId: string }, {}, {}, GetResultsQuery>, res: Response): Promise<void> => {
+const getResults = async (req: Request<{ taskId: string }, {}, {}, GetResultsQuery>, res: Response, next: NextFunction): Promise<void> => {
+  const requestId = (req as any).id;
   try {
     const taskId = Number(req.params.taskId);
     if (isNaN(taskId)) {
-      res.status(400).json({
-        success: false,
-        error: 'Invalid task ID'
-      });
-      return;
+      throw new ValidationError('Invalid task ID format', [
+        {
+          field: 'taskId',
+          message: 'Task ID must be a valid number',
+          value: req.params.taskId
+        }
+      ]).setRequestId(requestId);
     }
 
     const groupId = req.query.groupId ? Number(req.query.groupId) : undefined;
@@ -465,25 +566,30 @@ const getResults = async (req: Request<{ taskId: string }, {}, {}, GetResultsQue
       success: true,
       data: results
     });
-  } catch (err) {
-    const error = err as Error;
-    if (error.message.includes('not found')) {
-      res.status(404).json({
-        success: false,
-        error: 'Results not found'
-      });
-      return;
+  } catch (error) {
+    // Обработка ошибки "результаты не найдены"
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw new NotFoundError('Task results', req.params.taskId).setRequestId(requestId);
     }
+
+    // Передаем валидационные ошибки дальше
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    // Общая обработка ошибок
+    const err = error as Error;
     logger.error('Error in getResults', {
       taskId: req.params.taskId,
       groupId: req.query.groupId,
       postId: req.query.postId,
-      error: error.message
+      error: err.message,
+      stack: err.stack,
+      id: requestId
     });
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
+
+    const appError = ErrorUtils.toAppError(err, 'Ошибка получения результатов задачи').setRequestId(requestId);
+    throw appError;
   }
 };
 

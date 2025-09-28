@@ -1,7 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
 import logger from './logger';
-import { VkGroup, VkApiResponse, VkGroupsGetByIdResponse, VkApiError } from '@/types/vk';
-import { ProcessedGroup, RetryOptions, RateLimitInfo } from '@/types/common';
+import { VkGroup, VkApiResponse, VkApiError } from '@/types/vk';
+import { ProcessedGroup, RateLimitInfo } from '@/types/common';
 
 interface ValidationResult {
   validGroups: ProcessedGroup[];

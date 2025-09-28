@@ -37,8 +37,7 @@ services:
   api:
     build:
       context: ./backend
-      dockerfile: Dockerfile
-      target: deps  # Используем stage с зависимостями для разработки
+      dockerfile: Dockerfile.dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,14 +52,14 @@ services:
     volumes:
       # Монтируем исходный код для горячей перезагрузки
       - ./backend:/app
-      - /app/node_modules  # Исключаем node_modules из монтирования
+      # Создаем именованный volume для node_modules чтобы избежать конфликта архитектур
+      - backend_node_modules:/app/node_modules
       # Сохраняем директорию логов
       - ./backend/logs:/app/logs
     environment:
       - NODE_ENV=development
-      - BUN_ENV=development
     # Добавляем команду для запуска в режиме разработки
-    command: ["bun", "run", "dev"]
+    command: ["npm", "run", "dev:watch"]
     networks:
       - default
 
@@ -80,13 +79,17 @@ services:
     volumes:
       # Монтируем исходный код для горячей перезагрузки
       - ./frontend:/app
-      - /app/node_modules  # Исключаем node_modules из монтирования
+      # Создаем именованный volume для node_modules чтобы избежать конфликта архитектур
+      - frontend_node_modules:/app/node_modules
     environment:
       - NODE_ENV=development
-      - BUN_ENV=development
     # Команда уже указана в Dockerfile.dev
     networks:
       - default
+
+volumes:
+  frontend_node_modules:
+  backend_node_modules:
 
 networks:
   default:

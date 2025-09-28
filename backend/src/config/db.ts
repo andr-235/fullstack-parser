@@ -1,9 +1,6 @@
-import { Sequelize, SequelizeOptions } from 'sequelize-typescript';
-import * as pg from 'pg';
-import { SequelizeConfig, Environment } from '@/types/database';
+import { PrismaService, prisma } from './prisma';
+import { DatabaseConfig, Environment } from '@/types/database';
 import logger from '@/utils/logger';
-import path from 'path';
-import 'reflect-metadata';
 
 const environment = (process.env.NODE_ENV as Environment) || 'development';
 const dbUrl = process.env.DB_URL;
@@ -12,98 +9,33 @@ if (!dbUrl) {
   throw new Error('DB_URL environment variable is required');
 }
 
-const config: SequelizeOptions = {
-  // Включаем логирование SQL запросов в development режиме
-  logging: environment === 'development'
-    ? (sql: string, timing?: number) => {
-        logger.debug('SQL Query', { sql, timing });
-      }
-    : false,
-
-  // Connection pool конфигурация для оптимальной производительности
+// Legacy config для обратной совместимости с существующим API
+const legacyConfig = {
   pool: {
-    max: 20,          // Максимальное количество соединений в пуле
-    min: 0,           // Минимальное количество соединений в пуле
-    acquire: 60000,   // Максимальное время в миллисекундах, которое пул будет пытаться получить соединение
-    idle: 10000,      // Максимальное время в миллисекундах, которое соединение может быть неактивным
-    evict: 1000       // Интервал проверки соединений на предмет удаления из пула
+    max: 20,
+    min: 0,
+    acquire: 60000,
+    idle: 10000,
+    evict: 1000
   },
-
-  // Connection timeout настройки
-  dialectOptions: {
-    connectTimeout: 30000,    // Таймаут подключения (30 секунд)
-    acquireConnectionTimeout: 60000,  // Таймаут получения соединения (60 секунд)
-    timeout: 60000,           // Таймаут выполнения запроса (60 секунд)
-
-    // SSL конфигурация для production
-    ...(environment === 'production' && {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    })
-  },
-
-  // Дополнительные настройки производительности
   define: {
-    // Автоматически добавляем timestamps ко всем моделям
     timestamps: true,
-    // Используем camelCase для полей
     underscored: false,
-    // Имена таблиц во множественном числе
     freezeTableName: false
   },
-
-  // Query опции по умолчанию
-  query: {
-    // Используем prepared statements для лучшей производительности
-    useMaster: true
-  },
-
-  // Benchmark для мониторинга производительности в development
-  benchmark: environment === 'development',
-
-  // Настройки для различных диалектов PostgreSQL
-  dialectModule: pg,
-
-  // Retry конфигурация
-  retry: {
-    match: [
-      /ConnectionError/,
-      /ConnectionRefusedError/,
-      /ConnectionTimedOutError/,
-      /TimeoutError/,
-      /ETIMEDOUT/,
-      /ECONNRESET/,
-      /ECONNREFUSED/,
-      /EHOSTUNREACH/,
-      /ENOTFOUND/,
-      /EAI_AGAIN/
-    ],
-    max: 3
-  }
+  logging: environment === 'development',
+  benchmark: environment === 'development'
 };
-
-// Добавляем модели к конфигурации
-const sequelizeConfig: SequelizeOptions = {
-  ...config,
-  models: [path.join(__dirname, '..', 'models', '*.ts')],
-  modelMatch: (filename: string, member: string) => {
-    return filename.substring(0, filename.indexOf('.ts')) === member.toLowerCase();
-  }
-};
-
-const sequelize = new Sequelize(dbUrl, sequelizeConfig);
 
 /**
  * Проверяет подключение к базе данных
  */
 export async function testConnection(): Promise<boolean> {
   try {
-    await sequelize.authenticate();
+    await PrismaService.connect();
     logger.info('Database connection established successfully', {
-      database: sequelize.getDatabaseName(),
-      dialect: sequelize.getDialect()
+      database: 'vk_analyzer',
+      provider: 'postgresql'
     });
     return true;
   } catch (error) {
@@ -117,7 +49,7 @@ export async function testConnection(): Promise<boolean> {
  */
 export async function closeConnection(): Promise<void> {
   try {
-    await sequelize.close();
+    await PrismaService.disconnect();
     logger.info('Database connections closed');
   } catch (error) {
     logger.error('Error closing database connections', error);
@@ -126,14 +58,15 @@ export async function closeConnection(): Promise<void> {
 }
 
 /**
- * Синхронизирует модели с базой данных
+ * Синхронизирует модели с базой данных (заглушка для Prisma)
  */
 export async function syncModels(force = false): Promise<void> {
   try {
-    await sequelize.sync({ force });
-    logger.info('Database models synchronized', { force });
+    // Prisma управляет схемой через миграции
+    await prisma.$queryRaw`SELECT 1`;
+    logger.info('Database schema verified', { force, note: 'Prisma manages schema via migrations' });
   } catch (error) {
-    logger.error('Error synchronizing database models', error);
+    logger.error('Error verifying database schema', error);
     throw error;
   }
 }
@@ -143,7 +76,7 @@ export async function syncModels(force = false): Promise<void> {
  */
 export async function runMigrations(): Promise<void> {
   try {
-    // TODO: Implement migrations logic when migration system is set up
+    await PrismaService.runMigrations();
     logger.info('Database migrations completed');
   } catch (error) {
     logger.error('Error running database migrations', error);
@@ -154,17 +87,18 @@ export async function runMigrations(): Promise<void> {
 /**
  * Получает конфигурацию базы данных
  */
-export function getDatabaseConfig(): SequelizeConfig {
+export function getDatabaseConfig(): DatabaseConfig {
+  const url = new URL(dbUrl!);
   return {
-    username: sequelize.config.username || '',
-    password: sequelize.config.password || '',
-    database: sequelize.config.database || '',
-    host: sequelize.config.host || 'localhost',
-    port: Number(sequelize.config.port) || 5432,
-    dialect: sequelize.getDialect() as 'postgres',
-    logging: Boolean(config.logging),
-    pool: config.pool || undefined,
-    define: config.define || undefined
+    username: url.username || 'postgres',
+    password: url.password || '',
+    database: url.pathname.slice(1) || 'vk_analyzer',
+    host: url.hostname || 'localhost',
+    port: Number(url.port) || 5432,
+    dialect: 'postgresql' as const,
+    logging: legacyConfig.logging,
+    pool: legacyConfig.pool,
+    define: legacyConfig.define
   };
 }
 
@@ -175,24 +109,15 @@ export async function healthCheck(): Promise<{
   status: 'healthy' | 'unhealthy';
   latency?: number;
   error?: string;
+  connectionStats?: any;
 }> {
-  const start = Date.now();
-
-  try {
-    await sequelize.authenticate();
-    return {
-      status: 'healthy',
-      latency: Date.now() - start
-    };
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    return {
-      status: 'unhealthy',
-      latency: Date.now() - start,
-      error: errorMsg
-    };
-  }
+  return await PrismaService.healthCheck();
 }
 
-export default sequelize;
-export { sequelize };
+// Экспорт Prisma клиента вместо Sequelize
+export default prisma;
+export { prisma };
+
+// Экспорт дополнительных утилит
+export { PrismaService };
+export const db = prisma;
