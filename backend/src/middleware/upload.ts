@@ -1,4 +1,4 @@
-import multer, { MulterError } from 'multer';
+import multer, { MulterError, File } from 'multer';
 import path from 'path';
 import { Request, Response, NextFunction } from 'express';
 import logger from '@/utils/logger';
@@ -8,7 +8,7 @@ import { ApiResponse } from '@/types/express';
 declare global {
   namespace Express {
     interface Request {
-      file?: Express.Multer.File;
+      file?: File;
     }
   }
 }
@@ -18,7 +18,7 @@ declare global {
 const storage = multer.memoryStorage();
 
 // Фильтр для проверки типа файла
-const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback): void => {
+const fileFilter = (req: Request, file: File, cb: multer.FileFilterCallback): void => {
   if (file.mimetype === 'text/plain' || path.extname(file.originalname).toLowerCase() === '.txt') {
     cb(null, true);
   } else {
@@ -38,7 +38,7 @@ const upload = multer({
 // Middleware для обработки ошибок multer
 const handleUploadError = (error: Error, req: Request, res: Response, next: NextFunction): void => {
   if (error instanceof MulterError) {
-    switch (error.code) {
+    switch ((error as MulterError).code) {
       case 'LIMIT_FILE_SIZE':
         res.error('File size too large (max 10MB)', 400);
         return;

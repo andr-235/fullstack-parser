@@ -14,6 +14,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Generate Prisma client before building
+RUN npx prisma generate
+
 RUN npm run build
 
 EXPOSE 3000
