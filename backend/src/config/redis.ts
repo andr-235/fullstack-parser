@@ -16,7 +16,6 @@ function getRedisConfig(): QueueRedisConfig {
     commandTimeout: 300000, // Увеличен до 5 минут для VK API
     retryDelayOnFailover: 100,
     enableOfflineQueue: false,
-    maxRetriesPerRequest: null,
     lazyConnect: true,
     keepAlive: 30000, // Keep-alive каждые 30 секунд
   };
@@ -36,7 +35,6 @@ export function createRedisConnection(config?: Partial<QueueRedisConfig>): IORed
     maxRetriesPerRequest: redisConfig.maxRetriesPerRequest,
     connectTimeout: redisConfig.connectTimeout,
     commandTimeout: redisConfig.commandTimeout,
-    retryDelayOnFailover: redisConfig.retryDelayOnFailover,
     enableOfflineQueue: redisConfig.enableOfflineQueue,
     lazyConnect: redisConfig.lazyConnect,
     keepAlive: redisConfig.keepAlive,
