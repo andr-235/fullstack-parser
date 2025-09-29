@@ -10,7 +10,7 @@ import {
 import { QUEUE_NAMES, WORKER_CONFIGS, createWorkerRedisConnection } from '@/config/queue';
 import taskService from '@/services/taskService';
 import vkService from '@/services/vkService';
-import vkApi, { ProcessedPost } from '@/repositories/vkApi';
+import vkIoService, { ProcessedPost } from '@/services/vkIoService';
 import dbRepo from '@/repositories/dbRepo';
 import logger from '@/utils/logger';
 import { TaskMetrics } from '@/types/task';
@@ -20,10 +20,11 @@ import { TaskMetrics } from '@/types/task';
  *
  * Особенности:
  * - Строгая типизация с TypeScript
+ * - Использует новый vkIoService с библиотекой vk-io (решает проблему IP-блокировки)
  * - Интеграция с существующими сервисами
  * - Proper error handling и retry логика
  * - Progress tracking с детализированными метриками
- * - Rate limiting для VK API
+ * - Автоматический rate limiting через vk-io
  * - Structured logging для мониторинга
  */
 export class VkCollectWorker {
@@ -296,9 +297,9 @@ export class VkCollectWorker {
         throw new Error(`Invalid group ID: ${groupId}`);
       }
 
-      // Получаем посты группы с обработкой таймаутов
+      // Получаем посты группы через vk-io с обработкой таймаутов
       const postsResult = await this.executeWithTimeout(
-        () => vkApi.getPosts(numericGroupId),
+        () => vkIoService.getPosts(numericGroupId),
         60000, // 1 минута на получение постов
         `Получение постов для группы ${groupId}`
       );
@@ -321,7 +322,7 @@ export class VkCollectWorker {
       for (const post of postsToProcess) {
         try {
           const commentsResult = await this.executeWithTimeout(
-            () => vkApi.getComments(numericGroupId, post.vk_post_id),
+            () => vkIoService.getComments(numericGroupId, post.vk_post_id),
             90000, // 1.5 минуты на получение комментариев
             `Получение комментариев для поста ${post.vk_post_id}`
           );

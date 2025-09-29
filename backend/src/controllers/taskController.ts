@@ -4,7 +4,7 @@ import logger from '@/utils/logger';
 import taskService from '@/services/taskService';
 import vkService from '@/services/vkService';
 import { queueService } from '@/services/queueService';
-import vkApi from '@/repositories/vkApi';
+import vkIoService from '@/services/vkIoService';
 import { TaskStatus, TaskType, CreateTaskRequest } from '@/types/task';
 import { ApiResponse, PaginationParams, PaginatedResponse, ErrorCodes } from '@/types/express';
 import { ProgressCalculator } from '@/services/progressCalculator';
@@ -182,7 +182,7 @@ const createVkCollectTask = async (req: Request<{}, ApiResponse, VkCollectReques
 
     try {
       // Получаем информацию о группах из VK API
-      const groupsInfo = await vkApi.getGroupsInfo(uniqueGroupIds);
+      const groupsInfo = await vkIoService.getGroupsInfo(uniqueGroupIds);
 
       // Создаем map для быстрого поиска
       const groupInfoMap = new Map(groupsInfo.map(g => [g.id, g]));

@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import vkApi from '@/repositories/vkApi';
+import vkIoService from '@/services/vkIoService';
 import dbRepo from '@/repositories/dbRepo';
 import { VkPost, VkComment } from '@/types/vk';
 // Временные типы для корректной работы
@@ -33,7 +33,7 @@ interface TaskCompletionResult {
   completedAt: string;
 }
 
-// Используем правильные типы для репозиториев
+// Используем правильные типы для репозиториев (обновлено для vk-io)
 interface VkApiRepository {
   getPosts(groupId: number): Promise<{ posts: VkPost[] }>;
   getComments(groupId: number, postId: number): Promise<{ comments: VkComment[] }>;
@@ -48,13 +48,19 @@ interface DatabaseRepository {
   getRecentTasks(limit: number, type: string): Promise<Task[]>;
 }
 
+/**
+ * VKService - основной сервис для работы с VK API
+ *
+ * Обновлен для использования vkIoService с библиотекой vk-io
+ * Решает проблемы IP-блокировки и улучшает производительность
+ */
 class VKService {
   private vkApi: VkApiRepository;
   private dbRepo: DatabaseRepository;
 
   constructor(vkApiInstance?: VkApiRepository, dbRepoInstance?: DatabaseRepository) {
-    // Временное решение - используем приведение типов для совместимости
-    this.vkApi = (vkApiInstance || vkApi) as VkApiRepository;
+    // Обновлено для использования vkIoService
+    this.vkApi = (vkApiInstance || vkIoService) as VkApiRepository;
     this.dbRepo = (dbRepoInstance || dbRepo) as DatabaseRepository;
   }
 

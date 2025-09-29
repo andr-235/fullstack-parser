@@ -135,11 +135,27 @@ export interface VkApiError {
 export interface VkWallGetResponse {
   count: number;
   items: VkPost[];
+  profiles?: VkProfile[];
+  groups?: VkGroup[];
 }
 
 export interface VkCommentsGetResponse {
   count: number;
   items: VkComment[];
+  profiles?: VkProfile[];
+  groups?: VkGroup[];
+  current_level_count?: number;
+  can_post?: 0 | 1;
+}
+
+export interface VkProfile {
+  id: number;
+  first_name: string;
+  last_name: string;
+  photo_50?: string;
+  photo_100?: string;
+  deactivated?: string;
+  is_closed?: boolean;
 }
 
 export interface VkGroupsGetByIdResponse {
