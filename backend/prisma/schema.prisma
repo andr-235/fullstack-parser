@@ -25,7 +25,6 @@ model comments {
   createdAt                     DateTime @default(now())
   updatedAt                     DateTime
   post_id                       Int?
-  posts_comments_postIdToposts  posts?   @relation("comments_postIdToposts", fields: [postId], references: [id], onDelete: Cascade)
   posts_comments_post_idToposts posts?   @relation("comments_post_idToposts", fields: [post_id], references: [id], onDelete: Cascade)
 
   @@index([author_id], map: "idx_comment_author")
@@ -72,7 +71,6 @@ model posts {
   createdAt                        DateTime   @default(now())
   updatedAt                        DateTime
   task_id                          Int
-  comments_comments_postIdToposts  comments[] @relation("comments_postIdToposts")
   comments_comments_post_idToposts comments[] @relation("comments_post_idToposts")
   tasks                            tasks      @relation(fields: [task_id], references: [id], onDelete: Cascade)
 

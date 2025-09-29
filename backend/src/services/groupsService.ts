@@ -129,6 +129,13 @@ class GroupsService {
 
       // Парсинг файла
       const parseResult = await FileParser.parseGroupsFile(actualFilePath, encoding);
+      
+      // Log sample parsed data for debugging (without raw lines to avoid scope issues)
+      logger.info('Sample parsed groups (first 5)', {
+        sampleParsed: parseResult.groups.slice(0, 5).map(g => ({ id: g.id, name: g.name, url: g.url })),
+        totalParsed: parseResult.groups.length,
+        parseErrors: parseResult.errors.slice(0, 3) // first 3 errors if any
+      });
 
       // Создаем задачу загрузки
       const uploadTask: UploadTask = {
@@ -215,6 +222,15 @@ class GroupsService {
         }));
       }
 
+      // Enhanced logging for validation step
+      logger.info('Validation result', {
+        totalInputGroups: groups.length,
+        validGroupsCount: validGroups.length,
+        invalidGroupsCount: invalidGroups.length,
+        sampleValid: validGroups.slice(0, 3).map(g => ({ id: g.id, name: g.name, error: g.error })),
+        sampleInvalid: invalidGroups.slice(0, 3).map(g => ({ id: g.id, name: g.name, error: g.error }))
+      });
+
       // Получаем информацию о группах из VK API
       let enrichedGroups: Array<{
         vk_id: number;
@@ -229,10 +245,16 @@ class GroupsService {
 
       if (this.vkValidator) {
         try {
-          // Извлекаем VK ID из групп
+          // Извлекаем VK ID из групп (положительные)
           const vkIds = validGroups
             .map(group => group.id)
             .filter((id): id is number => id !== undefined && id > 0);
+          // Log filtered VK IDs
+          logger.info('Filtered VK IDs for enrichment', {
+            vkIdsCount: vkIds.length,
+            sampleVkIds: vkIds.slice(0, 5),
+            filterCriteria: 'id > 0 and not null'
+          });
 
           if (vkIds.length > 0) {
             // Получаем информацию о группах через VK API
@@ -262,7 +284,7 @@ class GroupsService {
           enrichedGroups = validGroups
             .filter(group => group.id && group.id > 0)
             .map(group => ({
-              vk_id: group.id!,
+              vk_id: group.id,
               name: group.name || `Группа ${group.id}`,
               screen_name: null,
               photo_50: null,
@@ -276,7 +298,7 @@ class GroupsService {
         enrichedGroups = validGroups
           .filter(group => group.id && group.id > 0)
           .map(group => ({
-            vk_id: group.id!,
+            vk_id: group.id,
             name: group.name || `Группа ${group.id}`,
             screen_name: null,
             photo_50: null,
@@ -301,6 +323,14 @@ class GroupsService {
           groupsToSave.push(group);
         }
       }
+
+      // Log groups to save
+      logger.info('Groups ready for DB save', {
+        groupsToSaveCount: groupsToSave.length,
+        duplicatesCount: duplicates,
+        sampleToSave: groupsToSave.slice(0, 3).map(g => ({ vk_id: g.vk_id, name: g.name })),
+        sampleDuplicates: enrichedGroups.slice(0, 3).filter(g => !groupsToSave.some(s => s.vk_id === g.vk_id)).map(g => ({ vk_id: g.vk_id, name: g.name }))
+      });
 
       // Сохраняем группы в БД
       if (groupsToSave.length > 0) {

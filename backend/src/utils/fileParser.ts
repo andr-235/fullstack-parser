@@ -59,7 +59,7 @@ class FileParser {
             groups.push({
               id: parsed.id || 0,
               name: parsed.name || '',
-              url: parsed.id ? `https://vk.com/public${Math.abs(parsed.id)}` : ''
+              url: parsed.id ? `https://vk.com/club${parsed.id}` : ''
             });
           }
         } catch (error) {
@@ -67,6 +67,15 @@ class FileParser {
           errors.push(`Line ${lineNumber}: ${errorMsg} - "${line}"`);
         }
       }
+
+      // Log sample parsed groups for debugging
+      const sampleGroups = groups.slice(0, 5);
+      logger.info('Sample parsed groups (first 5)', {
+        sample: sampleGroups.map(g => ({ id: g.id, name: g.name, url: g.url })),
+        totalLines: lines.length,
+        validGroups: groups.length,
+        errors: errors.length
+      });
 
       logger.info('File parsed successfully', {
         totalLines: lines.length,
@@ -90,11 +99,12 @@ class FileParser {
    * Парсит одну строку с группой
    */
   static parseGroupLine(line: string, lineNumber: number): ParsedGroup | null {
-    // Проверяем, является ли строка ID группы (отрицательное число)
-    if (line.startsWith('-') && /^-\d+$/.test(line)) {
-      const groupId = parseInt(line, 10);
-      if (groupId >= 0) {
-        throw new Error('Group ID must be negative');
+    // Проверяем URL screen_name: https://vk.com/club12345
+    const urlMatch = line.match(/^https:\/\/vk\.com\/(club)(\d+)$/i);
+    if (urlMatch) {
+      const groupId = parseInt(urlMatch[2], 10);
+      if (isNaN(groupId) || groupId <= 0) {
+        throw new Error('Invalid group ID in URL');
       }
       return {
         id: groupId,
@@ -103,9 +113,30 @@ class FileParser {
       };
     }
 
-    // Если строка является положительным числом
+    // Проверяем, является ли строка ID группы (отрицательное число)
+    if (line.startsWith('-') && /^-\d+$/.test(line)) {
+      const groupId = parseInt(line, 10);
+      if (groupId >= 0) {
+        throw new Error('Group ID must be negative');
+      }
+      return {
+        id: Math.abs(groupId), // Храним положительный в БД
+        name: null,
+        lineNumber
+      };
+    }
+
+    // Если строка является положительным числом (прямой ID)
     if (/^\d+$/.test(line)) {
-      throw new Error('Group ID must be negative');
+      const groupId = parseInt(line, 10);
+      if (groupId > 0) {
+        return {
+          id: groupId,
+          name: null,
+          lineNumber
+        };
+      }
+      throw new Error('Group ID must be positive');
     }
 
     // Если строка начинается с - но не является отрицательным числом
@@ -113,16 +144,26 @@ class FileParser {
       throw new Error('Invalid group format');
     }
 
-    // Проверяем, является ли строка именем группы (не начинается с -)
-    if (!line.startsWith('-')) {
-      // Если это не число, считаем именем группы
-      if (!/^\d+$/.test(line)) {
-        return {
-          id: null,
-          name: line,
-          lineNumber
-        };
+    // Проверяем, является ли строка screen_name без URL (club123 или просто строка)
+    if (!line.startsWith('-') && !/^\d+$/.test(line)) {
+      // Если это screen_name типа "club123", извлекаем число
+      const screenMatch = line.match(/^club(\d+)$/i);
+      if (screenMatch) {
+        const groupId = parseInt(screenMatch[1], 10);
+        if (groupId > 0) {
+          return {
+            id: groupId,
+            name: line,
+            lineNumber
+          };
+        }
       }
+      // Иначе просто имя группы без ID
+      return {
+        id: null,
+        name: line,
+        lineNumber
+      };
     }
 
     // Если мы дошли сюда, значит строка не подходит ни под один формат
