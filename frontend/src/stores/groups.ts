@@ -90,7 +90,7 @@ export const useGroupsStore = defineStore('groups', () => {
       const response = await groupsApi.getGroups(params)
       console.log('Groups API response:', response.data) // Временная отладка
       groups.value = response.data.data?.groups || []
-      pagination.value.total = response.data.data?.total || response.data.data?.totalCount || 0
+      pagination.value.total = response.data.data?.total || 0
     } catch (err: any) {
       console.error('Groups fetch error:', err) // Временная отладка
       error.value = err.response?.data?.message || 'Ошибка загрузки групп'
