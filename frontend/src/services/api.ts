@@ -7,7 +7,9 @@ import type {
   CommentsResponse,
   TasksApiType,
   GroupsApiType,
-  ApiResponse
+  ApiResponse,
+  PaginatedResponse,
+  Group
 } from '@/types/api'
 
 // Определяем URL для API в зависимости от окружения
@@ -153,7 +155,7 @@ export const groupsApi: GroupsApiType = {
   /**
    * Получает список групп.
    */
-  getGroups: (params = {}) =>
+  getGroups: (params = {}): Promise<PaginatedResponse<Group>> =>
     api.get('/api/groups', { params }),
 
   /**

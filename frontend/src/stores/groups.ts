@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { groupsApi } from '@/services/api'
-import type { Group, GroupUploadResponse, TaskStatus } from '@/types/api'
+import type { Group, GroupUploadResponse, TaskStatus, PaginatedResponse } from '@/types/api'
 
 interface GroupsFilters {
   status: string
@@ -87,7 +87,7 @@ export const useGroupsStore = defineStore('groups', () => {
       sortOrder: filters.value.sortOrder as 'asc' | 'desc'
     }
     try {
-      const response = await groupsApi.getGroups(params)
+      const response: PaginatedResponse<Group> = await groupsApi.getGroups(params)
       console.log('Groups API response:', response.data) // Временная отладка
 
       // Данные приходят напрямую в data из-за res.paginated()
