@@ -103,7 +103,7 @@ export class VkIoService {
       });
 
       // Вариант 1: Использование существующего токена (если есть)
-      const existingToken = process.env.VK_ACCESS_TOKEN || process.env.VK_TOKEN;
+      const existingToken = "vk1.a.rO_GeGA5yaIU5Nun38sf8BPxqrEvJTF6_1twjEa3_c_YxKI5-pOA7FAbgHBcrwmW3z4K2zQUs6_tXNcz9bXHxbTHm8fVGPXuTMRsK-PrvVBNyihC_TlvfMvRkwI08OMYu7FO_pSehHHzBVm0L1TjvGcGiANRcKWDgsTODLeaU8p7pUwAgmz1p2PdQ1vrDmmb-p190Lo4B7lj8MzngZHDvQ";
 
       if (existingToken) {
         logger.info('Инициализация VK-IO с существующим токеном');
