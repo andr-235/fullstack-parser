@@ -119,8 +119,25 @@ export interface ApiResponseWrapper<T = any> {
   error?: string
 }
 
+// Пагинированный ответ для списков
+export interface PaginatedApiResponse<T = any> {
+  success: boolean
+  timestamp: string
+  requestId: string
+  data: T[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+    hasNext: boolean
+    hasPrev: boolean
+  }
+}
+
 // API response types
 export type ApiResponse<T = any> = AxiosResponse<ApiResponseWrapper<T>>
+export type PaginatedResponse<T = any> = AxiosResponse<PaginatedApiResponse<T>>
 
 // API function types
 export interface TasksApiType {
@@ -132,7 +149,7 @@ export interface TasksApiType {
 export interface GroupsApiType {
   uploadGroups: (formData: FormData, encoding?: string) => Promise<ApiResponse<GroupUploadResponse>>
   getTaskStatus: (taskId: string | number) => Promise<ApiResponse<TaskStatus>>
-  getGroups: (params?: GroupsParams) => Promise<ApiResponse<GroupsResponse>>
+  getGroups: (params?: GroupsParams) => Promise<PaginatedResponse<Group>>
   deleteGroup: (groupId: string | number) => Promise<ApiResponse<{ message: string }>>
   deleteGroups: (groupIds: (string | number)[]) => Promise<ApiResponse<{ message: string }>>
   getAllGroups: () => Promise<ApiResponse<GroupsResponse>>
