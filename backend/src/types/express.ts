@@ -1,4 +1,43 @@
-// Расширения Express типов для middleware
+declare global {
+  namespace Express {
+    interface Request {
+      id: string;
+      file?: Express.Multer.File;
+      files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
+    }
+
+    // Расширения Express типов для middleware
+    // Расширения для groupsController endpoints
+    namespace GroupsRequest {
+      interface Upload extends Request {
+        file: Express.Multer.File;
+        query: {
+          encoding?: BufferEncoding;
+        };
+      }
+
+      interface List extends Request {
+        query: GetGroupsRequest;
+      }
+
+      interface Delete extends Request {
+        params: {
+          groupId: string;
+        };
+      }
+
+      interface BatchDelete extends Request {
+        body: BatchDeleteRequest;
+      }
+
+      interface Stats extends Request {
+        params?: {
+          taskId?: string;
+        };
+      }
+    }
+  }
+}
 
 // === СТАНДАРТИЗИРОВАННЫЕ API ОТВЕТЫ ===
 
