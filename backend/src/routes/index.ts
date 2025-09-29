@@ -5,6 +5,8 @@ import taskResultsController from '@/controllers/taskResultsController';
 import groupsController from '@/controllers/groupsController';
 import groupsStatsController from '@/controllers/groupsStatsController';
 import { responseFormatter, errorHandler, notFoundHandler } from '@/middleware/responseFormatter';
+import { requestContextMiddleware, initRequestContext } from '@/middleware/requestContext';
+import { securityHeaders, apiHeaders } from '@/middleware/security';
 
 // Создаем главный роутер для API
 const apiRouter = Router();
@@ -100,6 +102,16 @@ apiRouter.use('/api/*', notFoundHandler);
  * @param app Express приложение
  */
 export const setupRoutes = (app: any) => {
+  // Security заголовки (должны быть первыми)
+  app.use(securityHeaders);
+
+  // Request ID и контекст (должны быть ранними)
+  app.use(requestContextMiddleware);
+  app.use(initRequestContext);
+
+  // API заголовки для всех API маршрутов
+  app.use('/api', apiHeaders);
+
   // Применяем форматтер ответов ко всем API маршрутам
   app.use('/api', responseFormatter);
 

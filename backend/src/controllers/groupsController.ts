@@ -14,8 +14,7 @@ import {
   NotFoundError,
   ErrorUtils
 } from '@/utils/errors';
-import { validateBody, validateQuery, paginationSchema } from '@/middleware/validationMiddleware';
-import validateGroupId from '@/middleware/validateGroupId';
+import { validateBody, validateQuery, validateGroupIdParam, paginationSchema } from '@/middleware/validationMiddleware';
 
 const router = express.Router();
 
@@ -349,7 +348,7 @@ router.post(
 
 router.get('/groups/upload/:taskId/status', getUploadStatus);
 router.get('/groups', validateQuery(getGroupsQuerySchema), getGroups);
-router.delete('/groups/:groupId', validateGroupId, deleteGroup);
+router.delete('/groups/:groupId', validateGroupIdParam, deleteGroup);
 router.delete('/groups/batch', validateBody(batchDeleteSchema), deleteGroups);
 
 export default router;

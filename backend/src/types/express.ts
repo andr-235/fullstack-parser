@@ -1,12 +1,4 @@
-declare global {
-  namespace Express {
-    interface Request {
-      id: string;
-      file?: Express.Multer.File;
-      files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
-    }
-  }
-}
+// Расширения Express типов для middleware
 
 // === СТАНДАРТИЗИРОВАННЫЕ API ОТВЕТЫ ===
 
@@ -175,15 +167,32 @@ export interface QueryParams extends PaginationParams, SortParams, FilterParams 
 // === MIDDLEWARE РАСШИРЕНИЯ ===
 
 /**
- * Расширение Request для middleware
+ * Расширения Express интерфейсов для middleware
  */
 declare global {
   namespace Express {
+    interface Request {
+      id: string;
+      requestId: string;
+      startTime: number;
+      context: {
+        requestId: string;
+        startTime: number;
+        userAgent?: string;
+        ip?: string;
+        path: string;
+        method: string;
+      };
+      file?: Express.Multer.File;
+      files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
+    }
+
     interface Response {
       // Методы для стандартизированных ответов
-      success<T>(data: T, meta?: any): Response;
+      success<T>(data?: T, message?: string, meta?: any): Response;
       error(error: string | Error | any, statusCode?: number, details?: any): Response;
       paginated<T>(data: T[], pagination: any, meta?: any): Response;
+      validationError(errors: Array<{ field: string; message: string; value?: any }>): Response;
     }
   }
 }

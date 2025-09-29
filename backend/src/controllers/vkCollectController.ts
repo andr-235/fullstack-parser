@@ -13,8 +13,7 @@ import {
   RateLimitError,
   ErrorUtils
 } from '@/utils/errors';
-import { validateBody } from '@/middleware/validationMiddleware';
-import validateTaskId from '@/middleware/validateTaskId';
+import { validateBody, validateTaskIdParam } from '@/middleware/validationMiddleware';
 
 const router = Router();
 
@@ -260,6 +259,6 @@ const startCollect = async (req: Request<{ taskId: string }>, res: Response, nex
 
 // Маршруты
 router.post('/vk/collect', validateBody(vkCollectSchema), createVkCollectTask);
-router.post('/vk/collect/:taskId/start', validateTaskId, startCollect);
+router.post('/vk/collect/:taskId/start', validateTaskIdParam, startCollect);
 
 export default router;

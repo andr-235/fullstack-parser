@@ -7,8 +7,7 @@ import {
   NotFoundError,
   ErrorUtils
 } from '@/utils/errors';
-import { validateQuery } from '@/middleware/validationMiddleware';
-import validateTaskId from '@/middleware/validateTaskId';
+import { validateQuery, validateTaskIdParam } from '@/middleware/validationMiddleware';
 
 const router = Router();
 
@@ -282,8 +281,8 @@ const exportResults = async (req: Request<{ taskId: string }, {}, {}, { format?:
 };
 
 // Маршруты
-router.get('/results/:taskId', validateTaskId, validateQuery(getResultsQuerySchema), getResults as any);
-router.get('/results/:taskId/summary', validateTaskId, getResultsSummary);
-router.get('/results/:taskId/export', validateTaskId, exportResults);
+router.get('/results/:taskId', validateTaskIdParam, validateQuery(getResultsQuerySchema), getResults as any);
+router.get('/results/:taskId/summary', validateTaskIdParam, getResultsSummary);
+router.get('/results/:taskId/export', validateTaskIdParam, exportResults);
 
 export default router;

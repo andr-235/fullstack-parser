@@ -8,8 +8,7 @@ import {
   NotFoundError,
   ErrorUtils
 } from '@/utils/errors';
-import { validateParams, taskIdParamSchema } from '@/middleware/validationMiddleware';
-import validateTaskId from '@/middleware/validateTaskId';
+import { validateParams, validateTaskIdParam, taskIdParamSchema } from '@/middleware/validationMiddleware';
 
 const router = express.Router();
 
@@ -245,6 +244,6 @@ const getGroupsActivity = async (req: Request, res: Response): Promise<void> => 
 router.get('/stats/groups', getGroupsStats);
 router.get('/stats/groups/summary', getGroupsSummary);
 router.get('/stats/groups/activity', getGroupsActivity);
-router.get('/stats/groups/:taskId', validateTaskId, getGroupsStatsByTask);
+router.get('/stats/groups/:taskId', validateTaskIdParam, getGroupsStatsByTask);
 
 export default router;

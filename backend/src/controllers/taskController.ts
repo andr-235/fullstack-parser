@@ -15,8 +15,7 @@ import {
   TaskError,
   ErrorUtils
 } from '@/utils/errors';
-import { validateBody, validateQuery, paginationSchema } from '@/middleware/validationMiddleware';
-import validateTaskId from '@/middleware/validateTaskId';
+import { validateBody, validateQuery, validateTaskIdParam, paginationSchema } from '@/middleware/validationMiddleware';
 
 const router = Router();
 
@@ -222,7 +221,7 @@ const getTasks = async (req: Request<{}, PaginatedResponse<any>, {}, GetTasksQue
 
 // Маршруты
 router.post('/tasks', validateBody(createTaskSchema), createTask);
-router.get('/tasks/:taskId', validateTaskId, getTask);
+router.get('/tasks/:taskId', validateTaskIdParam, getTask);
 router.get('/tasks', validateQuery(getTasksQuerySchema), getTasks);
 
 export default router;

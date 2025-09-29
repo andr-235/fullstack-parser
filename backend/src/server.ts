@@ -12,19 +12,12 @@ import { PrismaService } from '@/config/prisma';
 import { queueService } from '@/services/queueService';
 import { setupRoutes } from '@/routes';
 import { ApiResponse } from '@/types/express';
-import {
-  requestIdMiddleware,
-  responseHeaders,
-  responseLogger
-} from '@/middleware/responseFormatter';
+// Убираем импорты старых middleware, которые были удалены или перенесены
 
 const app: Application = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
-// Интерфейсы для типизации middleware
-interface RequestWithId extends Request {
-  id: string;
-}
+// Интерфейсы определены в @/types/express.ts
 
 interface HealthCheckResponse {
   status: 'healthy' | 'unhealthy';
@@ -38,17 +31,7 @@ interface HealthCheckResponse {
 }
 
 // === СТАНДАРТИЗИРОВАННЫЕ MIDDLEWARE ===
-
-// Request ID и контекст запроса
-app.use(requestIdMiddleware);
-
-// Стандартные заголовки ответа
-app.use(responseHeaders);
-
-// Логирование ответов (опционально, для отладки)
-if (process.env.NODE_ENV === 'development') {
-  app.use(responseLogger);
-}
+// Middleware настраиваются в setupRoutes()
 
 // Middleware для обработки ошибок JSON
 app.use((err: Error, req: Request, res: Response, next: NextFunction): void => {
@@ -57,7 +40,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction): void => {
       url: req.url,
       method: req.method,
       error: err.message,
-      id: (req as RequestWithId).id
+      id: req.requestId
     });
 
     res.error('Invalid JSON in request body', 400);

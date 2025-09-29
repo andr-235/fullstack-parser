@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { v4 as uuidv4 } from 'uuid';
+import { StatusCodes } from 'http-status-codes';
 import logger from '@/utils/logger';
 import { ErrorCodes, AppError } from '@/types/express';
 import {
@@ -7,56 +7,12 @@ import {
   PaginatedResponse,
   ApiErrorResponse,
   ValidationErrorResponse,
-  ResponseMeta,
-  RequestContext
+  ResponseMeta
 } from '@/types/api';
 
-// === РАСШИРЕНИЕ EXPRESS ТИПОВ ===
+// Расширения интерфейсов Express уже определены в @/types/express.ts
 
-declare global {
-  namespace Express {
-    interface Request {
-      requestId: string;
-      startTime: number;
-      context: RequestContext;
-    }
-
-    interface Response {
-      success<T>(data?: T, message?: string, meta?: ResponseMeta): Response;
-      error(error: string | Error | AppError | any, statusCode?: number, details?: any): Response;
-      paginated<T>(data: T[], pagination: any, meta?: ResponseMeta): Response;
-      validationError(errors: Array<{ field: string; message: string; value?: any }>): Response;
-    }
-  }
-}
-
-// === КОНФИГУРАЦИЯ ===
-
-interface ResponseFormatterConfig {
-  includeStackTrace: boolean;
-  sanitizeErrors: boolean;
-  includeExecutionTime: boolean;
-  includeRequestId: boolean;
-  timestampFormat: 'iso' | 'unix';
-}
-
-const getConfig = (): ResponseFormatterConfig => ({
-  includeStackTrace: process.env.NODE_ENV === 'development',
-  sanitizeErrors: process.env.NODE_ENV === 'production',
-  includeExecutionTime: true,
-  includeRequestId: true,
-  timestampFormat: 'iso'
-});
-
-// === УТИЛИТАРНЫЕ ФУНКЦИИ ===
-
-/**
- * Генерирует timestamp в зависимости от конфигурации
- */
-const generateTimestamp = (format: 'iso' | 'unix'): string => {
-  const now = new Date();
-  return format === 'iso' ? now.toISOString() : Math.floor(now.getTime() / 1000).toString();
-};
+// === УТИЛИТЫ ===
 
 /**
  * Вычисляет время выполнения запроса
@@ -69,13 +25,12 @@ const calculateExecutionTime = (startTime: number): number => {
  * Создает базовый ответ с метаданными
  */
 const createBaseResponse = (req: Request, additionalMeta?: ResponseMeta): Partial<ApiResponse> => {
-  const config = getConfig();
-  const executionTime = config.includeExecutionTime ? calculateExecutionTime(req.startTime) : undefined;
+  const executionTime = calculateExecutionTime(req.startTime);
 
   return {
-    timestamp: generateTimestamp(config.timestampFormat),
-    requestId: config.includeRequestId ? req.requestId : undefined,
-    ...(executionTime !== undefined && { executionTime }),
+    timestamp: new Date().toISOString(),
+    requestId: req.requestId,
+    executionTime,
     ...additionalMeta
   };
 };
@@ -84,8 +39,6 @@ const createBaseResponse = (req: Request, additionalMeta?: ResponseMeta): Partia
  * Нормализует ошибку для ответа
  */
 const normalizeError = (error: string | Error | AppError): { message: string; code?: string; details?: any; stack?: string } => {
-  const config = getConfig();
-
   if (typeof error === 'string') {
     return { message: error };
   }
@@ -97,7 +50,7 @@ const normalizeError = (error: string | Error | AppError): { message: string; co
       message: appError.message,
       code: appError.code,
       details: appError.details,
-      ...(config.includeStackTrace && { stack: appError.stack })
+      ...(process.env.NODE_ENV === 'development' && { stack: appError.stack })
     };
   }
 
@@ -105,60 +58,31 @@ const normalizeError = (error: string | Error | AppError): { message: string; co
 };
 
 /**
- * Определяет HTTP статус код на основе ошибки
+ * Маппинг кодов ошибок на HTTP статусы с использованием http-status-codes
  */
 const getStatusCodeFromError = (error: string | Error | AppError): number => {
-  if (typeof error === 'string') return 500;
+  if (typeof error === 'string') return StatusCodes.INTERNAL_SERVER_ERROR;
 
   const appError = error as AppError;
   if (appError.statusCode) return appError.statusCode;
 
-  // Маппинг кодов ошибок на HTTP статусы
   const errorCodeToStatus: Record<string, number> = {
-    [ErrorCodes.VALIDATION_ERROR]: 400,
-    [ErrorCodes.INVALID_REQUEST]: 400,
-    [ErrorCodes.NOT_FOUND]: 404,
-    [ErrorCodes.UNAUTHORIZED]: 401,
-    [ErrorCodes.FORBIDDEN]: 403,
-    [ErrorCodes.ALREADY_EXISTS]: 409,
-    [ErrorCodes.RATE_LIMIT_EXCEEDED]: 429,
-    [ErrorCodes.VK_RATE_LIMIT]: 429,
-    [ErrorCodes.SERVICE_UNAVAILABLE]: 503,
-    [ErrorCodes.INTERNAL_ERROR]: 500
+    [ErrorCodes.VALIDATION_ERROR]: StatusCodes.BAD_REQUEST,
+    [ErrorCodes.INVALID_REQUEST]: StatusCodes.BAD_REQUEST,
+    [ErrorCodes.NOT_FOUND]: StatusCodes.NOT_FOUND,
+    [ErrorCodes.UNAUTHORIZED]: StatusCodes.UNAUTHORIZED,
+    [ErrorCodes.FORBIDDEN]: StatusCodes.FORBIDDEN,
+    [ErrorCodes.ALREADY_EXISTS]: StatusCodes.CONFLICT,
+    [ErrorCodes.RATE_LIMIT_EXCEEDED]: StatusCodes.TOO_MANY_REQUESTS,
+    [ErrorCodes.VK_RATE_LIMIT]: StatusCodes.TOO_MANY_REQUESTS,
+    [ErrorCodes.SERVICE_UNAVAILABLE]: StatusCodes.SERVICE_UNAVAILABLE,
+    [ErrorCodes.INTERNAL_ERROR]: StatusCodes.INTERNAL_SERVER_ERROR
   };
 
-  return errorCodeToStatus[appError.code] || 500;
+  return errorCodeToStatus[appError.code] || StatusCodes.INTERNAL_SERVER_ERROR;
 };
 
 // === ОСНОВНОЕ MIDDLEWARE ===
-
-/**
- * Middleware для добавления requestId и инициализации контекста
- */
-export const requestIdMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  req.requestId = uuidv4();
-  req.startTime = Date.now();
-
-  req.context = {
-    requestId: req.requestId,
-    startTime: req.startTime,
-    userAgent: req.get('User-Agent'),
-    ip: req.ip || req.connection.remoteAddress,
-    path: req.path,
-    method: req.method
-  };
-
-  // Логируем входящий запрос
-  logger.info('Incoming request', {
-    requestId: req.requestId,
-    method: req.method,
-    path: req.path,
-    userAgent: req.context.userAgent,
-    ip: req.context.ip
-  });
-
-  next();
-};
 
 /**
  * Основное middleware для форматирования ответов
@@ -169,20 +93,20 @@ export const responseFormatter = (req: Request, res: Response, next: NextFunctio
    */
   res.success = function<T>(data?: T, message?: string, meta?: ResponseMeta) {
     const baseResponse = createBaseResponse(req, meta);
-    const response = {
+    const response: ApiResponse<T> = {
       success: true,
       data,
       message,
-      timestamp: baseResponse.timestamp || generateTimestamp('iso'),
-      requestId: baseResponse.requestId || req.requestId,
-      ...(baseResponse.executionTime && { executionTime: baseResponse.executionTime }),
+      timestamp: baseResponse.timestamp!,
+      requestId: baseResponse.requestId!,
+      executionTime: baseResponse.executionTime!,
       ...meta
     };
 
     // Логируем успешный ответ
     logger.info('Successful response', {
       requestId: req.requestId,
-      statusCode: this.statusCode || 200,
+      statusCode: this.statusCode || StatusCodes.OK,
       hasData: data !== undefined,
       message,
       executionTime: response.executionTime
@@ -202,14 +126,14 @@ export const responseFormatter = (req: Request, res: Response, next: NextFunctio
     const response: ApiErrorResponse = {
       success: false,
       error: normalizedError.message,
-      timestamp: baseResponse.timestamp || generateTimestamp('iso'),
-      requestId: baseResponse.requestId || req.requestId,
+      timestamp: baseResponse.timestamp!,
+      requestId: baseResponse.requestId!,
+      executionTime: baseResponse.executionTime!,
       details: {
         code: normalizedError.code || ErrorCodes.INTERNAL_ERROR,
         ...normalizedError.details,
         ...details
-      },
-      ...(baseResponse.executionTime && { executionTime: baseResponse.executionTime })
+      }
     };
 
     // Логируем ошибку
@@ -241,15 +165,15 @@ export const responseFormatter = (req: Request, res: Response, next: NextFunctio
         hasNext: pagination.hasNext || false,
         hasPrev: pagination.hasPrev || false
       },
-      timestamp: baseResponse.timestamp || generateTimestamp('iso'),
-      requestId: baseResponse.requestId || req.requestId,
-      ...(baseResponse.executionTime && { executionTime: baseResponse.executionTime })
+      timestamp: baseResponse.timestamp!,
+      requestId: baseResponse.requestId!,
+      executionTime: baseResponse.executionTime!
     };
 
     // Логируем пагинированный ответ
     logger.info('Paginated response', {
       requestId: req.requestId,
-      statusCode: this.statusCode || 200,
+      statusCode: this.statusCode || StatusCodes.OK,
       itemsCount: data.length,
       pagination: response.pagination,
       executionTime: response.executionTime
@@ -266,24 +190,24 @@ export const responseFormatter = (req: Request, res: Response, next: NextFunctio
     const response: ValidationErrorResponse = {
       success: false,
       error: 'Validation failed',
-      timestamp: baseResponse.timestamp || generateTimestamp('iso'),
-      requestId: baseResponse.requestId || req.requestId,
+      timestamp: baseResponse.timestamp!,
+      requestId: baseResponse.requestId!,
+      executionTime: baseResponse.executionTime!,
       details: {
         code: ErrorCodes.VALIDATION_ERROR,
         validationErrors: errors
-      },
-      ...(baseResponse.executionTime && { executionTime: baseResponse.executionTime })
+      }
     };
 
     // Логируем ошибки валидации
     logger.warn('Validation error response', {
       requestId: req.requestId,
-      statusCode: 400,
+      statusCode: StatusCodes.BAD_REQUEST,
       validationErrors: errors,
       executionTime: response.executionTime
     });
 
-    return this.status(400).json(response);
+    return this.status(StatusCodes.BAD_REQUEST).json(response);
   };
 
   next();
@@ -308,61 +232,17 @@ export const errorHandler = (error: Error | AppError, req: Request, res: Respons
  * Обработчик для несуществующих маршрутов
  */
 export const notFoundHandler = (req: Request, res: Response) => {
-  res.error(`Route ${req.method} ${req.path} not found`, 404, {
+  res.error(`Route ${req.method} ${req.path} not found`, StatusCodes.NOT_FOUND, {
     code: ErrorCodes.NOT_FOUND,
     method: req.method,
     path: req.path
   });
 };
 
-// === ВСПОМОГАТЕЛЬНЫЕ MIDDLEWARE ===
-
-/**
- * Middleware для логирования всех исходящих ответов
- */
-export const responseLogger = (req: Request, res: Response, next: NextFunction) => {
-  const originalSend = res.send;
-
-  res.send = function(data) {
-    // Логируем исходящий ответ
-    logger.debug('Outgoing response', {
-      requestId: req.requestId,
-      statusCode: res.statusCode,
-      contentLength: data ? data.length : 0,
-      contentType: res.get('Content-Type'),
-      executionTime: calculateExecutionTime(req.startTime)
-    });
-
-    return originalSend.call(this, data);
-  };
-
-  next();
-};
-
-/**
- * Middleware для установки стандартных заголовков ответа
- */
-export const responseHeaders = (req: Request, res: Response, next: NextFunction) => {
-  // Устанавливаем стандартные заголовки
-  res.setHeader('X-Request-ID', req.requestId);
-  res.setHeader('X-API-Version', process.env.API_VERSION || '1.0.0');
-  res.setHeader('X-Powered-By', 'VK Analytics API');
-
-  // Заголовки безопасности
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-
-  next();
-};
-
 // === ЭКСПОРТ ===
 
 export default {
-  requestIdMiddleware,
   responseFormatter,
   errorHandler,
-  notFoundHandler,
-  responseLogger,
-  responseHeaders
+  notFoundHandler
 };

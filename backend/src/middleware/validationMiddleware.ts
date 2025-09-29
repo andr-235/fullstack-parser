@@ -179,11 +179,32 @@ export const groupIdParamSchema = Joi.object({
  */
 export const validatePagination = validateQuery(paginationSchema);
 
+/**
+ * Готовые middleware для валидации ID в параметрах маршрута
+ */
+export const validateTaskIdParam = validateParams(taskIdParamSchema);
+export const validateGroupIdParam = validateParams(groupIdParamSchema);
+export const validateIdParam = validateParams(idParamSchema);
+
+/**
+ * Middleware для валидации опционального group ID в query параметрах
+ */
+export const validateOptionalGroupId = (paramName: string = 'groupId') => {
+  const schema = Joi.object({
+    [paramName]: Joi.number().integer().positive().optional()
+  });
+  return validateQuery(schema);
+};
+
 export default {
   validateBody,
   validateQuery,
   validateParams,
   validatePagination,
+  validateTaskIdParam,
+  validateGroupIdParam,
+  validateIdParam,
+  validateOptionalGroupId,
   paginationSchema,
   idParamSchema,
   taskIdParamSchema,
