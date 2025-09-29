@@ -231,7 +231,7 @@ class GroupsService {
         sampleInvalid: invalidGroups.slice(0, 3).map(g => ({ id: g.id, name: g.name, error: g.error }))
       });
 
-      // Получаем информацию о группах из VK API
+      // Получаем информацию о группах из VK API - СТРОГАЯ ПРОВЕРКА
       let enrichedGroups: Array<{
         vk_id: number;
         name: string | null;
@@ -243,69 +243,83 @@ class GroupsService {
         error?: string;
       }> = [];
 
-      if (this.vkValidator) {
-        try {
-          // Извлекаем VK ID из групп (положительные)
-          const vkIds = validGroups
-            .map(group => group.id)
-            .filter((id): id is number => id !== undefined && id > 0);
-          // Log filtered VK IDs
-          logger.info('Filtered VK IDs for enrichment', {
-            vkIdsCount: vkIds.length,
-            sampleVkIds: vkIds.slice(0, 5),
-            filterCriteria: 'id > 0 and not null'
-          });
+      // Извлекаем VK ID из групп (положительные)
+      const vkIds = validGroups
+        .map(group => group.id)
+        .filter((id): id is number => id !== undefined && id > 0);
 
-          if (vkIds.length > 0) {
-            // Получаем информацию о группах через VK API
-            const vkGroupsInfo = await vkIoService.getGroupsInfo(vkIds);
+      logger.info('Запрос информации о группах из VK API', {
+        requestedVkIds: vkIds.length,
+        sampleVkIds: vkIds.slice(0, 5)
+      });
 
-            enrichedGroups = vkIds.map(vkId => {
-              const vkInfo = vkGroupsInfo.find(info => info.id === vkId);
-              return {
-                vk_id: vkId,
-                name: vkInfo?.name || `Группа ${vkId}`,
-                screen_name: vkInfo?.screen_name || null,
-                photo_50: vkInfo?.photo_50 || null,
-                members_count: vkInfo?.members_count || null,
-                is_closed: Number(vkInfo?.is_closed) || 0,
-                description: vkInfo?.description || null
-              };
+      if (vkIds.length === 0) {
+        logger.warn('Нет валидных VK ID для проверки', { taskId });
+        // Все группы невалидные
+        this.updateTaskStatus(taskId, 'completed', {
+          validGroups: 0,
+          invalidGroups: groups.length + parseErrors.length,
+          duplicates: 0,
+          completedAt: new Date()
+        });
+        return;
+      }
+
+      // Обязательный запрос к VK API для проверки существования групп
+      try {
+        const vkGroupsInfo = await vkIoService.getGroupsInfo(vkIds);
+
+        logger.info('Ответ от VK API получен', {
+          requestedCount: vkIds.length,
+          receivedCount: vkGroupsInfo.length,
+          missingCount: vkIds.length - vkGroupsInfo.length
+        });
+
+        // Создаем Map для быстрого поиска
+        const vkGroupsMap = new Map<number, typeof vkGroupsInfo[0]>(
+          vkGroupsInfo.map(g => [g.id, g])
+        );
+
+        // Проверяем каждый запрошенный ID
+        for (const vkId of vkIds) {
+          const vkInfo = vkGroupsMap.get(vkId);
+
+          if (vkInfo) {
+            // Группа существует в VK
+            enrichedGroups.push({
+              vk_id: vkId,
+              name: vkInfo.name || `Группа ${vkId}`,
+              screen_name: vkInfo.screen_name || null,
+              photo_50: vkInfo.photo_50 || null,
+              members_count: vkInfo.members_count || null,
+              is_closed: vkInfo.is_closed ? Number(vkInfo.is_closed) : 0,
+              description: vkInfo.description || null
             });
+          } else {
+            // Группа НЕ существует в VK
+            invalidGroups.push({
+              id: vkId,
+              name: validGroups.find(g => g.id === vkId)?.name || `Группа ${vkId}`,
+              error: 'Group does not exist or is not accessible'
+            });
+            logger.info('Группа не найдена в VK', { vkId });
           }
-        } catch (vkError) {
-          const errorMsg = vkError instanceof Error ? vkError.message : String(vkError);
-          logger.warn('Failed to get groups info from VK API, using fallback data', {
-            taskId,
-            error: errorMsg
-          });
-
-          // Fallback: создаем группы с базовой информацией
-          enrichedGroups = validGroups
-            .filter(group => group.id && group.id > 0)
-            .map(group => ({
-              vk_id: group.id,
-              name: group.name || `Группа ${group.id}`,
-              screen_name: null,
-              photo_50: null,
-              members_count: null,
-              is_closed: 0,
-              description: null
-            }));
         }
-      } else {
-        // Без VK валидатора создаем группы с базовой информацией
-        enrichedGroups = validGroups
-          .filter(group => group.id && group.id > 0)
-          .map(group => ({
-            vk_id: group.id,
-            name: group.name || `Группа ${group.id}`,
-            screen_name: null,
-            photo_50: null,
-            members_count: null,
-            is_closed: 0,
-            description: null
-          }));
+
+        logger.info('Валидация через VK API завершена', {
+          existingGroups: enrichedGroups.length,
+          notFoundGroups: vkIds.length - enrichedGroups.length
+        });
+
+      } catch (vkError) {
+        const errorMsg = vkError instanceof Error ? vkError.message : String(vkError);
+        logger.error('Критическая ошибка при запросе к VK API', {
+          taskId,
+          error: errorMsg
+        });
+
+        // НЕ сохраняем группы если VK API недоступен
+        throw new Error(`Не удалось проверить группы через VK API: ${errorMsg}`);
       }
 
       // Проверяем дубликаты в БД по VK ID
