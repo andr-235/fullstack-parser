@@ -1,28 +1,13 @@
 import express, { Request, Response } from 'express';
 import Joi from 'joi';
 import { uploadSingle, handleUploadError, validateUploadedFile, logFileUpload } from '@/middleware/upload';
-import { validatePagination, validateGroupId, validateBatchDelete } from '@/middleware/validation';
 import groupsService from '@/services/groupsService';
 import logger from '@/utils/logger';
-<<<<<<< Updated upstream
 import { ApiResponse, PaginationParams } from '@/types/express';
 import { GetGroupsParams } from '@/services/groupsService';
-=======
-import { ApiResponse, ErrorCodes } from '@/types/express';
->>>>>>> Stashed changes
 import {
-  GetGroupsRequest,
-  BatchDeleteRequest,
   GroupsUploadResponse,
-<<<<<<< Updated upstream
   GroupsListResponse
-=======
-  GroupsListResponse,
-  GroupsStatsResponse,
-  GroupsUploadStatusResponse,
-  GroupsDeleteResponse,
-  GroupsListItem
->>>>>>> Stashed changes
 } from '@/types/api';
 import {
   ValidationError,
@@ -64,7 +49,6 @@ interface GetGroupsQuery extends PaginationParams {
 interface BatchDeleteBody {
   groupIds: number[];
 }
-
 
 /**
  * POST /api/groups/upload - Загрузка файла с группами
@@ -158,7 +142,6 @@ const getUploadStatus = async (req: Request<{ taskId: string }>, res: Response):
     }
 
   } catch (error) {
-
     if (error instanceof NotFoundError) {
       throw error;
     }
@@ -181,7 +164,6 @@ const getUploadStatus = async (req: Request<{ taskId: string }>, res: Response):
 /**
  * GET /api/groups - Получение списка групп с пагинацией и фильтрацией
  */
-
 const getGroups = async (req: Request<{}, ApiResponse, {}, GetGroupsQuery>, res: Response): Promise<void> => {
   const requestId = (req as any).requestId || (req as any).id;
 
@@ -256,7 +238,6 @@ const getGroups = async (req: Request<{}, ApiResponse, {}, GetGroupsQuery>, res:
     throw appError;
   }
 };
-
 
 /**
  * DELETE /api/groups/:groupId - Удаление группы по ID
