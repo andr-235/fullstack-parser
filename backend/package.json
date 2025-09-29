@@ -25,6 +25,7 @@
     "@eslint/js": "^9.36.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/http-status-codes": "^1.2.0",
     "@types/jest": "^29.5.12",
     "@types/joi": "^17.2.2",
     "@types/multer": "^2.0.0",
@@ -53,6 +54,7 @@
     "bullmq": "^5.58.7",
     "celebrate": "^15.0.3",
     "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "express-request-id": "^3.0.0",
@@ -68,6 +70,7 @@
     "tsconfig-paths": "^4.2.0",
     "uuid": "^13.0.0",
     "vk-io": "^4.10.0",
-    "winston": "^3.17.0"
+    "winston": "^3.17.0",
+    "zod": "^4.1.11"
   }
 }

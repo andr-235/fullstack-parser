@@ -1,13 +1,15 @@
 import logger from '../utils/logger';
 import { prisma } from '../config/prisma';
-
-
-// Временные типы для корректной работы
-type tasks = any;
-type posts = any;
-type comments = any;
-type TaskStatus = "pending" | "processing" | "completed" | "failed";
-type TaskType = "fetch_comments" | "process_groups" | "analyze_posts";
+import { tasks, posts, comments, Prisma } from '@prisma/client';
+import {
+  TASK_STATUSES,
+  TASK_TYPES,
+  PAGINATION_DEFAULTS,
+  DEFAULT_VALUES,
+  TaskStatus,
+  TaskType
+} from '../constants';
+import { ERROR_MESSAGES } from '../constants/errors';
 
 // Интерфейсы для запросов
 interface ListTasksOptions {
@@ -31,10 +33,10 @@ interface TaskUpdateData {
   status?: TaskStatus;
   progress?: number;
   error?: string;
-  result?: any;
+  result?: Prisma.JsonValue;
   finishedAt?: Date;
-  metrics?: any;
-  parameters?: any;
+  metrics?: Prisma.JsonValue;
+  parameters?: Prisma.JsonValue;
   executionTime?: number;
   startedAt?: Date;
 }
@@ -42,9 +44,9 @@ interface TaskUpdateData {
 interface CreateTaskData {
   type?: TaskType;
   priority?: number;
-  groups?: any;
-  parameters?: any;
-  metadata?: any;
+  groups?: Prisma.JsonValue;
+  parameters?: Prisma.JsonValue;
+  metadata?: Prisma.JsonValue;
   status?: TaskStatus;
   createdBy?: string;
 }
@@ -60,14 +62,14 @@ class DBRepo {
   async createTask(taskData: CreateTaskData): Promise<tasks> {
     const task = await prisma.tasks.create({
       data: {
-        type: taskData.type || 'fetch_comments',
-        status: taskData.status || 'pending',
+        type: taskData.type || TASK_TYPES.FETCH_COMMENTS,
+        status: taskData.status || TASK_STATUSES.PENDING,
         groups: taskData.groups || [],
         parameters: taskData.parameters || {},
         metrics: taskData.metadata || {},
-        progress: 0,
-        priority: taskData.priority || 0,
-        createdBy: taskData.createdBy || 'system',
+        progress: DEFAULT_VALUES.PROGRESS_INITIAL,
+        priority: taskData.priority || DEFAULT_VALUES.LIKES_COUNT,
+        createdBy: taskData.createdBy || DEFAULT_VALUES.CREATED_BY,
         updatedAt: new Date()
       }
     });
@@ -82,7 +84,7 @@ class DBRepo {
       where: { id: taskId }
     });
     if (!task) {
-      throw new Error(`Task with id ${taskId} not found`);
+      throw new Error(`${ERROR_MESSAGES.TASK_NOT_FOUND}: ${taskId}`);
     }
     return task;
   }
@@ -110,8 +112,8 @@ class DBRepo {
       return updatedTask;
     } catch (error) {
       if (error instanceof Error && error.message.includes('Record to update not found')) {
-        logger.error('Failed to update task', { taskId, error: `Task with id ${taskId} not found` });
-        throw new Error(`Task with id ${taskId} not found`);
+        logger.error(ERROR_MESSAGES.TASK_UPDATE_FAILED, { taskId, error: `${ERROR_MESSAGES.TASK_NOT_FOUND}: ${taskId}` });
+        throw new Error(`${ERROR_MESSAGES.TASK_NOT_FOUND}: ${taskId}`);
       }
       throw error;
     }
@@ -120,7 +122,7 @@ class DBRepo {
   /**
    * Создает посты для задачи
    */
-  async createPosts(taskId: number, postsData: Partial<any>[]): Promise<posts[]> {
+  async createPosts(taskId: number, postsData: Partial<posts>[]): Promise<posts[]> {
     const createdPosts = await prisma.$transaction(
       postsData.map(postData =>
         prisma.posts.create({
@@ -130,7 +132,7 @@ class DBRepo {
             group_id: postData.group_id!,
             text: postData.text || '',
             date: postData.date!,
-            likes: postData.likes || 0,
+            likes: postData.likes || DEFAULT_VALUES.LIKES_COUNT,
             task_id: taskId,
             createdAt: new Date(),
             updatedAt: new Date()
@@ -144,7 +146,7 @@ class DBRepo {
   /**
    * Создает комментарии для поста
    */
-  async createComments(postId: number, commentsData: Partial<any>[]): Promise<comments[]> {
+  async createComments(postId: number, commentsData: Partial<comments>[]): Promise<comments[]> {
     const createdComments = await prisma.$transaction(
       commentsData.map(commentData =>
         prisma.comments.create({
@@ -156,7 +158,7 @@ class DBRepo {
             author_name: commentData.author_name!,
             text: commentData.text || '',
             date: commentData.date!,
-            likes: commentData.likes || 0,
+            likes: commentData.likes || DEFAULT_VALUES.LIKES_COUNT,
             post_id: postId,
             createdAt: new Date(),
             updatedAt: new Date()
@@ -170,7 +172,7 @@ class DBRepo {
   /**
    * Создает или обновляет посты (upsert)
    */
-  async upsertPosts(taskId: number, postsData: Partial<any>[]): Promise<posts[]> {
+  async upsertPosts(taskId: number, postsData: Partial<posts>[]): Promise<posts[]> {
     try {
       const upsertedPosts = await prisma.$transaction(
         postsData.map(postData =>
@@ -179,7 +181,7 @@ class DBRepo {
             update: {
               text: postData.text || '',
               date: postData.date!,
-              likes: postData.likes || 0,
+              likes: postData.likes || DEFAULT_VALUES.LIKES_COUNT,
               owner_id: postData.owner_id!,
               group_id: postData.group_id!,
               updatedAt: new Date()
@@ -190,7 +192,7 @@ class DBRepo {
               group_id: postData.group_id!,
               text: postData.text || '',
               date: postData.date!,
-              likes: postData.likes || 0,
+              likes: postData.likes || DEFAULT_VALUES.LIKES_COUNT,
               task_id: taskId,
               createdAt: new Date(),
               updatedAt: new Date()
@@ -209,7 +211,7 @@ class DBRepo {
   /**
    * Создает или обновляет комментарии (upsert)
    */
-  async upsertComments(postVkId: number, commentsData: Partial<any>[]): Promise<comments[]> {
+  async upsertComments(postVkId: number, commentsData: Partial<comments>[]): Promise<comments[]> {
     try {
       // Найти пост по vk_post_id для связи с комментариями
       const post = await prisma.posts.findUnique({
@@ -226,7 +228,7 @@ class DBRepo {
             update: {
               text: commentData.text || '',
               date: commentData.date!,
-              likes: commentData.likes || 0,
+              likes: commentData.likes || DEFAULT_VALUES.LIKES_COUNT,
               author_id: commentData.author_id!,
               author_name: commentData.author_name!,
               updatedAt: new Date()
@@ -239,7 +241,7 @@ class DBRepo {
               author_name: commentData.author_name!,
               text: commentData.text || '',
               date: commentData.date!,
-              likes: commentData.likes || 0,
+              likes: commentData.likes || DEFAULT_VALUES.LIKES_COUNT,
               post_id: post.id,
               createdAt: new Date(),
               updatedAt: new Date()
@@ -422,47 +424,6 @@ class DBRepo {
     }
   }
 
-  /**
-   * Получает полную информацию о группах для задачи (с VK данными)
-   */
-  async getGroupsWithVkDataByTaskId(taskId: string): Promise<Array<{
-    vk_id: number;
-    name: string | null;
-    screen_name: string | null;
-    photo_50: string | null;
-    members_count: number | null;
-    is_closed: number;
-    description: string | null;
-  }>> {
-    try {
-      const groups = await prisma.groups.findMany({
-        where: { task_id: taskId, status: 'valid' },
-        select: {
-          vk_id: true,
-          name: true,
-          screen_name: true,
-          photo_50: true,
-          members_count: true,
-          is_closed: true,
-          description: true
-        }
-      });
-
-      return groups as Array<{
-        vk_id: number;
-        name: string | null;
-        screen_name: string | null;
-        photo_50: string | null;
-        members_count: number | null;
-        is_closed: number;
-        description: string | null;
-      }>;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.error('Failed to get groups with VK data by task ID', { taskId, error: errorMsg });
-      throw new Error(`Failed to get groups with VK data: ${errorMsg}`);
-    }
-  }
 }
 
 // Экспорт класса и экземпляра репозитория
