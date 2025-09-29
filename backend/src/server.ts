@@ -1,3 +1,8 @@
+import dotenv from 'dotenv';
+
+// Загружаем переменные окружения в самом начале
+dotenv.config();
+
 import crypto from 'crypto';
 import express, { Request, Response, NextFunction, Application } from 'express';
 import cors from 'cors';
