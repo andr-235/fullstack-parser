@@ -45,12 +45,13 @@ services:
         condition: service_healthy
     env_file:
       - .env
-    ports:
-      - "3000:3000"
+    network_mode: host
+    # ports:
+    #   - "3000:3000"  # Не нужно при network_mode: host
     volumes:
       - ./backend/logs:/app/logs
-    networks:
-      - default
+    # networks:
+    #   - default  # Не совместимо с network_mode: host
 
   frontend:
     build:

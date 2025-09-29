@@ -36,15 +36,13 @@ export interface CommentCreationAttributes {
 
 export interface GroupCreationAttributes {
   vk_id: number;
-  name: string;
-  screen_name: string;
-  type: string;
-  is_closed: number;
-  photo_url?: string | null;
-  description?: string | null;
+  name?: string | null;
+  screen_name?: string | null;
+  photo_50?: string | null;
   members_count?: number | null;
-  source_file?: string | null;
-  task_id?: number | null;
+  is_closed?: number;
+  description?: string | null;
+  task_id: string;
 }
 
 export interface TaskCreationAttributes {

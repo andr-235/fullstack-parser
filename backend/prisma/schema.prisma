@@ -39,13 +39,21 @@ model comments {
 }
 
 model groups {
-  id          Int         @id @default(autoincrement())
-  name        String?
-  task_id     String      @db.Uuid
-  uploaded_at DateTime    @default(now())
-  status      GroupStatus @default(valid)
+  id            Int         @id @default(autoincrement())
+  vk_id         Int         @unique // VK ID группы (положительный)
+  name          String?     // Название группы
+  screen_name   String?     // Короткое имя (ссылка)
+  photo_50      String?     // URL аватара 50x50
+  members_count Int?        // Количество участников
+  is_closed     Int         @default(0) // 0=открытая, 1=закрытая, 2=частная
+  description   String?     // Описание группы
+  task_id       String      @db.Uuid
+  uploaded_at   DateTime    @default(now())
+  status        GroupStatus @default(valid)
 
+  @@index([vk_id], map: "idx_group_vk_id")
   @@index([name], map: "idx_group_name")
+  @@index([screen_name], map: "idx_group_screen_name")
   @@index([status], map: "idx_group_status")
   @@index([task_id], map: "idx_group_task")
   @@index([uploaded_at], map: "idx_group_uploaded")

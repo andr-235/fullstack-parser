@@ -30,8 +30,13 @@ interface GroupsStats {
 }
 
 interface CreateGroupInput {
-  id?: number;
-  name: string;
+  vk_id: number;
+  name?: string | null;
+  screen_name?: string | null;
+  photo_50?: string | null;
+  members_count?: number | null;
+  is_closed?: number;
+  description?: string | null;
   status?: $Enums.GroupStatus;
 }
 
@@ -49,16 +54,26 @@ class GroupsRepository {
         groupsData.map(group =>
           prisma.groups.upsert({
             where: {
-              id: group.id || 0  // fallback for groups without ID
+              vk_id: group.vk_id
             },
             update: {
               name: group.name,
+              screen_name: group.screen_name,
+              photo_50: group.photo_50,
+              members_count: group.members_count,
+              is_closed: group.is_closed || 0,
+              description: group.description,
               status: group.status || 'valid',
               uploaded_at: new Date()
             },
             create: {
-              ...(group.id && { id: group.id }),
+              vk_id: group.vk_id,
               name: group.name,
+              screen_name: group.screen_name,
+              photo_50: group.photo_50,
+              members_count: group.members_count,
+              is_closed: group.is_closed || 0,
+              description: group.description,
               status: group.status || 'valid',
               task_id: taskId,
               uploaded_at: new Date()
@@ -335,7 +350,7 @@ class GroupsRepository {
   }
 
   /**
-   * Проверяет существование группы
+   * Проверяет существование группы по внутреннему ID
    */
   async groupExists(groupId: number): Promise<boolean> {
     try {
@@ -349,6 +364,39 @@ class GroupsRepository {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to check group existence', { groupId, error: errorMsg });
       return false;
+    }
+  }
+
+  /**
+   * Проверяет существование группы по VK ID
+   */
+  async groupExistsByVkId(vkId: number): Promise<boolean> {
+    try {
+      const group = await prisma.groups.findUnique({
+        where: { vk_id: vkId },
+        select: { vk_id: true }
+      });
+
+      return !!group;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to check group existence by VK ID', { vkId, error: errorMsg });
+      return false;
+    }
+  }
+
+  /**
+   * Получает группу по VK ID
+   */
+  async getGroupByVkId(vkId: number): Promise<groups | null> {
+    try {
+      return await prisma.groups.findUnique({
+        where: { vk_id: vkId }
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get group by VK ID', { vkId, error: errorMsg });
+      throw new Error(`Failed to get group: ${errorMsg}`);
     }
   }
 
@@ -368,6 +416,58 @@ class GroupsRepository {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to get group IDs', { taskId, error: errorMsg });
       throw new Error(`Failed to get group IDs: ${errorMsg}`);
+    }
+  }
+
+  /**
+   * Получает все VK ID групп по task_id
+   */
+  async getVkGroupIdsByTaskId(taskId: string): Promise<number[]> {
+    try {
+      const groups = await prisma.groups.findMany({
+        where: { task_id: taskId },
+        select: { vk_id: true }
+      });
+
+      return groups.map(group => group.vk_id);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get VK group IDs by task ID', { taskId, error: errorMsg });
+      throw new Error(`Failed to get VK group IDs: ${errorMsg}`);
+    }
+  }
+
+  /**
+   * Получает полную информацию о группах для задачи (с VK данными)
+   */
+  async getGroupsWithVkDataByTaskId(taskId: string): Promise<Array<{
+    vk_id: number;
+    name: string | null;
+    screen_name: string | null;
+    photo_50: string | null;
+    members_count: number | null;
+    is_closed: number;
+    description: string | null;
+  }>> {
+    try {
+      const groups = await prisma.groups.findMany({
+        where: { task_id: taskId, status: 'valid' },
+        select: {
+          vk_id: true,
+          name: true,
+          screen_name: true,
+          photo_50: true,
+          members_count: true,
+          is_closed: true,
+          description: true
+        }
+      });
+
+      return groups;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get groups with VK data by task ID', { taskId, error: errorMsg });
+      throw new Error(`Failed to get groups with VK data: ${errorMsg}`);
     }
   }
 
