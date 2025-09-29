@@ -145,21 +145,21 @@
       </template>
 
       <!-- Upload Date Column -->
-      <template v-slot:[`item.uploaded_at`]="{ item }">
+      <template v-slot:[`item.uploadedAt`]="{ item }">
         <div class="text-body-2">
-          {{ formatDate(item.uploaded_at) }}
+          {{ formatDate(item.uploadedAt) }}
         </div>
       </template>
 
       <!-- Task ID Column -->
-      <template v-slot:[`item.task_id`]="{ item }">
+      <template v-slot:[`item.taskId`]="{ item }">
         <v-chip
           size="small"
           variant="outlined"
           color="info"
           class="font-mono"
         >
-          {{ item.task_id.substring(0, 8) }}...
+          {{ item.taskId.substring(0, 8) }}...
         </v-chip>
       </template>
 
@@ -281,8 +281,8 @@ const headers = [
   { title: 'ID группы', key: 'id', width: '120px', sortable: false },
   { title: 'Название', key: 'name', sortable: false },
   { title: 'Статус', key: 'status', width: '120px', sortable: false },
-  { title: 'Загружена', key: 'uploaded_at', width: '140px', sortable: false },
-  { title: 'Задача', key: 'task_id', width: '140px', sortable: false },
+  { title: 'Загружена', key: 'uploadedAt', width: '140px', sortable: false },
+  { title: 'Задача', key: 'taskId', width: '140px', sortable: false },
   { title: 'Действия', key: 'actions', width: '120px', sortable: false }
 ]
 

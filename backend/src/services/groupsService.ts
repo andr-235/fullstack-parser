@@ -294,15 +294,34 @@ class GroupsService {
   }
 
   /**
+   * Преобразует группу из формата БД в формат API (snake_case -> camelCase)
+   */
+  private transformGroupToApiFormat(group: any): any {
+    return {
+      id: group.id,
+      name: group.name,
+      status: group.status,
+      uploadedAt: group.uploaded_at,
+      taskId: group.task_id
+    };
+  }
+
+  /**
    * Получает группы с фильтрацией
    */
   async getGroups(params: GetGroupsParams): Promise<GetGroupsResult> {
     try {
       const result = await this.groupsRepo.getGroups(params);
 
+      // Преобразуем группы в формат camelCase для frontend
+      const transformedResult = {
+        ...result,
+        groups: result.groups.map(group => this.transformGroupToApiFormat(group))
+      };
+
       return {
         success: true,
-        data: result
+        data: transformedResult
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
