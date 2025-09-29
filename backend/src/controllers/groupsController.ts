@@ -1,17 +1,41 @@
 import express, { Request, Response } from 'express';
+import Joi from 'joi';
 import { uploadSingle, handleUploadError, validateUploadedFile, logFileUpload } from '@/middleware/upload';
 import groupsService from '@/services/groupsService';
 import logger from '@/utils/logger';
-import { ApiResponse, PaginationParams, ErrorCodes } from '@/types/express';
+import { ApiResponse, PaginationParams } from '@/types/express';
 import { GetGroupsParams } from '@/services/groupsService';
 import {
   GroupsUploadResponse,
-  GroupsListResponse,
-  GroupsStatsResponse
+  GroupsListResponse
 } from '@/types/api';
+import {
+  ValidationError,
+  NotFoundError,
+  ErrorUtils
+} from '@/utils/errors';
+import { validateBody, validateQuery, paginationSchema } from '@/middleware/validationMiddleware';
+import validateGroupId from '@/middleware/validateGroupId';
 
 const router = express.Router();
 
+// Validation schemas
+const uploadQuerySchema = Joi.object({
+  encoding: Joi.string().valid('utf-8', 'utf8', 'ascii', 'base64', 'hex').default('utf-8')
+});
+
+const getGroupsQuerySchema = paginationSchema.keys({
+  status: Joi.string().valid('active', 'inactive', 'pending').optional(),
+  search: Joi.string().min(1).max(255).optional(),
+  sortBy: Joi.string().valid('id', 'name', 'vkId', 'createdAt', 'updatedAt').default('id'),
+  sortOrder: Joi.string().valid('ASC', 'DESC', 'asc', 'desc').default('ASC')
+});
+
+const batchDeleteSchema = Joi.object({
+  groupIds: Joi.array().items(Joi.number().integer().positive()).min(1).max(100).required()
+});
+
+// Типы для запросов
 interface UploadQuery {
   encoding?: BufferEncoding;
 }
@@ -28,316 +52,304 @@ interface BatchDeleteBody {
 }
 
 /**
- * POST /api/groups/upload
- * Загрузка файла с группами
+ * POST /api/groups/upload - Загрузка файла с группами
  */
-router.post('/upload',
-  logFileUpload,
-  uploadSingle,
-  handleUploadError,
-  validateUploadedFile,
-  async (req: Request<{}, ApiResponse, {}, UploadQuery>, res: Response): Promise<void> => {
-    try {
-      if (!req.file) {
-        res.error('Файл не был загружен', 400);
-        return;
+const uploadGroups = async (req: Request<{}, ApiResponse, {}, UploadQuery>, res: Response): Promise<void> => {
+  const requestId = (req as any).requestId || (req as any).id;
+
+  try {
+    if (!req.file) {
+      const validationError = new ValidationError('Файл не был загружен', [
+        {
+          field: 'file',
+          message: 'File is required',
+          value: undefined
+        }
+      ]);
+      if (requestId) {
+        validationError.setRequestId(requestId);
       }
+      throw validationError;
+    }
 
-      logger.info('Groups upload started', {
-        filename: req.file.originalname,
-        size: req.file.size,
-        mimetype: req.file.mimetype
+    logger.info('Groups upload started', {
+      filename: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      requestId
+    });
+
+    const encoding: BufferEncoding = (req.query.encoding as BufferEncoding) || 'utf-8';
+    logger.info('Processing file with groupsService', { encoding, requestId });
+
+    const result = await groupsService.uploadGroups(req.file.buffer, encoding);
+
+    if (result.success) {
+      logger.info('Groups upload successful', {
+        taskId: result.data?.taskId,
+        totalGroups: result.data?.totalGroups || 0,
+        requestId
       });
-
-      const encoding: BufferEncoding = (req.query.encoding as BufferEncoding) || 'utf-8';
-      logger.info('Processing file with groupsService', { encoding });
-
-      const result = await groupsService.uploadGroups(req.file.buffer, encoding);
-
-      if (result.success) {
-        logger.info('Groups upload successful', {
-          taskId: result.data?.taskId,
-          totalGroups: result.data?.totalGroups || 0
-        });
-        res.success(result.data, 'Файл с группами успешно загружен');
-      } else {
-        logger.info('Groups upload failed', { error: result.error, message: result.message });
-        res.error(result.message || 'Ошибка обработки файла', 400);
-      }
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.error('Upload groups controller error', {
-        filename: req.file?.originalname,
-        error: errorMsg
+      res.success(result.data, 'Файл с группами успешно загружен');
+    } else {
+      logger.warn('Groups upload failed', {
+        error: result.error,
+        message: result.message,
+        requestId
       });
-      res.error('Ошибка загрузки файла', 500, {
-        filename: req.file?.originalname,
-        originalError: errorMsg
+      res.error(result.message || 'Ошибка обработки файла', 400, {
+        details: result.error
       });
     }
+
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error('Upload groups controller error', {
+      filename: req.file?.originalname,
+      error: errorMsg,
+      requestId
+    });
+
+    const appError = ErrorUtils.toAppError(error as Error, 'Ошибка загрузки файла');
+    if (requestId) {
+      appError.setRequestId(requestId);
+    }
+    throw appError;
   }
-);
+};
 
 /**
- * GET /api/groups/upload/:taskId/status
- * Получение статуса загрузки
+ * GET /api/groups/upload/:taskId/status - Получение статуса загрузки
  */
-router.get('/upload/:taskId/status', async (req: Request<{ taskId: string }>, res: Response): Promise<void> => {
+const getUploadStatus = async (req: Request<{ taskId: string }>, res: Response): Promise<void> => {
+  const requestId = (req as any).requestId || (req as any).id;
+  const { taskId } = req.params;
+
   try {
-    const { taskId } = req.params;
     const result = groupsService.getUploadStatus(taskId);
 
     if (result.success) {
       res.success(result.data, 'Статус загрузки получен');
     } else {
-      res.error('Задача загрузки не найдена', 404, {
-        taskId
-      });
+      const notFoundError = new NotFoundError('Upload task', taskId);
+      if (requestId) {
+        notFoundError.setRequestId(requestId);
+      }
+      throw notFoundError;
     }
+
   } catch (error) {
+    if (error instanceof NotFoundError) {
+      throw error;
+    }
+
     const errorMsg = error instanceof Error ? error.message : String(error);
     logger.error('Get upload status controller error', {
-      taskId: req.params.taskId,
-      error: errorMsg
+      taskId,
+      error: errorMsg,
+      requestId
     });
-    res.error('Ошибка получения статуса загрузки', 500, {
-      taskId: req.params.taskId,
-      originalError: errorMsg
-    });
+
+    const appError = ErrorUtils.toAppError(error as Error, 'Ошибка получения статуса загрузки');
+    if (requestId) {
+      appError.setRequestId(requestId);
+    }
+    throw appError;
   }
-});
+};
 
 /**
- * GET /api/groups
- * Получение списка групп
+ * GET /api/groups - Получение списка групп с пагинацией и фильтрацией
  */
-router.get('/', async (req: Request<{}, ApiResponse, {}, GetGroupsQuery>, res: Response): Promise<void> => {
+const getGroups = async (req: Request<{}, ApiResponse, {}, GetGroupsQuery>, res: Response): Promise<void> => {
+  const requestId = (req as any).requestId || (req as any).id;
+
   try {
-    const {
-      page = 1,
-      limit = 20,
-      status = 'all',
-      search = '',
-      sortBy = 'uploadedAt',
-      sortOrder = 'desc'
-    } = req.query;
+    logger.info('Processing getGroups request', {
+      page: req.query.page,
+      limit: req.query.limit,
+      status: req.query.status,
+      search: req.query.search,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder,
+      requestId
+    });
 
-    // Валидация параметров
-    const pageNum = Number(page);
-    const limitNum = Number(limit);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
 
-    if (isNaN(pageNum) || pageNum < 1) {
-      res.error('Номер страницы должен быть положительным числом', 400, {
-        field: 'page',
-        value: page,
-        constraint: 'positive integer'
-      });
-      return;
-    }
-
-    if (isNaN(limitNum) || limitNum < 1 || limitNum > 10000) {
-      res.error('Лимит должен быть от 1 до 10000', 400, {
-        field: 'limit',
-        value: limit,
-        constraint: '1 <= limit <= 10000'
-      });
-      return;
-    }
-
-    const offset = (pageNum - 1) * limitNum;
     const params: GetGroupsParams = {
-      limit: limitNum,
-      offset,
-      status: status !== 'all' ? status : undefined,
-      search: search || undefined,
-      sortBy,
-      sortOrder
+      limit: limit,
+      offset: offset,
+      status: req.query.status,
+      search: req.query.search,
+      sortBy: req.query.sortBy || 'id',
+      sortOrder: req.query.sortOrder || 'ASC'
     };
 
     const result = await groupsService.getGroups(params);
 
     if (result.success) {
-      // Используем пагинированный ответ для списка групп
-      const pagination = {
-        page: pageNum,
-        limit: limitNum,
-        total: result.data?.total || 0,
-        totalPages: Math.ceil((result.data?.total || 0) / limitNum),
-        hasNext: pageNum * limitNum < (result.data?.total || 0),
-        hasPrev: pageNum > 1
-      };
+      logger.info('Groups retrieved successfully', {
+        totalGroups: result.data?.total || 0,
+        page,
+        limit,
+        requestId
+      });
 
-      res.paginated(result.data?.groups || [], pagination);
+      const totalPages = Math.ceil((result.data?.total || 0) / limit);
+
+      res.paginated(result.data?.groups || [], {
+        page,
+        limit,
+        total: result.data?.total || 0,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }, {
+        filters: {
+          status: params.status,
+          search: params.search
+        },
+        sorting: {
+          sortBy: params.sortBy,
+          sortOrder: params.sortOrder
+        }
+      });
     } else {
       res.error(result.message || 'Ошибка получения списка групп', 500);
     }
+
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     logger.error('Get groups controller error', {
-      query: req.query,
-      error: errorMsg
+      error: errorMsg,
+      requestId
     });
-    res.error('Ошибка получения списка групп', 500, {
-      query: req.query,
-      originalError: errorMsg
-    });
+
+    const appError = ErrorUtils.toAppError(error as Error, 'Ошибка получения списка групп');
+    if (requestId) {
+      appError.setRequestId(requestId);
+    }
+    throw appError;
   }
-});
+};
 
 /**
- * DELETE /api/groups/:groupId
- * Удаление группы
+ * DELETE /api/groups/:groupId - Удаление группы по ID
  */
-router.delete('/:groupId', async (req: Request<{ groupId: string }>, res: Response): Promise<void> => {
-  try {
-    const { groupId } = req.params;
+const deleteGroup = async (req: Request<{ groupId: string }>, res: Response): Promise<void> => {
+  const requestId = (req as any).requestId || (req as any).id;
+  const groupId = (req as any).validatedGroupId; // Получаем из middleware
 
-    // Валидация ID
-    const groupIdNum = Number(groupId);
-    if (isNaN(groupIdNum) || groupIdNum <= 0) {
-      res.error('ID группы должен быть положительным числом', 400, {
-        field: 'groupId',
-        value: groupId,
-        constraint: 'positive number'
-      });
-      return;
-    }
+  try {
+    logger.info('Processing deleteGroup request', { groupId, requestId });
 
     const result = await groupsService.deleteGroup(groupId);
 
     if (result.success) {
-      res.success(result.data, 'Группа успешно удалена');
+      logger.info('Group deleted successfully', { groupId, requestId });
+      res.success({
+        deletedGroupId: groupId,
+        deletedAt: new Date().toISOString()
+      }, 'Группа успешно удалена');
     } else {
-      const errorCode = result.error === 'GROUP_NOT_FOUND' ? ErrorCodes.NOT_FOUND : ErrorCodes.INTERNAL_ERROR;
-      const statusCode = result.error === 'GROUP_NOT_FOUND' ? 404 : 400;
-      res.error(result.message || 'Ошибка удаления группы', statusCode, { groupId });
+      const notFoundError = new NotFoundError('Group', String(groupId));
+      if (requestId) {
+        notFoundError.setRequestId(requestId);
+      }
+      throw notFoundError;
     }
+
   } catch (error) {
+    if (error instanceof NotFoundError) {
+      throw error;
+    }
+
     const errorMsg = error instanceof Error ? error.message : String(error);
     logger.error('Delete group controller error', {
-      groupId: req.params.groupId,
-      error: errorMsg
+      groupId,
+      error: errorMsg,
+      requestId
     });
-    res.error('Ошибка удаления группы', 500, {
-      groupId: req.params.groupId,
-      originalError: errorMsg
-    });
+
+    const appError = ErrorUtils.toAppError(error as Error, 'Ошибка удаления группы');
+    if (requestId) {
+      appError.setRequestId(requestId);
+    }
+    throw appError;
   }
-});
+};
 
 /**
- * DELETE /api/groups/batch
- * Массовое удаление групп
+ * DELETE /api/groups/batch - Массовое удаление групп
  */
-router.delete('/batch', async (req: Request<{}, ApiResponse, BatchDeleteBody>, res: Response): Promise<void> => {
+const deleteGroups = async (req: Request<{}, ApiResponse, BatchDeleteBody>, res: Response): Promise<void> => {
+  const requestId = (req as any).requestId || (req as any).id;
+
   try {
+    logger.info('Processing batch deleteGroups request', {
+      groupsCount: req.body.groupIds?.length,
+      requestId
+    });
+
     const { groupIds } = req.body;
-
-    if (!groupIds || !Array.isArray(groupIds)) {
-      res.error('groupIds должен быть массивом', 400, {
-        field: 'groupIds',
-        value: groupIds,
-        constraint: 'array'
-      });
-      return;
-    }
-
-    if (groupIds.length === 0) {
-      res.error('Массив groupIds не может быть пустым', 400, {
-        field: 'groupIds',
-        constraint: 'non-empty array'
-      });
-      return;
-    }
-
-    // Валидация всех ID
-    const validGroupIds: number[] = [];
-    for (const id of groupIds) {
-      const numId = Number(id);
-      if (isNaN(numId) || numId <= 0) {
-        res.error(`Некорректный ID группы: ${id}. Все ID должны быть положительными числами`, 400, {
-          field: 'groupIds',
-          invalidId: id,
-          constraint: 'positive numbers'
-        });
-        return;
-      }
-      validGroupIds.push(numId);
-    }
-
-    const result = await groupsService.deleteGroups(validGroupIds);
+    const result = await groupsService.deleteGroups(groupIds);
 
     if (result.success) {
-      res.status(200).json(result);
-    } else {
-      res.status(400).json(result);
-    }
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    logger.error('Delete groups batch controller error', {
-      groupIds: req.body.groupIds,
-      error: errorMsg
-    });
-    res.error('Внутренняя ошибка сервера', 500);
-  }
-});
-
-/**
- * GET /api/groups/stats
- * GET /api/groups/:taskId/stats
- * Получение статистики по группам
- */
-router.get('/stats', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const result = await groupsService.getGroupsStats();
-
-    if (result.success) {
-      res.success(result.data, 'Операция выполнена успешно');
-    } else {
-      res.error(result.message || 'Ошибка выполнения операции', 500);
-    }
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    logger.error('Get groups stats controller error', {
-      error: errorMsg
-    });
-    res.error('Внутренняя ошибка сервера', 500);
-  }
-});
-
-/**
- * GET /api/groups/:taskId/stats
- * Получение статистики по группам для конкретной задачи
- */
-router.get('/:taskId/stats', async (req: Request<{ taskId: string }>, res: Response): Promise<void> => {
-  try {
-    const { taskId } = req.params;
-
-    // Валидация taskId
-    if (!taskId || typeof taskId !== 'string') {
-      res.status(400).json({
-        success: false,
-        error: 'INVALID_TASK_ID',
-        message: 'Task ID is required'
+      logger.info('Groups batch deleted successfully', {
+        deletedCount: result.data?.deletedCount || 0,
+        requestedCount: groupIds.length,
+        requestId
       });
-      return;
-    }
 
-    const result = await groupsService.getGroupsStats(taskId);
-
-    if (result.success) {
-      res.success(result.data, 'Операция выполнена успешно');
+      res.success({
+        deletedGroupIds: groupIds,
+        deletedCount: result.data?.deletedCount || 0,
+        requestedCount: groupIds.length,
+        deletedAt: new Date().toISOString()
+      }, `Успешно удалено групп: ${result.data?.deletedCount || 0} из ${groupIds.length}`);
     } else {
-      res.error(result.message || 'Ошибка выполнения операции', 500);
+      res.error(result.message || 'Ошибка массового удаления групп', 500, {
+        failedGroupIds: groupIds
+      });
     }
+
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    logger.error('Get groups stats controller error', {
-      taskId: req.params.taskId,
-      error: errorMsg
+    logger.error('Batch delete groups controller error', {
+      groupsCount: req.body.groupIds?.length,
+      error: errorMsg,
+      requestId
     });
-    res.error('Внутренняя ошибка сервера', 500);
+
+    const appError = ErrorUtils.toAppError(error as Error, 'Ошибка массового удаления групп');
+    if (requestId) {
+      appError.setRequestId(requestId);
+    }
+    throw appError;
   }
-});
+};
+
+// Маршруты
+router.post(
+  '/groups/upload',
+  logFileUpload,
+  uploadSingle,
+  handleUploadError,
+  validateUploadedFile,
+  validateQuery(uploadQuerySchema),
+  uploadGroups
+);
+
+router.get('/groups/upload/:taskId/status', getUploadStatus);
+router.get('/groups', validateQuery(getGroupsQuerySchema), getGroups);
+router.delete('/groups/:groupId', validateGroupId, deleteGroup);
+router.delete('/groups/batch', validateBody(batchDeleteSchema), deleteGroups);
 
 export default router;

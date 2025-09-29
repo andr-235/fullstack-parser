@@ -448,7 +448,15 @@ class DBRepo {
         }
       });
 
-      return groups;
+      return groups as Array<{
+        vk_id: number;
+        name: string | null;
+        screen_name: string | null;
+        photo_50: string | null;
+        members_count: number | null;
+        is_closed: number;
+        description: string | null;
+      }>;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Failed to get groups with VK data by task ID', { taskId, error: errorMsg });

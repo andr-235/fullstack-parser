@@ -10,16 +10,12 @@ import cors from 'cors';
 import logger from '@/utils/logger';
 import { PrismaService } from '@/config/prisma';
 import { queueService } from '@/services/queueService';
-import taskController from '@/controllers/taskController';
-import groupsController from '@/controllers/groupsController';
+import { setupRoutes } from '@/routes';
 import { ApiResponse } from '@/types/express';
 import {
   requestIdMiddleware,
-  responseFormatter,
-  errorHandler,
-  notFoundHandler,
-  responseLogger,
-  responseHeaders
+  responseHeaders,
+  responseLogger
 } from '@/middleware/responseFormatter';
 
 const app: Application = express();
@@ -53,9 +49,6 @@ app.use(responseHeaders);
 if (process.env.NODE_ENV === 'development') {
   app.use(responseLogger);
 }
-
-// Форматирование ответов API
-app.use(responseFormatter);
 
 // Middleware для обработки ошибок JSON
 app.use((err: Error, req: Request, res: Response, next: NextFunction): void => {
@@ -116,98 +109,22 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
 
 // Basic route с использованием стандартизированного ответа
 app.get('/', (req: Request, res: Response): void => {
-  res.success({
-    version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
-    uptime: process.uptime()
-  }, 'Express VK Backend is running!');
-});
-
-// Health check endpoint для мониторинга развертывания
-app.get('/api/health', async (req: Request, res: Response): Promise<void> => {
-  try {
-    // Проверяем соединение с базой данных
-    const dbHealth = await PrismaService.healthCheck();
-
-    const healthData = {
-      status: dbHealth.status === 'healthy' ? 'healthy' : 'unhealthy',
-      services: {
-        database: dbHealth.status === 'healthy' ? 'connected' : 'disconnected',
-        server: 'running'
-      },
-      uptime: process.uptime()
-    };
-
-    if (dbHealth.status === 'healthy') {
-      res.success(healthData, 'Service is healthy');
-    } else {
-      res.error('Service is unhealthy', 503, {
-        dbError: dbHealth.error
-      });
-    }
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    res.error('Health check failed', 503, { originalError: errorMsg });
-  }
-});
-
-// Детальный health check endpoint
-app.get('/api/health/detailed', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const dbHealth = await PrismaService.healthCheck();
-    const queueHealth = await queueService.healthCheck();
-
-    const detailedHealthData = {
-      status: dbHealth.status === 'healthy' && queueHealth.status === 'healthy' ? 'healthy' : 'unhealthy',
-      version: process.env.npm_package_version || '1.0.0',
-      uptime: process.uptime(),
+  res.json({
+    success: true,
+    data: {
+      version: '1.0.0',
       environment: process.env.NODE_ENV || 'development',
-      services: {
-        database: {
-          status: dbHealth.status === 'healthy' ? 'connected' : 'disconnected',
-          latency: dbHealth.latency,
-          error: dbHealth.error
-        },
-        queue: {
-          status: queueHealth.status,
-          initialized: queueHealth.details.initialized,
-          queuesCount: queueHealth.details.queuesCount,
-          workersCount: queueHealth.details.workersCount,
-          workers: queueHealth.details.workers,
-          totalJobs: queueHealth.details.totalJobs
-        },
-        server: {
-          status: 'running',
-          port: PORT,
-          memory: process.memoryUsage(),
-          pid: process.pid
-        }
-      }
-    };
-
-    const overallHealthy = dbHealth.status === 'healthy' && queueHealth.status === 'healthy';
-    if (overallHealthy) {
-      res.success(detailedHealthData, 'Detailed health check completed');
-    } else {
-      res.error('Service unhealthy', 503, detailedHealthData);
-    }
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    res.error('Detailed health check failed', 503, { originalError: errorMsg });
-  }
+      uptime: process.uptime()
+    },
+    message: 'Express VK Backend is running!',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// API routes
-app.use('/api', taskController);
-app.use('/api/groups', groupsController);
-
-// === СТАНДАРТИЗИРОВАННЫЕ ОБРАБОТЧИКИ ОШИБОК ===
-
-// 404 - маршрут не найден
-app.use(notFoundHandler);
-
-// Глобальный обработчик ошибок
-app.use(errorHandler);
+// === НАСТРОЙКА МАРШРУТОВ ===
+// Используем централизованную систему маршрутизации
+// Она включает в себя responseFormatter и errorHandler
+setupRoutes(app);
 
 // Graceful shutdown handler
 const gracefulShutdown = async (signal: string): Promise<void> => {
