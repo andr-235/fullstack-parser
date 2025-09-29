@@ -157,8 +157,8 @@ export const useGroupsStore = defineStore('groups', () => {
 
   const getAllGroups = async () => {
     try {
-      const response = await groupsApi.getAllGroups()
-      return response.data.data?.groups || []
+      const response: PaginatedResponse<Group> = await groupsApi.getAllGroups()
+      return response.data.data || []
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Ошибка загрузки групп'
       return []

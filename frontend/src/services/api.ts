@@ -173,7 +173,7 @@ export const groupsApi: GroupsApiType = {
   /**
    * Получает все группы без пагинации (для селектов и форм).
    */
-  getAllGroups: () =>
+  getAllGroups: (): Promise<PaginatedResponse<Group>> =>
     api.get('/api/groups', { params: { limit: 10000, page: 1 } })
 }
 

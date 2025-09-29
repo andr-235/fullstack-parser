@@ -152,5 +152,5 @@ export interface GroupsApiType {
   getGroups: (params?: GroupsParams) => Promise<PaginatedResponse<Group>>
   deleteGroup: (groupId: string | number) => Promise<ApiResponse<{ message: string }>>
   deleteGroups: (groupIds: (string | number)[]) => Promise<ApiResponse<{ message: string }>>
-  getAllGroups: () => Promise<ApiResponse<GroupsResponse>>
+  getAllGroups: () => Promise<PaginatedResponse<Group>>
 }
