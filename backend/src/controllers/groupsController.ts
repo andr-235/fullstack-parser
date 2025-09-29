@@ -360,6 +360,46 @@ const deleteGroups = async (req: Request<{}, ApiResponse, BatchDeleteBody>, res:
   }
 };
 
+/**
+ * DELETE /api/groups/all - Удаление всех групп из БД
+ */
+const deleteAllGroups = async (req: Request, res: Response): Promise<void> => {
+  const requestId = (req as any).requestId || (req as any).id;
+
+  try {
+    logger.warn('Processing deleteAllGroups request - deleting ALL groups from database', { requestId });
+
+    const result = await groupsService.deleteAllGroups();
+
+    if (result.success) {
+      logger.info('All groups deleted successfully', {
+        deletedCount: result.data?.deletedCount || 0,
+        requestId
+      });
+
+      res.success({
+        deletedCount: result.data?.deletedCount || 0,
+        deletedAt: new Date().toISOString()
+      }, `Успешно удалено групп: ${result.data?.deletedCount || 0}`);
+    } else {
+      res.error(result.message || 'Ошибка удаления всех групп', 500);
+    }
+
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error('Delete all groups controller error', {
+      error: errorMsg,
+      requestId
+    });
+
+    const appError = ErrorUtils.toAppError(error as Error, 'Ошибка удаления всех групп');
+    if (requestId) {
+      appError.setRequestId(requestId);
+    }
+    throw appError;
+  }
+};
+
 // Маршруты
 router.post(
   '/groups/upload',
@@ -373,6 +413,7 @@ router.post(
 
 router.get('/groups/upload/:taskId/status', getUploadStatus);
 router.get('/groups', validateQuery(getGroupsQuerySchema), getGroups);
+router.delete('/groups/all', deleteAllGroups);
 router.delete('/groups/:groupId', validateGroupIdParam, deleteGroup);
 router.delete('/groups/batch', validateBody(batchDeleteSchema), deleteGroups);
 

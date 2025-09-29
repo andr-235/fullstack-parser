@@ -177,6 +177,12 @@ export const groupsApi: GroupsApiType = {
     api.delete('/api/groups/batch', { data: { groupIds }}),
 
   /**
+   * Удаляет все группы из БД.
+   */
+  deleteAllGroups: () =>
+    api.delete('/api/groups/all'),
+
+  /**
    * Получает все группы без пагинации (для селектов и форм).
    */
   getAllGroups: (): Promise<PaginatedResponse<Group>> =>

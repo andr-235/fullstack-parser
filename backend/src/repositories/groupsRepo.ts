@@ -294,6 +294,22 @@ class GroupsRepository {
   }
 
   /**
+   * Удаляет все группы из БД
+   */
+  async deleteAllGroups(): Promise<number> {
+    try {
+      const deleteResult = await prisma.groups.deleteMany({});
+
+      logger.warn('All groups deleted from database', { count: deleteResult.count });
+      return deleteResult.count;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to delete all groups', { error: errorMsg });
+      throw new Error(`Failed to delete all groups: ${errorMsg}`);
+    }
+  }
+
+  /**
    * Удаляет группы по ID задачи
    */
   async deleteGroupsByTaskId(taskId: string): Promise<number> {

@@ -138,6 +138,18 @@ export const useGroupsStore = defineStore('groups', () => {
     }
   }
 
+  const deleteAllGroups = async () => {
+    try {
+      await groupsApi.deleteAllGroups()
+      groups.value = []
+      pagination.value.total = 0
+      pagination.value.page = 1
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'Ошибка очистки всех групп'
+      throw err
+    }
+  }
+
   const updateFilters = (newFilters: Partial<GroupsFilters & { page?: number, limit?: number }>) => {
     if (newFilters.page) {
       pagination.value.page = newFilters.page
@@ -184,6 +196,7 @@ export const useGroupsStore = defineStore('groups', () => {
     getTaskStatus,
     deleteGroup,
     deleteGroups,
+    deleteAllGroups,
     updateFilters,
     getAllGroups
   }

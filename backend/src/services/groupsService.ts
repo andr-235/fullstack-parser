@@ -500,6 +500,32 @@ class GroupsService {
   }
 
   /**
+   * Удаляет все группы из БД
+   */
+  async deleteAllGroups(): Promise<DeleteResult> {
+    try {
+      logger.warn('Deleting all groups from database');
+      const result = await this.groupsRepo.deleteAllGroups();
+
+      return {
+        success: true,
+        data: {
+          deletedCount: result,
+          message: `All groups deleted successfully (${result} groups)`
+        }
+      };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('Delete all groups failed', { error: errorMsg });
+      return {
+        success: false,
+        error: 'DELETE_ALL_GROUPS_ERROR',
+        message: errorMsg
+      };
+    }
+  }
+
+  /**
    * Получает статистику по группам
    */
   async getGroupsStats(taskId?: string): Promise<StatsResult> {

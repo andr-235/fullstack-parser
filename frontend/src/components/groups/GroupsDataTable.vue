@@ -13,6 +13,16 @@
       >
         {{ pagination.total }} {{ getGroupsCountText(pagination.total) }}
       </v-chip>
+      <v-btn
+        v-if="!isEmpty"
+        color="error"
+        variant="text"
+        prepend-icon="mdi-delete-sweep"
+        @click="handleClearAll"
+        class="ms-2"
+      >
+        Очистить таблицу
+      </v-btn>
     </v-card-title>
 
     <!-- Bulk Actions Toolbar -->
@@ -301,6 +311,55 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Clear All Confirmation Dialog -->
+    <v-dialog
+      v-model="clearAllDialog.show"
+      max-width="500px"
+    >
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <v-icon class="me-2" color="error">mdi-alert-circle</v-icon>
+          Подтверждение очистки
+        </v-card-title>
+        <v-card-text>
+          <p class="mb-4">
+            Вы действительно хотите удалить <strong>все группы</strong> из базы данных?
+          </p>
+          <p class="text-body-2 text-medium-emphasis mb-2">
+            Это действие необратимо. Будет удалено <strong>{{ pagination.total }}</strong> {{ getGroupsCountText(pagination.total) }}.
+          </p>
+          <v-alert
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mt-4"
+          >
+            <div class="text-body-2">
+              Внимание: все данные будут безвозвратно утеряны!
+            </div>
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="clearAllDialog.show = false"
+            :disabled="clearAllDialog.loading"
+          >
+            Отмена
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
+            @click="confirmClearAll"
+            :loading="clearAllDialog.loading"
+          >
+            Удалить все
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -326,6 +385,10 @@ const selectedGroups = ref([])
 const singleDeleteDialog = ref({
   show: false,
   group: null,
+  loading: false
+})
+const clearAllDialog = ref({
+  show: false,
   loading: false
 })
 
@@ -399,6 +462,24 @@ const clearSelection = () => {
 const viewDetails = (group) => {
   // TODO: Implement group details view
   console.log('View group details:', group)
+}
+
+const handleClearAll = () => {
+  clearAllDialog.value.show = true
+}
+
+const confirmClearAll = async () => {
+  clearAllDialog.value.loading = true
+
+  try {
+    await groupsStore.deleteAllGroups()
+    clearAllDialog.value.show = false
+    selectedGroups.value = []
+  } catch (error) {
+    console.error('Error clearing all groups:', error)
+  } finally {
+    clearAllDialog.value.loading = false
+  }
 }
 
 // Helper functions
