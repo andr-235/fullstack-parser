@@ -1,8 +1,6 @@
 import logger from '../utils/logger';
 import { prisma } from '../config/prisma';
-import type {
-  Prisma
-} from '@prisma/client';
+
 
 // Временные типы для корректной работы
 type tasks = any;

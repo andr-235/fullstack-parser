@@ -2,9 +2,9 @@ import { Router, Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import logger from '@/utils/logger';
 import taskService from '@/services/taskService';
-import vkService from '@/services/vkService';
 import { queueService } from '@/services/queueService';
 import vkIoService from '@/services/vkIoService';
+import dbRepo from '@/repositories/dbRepo';
 import { TaskStatus, TaskType, CreateTaskRequest } from '@/types/task';
 import { ApiResponse, PaginationParams, PaginatedResponse, ErrorCodes } from '@/types/express';
 import { ProgressCalculator } from '@/services/progressCalculator';
@@ -561,7 +561,7 @@ const getResults = async (req: Request<{ taskId: string }, {}, {}, GetResultsQue
     const groupId = req.query.groupId ? Number(req.query.groupId) : undefined;
     const postId = req.query.postId ? Number(req.query.postId) : undefined;
 
-    const results = await vkService.getResults(taskId, groupId, postId);
+    const results = await dbRepo.getResults(taskId, groupId, postId);
     res.json({
       success: true,
       data: results

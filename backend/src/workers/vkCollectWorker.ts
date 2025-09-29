@@ -9,7 +9,6 @@ import {
 } from '@/types/queue';
 import { QUEUE_NAMES, WORKER_CONFIGS, createWorkerRedisConnection } from '@/config/queue';
 import taskService from '@/services/taskService';
-import vkService from '@/services/vkService';
 import vkIoService, { ProcessedPost } from '@/services/vkIoService';
 import dbRepo from '@/repositories/dbRepo';
 import logger from '@/utils/logger';
