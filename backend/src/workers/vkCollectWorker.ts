@@ -99,10 +99,21 @@ export class VkCollectWorker {
       let totalComments = 0;
       const errors: Array<{ groupId: string; error: string; timestamp: Date }> = [];
 
-      // Обрабатываем каждую группу
-      for (let i = 0; i < groups.length; i++) {
-        const group = groups[i];
-        const groupId = group.vkId;
+      // Получаем реальные группы из базы данных с VK ID
+      const dbGroups = await dbRepo.getGroupsWithVkDataByTaskId(String(taskId));
+
+      if (dbGroups.length === 0) {
+        throw new WorkerError(
+          `No valid groups found for task ${taskId}`,
+          'NO_GROUPS_FOUND',
+          job.id?.toString()
+        );
+      }
+
+      // Обрабатываем каждую группу из базы данных
+      for (let i = 0; i < dbGroups.length; i++) {
+        const group = dbGroups[i];
+        const groupId = group.vk_id; // Используем VK ID из базы данных
 
         try {
           logger.info('Processing VK group', {
@@ -115,16 +126,16 @@ export class VkCollectWorker {
 
           // Обновляем progress с текущей группой
           await this.updateJobProgress(job, {
-            percentage: Math.round((i / groups.length) * 90), // 90% на обработку групп
+            percentage: Math.round((i / dbGroups.length) * 90), // 90% на обработку групп
             stage: 'fetching_posts',
             currentGroup: {
-              vkId: groupId,
-              name: group.name,
+              vkId: String(groupId),
+              name: group.name || `Группа ${groupId}`,
               progress: 0
             },
             stats: {
               groupsCompleted: i,
-              totalGroups: groups.length,
+              totalGroups: dbGroups.length,
               postsProcessed: totalPosts,
               commentsCollected: totalComments
             }
@@ -133,8 +144,8 @@ export class VkCollectWorker {
           // Обрабатываем группу через существующий VK service
           const groupResult = await this.processGroup(
             taskId,
-            groupId,
-            group.name,
+            String(groupId),
+            group.name || `Группа ${groupId}`,
             options,
             job
           );
@@ -144,16 +155,16 @@ export class VkCollectWorker {
 
           // Обновляем progress после обработки группы
           await this.updateJobProgress(job, {
-            percentage: Math.round(((i + 1) / groups.length) * 90),
+            percentage: Math.round(((i + 1) / dbGroups.length) * 90),
             stage: 'fetching_comments',
             currentGroup: {
-              vkId: groupId,
-              name: group.name,
+              vkId: String(groupId),
+              name: group.name || `Группа ${groupId}`,
               progress: 100
             },
             stats: {
               groupsCompleted: i + 1,
-              totalGroups: groups.length,
+              totalGroups: dbGroups.length,
               postsProcessed: totalPosts,
               commentsCollected: totalComments
             }
@@ -177,7 +188,7 @@ export class VkCollectWorker {
           });
 
           errors.push({
-            groupId,
+            groupId: String(groupId),
             error: errorMsg,
             timestamp: new Date()
           });
@@ -191,8 +202,8 @@ export class VkCollectWorker {
         percentage: 95,
         stage: 'saving_data',
         stats: {
-          groupsCompleted: groups.length,
-          totalGroups: groups.length,
+          groupsCompleted: dbGroups.length,
+          totalGroups: dbGroups.length,
           postsProcessed: totalPosts,
           commentsCollected: totalComments
         }
@@ -210,7 +221,7 @@ export class VkCollectWorker {
 
       if (finalStatus === 'completed') {
         await taskService.completeTask(taskId, {
-          totalGroups: groups.length,
+          totalGroups: dbGroups.length,
           processedPosts: totalPosts,
           processedComments: totalComments,
           errors: errors,
@@ -225,8 +236,8 @@ export class VkCollectWorker {
         percentage: 100,
         stage: 'completing',
         stats: {
-          groupsCompleted: groups.length,
-          totalGroups: groups.length,
+          groupsCompleted: dbGroups.length,
+          totalGroups: dbGroups.length,
           postsProcessed: totalPosts,
           commentsCollected: totalComments
         }
@@ -249,7 +260,7 @@ export class VkCollectWorker {
         taskId,
         commentsCollected: totalComments,
         postsProcessed: totalPosts,
-        groupsProcessed: groups.length,
+        groupsProcessed: dbGroups.length,
         errors,
         processingTime,
         finalStatus

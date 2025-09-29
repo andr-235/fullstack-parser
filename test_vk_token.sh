@@ -13,19 +13,19 @@ echo ""
 
 # Проверка токена (следуем редиректам)
 echo "=== Тест 1: account.getInfo ==="
-RESPONSE1=$(curl -s -L "https://dev.vk.com/method/account.getInfo?access_token=${CURRENT_TOKEN}&v=5.199")
+RESPONSE1=$(curl -s -L "https://api.vk.com/method/account.getInfo?access_token=${CURRENT_TOKEN}&v=5.199")
 echo "Ответ: $RESPONSE1"
 echo ""
 
 # Проверка доступа к группам
 echo "=== Тест 2: groups.getById для группы 2249 ==="
-RESPONSE2=$(curl -s -L "https://dev.vk.com/method/groups.getById?group_ids=40023088&access_token=${CURRENT_TOKEN}&v=5.199")
+RESPONSE2=$(curl -s -L "https://api.vk.com/method/groups.getById?group_ids=2249&access_token=${CURRENT_TOKEN}&v=5.199")
 echo "Ответ: $RESPONSE2"
 echo ""
 
 # Проверка доступа к стене группы
 echo "=== Тест 3: wall.get для группы 2249 ==="
-RESPONSE3=$(curl -s -L "https://dev.vk.com/method/wall.get?owner_id=40023088&count=1&access_token=${CURRENT_TOKEN}&v=5.199")
+RESPONSE3=$(curl -s -L "https://api.vk.com/method/wall.get?owner_id=-2249&count=1&access_token=${CURRENT_TOKEN}&v=5.199")
 echo "Ответ: $RESPONSE3"
 echo ""
 

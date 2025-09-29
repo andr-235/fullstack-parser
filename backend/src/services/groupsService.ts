@@ -5,6 +5,7 @@ import os from 'os';
 
 import FileParser from '@/utils/fileParser';
 import VKValidator from '@/utils/vkValidator';
+import vkIoService from '@/services/vkIoService';
 import groupsRepo, { GroupsRepository } from '@/repositories/groupsRepo';
 import logger from '@/utils/logger';
 import { ProcessedGroup } from '@/types/common';
@@ -214,20 +215,88 @@ class GroupsService {
         }));
       }
 
-      // Проверяем дубликаты в БД
-      const groupsToSave: ProcessedGroup[] = [];
-      for (const group of validGroups) {
-        if (group.id) {
-          const exists = await this.groupsRepo.groupExists(group.id);
-          if (exists) {
-            duplicates++;
-            invalidGroups.push({
-              ...group,
-              error: 'Group already exists in database'
+      // Получаем информацию о группах из VK API
+      let enrichedGroups: Array<{
+        vk_id: number;
+        name: string | null;
+        screen_name: string | null;
+        photo_50: string | null;
+        members_count: number | null;
+        is_closed: number;
+        description: string | null;
+        error?: string;
+      }> = [];
+
+      if (this.vkValidator) {
+        try {
+          // Извлекаем VK ID из групп
+          const vkIds = validGroups
+            .map(group => group.id)
+            .filter((id): id is number => id !== undefined && id > 0);
+
+          if (vkIds.length > 0) {
+            // Получаем информацию о группах через VK API
+            const vkGroupsInfo = await vkIoService.getGroupsInfo(vkIds);
+
+            enrichedGroups = vkIds.map(vkId => {
+              const vkInfo = vkGroupsInfo.find(info => info.id === vkId);
+              return {
+                vk_id: vkId,
+                name: vkInfo?.name || `Группа ${vkId}`,
+                screen_name: vkInfo?.screen_name || null,
+                photo_50: vkInfo?.photo_50 || null,
+                members_count: vkInfo?.members_count || null,
+                is_closed: vkInfo?.is_closed || 0,
+                description: vkInfo?.description || null
+              };
             });
-          } else {
-            groupsToSave.push(group);
           }
+        } catch (vkError) {
+          const errorMsg = vkError instanceof Error ? vkError.message : String(vkError);
+          logger.warn('Failed to get groups info from VK API, using fallback data', {
+            taskId,
+            error: errorMsg
+          });
+
+          // Fallback: создаем группы с базовой информацией
+          enrichedGroups = validGroups
+            .filter(group => group.id && group.id > 0)
+            .map(group => ({
+              vk_id: group.id!,
+              name: group.name || `Группа ${group.id}`,
+              screen_name: null,
+              photo_50: null,
+              members_count: null,
+              is_closed: 0,
+              description: null
+            }));
+        }
+      } else {
+        // Без VK валидатора создаем группы с базовой информацией
+        enrichedGroups = validGroups
+          .filter(group => group.id && group.id > 0)
+          .map(group => ({
+            vk_id: group.id!,
+            name: group.name || `Группа ${group.id}`,
+            screen_name: null,
+            photo_50: null,
+            members_count: null,
+            is_closed: 0,
+            description: null
+          }));
+      }
+
+      // Проверяем дубликаты в БД по VK ID
+      const groupsToSave = [];
+      for (const group of enrichedGroups) {
+        const exists = await this.groupsRepo.groupExistsByVkId(group.vk_id);
+        if (exists) {
+          duplicates++;
+          invalidGroups.push({
+            id: group.vk_id,
+            name: group.name || '',
+            error: 'Group already exists in database'
+          });
         } else {
           groupsToSave.push(group);
         }
