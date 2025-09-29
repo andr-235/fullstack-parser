@@ -123,11 +123,83 @@
         </v-chip>
       </template>
 
+      <!-- VK ID Column -->
+      <template v-slot:[`item.vk_id`]="{ item }">
+        <a
+          :href="`https://vk.com/club${item.vk_id}`"
+          target="_blank"
+          class="text-decoration-none"
+        >
+          <v-chip
+            size="small"
+            variant="outlined"
+            color="primary"
+            class="font-mono"
+          >
+            {{ item.vk_id }}
+            <v-icon end size="x-small">mdi-open-in-new</v-icon>
+          </v-chip>
+        </a>
+      </template>
+
       <!-- Name Column -->
       <template v-slot:[`item.name`]="{ item }">
-        <div class="text-body-2 font-weight-medium">
-          {{ item.name || 'Без названия' }}
+        <div class="d-flex align-center">
+          <v-avatar v-if="item.photo_50" size="32" class="me-2">
+            <v-img :src="item.photo_50" :alt="item.name" />
+          </v-avatar>
+          <div>
+            <div class="text-body-2 font-weight-medium">
+              {{ item.name || 'Без названия' }}
+            </div>
+            <div v-if="item.description" class="text-caption text-medium-emphasis text-truncate" style="max-width: 300px;">
+              {{ item.description }}
+            </div>
+          </div>
         </div>
+      </template>
+
+      <!-- Screen Name Column -->
+      <template v-slot:[`item.screen_name`]="{ item }">
+        <a
+          v-if="item.screen_name"
+          :href="`https://vk.com/${item.screen_name}`"
+          target="_blank"
+          class="text-decoration-none"
+        >
+          <v-chip
+            size="small"
+            variant="text"
+            color="info"
+          >
+            {{ item.screen_name }}
+            <v-icon end size="x-small">mdi-open-in-new</v-icon>
+          </v-chip>
+        </a>
+        <span v-else class="text-medium-emphasis">-</span>
+      </template>
+
+      <!-- Members Count Column -->
+      <template v-slot:[`item.members_count`]="{ item }">
+        <div v-if="item.members_count !== null && item.members_count !== undefined" class="text-body-2">
+          <v-icon size="small" class="me-1">mdi-account-group</v-icon>
+          {{ formatNumber(item.members_count) }}
+        </div>
+        <span v-else class="text-medium-emphasis">-</span>
+      </template>
+
+      <!-- Is Closed Column -->
+      <template v-slot:[`item.is_closed`]="{ item }">
+        <v-chip
+          size="small"
+          :color="getClosedColor(item.is_closed)"
+          variant="tonal"
+        >
+          <v-icon start size="small">
+            {{ getClosedIcon(item.is_closed) }}
+          </v-icon>
+          {{ getClosedText(item.is_closed) }}
+        </v-chip>
       </template>
 
       <!-- Status Column -->
@@ -149,18 +221,6 @@
         <div class="text-body-2">
           {{ formatDate(item.uploadedAt) }}
         </div>
-      </template>
-
-      <!-- Task ID Column -->
-      <template v-slot:[`item.taskId`]="{ item }">
-        <v-chip
-          size="small"
-          variant="outlined"
-          color="info"
-          class="font-mono"
-        >
-          {{ item.taskId.substring(0, 8) }}...
-        </v-chip>
       </template>
 
       <!-- Actions Column -->
@@ -403,6 +463,38 @@ const getDisplayRangeText = () => {
   const start = (page - 1) * limit + 1
   const end = Math.min(page * limit, total)
   return `${start}-${end}`
+}
+
+const formatNumber = (num) => {
+  if (num === null || num === undefined) return '-'
+  return new Intl.NumberFormat('ru-RU').format(num)
+}
+
+const getClosedColor = (isClosed) => {
+  const colors = {
+    0: 'success',  // Открытая
+    1: 'warning',  // Закрытая
+    2: 'error'     // Частная
+  }
+  return colors[isClosed] || 'grey'
+}
+
+const getClosedIcon = (isClosed) => {
+  const icons = {
+    0: 'mdi-lock-open',      // Открытая
+    1: 'mdi-lock',           // Закрытая
+    2: 'mdi-lock-alert'      // Частная
+  }
+  return icons[isClosed] || 'mdi-help'
+}
+
+const getClosedText = (isClosed) => {
+  const texts = {
+    0: 'Откр.',    // Открытая
+    1: 'Закр.',    // Закрытая
+    2: 'Част.'     // Частная
+  }
+  return texts[isClosed] || '?'
 }
 </script>
 
