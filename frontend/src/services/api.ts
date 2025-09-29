@@ -127,7 +127,13 @@ export const tasksApi: TasksApiType = {
    * Получает детальную информацию о задаче.
    */
   getTaskDetails: (taskId: string | number) =>
-    api.get(`/api/tasks/${taskId}`)
+    api.get(`/api/tasks/${taskId}`, {
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
 }
 
 // Groups API

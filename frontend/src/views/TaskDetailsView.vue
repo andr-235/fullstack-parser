@@ -312,7 +312,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { tasksApi } from '@/services/api'
+import { tasksApi, postStartCollect } from '@/services/api'
 import { useAdaptivePolling } from '@/composables/useAdaptivePolling'
 import ResultsTable from '@/components/tasks/ResultsTable.vue'
 
@@ -343,11 +343,32 @@ const loadTask = async () => {
     const response = await tasksApi.getTaskDetails(taskId.value)
     task.value = response.data
 
+    console.log('Загружена задача:', {
+      taskId: taskId.value,
+      status: task.value.status,
+      progress: task.value.progress,
+      data: task.value
+    })
+
     // Запускаем адаптивный polling если задача выполняется
     if (['pending', 'processing'].includes(task.value.status)) {
+      console.log('Запускаем polling для задачи:', taskId.value)
       await polling.startPolling(async () => {
         const statusResponse = await tasksApi.getTaskDetails(taskId.value)
+        // Обновляем данные задачи из response
+        const oldStatus = task.value.status
+        const oldProgress = task.value.progress
         task.value = statusResponse.data
+
+        console.log('Polling обновление:', {
+          taskId: taskId.value,
+          oldStatus,
+          newStatus: statusResponse.data.status,
+          oldProgress,
+          newProgress: statusResponse.data.progress,
+          data: statusResponse.data
+        })
+
         return {
           status: statusResponse.data.status,
           progress: statusResponse.data.progress,
@@ -355,6 +376,7 @@ const loadTask = async () => {
         }
       })
     } else {
+      console.log('Не запускаем polling, статус:', task.value.status)
       polling.stopPolling()
     }
   } catch (err) {
@@ -375,12 +397,14 @@ const startTask = async () => {
   startingTask.value = true
 
   try {
-    // TODO: Implement start task API call
-    console.log('Starting task:', taskId.value)
-    await loadTask() // Reload task after starting
+    console.log('Запуск задачи:', taskId.value)
+    // Используем API для запуска задачи
+    await postStartCollect(taskId.value)
+    console.log('Задача запущена успешно')
+    await loadTask() // Перезагружаем задачу после запуска
   } catch (err) {
     error.value = err.response?.data?.message || err.message || 'Ошибка запуска задачи'
-    console.error('Error starting task:', err)
+    console.error('Ошибка запуска задачи:', err)
   } finally {
     startingTask.value = false
   }
