@@ -17,21 +17,23 @@ export const validatePagination = (req: Request, res: Response, next: NextFuncti
   const limit = Number(req.query.limit);
 
   if (isNaN(page) || page < 1) {
-    throw new AppValidationError('Номер страницы должен быть положительным числом', {
+    throw new AppValidationError('Номер страницы должен быть положительным числом', [{
       code: ErrorCodes.INVALID_PARAMETER,
       field: 'page',
       value: req.query.page,
-      constraint: 'positive integer'
-    });
+      constraint: 'positive integer',
+      message: 'Номер страницы должен быть положительным числом'
+    }]);
   }
 
   if (isNaN(limit) || limit < MIN_PAGINATION_LIMIT || limit > MAX_PAGINATION_LIMIT) {
-    throw new AppValidationError('Лимит должен быть от 1 до 10000', {
+    throw new AppValidationError('Лимит должен быть от 1 до 10000', [{
       code: ErrorCodes.INVALID_PARAMETER,
       field: 'limit',
       value: req.query.limit,
-      constraint: `${MIN_PAGINATION_LIMIT} <= limit <= ${MAX_PAGINATION_LIMIT}`
-    });
+      constraint: `${MIN_PAGINATION_LIMIT} <= limit <= ${MAX_PAGINATION_LIMIT}`,
+      message: 'Лимит должен быть от 1 до 10000'
+    }]);
   }
 
   // Добавляем validated params в req для использования в controller
@@ -51,12 +53,13 @@ export const validateGroupId = (req: Request, res: Response, next: NextFunction)
   const groupId = Number(req.params.groupId);
 
   if (isNaN(groupId) || groupId <= 0) {
-    throw new AppValidationError('ID группы должен быть положительным числом', {
+    throw new AppValidationError('ID группы должен быть положительным числом', [{
       code: ErrorCodes.INVALID_PARAMETER,
       field: 'groupId',
       value: req.params.groupId,
-      constraint: 'positive number'
-    });
+      constraint: 'positive number',
+      message: 'ID группы должен быть положительным числом'
+    }]);
   }
 
   (req as any).validatedGroupId = groupId;
@@ -71,31 +74,34 @@ export const validateBatchDelete = (req: Request, res: Response, next: NextFunct
   const { groupIds } = req.body;
 
   if (!groupIds || !Array.isArray(groupIds)) {
-    throw new AppValidationError('groupIds должен быть массивом', {
+    throw new AppValidationError('groupIds должен быть массивом', [{
       code: ErrorCodes.INVALID_PARAMETER,
       field: 'groupIds',
       value: groupIds,
-      constraint: 'array'
-    });
+      constraint: 'array',
+      message: 'groupIds должен быть массивом'
+    }]);
   }
 
   if (groupIds.length === 0) {
-    throw new AppValidationError('Массив groupIds не может быть пустым', {
+    throw new AppValidationError('Массив groupIds не может быть пустым', [{
       code: ErrorCodes.INVALID_PARAMETER,
       field: 'groupIds',
-      constraint: 'non-empty array'
-    });
+      constraint: 'non-empty array',
+      message: 'Массив groupIds не может быть пустым'
+    }]);
   }
 
   const validGroupIds = groupIds.map(id => Number(id)).filter(id => !isNaN(id) && id > 0);
 
   if (validGroupIds.length !== groupIds.length) {
-    throw new AppValidationError('Все ID групп должны быть положительными числами', {
+    throw new AppValidationError('Все ID групп должны быть положительными числами', [{
       code: ErrorCodes.INVALID_PARAMETER,
       field: 'groupIds',
       value: groupIds,
-      constraint: 'positive numbers array'
-    });
+      constraint: 'positive numbers array',
+      message: 'Все ID групп должны быть положительными числами'
+    }]);
   }
 
   (req as any).validatedGroupIds = validGroupIds;

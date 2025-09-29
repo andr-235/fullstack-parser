@@ -24,9 +24,9 @@ const uploadQuerySchema = Joi.object({
 });
 
 const getGroupsQuerySchema = paginationSchema.keys({
-  status: Joi.string().valid('active', 'inactive', 'pending').optional(),
-  search: Joi.string().min(1).max(255).optional(),
-  sortBy: Joi.string().valid('id', 'name', 'vkId', 'createdAt', 'updatedAt').default('id'),
+  status: Joi.string().valid('all', 'active', 'inactive', 'pending').optional(),
+  search: Joi.string().allow('').min(0).max(255).optional(),
+  sortBy: Joi.string().valid('id', 'name', 'vkId', 'createdAt', 'updatedAt', 'uploadedAt', 'uploaded_at').default('id'),
   sortOrder: Joi.string().valid('ASC', 'DESC', 'asc', 'desc').default('ASC')
 });
 
@@ -166,29 +166,54 @@ const getUploadStatus = async (req: Request<{ taskId: string }>, res: Response):
  */
 const getGroups = async (req: Request<{}, ApiResponse, {}, GetGroupsQuery>, res: Response): Promise<void> => {
   const requestId = (req as any).requestId || (req as any).id;
+  const validatedQuery = (req as any).validatedQuery || req.query;
 
   try {
     logger.info('Processing getGroups request', {
-      page: req.query.page,
-      limit: req.query.limit,
-      status: req.query.status,
-      search: req.query.search,
-      sortBy: req.query.sortBy,
-      sortOrder: req.query.sortOrder,
+      page: validatedQuery.page,
+      limit: validatedQuery.limit,
+      status: validatedQuery.status,
+      search: validatedQuery.search,
+      sortBy: validatedQuery.sortBy,
+      sortOrder: validatedQuery.sortOrder,
       requestId
     });
 
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
+    const page = Number(validatedQuery.page) || 1;
+    const limit = Number(validatedQuery.limit) || 20;
     const offset = (page - 1) * limit;
+
+    // Маппинг параметров для repo
+    let mappedStatus = validatedQuery.status;
+    if (mappedStatus === 'all') {
+      mappedStatus = undefined;
+    } else if (mappedStatus) {
+      // Маппинг frontend статусов к БД enum
+      const statusMap: { [key: string]: string } = {
+        active: 'valid',
+        inactive: 'invalid',
+        pending: 'duplicate'
+      };
+      mappedStatus = statusMap[mappedStatus as keyof typeof statusMap] || mappedStatus;
+    }
+
+    let mappedSearch = validatedQuery.search;
+    if (mappedSearch === '') {
+      mappedSearch = undefined;
+    }
+
+    let mappedSortBy = validatedQuery.sortBy || 'id';
+    if (mappedSortBy === 'uploadedAt') {
+      mappedSortBy = 'uploaded_at';
+    }
 
     const params: GetGroupsParams = {
       limit: limit,
       offset: offset,
-      status: req.query.status,
-      search: req.query.search,
-      sortBy: req.query.sortBy || 'id',
-      sortOrder: req.query.sortOrder || 'ASC'
+      status: mappedStatus,
+      search: mappedSearch,
+      sortBy: mappedSortBy,
+      sortOrder: validatedQuery.sortOrder || 'ASC'
     };
 
     const result = await groupsService.getGroups(params);

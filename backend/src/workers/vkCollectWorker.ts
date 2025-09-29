@@ -100,7 +100,7 @@ export class VkCollectWorker {
       const errors: Array<{ groupId: string; error: string; timestamp: Date }> = [];
 
       // Получаем реальные группы из базы данных с VK ID
-      const dbGroups = await dbRepo.getGroupsWithVkDataByTaskId(String(taskId));
+      const dbGroups = await dbRepo.getGroupsWithVkDataByTaskId(taskId);
 
       if (dbGroups.length === 0) {
         throw new WorkerError(

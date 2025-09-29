@@ -424,6 +424,34 @@ class DBRepo {
     }
   }
 
+  /**
+   * Получает группы с VK данными по ID задачи
+   * @param taskId - ID задачи
+   * @returns Массив групп с vk_id и name
+   */
+  async getGroupsWithVkDataByTaskId(taskId: number): Promise<Array<{
+    id: number;
+    vk_id: number;
+    name: string;
+    status?: string;
+  }>> {
+    try {
+      return await prisma.groups.findMany({
+        where: { task_id: taskId.toString() },
+        select: {
+          id: true,
+          vk_id: true,
+          name: true,
+          status: true
+        }
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get groups with VK data by task ID', { taskId, error: errorMsg });
+      throw new Error(`Failed to get groups: ${errorMsg}`);
+    }
+  }
+
 }
 
 // Экспорт класса и экземпляра репозитория

@@ -87,6 +87,7 @@ export interface ValidationErrorResponse extends ApiErrorResponse {
   details: {
     code: 'VALIDATION_ERROR';
     validationErrors: Array<{
+      code?: string;
       field: string;
       message: string;
       value?: any;
@@ -152,16 +153,7 @@ export interface GroupsUploadResponse extends ApiResponse {
 /**
  * Ответ списка групп
  */
-export interface GroupsListResponse extends PaginatedResponse<{
-  id: number;
-  vkId: string;
-  name: string;
-  status: string;
-  uploadedAt: string;
-  lastProcessedAt?: string;
-  postsCount?: number;
-  commentsCount?: number;
-}> {}
+export interface GroupsListResponse extends PaginatedResponse<GroupsListItem> {}
 
 /**
  * Ответ статистики групп
@@ -209,58 +201,6 @@ export interface GroupsListItem {
   postsCount?: number;
   commentsCount?: number;
 }
-
-export interface GroupsListResponse extends PaginatedResponse<GroupsListItem> {}
-
-// Улучшенный тип для upload status
-export interface GroupsUploadStatusResponse extends ApiResponse {
-  data: {
-    taskId: string;
-    status: 'created' | 'processing' | 'completed' | 'failed';
-    progress: {
-      processed: number;
-      total: number;
-      percentage: number;
-    };
-    errors: string[];
-    validGroups: number;
-    invalidGroups: number;
-    duplicates: number;
-  };
-}
-
-// Новые типы для groupsController рефакторинга
-export interface BatchDeleteRequest {
-  groupIds: number[];
-}
-
-export interface GetGroupsRequest extends PaginationQuery {
-  status?: string;
-  search?: string;
-  sortBy?: string;
-  sortOrder?: 'ASC' | 'DESC' | 'asc' | 'desc';
-}
-
-export interface GroupsDeleteResponse extends ApiResponse {
-  data?: {
-    deletedCount: number;
-    message: string;
-  };
-}
-
-export interface GroupsListItem {
-  id: number;
-  vkId: number;
-  name: string;
-  status: string;
-  uploadedAt: string;
-  taskId?: string;
-  lastProcessedAt?: string;
-  postsCount?: number;
-  commentsCount?: number;
-}
-
-export interface GroupsListResponse extends PaginatedResponse<GroupsListItem> {}
 
 // Улучшенный тип для upload status
 export interface GroupsUploadStatusResponse extends ApiResponse {

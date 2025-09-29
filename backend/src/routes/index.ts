@@ -26,36 +26,36 @@ const apiRouter = Router();
 // POST /api/tasks - создание задач
 // GET /api/tasks/:taskId - получение задачи
 // GET /api/tasks - список задач
-apiRouter.use('/api', taskController);
+apiRouter.use(taskController);
 
 // === VK КОЛЛЕКЦИЯ ОПЕРАЦИИ ===
 // POST /api/vk/collect - создание задачи VK коллекции
 // POST /api/vk/collect/:taskId/start - запуск сбора
-apiRouter.use('/api', vkCollectController);
+apiRouter.use(vkCollectController);
 
 // === РЕЗУЛЬТАТЫ ЗАДАЧ ===
 // GET /api/results/:taskId - получение результатов
 // GET /api/results/:taskId/summary - сводка результатов
 // GET /api/results/:taskId/export - экспорт результатов
-apiRouter.use('/api', taskResultsController);
+apiRouter.use(taskResultsController);
 
 // === ОПЕРАЦИИ С ГРУППАМИ ===
 // POST /api/groups/upload - загрузка групп
 // GET /api/groups - список групп
 // DELETE /api/groups/:groupId - удаление группы
 // DELETE /api/groups/batch - массовое удаление
-apiRouter.use('/api', groupsController);
+apiRouter.use(groupsController);
 
 // === СТАТИСТИЧЕСКИЕ ОПЕРАЦИИ ===
 // GET /api/stats/groups - общая статистика групп
 // GET /api/stats/groups/:taskId - статистика по задаче
 // GET /api/stats/groups/summary - сводная статистика
 // GET /api/stats/groups/activity - активность групп
-apiRouter.use('/api', groupsStatsController);
+apiRouter.use(groupsStatsController);
 
 // === ЗДОРОВЬЕ API ===
 // Базовый health check
-apiRouter.get('/api/health', (req, res) => {
+apiRouter.get('/health', (req, res) => {
   res.success({
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -65,7 +65,7 @@ apiRouter.get('/api/health', (req, res) => {
 });
 
 // Детальный health check
-apiRouter.get('/api/health/detailed', async (req, res) => {
+apiRouter.get('/health/detailed', async (req, res) => {
   try {
     // Проверка подключений к внешним сервисам
     const healthChecks = {
@@ -94,8 +94,8 @@ apiRouter.get('/api/health/detailed', async (req, res) => {
 });
 
 // === ОБРАБОТЧИК 404 ДЛЯ API МАРШРУТОВ ===
-// Применяется только к маршрутам начинающимся с /api/
-apiRouter.use('/api/*', notFoundHandler);
+// Применяется ко всем неопределенным маршрутам API
+apiRouter.use(notFoundHandler);
 
 /**
  * Создает и настраивает главный роутер приложения
@@ -115,8 +115,7 @@ export const setupRoutes = (app: any) => {
   // Применяем форматтер ответов ко всем API маршрутам
   app.use('/api', responseFormatter);
 
-  // Регистрируем все API маршруты
-  app.use(apiRouter);
+  app.use('/api', apiRouter);
 
   // Глобальный обработчик ошибок (должен быть последним)
   app.use(errorHandler);

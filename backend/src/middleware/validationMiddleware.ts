@@ -47,8 +47,8 @@ export const validateBody = (schema: Joi.ObjectSchema, options: ValidationOption
         throw validationError;
       }
 
-      // Заменяем тело запроса на валидированные данные
-      req.body = value;
+      // Сохраняем валидированные body параметры
+      (req as any).validatedBody = value;
       next();
     } catch (error) {
       next(error);
@@ -91,8 +91,8 @@ export const validateQuery = (schema: Joi.ObjectSchema, options: ValidationOptio
         throw validationError;
       }
 
-      // Заменяем query параметры на валидированные данные
-      req.query = value as any;
+      // Сохраняем валидированные query параметры
+      (req as any).validatedQuery = value;
       next();
     } catch (error) {
       next(error);
@@ -134,8 +134,8 @@ export const validateParams = (schema: Joi.ObjectSchema, options: ValidationOpti
         throw validationError;
       }
 
-      // Заменяем параметры на валидированные данные
-      req.params = value;
+      // Сохраняем валидированные params
+      (req as any).validatedParams = value;
       next();
     } catch (error) {
       next(error);
