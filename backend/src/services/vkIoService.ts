@@ -91,8 +91,19 @@ export class VkIoService {
 
   private async performInitialization(): Promise<void> {
     try {
+      // Отладочная информация о переменных окружения
+      logger.info('VK API initialization debug info', {
+        hasVkAccessToken: !!process.env.VK_ACCESS_TOKEN,
+        hasVkToken: !!process.env.VK_TOKEN,
+        hasVkLogin: !!process.env.VK_LOGIN,
+        hasVkPassword: !!process.env.VK_PASSWORD,
+        nodeEnv: process.env.NODE_ENV,
+        vkAccessTokenLength: process.env.VK_ACCESS_TOKEN?.length,
+        vkTokenLength: process.env.VK_TOKEN?.length
+      });
+
       // Вариант 1: Использование существующего токена (если есть)
-      const existingToken = process.env.VK_ACCESS_TOKEN;
+      const existingToken = process.env.VK_ACCESS_TOKEN || process.env.VK_TOKEN;
 
       if (existingToken) {
         logger.info('Инициализация VK-IO с существующим токеном');
