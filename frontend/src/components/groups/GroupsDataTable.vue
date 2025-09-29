@@ -279,10 +279,13 @@ const hasFilters = computed(() =>
 // Data
 const headers = [
   { title: 'ID группы', key: 'id', width: '120px', sortable: false },
+  { title: 'VK ID', key: 'vk_id', width: '120px', sortable: false },
   { title: 'Название', key: 'name', sortable: false },
+  { title: 'Короткое имя', key: 'screen_name', width: '140px', sortable: false },
+  { title: 'Участники', key: 'members_count', width: '120px', sortable: false },
+  { title: 'Тип', key: 'is_closed', width: '100px', sortable: false },
   { title: 'Статус', key: 'status', width: '120px', sortable: false },
   { title: 'Загружена', key: 'uploadedAt', width: '140px', sortable: false },
-  { title: 'Задача', key: 'taskId', width: '140px', sortable: false },
   { title: 'Действия', key: 'actions', width: '120px', sortable: false }
 ]
 
