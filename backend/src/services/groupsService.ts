@@ -246,7 +246,7 @@ class GroupsService {
                 screen_name: vkInfo?.screen_name || null,
                 photo_50: vkInfo?.photo_50 || null,
                 members_count: vkInfo?.members_count || null,
-                is_closed: vkInfo?.is_closed || 0,
+                is_closed: Number(vkInfo?.is_closed) || 0,
                 description: vkInfo?.description || null
               };
             });

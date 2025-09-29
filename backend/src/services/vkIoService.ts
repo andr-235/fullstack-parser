@@ -37,6 +37,9 @@ export interface ProcessedGroup {
   name: string;
   screen_name: string;
   description: string;
+  photo_50: string;
+  members_count: number;
+  is_closed: boolean;
 }
 
 export interface GetPostsResult {
@@ -103,7 +106,7 @@ export class VkIoService {
       });
 
       // Вариант 1: Использование существующего токена (если есть)
-      const existingToken = "vk1.a.rO_GeGA5yaIU5Nun38sf8BPxqrEvJTF6_1twjEa3_c_YxKI5-pOA7FAbgHBcrwmW3z4K2zQUs6_tXNcz9bXHxbTHm8fVGPXuTMRsK-PrvVBNyihC_TlvfMvRkwI08OMYu7FO_pSehHHzBVm0L1TjvGcGiANRcKWDgsTODLeaU8p7pUwAgmz1p2PdQ1vrDmmb-p190Lo4B7lj8MzngZHDvQ";
+      const existingToken = process.env.VK_ACCESS_TOKEN;
 
       if (existingToken) {
         logger.info('Инициализация VK-IO с существующим токеном');
@@ -334,8 +337,8 @@ export class VkIoService {
       });
 
       const response = await this.vk.api.groups.getById({
-        group_ids: positiveIds ,
-        fields: ['name', 'screen_name', 'description']
+        group_ids: positiveIds,
+        fields: ['name', 'screen_name', 'description', 'photo_50', 'members_count', 'is_closed']
       });
 
       if (!response || !Array.isArray(response)) {
@@ -347,7 +350,10 @@ export class VkIoService {
         id: Math.abs(group.id), // Возвращаем положительный ID
         name: group.name,
         screen_name: group.screen_name,
-        description: group.description || ''
+        description: group.description || '',
+        photo_50: group.photo_50 || '',
+        members_count: group.members_count || 0,
+        is_closed: group.is_closed || false
       }));
 
       logger.info('Информация о группах успешно получена через VK-IO', {
