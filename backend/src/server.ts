@@ -8,7 +8,7 @@ import express, { Request, Response, NextFunction, Application } from 'express';
 import cors from 'cors';
 
 import logger from '@/utils/logger';
-import { PrismaService, testConnection, healthCheck } from '@/config/db';
+import { PrismaService } from '@/config/prisma';
 import { queueService } from '@/services/queueService';
 import taskController from '@/controllers/taskController';
 import groupsController from '@/controllers/groupsController';
@@ -127,7 +127,7 @@ app.get('/', (req: Request, res: Response): void => {
 app.get('/api/health', async (req: Request, res: Response): Promise<void> => {
   try {
     // Проверяем соединение с базой данных
-    const dbHealth = await healthCheck();
+    const dbHealth = await PrismaService.healthCheck();
 
     const healthData = {
       status: dbHealth.status === 'healthy' ? 'healthy' : 'unhealthy',
@@ -154,7 +154,7 @@ app.get('/api/health', async (req: Request, res: Response): Promise<void> => {
 // Детальный health check endpoint
 app.get('/api/health/detailed', async (req: Request, res: Response): Promise<void> => {
   try {
-    const dbHealth = await healthCheck();
+    const dbHealth = await PrismaService.healthCheck();
     const queueHealth = await queueService.healthCheck();
 
     const detailedHealthData = {
@@ -261,11 +261,7 @@ async function startServer(): Promise<void> {
     await PrismaService.connect();
     logger.info('Prisma connected to database');
 
-    // Test database connection
-    const connected = await testConnection();
-    if (!connected) {
-      throw new Error('Failed to connect to database');
-    }
+    // Database connection already tested via PrismaService.connect()
 
     // Initialize queue service and workers
     logger.info('Initializing BullMQ queue service and workers...');

@@ -1,3 +1,16 @@
+/**
+ * @fileoverview Redis connection management для BullMQ
+ * Централизованное управление Redis подключениями
+ *
+ * Особенности:
+ * - IORedis клиент с оптимизированными настройками
+ * - Connection pooling и retry стратегии
+ * - Health checks и monitoring
+ * - Database management utilities
+ * - BullMQ-совместимая конфигурация
+ * - Graceful shutdown handling
+ */
+
 import IORedis from 'ioredis';
 import logger from '@/utils/logger';
 import { QueueRedisConfig } from '@/types/queue';

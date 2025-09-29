@@ -1,3 +1,16 @@
+/**
+ * @fileoverview Prisma клиент с singleton паттерном и connection management
+ * Основной файл для работы с PostgreSQL через Prisma ORM
+ *
+ * Особенности:
+ * - Singleton паттерн для единого подключения
+ * - Connection pooling через параметры DB_URL
+ * - Health checks и monitoring
+ * - Graceful shutdown handlers
+ * - Автоматические retry стратегии
+ * - Логирование запросов в development режиме
+ */
+
 import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 

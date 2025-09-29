@@ -1,3 +1,16 @@
+/**
+ * @fileoverview Конфигурация BullMQ очередей и worker'ов
+ * Централизованное управление асинхронными задачами
+ *
+ * Особенности:
+ * - Настройки всех типов очередей (VK_COLLECT, PROCESS_GROUPS, etc.)
+ * - Worker конфигурации с rate limiting
+ * - Backoff стратегии и retry политики
+ * - Redis connection factories
+ * - Health checks и monitoring
+ * - Graceful shutdown handling
+ */
+
 import { QueueConfig, WorkerConfig } from '@/types/queue';
 import { createRedisConnection, redisConfig } from './redis';
 

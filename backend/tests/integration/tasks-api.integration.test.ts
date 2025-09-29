@@ -1,6 +1,6 @@
 import request from 'supertest';
 import app from '@/server';
-import { PrismaService } from '@/config/db';
+import { PrismaService } from '@/config/prisma';
 import taskService from '@/services/taskService';
 
 describe('Tasks API Integration Tests', () => {

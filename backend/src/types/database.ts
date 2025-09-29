@@ -61,28 +61,7 @@ export interface ModelWithTimestamps {
 
 export type Environment = 'development' | 'production' | 'test';
 
-// Обновленная конфигурация для Prisma
-export interface DatabaseConfig {
-  username: string;
-  password: string;
-  database: string;
-  host: string;
-  port: number;
-  dialect: 'postgresql' | 'mysql' | 'sqlite';
-  logging?: boolean | ((sql: string) => void);
-  pool?: {
-    max: number;
-    min: number;
-    acquire: number;
-    idle: number;
-    evict?: number;
-  };
-  define?: {
-    timestamps: boolean;
-    underscored: boolean;
-    freezeTableName: boolean;
-  };
-}
+// Legacy database config удален - больше не используется
 
 // Типы для пагинации и фильтрации
 export interface PaginationOptions {
@@ -103,5 +82,4 @@ export interface FilterOptions {
   dateTo?: Date;
 }
 
-// Псевдоним для совместимости с существующим кодом
-export type SequelizeConfig = DatabaseConfig;
+// Legacy SequelizeConfig удален - больше не используется
