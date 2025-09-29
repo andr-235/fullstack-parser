@@ -161,9 +161,9 @@ router.get('/', async (req: Request<{}, ApiResponse, {}, GetGroupsQuery>, res: R
       const pagination = {
         page: pageNum,
         limit: limitNum,
-        total: result.data?.totalCount || 0,
-        totalPages: Math.ceil((result.data?.totalCount || 0) / limitNum),
-        hasNext: pageNum * limitNum < (result.data?.totalCount || 0),
+        total: result.data?.total || 0,
+        totalPages: Math.ceil((result.data?.total || 0) / limitNum),
+        hasNext: pageNum * limitNum < (result.data?.total || 0),
         hasPrev: pageNum > 1
       };
 
