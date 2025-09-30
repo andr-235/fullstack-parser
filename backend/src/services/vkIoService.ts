@@ -39,7 +39,7 @@ export interface ProcessedGroup {
   description: string;
   photo_50: string;
   members_count: number;
-  is_closed: boolean;
+  is_closed: 0 | 1 | 2;
 }
 
 export interface GetPostsResult {
@@ -341,32 +341,38 @@ export class VkIoService {
         fields: ['name', 'screen_name', 'description', 'photo_50', 'members_count', 'is_closed']
       });
 
-      // VK-IO может возвращать разные форматы ответа
-      type VkIoResponse = VkGroup[] | { groups: VkGroup[] } | { items: VkGroup[] };
-      const vkResponse = response as VkIoResponse;
-
+      // VK-IO возвращает массив групп напрямую или обернутый в объект
       logger.info('DEBUG: response от groups.getById', {
         responseType: typeof response,
         isArray: Array.isArray(response),
-        hasGroups: 'groups' in vkResponse,
-        hasItems: 'items' in vkResponse,
         responseKeys: response ? Object.keys(response).slice(0, 5) : []
       });
 
       // Определяем формат ответа и извлекаем массив групп
       let groupsArray: VkGroup[];
-      if (Array.isArray(vkResponse)) {
-        groupsArray = vkResponse;
-      } else if ('groups' in vkResponse && Array.isArray(vkResponse.groups)) {
-        groupsArray = vkResponse.groups;
-      } else if ('items' in vkResponse && Array.isArray(vkResponse.items)) {
-        groupsArray = vkResponse.items;
+      if (Array.isArray(response)) {
+        groupsArray = response;
+      } else if (response && typeof response === 'object') {
+        // Проверяем возможные поля с массивами групп
+        const responseObj = response as Record<string, unknown>;
+        if (Array.isArray(responseObj.groups)) {
+          groupsArray = responseObj.groups as VkGroup[];
+        } else if (Array.isArray(responseObj.items)) {
+          groupsArray = responseObj.items as VkGroup[];
+        } else {
+          logger.warn('Некорректный ответ от groups.getById', {
+            groupIds,
+            responseType: typeof response,
+            isArray: Array.isArray(response),
+            responseKeys: Object.keys(responseObj)
+          });
+          return [];
+        }
       } else {
         logger.warn('Некорректный ответ от groups.getById', {
           groupIds,
           responseType: typeof response,
-          isArray: Array.isArray(response),
-          responseKeys: response ? Object.keys(response) : []
+          isArray: Array.isArray(response)
         });
         return [];
       }
@@ -383,7 +389,7 @@ export class VkIoService {
         description: group.description || '',
         photo_50: group.photo_50 || '',
         members_count: group.members_count || 0,
-        is_closed: group.is_closed || false
+        is_closed: group.is_closed ?? 0
       }));
 
       logger.info('Информация о группах успешно получена через VK-IO', {
