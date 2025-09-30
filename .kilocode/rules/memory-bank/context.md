@@ -13,6 +13,7 @@
 - Frontend: Pinia stores (comments.js, tasks.js), views (FetchComments.vue, TaskStatus.vue, CommentsList.vue), components (ErrorMessage.vue, LoadingSpinner.vue).
 - Тесты: unit (taskService.test.js, vkApi.test.js), integration (api.test.js).
 - Setup: docker-compose.yml (postgres/redis/backend/frontend), package.json (dependencies).
+- Рефакторинг backend/src/utils/fileParser.ts: разбиты методы, добавлен JSDoc, кастомные ошибки, тесты с 92% покрытием для улучшения maintainability.
 
 Проект на стадии ~50% готовности backend и frontend, миграция с Python завершена.
 

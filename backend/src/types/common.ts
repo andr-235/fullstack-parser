@@ -34,6 +34,20 @@ export interface ValidationResult {
   data?: any;
 }
 
+export interface ParseError {
+  line: number;
+  content: string;
+  error: string;
+  expectedFormat?: string;
+  groupId?: number;
+}
+
+export interface ParsedGroup {
+  id: number | null;
+  name: string | null;
+  lineNumber: number;
+}
+
 export interface RetryOptions {
   retries: number;
   delay: number;

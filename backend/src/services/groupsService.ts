@@ -366,27 +366,16 @@ class GroupsService {
             // Группа НЕ доступна через getById, но если она была резолвлена - значит существует
             // Сохраняем с минимальными данными, используя screen_name
             const screenName = (originalGroup as any)?.screenName || originalGroup?.name || null;
-
-            // DEBUG: логируем что нашли в originalGroup
-            if (vkId === 30480170 || vkId === 4026058) { // erokost или priamursk
-              logger.info('DEBUG originalGroup для vkId', {
-                vkId,
-                originalGroup: originalGroup ? {
-                  id: originalGroup.id,
-                  name: originalGroup.name,
-                  screenName: (originalGroup as any).screenName,
-                  allKeys: Object.keys(originalGroup)
-                } : null
-              });
-            }
+            const name = (originalGroup as any)?.name;
+            const is_closed = (originalGroup as any).is_closed;
 
             enrichedGroups.push({
               vk_id: vkId,
-              name: screenName || `Группа ${vkId}`, // Используем screen_name как имя
+              name: name, //screenName || `Группа ${vkId}`, // Используем screen_name как имя
               screen_name: screenName,
               photo_50: null,
               members_count: null,
-              is_closed: 1, // Помечаем как закрытую
+              is_closed: is_closed, // Помечаем как закрытую
               description: null
             });
             logger.info('Группа резолвлена но недоступна через getById (закрыта/ограничена)', {
