@@ -380,7 +380,15 @@ class GroupsService {
         logger.info('Валидация через VK API завершена', {
           totalGroups: enrichedGroups.length,
           accessibleGroups: vkGroupsInfo.length,
-          restrictedGroups: vkIds.length - vkGroupsInfo.length
+          restrictedGroups: vkIds.length - vkGroupsInfo.length,
+          sampleGroups: enrichedGroups.slice(0, 3).map(g => ({
+            vk_id: g.vk_id,
+            name: g.name,
+            screen_name: g.screen_name,
+            photo_50: g.photo_50?.substring(0, 50),
+            members_count: g.members_count,
+            is_closed: g.is_closed
+          }))
         });
 
       } catch (vkError) {

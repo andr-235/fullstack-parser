@@ -62,12 +62,21 @@ class VKValidator {
     const invalidGroups: ProcessedGroup[] = [];
     const errors: ValidationError[] = [];
 
-    // Фильтруем только группы с ID (отрицательные числа)
+    // Группы с положительными ID уже резолвлены через screen_name и валидны
+    const resolvedGroups = groups.filter(group => group.id && group.id > 0);
+    validGroups.push(...resolvedGroups);
+
+    logger.info('VKValidator: резолвленные группы пропущены', {
+      resolvedCount: resolvedGroups.length,
+      sampleResolved: resolvedGroups.slice(0, 3).map(g => ({ id: g.id, name: g.name, screenName: (g as any).screenName }))
+    });
+
+    // Фильтруем только группы с отрицательными ID (требуют валидации через VK API)
     const groupsWithId = groups.filter(group => group.id && group.id < 0);
 
     if (groupsWithId.length === 0) {
       return {
-        validGroups: groups.filter(group => !group.id), // Группы только с именами
+        validGroups,
         invalidGroups: [],
         errors: []
       };
