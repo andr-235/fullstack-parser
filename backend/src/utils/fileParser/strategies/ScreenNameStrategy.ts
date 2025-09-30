@@ -16,8 +16,8 @@ export class ScreenNameStrategy implements GroupParsingStrategy {
       return false;
     }
 
-    // Валидный screen_name: буквы, цифры, подчеркивание
-    return /^[a-zA-Z0-9_]+$/.test(line);
+    // Валидный screen_name: буквы, цифры, подчеркивание и точки
+    return /^[a-zA-Z0-9_.]+$/.test(line);
   }
 
   parse(line: string): { id: number | null; name: string | null } | null {
@@ -31,7 +31,7 @@ export class ScreenNameStrategy implements GroupParsingStrategy {
     }
 
     // Просто screen_name - дополнительная проверка формата
-    if (/^[a-zA-Z0-9_]+$/.test(line)) {
+    if (/^[a-zA-Z0-9_.]+$/.test(line)) {
       return { id: null, name: line };
     }
 

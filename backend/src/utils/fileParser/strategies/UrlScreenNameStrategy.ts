@@ -11,12 +11,13 @@ export class UrlScreenNameStrategy implements GroupParsingStrategy {
 
   canParse(line: string): boolean {
     // Проверяем что это URL, но не club<ID>
-    return /^https:\/\/vk\.com\/[a-zA-Z0-9_]+$/i.test(line) &&
+    // Разрешаем буквы, цифры, подчеркивание и точки в screen_name
+    return /^https:\/\/vk\.com\/[a-zA-Z0-9_.]+$/i.test(line) &&
            !line.match(/^https:\/\/vk\.com\/club\d+$/i);
   }
 
   parse(line: string): { id: number | null; name: string | null } | null {
-    const match = line.match(/^https:\/\/vk\.com\/([a-zA-Z0-9_]+)$/i);
+    const match = line.match(/^https:\/\/vk\.com\/([a-zA-Z0-9_.]+)$/i);
     if (match) {
       const screenName = match[1];
       // Исключаем просто 'club' без ID

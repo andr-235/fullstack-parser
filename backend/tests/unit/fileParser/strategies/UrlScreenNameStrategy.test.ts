@@ -32,6 +32,12 @@ describe('UrlScreenNameStrategy', () => {
       expect(strategy.canParse('https://vk.com/my_group_2024')).toBe(true);
     });
 
+    it('should return true for URL with dots', () => {
+      expect(strategy.canParse('https://vk.com/baraholka777.birobidzhan')).toBe(true);
+      expect(strategy.canParse('https://vk.com/test.group')).toBe(true);
+      expect(strategy.canParse('https://vk.com/my.group.name')).toBe(true);
+    });
+
     it('should return false for club URL', () => {
       expect(strategy.canParse('https://vk.com/club123')).toBe(false);
       expect(strategy.canParse('https://vk.com/club456')).toBe(false);
@@ -43,9 +49,8 @@ describe('UrlScreenNameStrategy', () => {
       expect(strategy.canParse('-123')).toBe(false);
     });
 
-    it('should return false for URL with special characters', () => {
+    it('should return false for URL with hyphens', () => {
       expect(strategy.canParse('https://vk.com/test-group')).toBe(false);
-      expect(strategy.canParse('https://vk.com/test.group')).toBe(false);
     });
   });
 
@@ -58,6 +63,16 @@ describe('UrlScreenNameStrategy', () => {
     it('should extract screen_name with underscores', () => {
       const result = strategy.parse('https://vk.com/my_group_123');
       expect(result).toEqual({ id: null, name: 'my_group_123' });
+    });
+
+    it('should extract screen_name with dots', () => {
+      const result = strategy.parse('https://vk.com/baraholka777.birobidzhan');
+      expect(result).toEqual({ id: null, name: 'baraholka777.birobidzhan' });
+    });
+
+    it('should extract screen_name with dots and underscores', () => {
+      const result = strategy.parse('https://vk.com/my_group.test');
+      expect(result).toEqual({ id: null, name: 'my_group.test' });
     });
 
     it('should handle uppercase URL', () => {

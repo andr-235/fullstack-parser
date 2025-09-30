@@ -57,6 +57,28 @@ describe('FileParser', () => {
       expect(result.groups[5]).toMatchObject({ id: 999, name: 'club999', url: 'https://vk.com/club999' });
     });
 
+    it('should parse screen_names with dots', async () => {
+      const testFile = path.join(testFilesDir, 'with-dots.txt');
+      const content = [
+        'https://vk.com/baraholka777.birobidzhan',
+        'https://vk.com/valera.naito',
+        'q.online',
+        'test.group.name',
+        'my_group.test'
+      ].join('\n');
+      fs.writeFileSync(testFile, content, 'utf-8');
+
+      const result = await parser.parseGroupsFile(testFile);
+
+      expect(result.groups).toHaveLength(5);
+      expect(result.errors).toHaveLength(0);
+      expect(result.groups[0]).toMatchObject({ id: 0, name: 'baraholka777.birobidzhan', url: 'https://vk.com/baraholka777.birobidzhan' });
+      expect(result.groups[1]).toMatchObject({ id: 0, name: 'valera.naito', url: 'https://vk.com/valera.naito' });
+      expect(result.groups[2]).toMatchObject({ id: 0, name: 'q.online', url: 'https://vk.com/q.online' });
+      expect(result.groups[3]).toMatchObject({ id: 0, name: 'test.group.name', url: 'https://vk.com/test.group.name' });
+      expect(result.groups[4]).toMatchObject({ id: 0, name: 'my_group.test', url: 'https://vk.com/my_group.test' });
+    });
+
     it('should handle comments and empty lines', async () => {
       const testFile = path.join(testFilesDir, 'with-comments.txt');
       const content = [

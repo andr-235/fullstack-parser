@@ -28,6 +28,12 @@ describe('ScreenNameStrategy', () => {
       expect(strategy.canParse('my_group')).toBe(true);
     });
 
+    it('should return true for screen_name with dots', () => {
+      expect(strategy.canParse('baraholka777.birobidzhan')).toBe(true);
+      expect(strategy.canParse('test.group')).toBe(true);
+      expect(strategy.canParse('my.group.name')).toBe(true);
+    });
+
     it('should return true for club<ID> format', () => {
       expect(strategy.canParse('club123')).toBe(true);
       expect(strategy.canParse('CLUB456')).toBe(true);
@@ -56,6 +62,16 @@ describe('ScreenNameStrategy', () => {
     it('should parse screen_name with underscores', () => {
       const result = strategy.parse('my_group_test');
       expect(result).toEqual({ id: null, name: 'my_group_test' });
+    });
+
+    it('should parse screen_name with dots', () => {
+      const result = strategy.parse('baraholka777.birobidzhan');
+      expect(result).toEqual({ id: null, name: 'baraholka777.birobidzhan' });
+    });
+
+    it('should parse screen_name with dots and underscores', () => {
+      const result = strategy.parse('my_group.test');
+      expect(result).toEqual({ id: null, name: 'my_group.test' });
     });
 
     it('should parse club<ID> format as ID with name', () => {
