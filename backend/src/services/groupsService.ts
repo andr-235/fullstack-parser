@@ -288,7 +288,12 @@ class GroupsService {
         totalInputGroups: groups.length,
         validGroupsCount: validGroups.length,
         invalidGroupsCount: invalidGroups.length,
-        sampleValid: validGroups.slice(0, 3).map(g => ({ id: g.id, name: g.name, error: g.error })),
+        sampleValid: validGroups.slice(0, 3).map(g => ({
+          id: g.id,
+          name: g.name,
+          screenName: (g as any).screenName,
+          error: g.error
+        })),
         sampleInvalid: invalidGroups.slice(0, 3).map(g => ({ id: g.id, name: g.name, error: g.error }))
       });
 
