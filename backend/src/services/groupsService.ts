@@ -3,7 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
 
-import FileParser from '@/utils/fileParser';
+import { FileParserFactory } from '@/utils/fileParser/FileParserFactory';
 import VKValidator from '@/utils/vkValidator';
 import vkIoService from '@/services/vkIoService';
 import groupsRepo, { GroupsRepository } from '@/repositories/groupsRepo';
@@ -121,14 +121,17 @@ class GroupsService {
         actualFilePath = tempPath;
       }
 
+      // Создаем парсер
+      const parser = FileParserFactory.create();
+
       // Валидация файла
-      const validationResult = await FileParser.validateFile(actualFilePath);
+      const validationResult = await parser.validateFile(actualFilePath);
       if (!validationResult.isValid) {
         throw new Error(validationResult.errors.join(', '));
       }
 
       // Парсинг файла
-      const parseResult = await FileParser.parseGroupsFile(actualFilePath, encoding);
+      const parseResult = await parser.parseGroupsFile(actualFilePath, encoding);
       
       // Log sample parsed data for debugging (without raw lines to avoid scope issues)
       logger.info('Sample parsed groups (first 5)', {
