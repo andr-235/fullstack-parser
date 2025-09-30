@@ -72,6 +72,7 @@
     "uuid": "^13.0.0",
     "vk-io": "^4.10.0",
     "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0",
     "zod": "^4.1.11"
   }
 }

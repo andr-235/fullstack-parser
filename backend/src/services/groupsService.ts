@@ -3,8 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
 
-import FileParser from '@/utils/fileParser';
-import VKValidator from '@/utils/vkValidator';
+import { FileParserFactory } from '@/utils/fileParser/FileParserFactory';
 import vkIoService from '@/services/vkIoService';
 import groupsRepo, { GroupsRepository } from '@/repositories/groupsRepo';
 import logger from '@/utils/logger';
@@ -86,19 +85,11 @@ interface StatsResult {
 }
 
 class GroupsService {
-  private vkValidator: VKValidator | null = null;
   private uploadTasks = new Map<string, UploadTask>(); // Хранение задач загрузки
   private groupsRepo: GroupsRepository;
 
   constructor() {
     this.groupsRepo = groupsRepo;
-  }
-
-  /**
-   * Инициализирует VK валидатор
-   */
-  initializeVKValidator(vkToken: string): void {
-    this.vkValidator = new VKValidator({ accessToken: vkToken });
   }
 
   /**
@@ -121,14 +112,17 @@ class GroupsService {
         actualFilePath = tempPath;
       }
 
+      // Создаем парсер
+      const parser = FileParserFactory.create();
+
       // Валидация файла
-      const validationResult = await FileParser.validateFile(actualFilePath);
+      const validationResult = await parser.validateFile(actualFilePath);
       if (!validationResult.isValid) {
         throw new Error(validationResult.errors.join(', '));
       }
 
       // Парсинг файла
-      const parseResult = await FileParser.parseGroupsFile(actualFilePath, encoding);
+      const parseResult = await parser.parseGroupsFile(actualFilePath, encoding);
       
       // Log sample parsed data for debugging (without raw lines to avoid scope issues)
       logger.info('Sample parsed groups (first 5)', {
@@ -270,18 +264,11 @@ class GroupsService {
         totalInvalid: invalidGroups.length
       });
 
-      // ШАГ 2: Если есть VK валидатор, валидируем группы
-      if (false && this.vkValidator) {
-        const validationResult = await this.vkValidator.validateGroups(groupsWithIds);
-        validGroups = validationResult.validGroups;
-        invalidGroups.push(...validationResult.invalidGroups);
-      } else {
-        // Без VK валидации все группы с ID считаем валидными
-        validGroups = groupsWithIds.map(group => ({
-          ...group,
-          error: group.error || ''
-        }));
-      }
+      // ШАГ 2: Все группы с ID считаем валидными (валидация через vk-io)
+      validGroups = groupsWithIds.map(group => ({
+        ...group,
+        error: group.error || ''
+      }));
 
       // Enhanced logging for validation step
       logger.info('Validation result', {
