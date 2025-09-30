@@ -52,7 +52,7 @@ export function createLogger(options: LoggerOptions = {}): WinstonLogger {
     level = (process.env.LOG_LEVEL as LogLevel) || 'info',
     service = 'vk-backend',
     environment = (process.env.NODE_ENV as Environment) || 'development',
-    logDir = process.env.LOG_DIR || 'backend/logs'
+    logDir = process.env.LOG_DIR || 'logs'
   } = options;
 
   return winston.createLogger({
