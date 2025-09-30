@@ -341,9 +341,10 @@ class GroupsService {
         // Проверяем каждый запрошенный ID
         for (const vkId of vkIds) {
           const vkInfo = vkGroupsMap.get(vkId);
+          const originalGroup = validGroups.find(g => g.id === vkId);
 
           if (vkInfo) {
-            // Группа существует в VK
+            // Группа доступна в VK - сохраняем полную информацию
             enrichedGroups.push({
               vk_id: vkId,
               name: vkInfo.name || `Группа ${vkId}`,
@@ -354,19 +355,28 @@ class GroupsService {
               description: vkInfo.description || null
             });
           } else {
-            // Группа НЕ существует в VK
-            invalidGroups.push({
-              id: vkId,
-              name: validGroups.find(g => g.id === vkId)?.name || `Группа ${vkId}`,
-              error: 'Group does not exist or is not accessible'
+            // Группа НЕ доступна через getById, но если она была резолвлена - значит существует
+            // Сохраняем с минимальными данными
+            enrichedGroups.push({
+              vk_id: vkId,
+              name: originalGroup?.name || `Группа ${vkId}`,
+              screen_name: originalGroup?.name || null,
+              photo_50: null,
+              members_count: null,
+              is_closed: 1, // Помечаем как закрытую
+              description: null
             });
-            logger.info('Группа не найдена в VK', { vkId });
+            logger.info('Группа резолвлена но недоступна через getById (закрыта/ограничена)', {
+              vkId,
+              screenName: originalGroup?.name
+            });
           }
         }
 
         logger.info('Валидация через VK API завершена', {
-          existingGroups: enrichedGroups.length,
-          notFoundGroups: vkIds.length - enrichedGroups.length
+          totalGroups: enrichedGroups.length,
+          accessibleGroups: vkGroupsInfo.length,
+          restrictedGroups: vkIds.length - vkGroupsInfo.length
         });
 
       } catch (vkError) {
