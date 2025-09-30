@@ -167,8 +167,8 @@
       <!-- Screen Name Column -->
       <template v-slot:[`item.screen_name`]="{ item }">
         <a
-          v-if="item.screen_name"
-          :href="`https://vk.com/${item.screen_name}`"
+          v-if="item.screenName"
+          :href="`https://vk.com/${item.screenName}`"
           target="_blank"
           class="text-decoration-none"
         >
@@ -177,7 +177,7 @@
             variant="text"
             color="info"
           >
-            {{ item.screen_name }}
+            {{ item.screenName }}
             <v-icon end size="x-small">mdi-open-in-new</v-icon>
           </v-chip>
         </a>
@@ -186,9 +186,9 @@
 
       <!-- Members Count Column -->
       <template v-slot:[`item.members_count`]="{ item }">
-        <div v-if="item.members_count !== null && item.members_count !== undefined" class="text-body-2">
+        <div v-if="item.membersCount !== null && item.membersCount !== undefined" class="text-body-2">
           <v-icon size="small" class="me-1">mdi-account-group</v-icon>
-          {{ formatNumber(item.members_count) }}
+          {{ formatNumber(item.membersCount) }}
         </div>
         <span v-else class="text-medium-emphasis">-</span>
       </template>
@@ -197,13 +197,13 @@
       <template v-slot:[`item.is_closed`]="{ item }">
         <v-chip
           size="small"
-          :color="getClosedColor(item.is_closed)"
+          :color="getClosedColor(item.isClosed)"
           variant="tonal"
         >
           <v-icon start size="small">
-            {{ getClosedIcon(item.is_closed) }}
+            {{ getClosedIcon(item.isClosed) }}
           </v-icon>
-          {{ getClosedText(item.is_closed) }}
+          {{ getClosedText(item.isClosed) }}
         </v-chip>
       </template>
 
