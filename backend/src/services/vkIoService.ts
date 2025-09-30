@@ -448,6 +448,77 @@ export class VkIoService {
   }
 
   /**
+   * Резолвит screen_name в ID группы
+   * Использует метод utils.resolveScreenName VK API
+   */
+  async resolveScreenName(screenName: string): Promise<number | null> {
+    await this.initialize();
+
+    try {
+      logger.info('Резолвинг screen_name в ID', { screenName });
+
+      const response = await this.vk.api.utils.resolveScreenName({
+        screen_name: screenName
+      });
+
+      // Проверяем, что это группа (type: 'group')
+      if (response && response.type === 'group' && response.object_id) {
+        logger.info('Screen_name успешно резолвлен', {
+          screenName,
+          groupId: response.object_id
+        });
+        return response.object_id;
+      }
+
+      logger.warn('Screen_name не является группой или не найден', {
+        screenName,
+        type: response?.type
+      });
+      return null;
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('Ошибка резолвинга screen_name через VK-IO', {
+        screenName,
+        error: errorMsg
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Резолвит массив screen_names в ID групп
+   * Обрабатывает батчами для соблюдения rate limits
+   */
+  async resolveScreenNames(screenNames: string[]): Promise<Map<string, number>> {
+    await this.initialize();
+
+    const results = new Map<string, number>();
+
+    logger.info('Начало резолвинга screen_names', {
+      totalScreenNames: screenNames.length
+    });
+
+    // Обрабатываем по одному из-за ограничений VK API
+    for (const screenName of screenNames) {
+      const groupId = await this.resolveScreenName(screenName);
+      if (groupId) {
+        results.set(screenName, groupId);
+      }
+      // Небольшая задержка для соблюдения rate limits
+      await new Promise(resolve => setTimeout(resolve, 350)); // ~3 запроса в секунду
+    }
+
+    logger.info('Резолвинг screen_names завершен', {
+      totalScreenNames: screenNames.length,
+      resolvedCount: results.size,
+      unresolvedCount: screenNames.length - results.size
+    });
+
+    return results;
+  }
+
+  /**
    * Получает экземпляр VK для прямого доступа к API (для расширенного использования)
    */
   getVkInstance(): VK {

@@ -206,17 +206,60 @@ class GroupsService {
       this.updateTaskStatus(taskId, 'processing', { startedAt: new Date() });
 
       let validGroups: ProcessedGroup[] = [];
-      let invalidGroups: ProcessedGroup[] = [];
+      const invalidGroups: ProcessedGroup[] = [];
       let duplicates = 0;
 
-      // Если есть VK валидатор, валидируем группы
+      // ШАГ 1: Резолвим screen_names в ID через VK API
+      const groupsWithScreenNames = groups.filter(g => !g.id && g.name);
+      const groupsWithIds = groups.filter(g => g.id);
+
+      logger.info('Группы для резолвинга screen_names', {
+        totalGroups: groups.length,
+        withIds: groupsWithIds.length,
+        withScreenNames: groupsWithScreenNames.length
+      });
+
+      if (groupsWithScreenNames.length > 0) {
+        const screenNames = groupsWithScreenNames.map(g => g.name!);
+        const resolvedMap = await vkIoService.resolveScreenNames(screenNames);
+
+        // Обновляем группы с резолвленными ID
+        for (const group of groupsWithScreenNames) {
+          const resolvedId = resolvedMap.get(group.name!);
+          if (resolvedId) {
+            groupsWithIds.push({
+              ...group,
+              id: resolvedId
+            });
+            logger.info('Screen_name успешно резолвлен', {
+              screenName: group.name,
+              resolvedId
+            });
+          } else {
+            invalidGroups.push({
+              ...group,
+              error: 'Screen name not found or is not a group'
+            });
+            logger.warn('Screen_name не удалось резолвить', {
+              screenName: group.name
+            });
+          }
+        }
+      }
+
+      logger.info('Результат резолвинга screen_names', {
+        totalResolved: groupsWithIds.length - groups.filter(g => g.id).length,
+        totalInvalid: invalidGroups.length
+      });
+
+      // ШАГ 2: Если есть VK валидатор, валидируем группы
       if (this.vkValidator) {
-        const validationResult = await this.vkValidator.validateGroups(groups);
+        const validationResult = await this.vkValidator.validateGroups(groupsWithIds);
         validGroups = validationResult.validGroups;
-        invalidGroups = validationResult.invalidGroups;
+        invalidGroups.push(...validationResult.invalidGroups);
       } else {
-        // Без VK валидации все группы считаем валидными
-        validGroups = groups.map(group => ({
+        // Без VK валидации все группы с ID считаем валидными
+        validGroups = groupsWithIds.map(group => ({
           ...group,
           error: group.error || ''
         }));
@@ -232,7 +275,7 @@ class GroupsService {
       });
 
       // Получаем информацию о группах из VK API - СТРОГАЯ ПРОВЕРКА
-      let enrichedGroups: Array<{
+      const enrichedGroups: Array<{
         vk_id: number;
         name: string | null;
         screen_name: string | null;

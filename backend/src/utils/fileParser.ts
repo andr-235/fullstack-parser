@@ -99,10 +99,10 @@ class FileParser {
    * Парсит одну строку с группой
    */
   static parseGroupLine(line: string, lineNumber: number): ParsedGroup | null {
-    // Проверяем URL screen_name: https://vk.com/club12345
-    const urlMatch = line.match(/^https:\/\/vk\.com\/(club)(\d+)$/i);
-    if (urlMatch) {
-      const groupId = parseInt(urlMatch[2], 10);
+    // 1. Проверяем URL формата https://vk.com/club12345
+    const urlClubMatch = line.match(/^https:\/\/vk\.com\/club(\d+)$/i);
+    if (urlClubMatch) {
+      const groupId = parseInt(urlClubMatch[1], 10);
       if (isNaN(groupId) || groupId <= 0) {
         throw new Error('Invalid group ID in URL');
       }
@@ -113,7 +113,19 @@ class FileParser {
       };
     }
 
-    // Проверяем, является ли строка ID группы (отрицательное число)
+    // 2. Проверяем URL формата https://vk.com/screen_name (НЕ club)
+    const urlScreenNameMatch = line.match(/^https:\/\/vk\.com\/([a-zA-Z0-9_]+)$/i);
+    if (urlScreenNameMatch) {
+      const screenName = urlScreenNameMatch[1];
+      // Если это не "club", значит это screen_name - сохраняем как имя для дальнейшего резолвинга
+      return {
+        id: null,
+        name: screenName,
+        lineNumber
+      };
+    }
+
+    // 3. Проверяем, является ли строка ID группы (отрицательное число)
     if (line.startsWith('-') && /^-\d+$/.test(line)) {
       const groupId = parseInt(line, 10);
       if (groupId >= 0) {
@@ -126,7 +138,7 @@ class FileParser {
       };
     }
 
-    // Если строка является положительным числом (прямой ID)
+    // 4. Если строка является положительным числом (прямой ID)
     if (/^\d+$/.test(line)) {
       const groupId = parseInt(line, 10);
       if (groupId > 0) {
@@ -139,12 +151,12 @@ class FileParser {
       throw new Error('Group ID must be positive');
     }
 
-    // Если строка начинается с - но не является отрицательным числом
+    // 5. Если строка начинается с - но не является отрицательным числом
     if (line.startsWith('-') && !/^-\d+$/.test(line)) {
       throw new Error('Invalid group format');
     }
 
-    // Проверяем, является ли строка screen_name без URL (club123 или просто строка)
+    // 6. Проверяем, является ли строка screen_name без URL (club123 или просто строка)
     if (!line.startsWith('-') && !/^\d+$/.test(line)) {
       // Если это screen_name типа "club123", извлекаем число
       const screenMatch = line.match(/^club(\d+)$/i);
@@ -158,7 +170,7 @@ class FileParser {
           };
         }
       }
-      // Иначе просто имя группы без ID
+      // Иначе просто screen_name группы без ID - сохраняем для дальнейшего резолвинга
       return {
         id: null,
         name: line,
