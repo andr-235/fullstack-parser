@@ -155,16 +155,11 @@
       <!-- Name Column -->
       <template v-slot:[`item.name`]="{ item }">
         <div class="d-flex align-center">
-          <v-avatar v-if="item.photo_50" size="32" class="me-2">
-            <v-img :src="item.photo_50" :alt="item.name" />
+          <v-avatar v-if="item.photo50" size="32" class="me-2">
+            <v-img :src="item.photo50" :alt="item.name" />
           </v-avatar>
-          <div>
-            <div class="text-body-2 font-weight-medium">
-              {{ item.name || 'Без названия' }}
-            </div>
-            <div v-if="item.description" class="text-caption text-medium-emphasis text-truncate" style="max-width: 300px;">
-              {{ item.description }}
-            </div>
+          <div class="text-body-2">
+            {{ item.name || 'Без названия' }}
           </div>
         </div>
       </template>
@@ -403,10 +398,10 @@ const hasFilters = computed(() =>
 const headers = [
   { title: 'ID группы', key: 'id', width: '120px', sortable: false },
   { title: 'VK ID', key: 'vk_id', width: '120px', sortable: false },
-  { title: 'Название', key: 'name', sortable: false },
-  { title: 'Короткое имя', key: 'screen_name', width: '140px', sortable: false },
-  { title: 'Участники', key: 'members_count', width: '120px', sortable: false },
-  { title: 'Тип', key: 'is_closed', width: '100px', sortable: false },
+  { title: 'Название', key: 'name', width: '200px', sortable: false },
+  { title: 'Короткое имя', key: 'screen_name', sortable: false },
+  // { title: 'Участники', key: 'members_count', width: '120px', sortable: false },
+  { title: 'Тип', key: 'is_closed', width: '150px', sortable: false },
   { title: 'Статус', key: 'status', width: '120px', sortable: false },
   { title: 'Загружена', key: 'uploadedAt', width: '140px', sortable: false },
   { title: 'Действия', key: 'actions', width: '120px', sortable: false }
@@ -571,11 +566,11 @@ const getClosedIcon = (isClosed) => {
 
 const getClosedText = (isClosed) => {
   const texts = {
-    0: 'Откр.',    // Открытая
-    1: 'Закр.',    // Закрытая
-    2: 'Част.'     // Частная
+    0: 'Открытая группа',
+    1: 'Закрытая группа',
+    2: 'Частная группа'
   }
-  return texts[isClosed] || '?'
+  return texts[isClosed] || 'Неизвестно'
 }
 </script>
 
