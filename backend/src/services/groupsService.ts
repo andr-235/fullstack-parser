@@ -221,7 +221,22 @@ class GroupsService {
 
       if (groupsWithScreenNames.length > 0) {
         const screenNames = groupsWithScreenNames.map(g => g.name!);
-        const resolvedMap = await vkIoService.resolveScreenNames(screenNames);
+
+        // Резолвим screen_names с обновлением прогресса
+        const resolvedMap = await vkIoService.resolveScreenNames(
+          screenNames,
+          (current, total) => {
+            // Обновляем прогресс задачи: резолвинг это первая часть обработки
+            const baseProcessed = groupsWithIds.length; // Группы с ID уже обработаны
+            const totalToProcess = groups.length;
+            const currentProcessed = baseProcessed + current;
+
+            this.updateTaskStatus(taskId, 'processing', {
+              validGroups: currentProcessed,
+              invalidGroups: invalidGroups.length
+            });
+          }
+        );
 
         // Обновляем группы с резолвленными ID
         for (const group of groupsWithScreenNames) {

@@ -56,10 +56,16 @@ class FileParser {
               duplicateIds.add(parsed.id);
             }
 
+            // Очищаем name от URL префикса, если он есть
+            let cleanName = parsed.name || '';
+            if (cleanName.startsWith('https://vk.com/')) {
+              cleanName = cleanName.replace('https://vk.com/', '');
+            }
+
             groups.push({
               id: parsed.id || 0,
-              name: parsed.name || '',
-              url: parsed.id ? `https://vk.com/club${parsed.id}` : ''
+              name: cleanName,
+              url: parsed.id ? `https://vk.com/club${parsed.id}` : (cleanName ? `https://vk.com/${cleanName}` : '')
             });
           }
         } catch (error) {

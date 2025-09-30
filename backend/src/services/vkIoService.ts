@@ -490,7 +490,10 @@ export class VkIoService {
    * Резолвит массив screen_names в ID групп
    * Обрабатывает батчами для соблюдения rate limits
    */
-  async resolveScreenNames(screenNames: string[]): Promise<Map<string, number>> {
+  async resolveScreenNames(
+    screenNames: string[],
+    onProgress?: (current: number, total: number) => void
+  ): Promise<Map<string, number>> {
     await this.initialize();
 
     const results = new Map<string, number>();
@@ -500,11 +503,18 @@ export class VkIoService {
     });
 
     // Обрабатываем по одному из-за ограничений VK API
-    for (const screenName of screenNames) {
+    for (let i = 0; i < screenNames.length; i++) {
+      const screenName = screenNames[i];
       const groupId = await this.resolveScreenName(screenName);
       if (groupId) {
         results.set(screenName, groupId);
       }
+
+      // Вызываем callback прогресса если он предоставлен
+      if (onProgress) {
+        onProgress(i + 1, screenNames.length);
+      }
+
       // Небольшая задержка для соблюдения rate limits
       await new Promise(resolve => setTimeout(resolve, 350)); // ~3 запроса в секунду
     }
