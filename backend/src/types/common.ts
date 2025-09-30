@@ -19,6 +19,8 @@ export interface ProcessedGroup {
   name: string;
   screenName?: string;
   url?: string;
+  is_closed?: number;
+  photo_50?: string | null;
   error?: string;
 }
 

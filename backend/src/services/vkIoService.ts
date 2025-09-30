@@ -484,10 +484,10 @@ export class VkIoService {
   }
 
   /**
-   * Резолвит screen_name в ID группы
-   * Использует метод utils.resolveScreenName VK API
+   * Резолвит screen_name в ID группы и получает полную информацию
+   * Использует метод utils.resolveScreenName + groups.getById VK API
    */
-  async resolveScreenName(screenName: string): Promise<number | null> {
+  async resolveScreenName(screenName: string): Promise<{ id: number; name: string; is_closed: number; photo_50: string | null } | null> {
     await this.initialize();
 
     try {
@@ -499,11 +499,66 @@ export class VkIoService {
 
       // Проверяем, что это группа (type: 'group')
       if (response && response.type === 'group' && response.object_id) {
-        logger.info('Screen_name успешно резолвлен', {
-          screenName,
-          groupId: response.object_id
-        });
-        return response.object_id;
+        // Получаем полную информацию о группе через getById
+        try {
+          const groupInfo = await this.vk.api.groups.getById({
+            group_id: response.object_id.toString(),
+            fields: ['name', 'is_closed', 'photo_50']
+          });
+
+          let groupName = screenName; // fallback
+          let isClosed = 1; // fallback - считаем закрытой если не получили данные
+          let photo50: string | null = null;
+
+          // Извлекаем данные из ответа
+          if (Array.isArray(groupInfo) && groupInfo.length > 0) {
+            const group = groupInfo[0];
+            groupName = group.name || screenName;
+            isClosed = group.is_closed !== undefined ? Number(group.is_closed) : 1;
+            photo50 = group.photo_50 || null;
+          } else if (groupInfo && typeof groupInfo === 'object') {
+            const groupObj = groupInfo as any;
+            if (groupObj.name) {
+              groupName = groupObj.name;
+              isClosed = groupObj.is_closed !== undefined ? Number(groupObj.is_closed) : 1;
+              photo50 = groupObj.photo_50 || null;
+            } else if (Array.isArray(groupObj.groups) && groupObj.groups.length > 0) {
+              const group = groupObj.groups[0];
+              groupName = group.name || screenName;
+              isClosed = group.is_closed !== undefined ? Number(group.is_closed) : 1;
+              photo50 = group.photo_50 || null;
+            }
+          }
+
+          logger.info('Screen_name успешно резолвлен с полной информацией', {
+            screenName,
+            groupId: response.object_id,
+            groupName,
+            isClosed,
+            photo50: photo50 ? 'доступно' : 'нет'
+          });
+
+          return {
+            id: response.object_id,
+            name: groupName,
+            is_closed: isClosed,
+            photo_50: photo50
+          };
+        } catch (getByIdError) {
+          // Если getById не удался, возвращаем минимальные данные
+          logger.warn('Не удалось получить полную информацию о группе, используем минимальные данные', {
+            screenName,
+            groupId: response.object_id,
+            error: getByIdError instanceof Error ? getByIdError.message : String(getByIdError)
+          });
+
+          return {
+            id: response.object_id,
+            name: screenName,
+            is_closed: 1, // Считаем закрытой
+            photo_50: null
+          };
+        }
       }
 
       logger.warn('Screen_name не является группой или не найден', {
@@ -523,16 +578,16 @@ export class VkIoService {
   }
 
   /**
-   * Резолвит массив screen_names в ID групп
+   * Резолвит массив screen_names в ID групп с полной информацией
    * Обрабатывает батчами для соблюдения rate limits
    */
   async resolveScreenNames(
     screenNames: string[],
     onProgress?: (current: number, total: number) => void
-  ): Promise<Map<string, number>> {
+  ): Promise<Map<string, { id: number; name: string; is_closed: number; photo_50: string | null }>> {
     await this.initialize();
 
-    const results = new Map<string, number>();
+    const results = new Map<string, { id: number; name: string; is_closed: number; photo_50: string | null }>();
 
     logger.info('Начало резолвинга screen_names', {
       totalScreenNames: screenNames.length
@@ -541,9 +596,9 @@ export class VkIoService {
     // Обрабатываем по одному из-за ограничений VK API
     for (let i = 0; i < screenNames.length; i++) {
       const screenName = screenNames[i];
-      const groupId = await this.resolveScreenName(screenName);
-      if (groupId) {
-        results.set(screenName, groupId);
+      const groupInfo = await this.resolveScreenName(screenName);
+      if (groupInfo) {
+        results.set(screenName, groupInfo);
       }
 
       // Вызываем callback прогресса если он предоставлен

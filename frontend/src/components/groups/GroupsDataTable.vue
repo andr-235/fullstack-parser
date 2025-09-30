@@ -135,21 +135,16 @@
 
       <!-- VK ID Column -->
       <template v-slot:[`item.vk_id`]="{ item }">
-        <a
-          :href="item.screenName ? `https://vk.com/${item.screenName}` : `https://vk.com/club${item.vkId}`"
-          target="_blank"
-          class="text-decoration-none"
+        <v-chip
+          size="small"
+          variant="outlined"
+          color="primary"
+          class="font-mono"
         >
-          <v-chip
-            size="small"
-            variant="outlined"
-            color="primary"
-            class="font-mono"
-          >
-            {{ item.vkId }}
-            <v-icon end size="x-small">mdi-open-in-new</v-icon>
-          </v-chip>
-        </a>
+          {{ item.vkId }}
+          <v-icon end size="x-small">mdi-open-in-new</v-icon>
+        </v-chip>
+        
       </template>
 
       <!-- Name Column -->
