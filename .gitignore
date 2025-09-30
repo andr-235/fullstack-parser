@@ -228,5 +228,3 @@ processing/
 # Generated reports
 reports/generated/
 exports/temp/
-
-*.txt

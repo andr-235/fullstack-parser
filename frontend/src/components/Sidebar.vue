@@ -105,12 +105,6 @@ const menuItems = computed(() => [
     icon: 'mdi-account-group'
   },
   {
-    title: 'Старые задачи',
-    subtitle: 'Создание задач (legacy)',
-    to: '/fetch',
-    icon: 'mdi-plus-box'
-  },
-  {
     title: 'Комментарии',
     subtitle: 'Просмотр результатов',
     to: '/comments',
@@ -135,10 +129,6 @@ const isActiveRoute = (routePath) => {
   // Для "Группы VK" - активен на всех страницах групп
   if (routePath === '/groups') {
     return route.path.startsWith('/groups')
-  }
-  // Для "Старые задачи" - активен только на /fetch
-  if (routePath === '/fetch') {
-    return route.path === '/fetch'
   }
   // Для "Комментарии" - активен только на /comments
   if (routePath === '/comments') {

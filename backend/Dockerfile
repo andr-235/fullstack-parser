@@ -24,14 +24,17 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Копируем package.json для reference
 COPY package.json package-lock.json ./
-RUN npm install -g npm@latest
-RUN npm ci --omit=dev
 
+# Копируем скомпилированный код и необходимые зависимости
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Копируем только production зависимости
+COPY --from=deps /app/node_modules ./node_modules
 
 EXPOSE 3000
 
