@@ -89,10 +89,16 @@ export interface CommentsResponse {
 // Groups types
 export interface Group {
   id: string | number
+  vkId: number
   name: string
+  screenName?: string | null
+  photo50?: string | null
+  membersCount?: number | null
+  isClosed: number
+  description?: string | null
   status: 'valid' | 'invalid' | 'duplicate'
-  task_id: string
-  uploaded_at: string
+  taskId: string
+  uploadedAt: string
 }
 
 export interface GroupsParams extends PaginationParams {

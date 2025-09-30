@@ -136,7 +136,7 @@
       <!-- VK ID Column -->
       <template v-slot:[`item.vk_id`]="{ item }">
         <a
-          :href="`https://vk.com/club${item.vk_id}`"
+          :href="item.screenName ? `https://vk.com/${item.screenName}` : `https://vk.com/club${item.vkId}`"
           target="_blank"
           class="text-decoration-none"
         >
@@ -146,7 +146,7 @@
             color="primary"
             class="font-mono"
           >
-            {{ item.vk_id }}
+            {{ item.vkId }}
             <v-icon end size="x-small">mdi-open-in-new</v-icon>
           </v-chip>
         </a>

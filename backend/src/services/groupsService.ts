@@ -240,14 +240,17 @@ class GroupsService {
 
         // Обновляем группы с резолвленными ID
         for (const group of groupsWithScreenNames) {
-          const resolvedId = resolvedMap.get(group.name!);
+          const screenName = group.name!;
+          const resolvedId = resolvedMap.get(screenName);
           if (resolvedId) {
             groupsWithIds.push({
-              ...group,
-              id: resolvedId
+              id: resolvedId,
+              name: screenName, // Временно сохраняем screen_name, заменим после запроса getGroupsInfo
+              screenName: screenName, // Сохраняем screen_name отдельно
+              url: `https://vk.com/${screenName}`
             });
             logger.info('Screen_name успешно резолвлен', {
-              screenName: group.name,
+              screenName,
               resolvedId
             });
           } else {
@@ -356,11 +359,12 @@ class GroupsService {
             });
           } else {
             // Группа НЕ доступна через getById, но если она была резолвлена - значит существует
-            // Сохраняем с минимальными данными
+            // Сохраняем с минимальными данными, используя screen_name
+            const screenName = (originalGroup as any)?.screenName || originalGroup?.name || null;
             enrichedGroups.push({
               vk_id: vkId,
-              name: originalGroup?.name || `Группа ${vkId}`,
-              screen_name: originalGroup?.name || null,
+              name: screenName || `Группа ${vkId}`, // Используем screen_name как имя
+              screen_name: screenName,
               photo_50: null,
               members_count: null,
               is_closed: 1, // Помечаем как закрытую
@@ -368,7 +372,7 @@ class GroupsService {
             });
             logger.info('Группа резолвлена но недоступна через getById (закрыта/ограничена)', {
               vkId,
-              screenName: originalGroup?.name
+              screenName
             });
           }
         }
@@ -480,7 +484,13 @@ class GroupsService {
   private transformGroupToApiFormat(group: any): any {
     return {
       id: group.id,
+      vkId: group.vk_id,
       name: group.name,
+      screenName: group.screen_name,
+      photo50: group.photo_50,
+      membersCount: group.members_count,
+      isClosed: group.is_closed,
+      description: group.description,
       status: group.status,
       uploadedAt: group.uploaded_at,
       taskId: group.task_id
