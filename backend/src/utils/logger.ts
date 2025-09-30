@@ -210,6 +210,9 @@ class AppLogger implements Logger {
 // Singleton instance для обратной совместимости
 const logger = new AppLogger();
 
+// Проверка инициализации логгера
+console.log('[Logger Init] Winston logger initialized with level:', logger.getLevel());
+
 export default logger;
 export { AppLogger };
 export type { Logger };
