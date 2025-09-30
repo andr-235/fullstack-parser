@@ -4,7 +4,7 @@ import path from 'path';
 import os from 'os';
 
 import { FileParserFactory } from '@/utils/fileParser/FileParserFactory';
-import vkIoService from '@/services/vkIoService';
+import vkIoService, { ProcessedGroup as VkProcessedGroup } from '@/services/vkIoService';
 import groupsRepo, { GroupsRepository } from '@/repositories/groupsRepo';
 import logger from '@/utils/logger';
 import { ProcessedGroup } from '@/types/common';
@@ -216,7 +216,7 @@ class GroupsService {
       if (groupsWithScreenNames.length > 0) {
         const screenNames = groupsWithScreenNames.map(g => g.name!);
 
-        // Резолвим screen_names с обновлением прогресса
+        // Резолвим screen_names в ID (без полной информации)
         const resolvedMap = await vkIoService.resolveScreenNames(
           screenNames,
           (current, total) => {
@@ -232,25 +232,20 @@ class GroupsService {
           }
         );
 
-        // Обновляем группы с резолвленными ID и полной информацией
+        // Обновляем группы с резолвленными ID
         for (const group of groupsWithScreenNames) {
           const screenName = group.name!;
           const resolvedInfo = resolvedMap.get(screenName);
           if (resolvedInfo) {
             groupsWithIds.push({
               id: resolvedInfo.id,
-              name: resolvedInfo.name, // Полное название из VK API
-              screenName: screenName, // Сохраняем screen_name отдельно
-              url: `https://vk.com/${screenName}`,
-              is_closed: resolvedInfo.is_closed,
-              photo_50: resolvedInfo.photo_50
+              name: screenName, // Временно используем screen_name
+              screenName: resolvedInfo.screen_name,
+              url: `https://vk.com/${screenName}`
             });
-            logger.info('Screen_name успешно резолвлен', {
+            logger.info('Screen_name успешно резолвлен в ID', {
               screenName,
-              resolvedId: resolvedInfo.id,
-              groupName: resolvedInfo.name,
-              isClosed: resolvedInfo.is_closed,
-              hasPhoto: !!resolvedInfo.photo_50
+              resolvedId: resolvedInfo.id
             });
           } else {
             invalidGroups.push({
@@ -323,11 +318,30 @@ class GroupsService {
         return;
       }
 
-      // Обязательный запрос к VK API для проверки существования групп
+      // Батч-запрос к VK API для получения полной информации о всех группах
       try {
-        const vkGroupsInfo = await vkIoService.getGroupsInfo(vkIds);
+        // Разбиваем на батчи по 500 групп (лимит VK API)
+        const batchSize = 500;
+        const vkGroupsInfo: VkProcessedGroup[] = [];
 
-        logger.info('Ответ от VK API получен', {
+        for (let i = 0; i < vkIds.length; i += batchSize) {
+          const batch = vkIds.slice(i, i + batchSize);
+          logger.info('Батч-запрос информации о группах', {
+            batchNumber: Math.floor(i / batchSize) + 1,
+            batchSize: batch.length,
+            totalBatches: Math.ceil(vkIds.length / batchSize)
+          });
+
+          const batchInfo = await vkIoService.getGroupsInfo(batch);
+          vkGroupsInfo.push(...batchInfo);
+
+          // Небольшая задержка между батчами
+          if (i + batchSize < vkIds.length) {
+            await new Promise(resolve => setTimeout(resolve, 400));
+          }
+        }
+
+        logger.info('Батч-запросы завершены', {
           requestedCount: vkIds.length,
           receivedCount: vkGroupsInfo.length,
           missingCount: vkIds.length - vkGroupsInfo.length
@@ -356,27 +370,23 @@ class GroupsService {
             });
           } else {
             // Группа НЕ доступна через getById, но если она была резолвлена - значит существует
-            // Используем данные из резолвинга
+            // Используем данные из резолвинга (screen_name)
             const screenName = (originalGroup as any)?.screenName || null;
             const groupName = originalGroup?.name || screenName || `Группа ${vkId}`;
-            const is_closed = (originalGroup as any)?.is_closed !== undefined ? (originalGroup as any).is_closed : 1;
-            const photo_50 = (originalGroup as any)?.photo_50 || null;
 
             enrichedGroups.push({
               vk_id: vkId,
-              name: groupName, // Используем полное название из резолвинга или screen_name как fallback
+              name: groupName,
               screen_name: screenName,
-              photo_50: photo_50, // Используем фото из резолвинга
+              photo_50: null,
               members_count: null,
-              is_closed: is_closed, // Используем is_closed из резолвинга
+              is_closed: 1, // Считаем закрытой если не получили данные
               description: null
             });
             logger.info('Группа резолвлена но недоступна через getById (закрыта/ограничена)', {
               vkId,
               screenName,
-              groupName,
-              isClosed: is_closed,
-              hasPhoto: !!photo_50
+              groupName
             });
           }
         }
