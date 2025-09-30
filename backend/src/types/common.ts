@@ -17,6 +17,7 @@ export interface FileUpload {
 export interface ProcessedGroup {
   id?: number;
   name: string;
+  screenName?: string;
   url?: string;
   error?: string;
 }
