@@ -1,17 +1,10 @@
-FROM node:20-alpine AS deps
-
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-
-RUN npm ci
-
-
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+RUN npm ci
+
 COPY . .
 
 # Generate Prisma client before building
@@ -20,21 +13,23 @@ RUN npx prisma generate
 RUN npm run build
 
 
-FROM node:20-alpine
+FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Копируем package.json и tsconfig для reference
+# Копируем package.json и tsconfig
 COPY package.json package-lock.json tsconfig.json ./
 
-# Копируем скомпилированный код и необходимые зависимости
+# Устанавливаем только production зависимости
+RUN npm ci --omit=dev
+
+# Копируем скомпилированный код
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+
+# Копируем Prisma client из builder
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-
-# Копируем только production зависимости
-COPY --from=deps /app/node_modules ./node_modules
 
 EXPOSE 3000
 
