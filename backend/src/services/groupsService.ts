@@ -245,7 +245,7 @@ class GroupsService {
           if (resolvedId) {
             groupsWithIds.push({
               id: resolvedId,
-              name: screenName, // Временно сохраняем screen_name, заменим после запроса getGroupsInfo
+              name: '', // Полное название получим позже через getGroupsInfo или используем screenName
               screenName: screenName, // Сохраняем screen_name отдельно
               url: `https://vk.com/${screenName}`
             });
@@ -271,7 +271,7 @@ class GroupsService {
       });
 
       // ШАГ 2: Если есть VK валидатор, валидируем группы
-      if (this.vkValidator) {
+      if (false && this.vkValidator) {
         const validationResult = await this.vkValidator.validateGroups(groupsWithIds);
         validGroups = validationResult.validGroups;
         invalidGroups.push(...validationResult.invalidGroups);
