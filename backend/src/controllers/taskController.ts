@@ -167,15 +167,18 @@ const getTask = async (req: Request<{ taskId: string }>, res: Response, next: Ne
 const getTasks = async (req: Request<{}, PaginatedResponse<any>, {}, GetTasksQuery>, res: Response, next: NextFunction): Promise<void> => {
   const requestId = (req as any).requestId || (req as any).id;
   try {
+    // Получаем валидированные query параметры из middleware
+    const validatedQuery = (req as any).validatedQuery || req.query;
+    const { page = 1, limit = 20, status, type } = validatedQuery;
+
     logger.info('Processing getTasks request', {
-      page: req.query.page,
-      limit: req.query.limit,
-      status: req.query.status,
-      type: req.query.type,
+      page,
+      limit,
+      status,
+      type,
       requestId
     });
 
-    const { page = 1, limit = 20, status, type } = req.query as { page?: number; limit?: number; status?: any; type?: any };
     const { tasks, total } = await taskService.listTasks(page, limit, status, type);
 
     logger.info('Tasks listed successfully', {
@@ -201,11 +204,12 @@ const getTasks = async (req: Request<{}, PaginatedResponse<any>, {}, GetTasksQue
   } catch (error) {
     // Общая обработка ошибок
     const err = error as Error;
+    const validatedQuery = (req as any).validatedQuery || req.query;
     logger.error('Error in getTasks', {
-      page: req.query.page,
-      limit: req.query.limit,
-      status: req.query.status,
-      type: req.query.type,
+      page: validatedQuery.page,
+      limit: validatedQuery.limit,
+      status: validatedQuery.status,
+      type: validatedQuery.type,
       error: err.message,
       stack: err.stack,
       requestId
