@@ -80,6 +80,7 @@ function createTransports(
   environment: Environment,
   logDir: string
 ): winston.transport[] {
+  // Только консольное логирование для Docker
   const transports: winston.transport[] = [
     new winston.transports.Console({
       level,
@@ -92,41 +93,6 @@ function createTransports(
       )
     })
   ];
-
-  // В тестовом окружении не пишем в файлы
-  if (environment === 'test') {
-    return transports;
-  }
-
-  // Rotation для error логов
-  transports.push(
-    new DailyRotateFile({
-      filename: path.join(logDir, 'error-%DATE%.log'),
-      datePattern: 'YYYY-MM-DD',
-      level: 'error',
-      maxSize: process.env.LOG_MAX_SIZE || '5m',
-      maxFiles: process.env.LOG_MAX_FILES || '5',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      )
-    })
-  );
-
-  // Rotation для всех логов
-  transports.push(
-    new DailyRotateFile({
-      filename: path.join(logDir, 'combined-%DATE%.log'),
-      datePattern: 'YYYY-MM-DD',
-      level: 'info',
-      maxSize: process.env.LOG_MAX_SIZE || '5m',
-      maxFiles: process.env.LOG_MAX_FILES || '5',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      )
-    })
-  );
 
   return transports;
 }
@@ -212,6 +178,7 @@ const logger = new AppLogger();
 
 // Проверка инициализации логгера
 console.log('[Logger Init] Winston logger initialized with level:', logger.getLevel());
+logger.info('Logger initialized successfully');
 
 export default logger;
 export { AppLogger };
