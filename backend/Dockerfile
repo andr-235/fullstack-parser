@@ -24,8 +24,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Копируем package.json для reference
-COPY package.json package-lock.json ./
+# Копируем package.json и tsconfig для reference
+COPY package.json package-lock.json tsconfig.json ./
 
 # Копируем скомпилированный код и необходимые зависимости
 COPY --from=builder /app/dist ./dist
