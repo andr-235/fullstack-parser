@@ -341,8 +341,21 @@ export class VkIoService {
         fields: ['name', 'screen_name', 'description', 'photo_50', 'members_count', 'is_closed']
       });
 
+      // VK-IO возвращает массив напрямую
+      logger.info('DEBUG: response от groups.getById', {
+        responseType: typeof response,
+        isArray: Array.isArray(response),
+        hasGroups: response && (response as any).groups,
+        responseKeys: response ? Object.keys(response).slice(0, 5) : [],
+        sampleData: Array.isArray(response) ? response.slice(0, 2) : null
+      });
+
       if (!response || !Array.isArray(response)) {
-        logger.warn('Некорректный ответ от groups.getById', { groupIds });
+        logger.warn('Некорректный ответ от groups.getById', {
+          groupIds,
+          responseType: typeof response,
+          isArray: Array.isArray(response)
+        });
         return [];
       }
 
