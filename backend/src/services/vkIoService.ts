@@ -341,25 +341,42 @@ export class VkIoService {
         fields: ['name', 'screen_name', 'description', 'photo_50', 'members_count', 'is_closed']
       });
 
-      // VK-IO возвращает массив напрямую
+      // VK-IO может возвращать разные форматы ответа
+      type VkIoResponse = VkGroup[] | { groups: VkGroup[] } | { items: VkGroup[] };
+      const vkResponse = response as VkIoResponse;
+
       logger.info('DEBUG: response от groups.getById', {
         responseType: typeof response,
         isArray: Array.isArray(response),
-        hasGroups: response && (response as any).groups,
-        responseKeys: response ? Object.keys(response).slice(0, 5) : [],
-        sampleData: Array.isArray(response) ? response.slice(0, 2) : null
+        hasGroups: 'groups' in vkResponse,
+        hasItems: 'items' in vkResponse,
+        responseKeys: response ? Object.keys(response).slice(0, 5) : []
       });
 
-      if (!response || !Array.isArray(response)) {
+      // Определяем формат ответа и извлекаем массив групп
+      let groupsArray: VkGroup[];
+      if (Array.isArray(vkResponse)) {
+        groupsArray = vkResponse;
+      } else if ('groups' in vkResponse && Array.isArray(vkResponse.groups)) {
+        groupsArray = vkResponse.groups;
+      } else if ('items' in vkResponse && Array.isArray(vkResponse.items)) {
+        groupsArray = vkResponse.items;
+      } else {
         logger.warn('Некорректный ответ от groups.getById', {
           groupIds,
           responseType: typeof response,
-          isArray: Array.isArray(response)
+          isArray: Array.isArray(response),
+          responseKeys: response ? Object.keys(response) : []
         });
         return [];
       }
 
-      const processedGroups: ProcessedGroup[] = response.map(group => ({
+      logger.info('Найден массив групп', {
+        count: groupsArray.length,
+        sampleGroup: groupsArray[0]
+      });
+
+      const processedGroups: ProcessedGroup[] = groupsArray.map(group => ({
         id: Math.abs(group.id), // Возвращаем положительный ID
         name: group.name,
         screen_name: group.screen_name,
