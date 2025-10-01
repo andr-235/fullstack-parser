@@ -67,9 +67,9 @@ export const GetGroupsQuerySchema = z.object({
     .number()
     .int()
     .positive()
-    .max(100, 'Maximum limit is 100')
+    .max(10000, 'Maximum limit is 10000')
     .default(20)
-    .describe('Количество записей на странице (1-100)'),
+    .describe('Количество записей на странице (1-10000)'),
 
   offset: z.coerce
     .number()
