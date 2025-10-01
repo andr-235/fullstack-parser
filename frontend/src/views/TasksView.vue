@@ -346,6 +346,7 @@ const getTypeColor = (type) => {
     comments: 'blue',
     vk_collect: 'green',
     groups: 'purple',
+    fetch_comments: 'green',
   }
   return colors[type] || 'grey'
 }
@@ -355,6 +356,7 @@ const getTypeIcon = (type) => {
     comments: 'mdi-comment-multiple',
     vk_collect: 'mdi-download',
     groups: 'mdi-account-group',
+    fetch_comments: 'mdi-download',
   }
   return icons[type] || 'mdi-help'
 }
@@ -364,6 +366,7 @@ const getTypeText = (type) => {
     comments: 'Комментарии',
     vk_collect: 'VK Сбор',
     groups: 'Группы',
+    fetch_comments: 'VK Сбор',
   }
   return texts[type] || type
 }
