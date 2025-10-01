@@ -31,11 +31,19 @@ const getTasksQuerySchema = paginationSchema.keys({
   type: Joi.string().valid('fetch_comments', 'process_groups', 'analyze_posts').allow(null)
 });
 
+const createVkCollectTaskSchema = Joi.object({
+  groups: Joi.array().items(Joi.number().integer().positive()).min(1).required()
+});
+
 // Типы для запросов
 interface CreateTaskRequestBody {
   ownerId: number;
   postId: number;
   token: string;
+}
+
+interface CreateVkCollectTaskRequestBody {
+  groups: number[];
 }
 
 interface GetTasksQuery extends PaginationParams {
@@ -162,6 +170,49 @@ const getTask = async (req: Request<{ taskId: string }>, res: Response, next: Ne
 };
 
 /**
+ * POST /api/tasks/collect - Создает задачу на сбор данных из групп VK
+ */
+const createVkCollectTask = async (req: Request<{}, ApiResponse, CreateVkCollectTaskRequestBody>, res: Response): Promise<void> => {
+  const requestId = (req as any).requestId || (req as any).id;
+  try {
+    logger.info('Processing createVkCollectTask request', {
+      groupsCount: req.body.groups.length,
+      requestId
+    });
+
+    const { groups } = req.body;
+    const taskData: CreateTaskRequest = {
+      type: 'fetch_comments',
+      groupIds: groups,
+      options: {}
+    };
+
+    const { taskId } = await taskService.createTask(taskData);
+    logger.info('VK collect task created successfully', { taskId, status: 'created', groupsCount: groups.length, requestId });
+
+    res.status(201).success({
+      taskId,
+      status: 'created',
+      type: taskData.type,
+      createdAt: new Date().toISOString()
+    }, 'Задача на сбор данных успешно создана');
+  } catch (error) {
+    const err = error as Error;
+    logger.error('Error in createVkCollectTask', {
+      error: err.message,
+      stack: err.stack,
+      requestId
+    });
+
+    const appError = ErrorUtils.toAppError(err, 'Ошибка создания задачи на сбор данных');
+    if (requestId) {
+      appError.setRequestId(requestId);
+    }
+    throw appError;
+  }
+};
+
+/**
  * GET /api/tasks - Получает список задач с пагинацией и фильтрацией
  */
 const getTasks = async (req: Request<{}, PaginatedResponse<any>, {}, GetTasksQuery>, res: Response, next: NextFunction): Promise<void> => {
@@ -225,6 +276,7 @@ const getTasks = async (req: Request<{}, PaginatedResponse<any>, {}, GetTasksQue
 
 // Маршруты
 router.post('/tasks', validateBody(createTaskSchema), createTask);
+router.post('/tasks/collect', validateBody(createVkCollectTaskSchema), createVkCollectTask);
 router.get('/tasks/:taskId', validateTaskIdParam, getTask);
 router.get('/tasks', validateQuery(getTasksQuerySchema), getTasks);
 
