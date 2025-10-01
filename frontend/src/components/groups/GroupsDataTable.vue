@@ -121,35 +121,29 @@
       items-per-page-text="Групп на странице:"
       :items-per-page-options="[10, 25, 50, 100]"
     >
-      <!-- Group ID Column -->
-      <template v-slot:[`item.id`]="{ item }">
-        <v-chip
-          size="small"
-          variant="tonal"
-          color="primary"
-          class="font-mono"
-        >
-          {{ item.id }}
-        </v-chip>
-      </template>
-
       <!-- VK ID Column -->
       <template v-slot:[`item.vk_id`]="{ item }">
-        <v-chip
-          size="small"
-          variant="outlined"
-          color="primary"
-          class="font-mono"
-        >
+        <div class="text-body-2 font-mono">
           {{ item.vkId }}
-          <v-icon end size="x-small">mdi-open-in-new</v-icon>
-        </v-chip>
-        
+        </div>
       </template>
 
       <!-- Name Column -->
       <template v-slot:[`item.name`]="{ item }">
-        <div class="d-flex align-center">
+        <a
+          v-if="item.screenName"
+          :href="`https://vk.com/${item.screenName}`"
+          target="_blank"
+          class="text-decoration-none d-flex align-center"
+        >
+          <v-avatar v-if="item.photo50" size="32" class="me-2">
+            <v-img :src="item.photo50" :alt="item.name" />
+          </v-avatar>
+          <div class="text-body-2">
+            {{ item.name || 'Без названия' }}
+          </div>
+        </a>
+        <div v-else class="d-flex align-center">
           <v-avatar v-if="item.photo50" size="32" class="me-2">
             <v-img :src="item.photo50" :alt="item.name" />
           </v-avatar>
@@ -161,21 +155,9 @@
 
       <!-- Screen Name Column -->
       <template v-slot:[`item.screen_name`]="{ item }">
-        <a
-          v-if="item.screenName"
-          :href="`https://vk.com/${item.screenName}`"
-          target="_blank"
-          class="text-decoration-none"
-        >
-          <v-chip
-            size="small"
-            variant="text"
-            color="info"
-          >
-            {{ item.screenName }}
-            <v-icon end size="x-small">mdi-open-in-new</v-icon>
-          </v-chip>
-        </a>
+        <div v-if="item.screenName" class="text-body-2">
+          {{ item.screenName }}
+        </div>
         <span v-else class="text-medium-emphasis">-</span>
       </template>
 
@@ -199,20 +181,6 @@
             {{ getClosedIcon(item.isClosed) }}
           </v-icon>
           {{ getClosedText(item.isClosed) }}
-        </v-chip>
-      </template>
-
-      <!-- Status Column -->
-      <template v-slot:[`item.status`]="{ item }">
-        <v-chip
-          size="small"
-          :color="getStatusColor(item.status)"
-          variant="flat"
-        >
-          <v-icon start size="small">
-            {{ getStatusIcon(item.status) }}
-          </v-icon>
-          {{ getStatusText(item.status) }}
         </v-chip>
       </template>
 
@@ -391,13 +359,10 @@ const hasFilters = computed(() =>
 
 // Data
 const headers = [
-  { title: 'ID группы', key: 'id', width: '120px', sortable: false },
   { title: 'VK ID', key: 'vk_id', width: '120px', sortable: false },
   { title: 'Название', key: 'name', width: '200px', sortable: false },
   { title: 'Короткое имя', key: 'screen_name', sortable: false },
-  // { title: 'Участники', key: 'members_count', width: '120px', sortable: false },
   { title: 'Тип', key: 'is_closed', width: '150px', sortable: false },
-  { title: 'Статус', key: 'status', width: '120px', sortable: false },
   { title: 'Загружена', key: 'uploadedAt', width: '140px', sortable: false },
   { title: 'Действия', key: 'actions', width: '120px', sortable: false }
 ]
