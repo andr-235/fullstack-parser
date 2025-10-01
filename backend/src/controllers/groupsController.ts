@@ -28,7 +28,7 @@ const getGroupsQuerySchema = paginationSchema.keys({
   search: Joi.string().allow('').min(0).max(255).optional(),
   sortBy: Joi.string().valid('id', 'name', 'vkId', 'createdAt', 'updatedAt', 'uploadedAt', 'uploaded_at').default('id'),
   sortOrder: Joi.string().valid('ASC', 'DESC', 'asc', 'desc').default('ASC')
-});
+}).options({ convert: true });
 
 const batchDeleteSchema = Joi.object({
   groupIds: Joi.array().items(Joi.number().integer().positive()).min(1).max(100).required()
