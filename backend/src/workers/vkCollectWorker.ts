@@ -99,21 +99,25 @@ export class VkCollectWorker {
       let totalComments = 0;
       const errors: Array<{ groupId: string; error: string; timestamp: Date }> = [];
 
-      // Получаем реальные группы из базы данных с VK ID
-      const dbGroups = await dbRepo.getGroupsWithVkDataByTaskId(taskId);
-
-      if (dbGroups.length === 0) {
+      // Используем группы из metadata job'а (переданные при создании задачи)
+      if (!groups || groups.length === 0) {
         throw new WorkerError(
-          `No valid groups found for task ${taskId}`,
-          'NO_GROUPS_FOUND',
+          `No groups provided for task ${taskId}`,
+          'NO_GROUPS_PROVIDED',
           job.id?.toString()
         );
       }
 
-      // Обрабатываем каждую группу из базы данных
-      for (let i = 0; i < dbGroups.length; i++) {
-        const group = dbGroups[i];
-        const groupId = group.vk_id; // Используем VK ID из базы данных
+      logger.info('Processing groups from job metadata', {
+        jobId: job.id,
+        taskId,
+        groupsCount: groups.length
+      });
+
+      // Обрабатываем каждую группу из metadata
+      for (let i = 0; i < groups.length; i++) {
+        const group = groups[i];
+        const groupId = parseInt(group.vkId); // Конвертируем vkId в число
 
         try {
           logger.info('Processing VK group', {
@@ -126,26 +130,26 @@ export class VkCollectWorker {
 
           // Обновляем progress с текущей группой
           await this.updateJobProgress(job, {
-            percentage: Math.round((i / dbGroups.length) * 90), // 90% на обработку групп
+            percentage: Math.round((i / groups.length) * 90), // 90% на обработку групп
             stage: 'fetching_posts',
             currentGroup: {
-              vkId: String(groupId),
-              name: group.name || `Группа ${groupId}`,
+              vkId: group.vkId,
+              name: group.name,
               progress: 0
             },
             stats: {
               groupsCompleted: i,
-              totalGroups: dbGroups.length,
+              totalGroups: groups.length,
               postsProcessed: totalPosts,
               commentsCollected: totalComments
             }
           });
 
-          // Обрабатываем группу через существующий VK service
+          // Обрабатываем группу через VK service
           const groupResult = await this.processGroup(
             taskId,
-            String(groupId),
-            group.name || `Группа ${groupId}`,
+            groupId,
+            group.name,
             options,
             job
           );
@@ -155,16 +159,16 @@ export class VkCollectWorker {
 
           // Обновляем progress после обработки группы
           await this.updateJobProgress(job, {
-            percentage: Math.round(((i + 1) / dbGroups.length) * 90),
+            percentage: Math.round(((i + 1) / groups.length) * 90),
             stage: 'fetching_comments',
             currentGroup: {
-              vkId: String(groupId),
-              name: group.name || `Группа ${groupId}`,
+              vkId: group.vkId,
+              name: group.name,
               progress: 100
             },
             stats: {
               groupsCompleted: i + 1,
-              totalGroups: dbGroups.length,
+              totalGroups: groups.length,
               postsProcessed: totalPosts,
               commentsCollected: totalComments
             }
@@ -184,11 +188,12 @@ export class VkCollectWorker {
             jobId: job.id,
             taskId,
             groupId,
+            groupName: group.name,
             error: errorMsg
           });
 
           errors.push({
-            groupId: String(groupId),
+            groupId: group.vkId,
             error: errorMsg,
             timestamp: new Date()
           });
@@ -202,8 +207,8 @@ export class VkCollectWorker {
         percentage: 95,
         stage: 'saving_data',
         stats: {
-          groupsCompleted: dbGroups.length,
-          totalGroups: dbGroups.length,
+          groupsCompleted: groups.length,
+          totalGroups: groups.length,
           postsProcessed: totalPosts,
           commentsCollected: totalComments
         }
@@ -221,7 +226,7 @@ export class VkCollectWorker {
 
       if (finalStatus === 'completed') {
         await taskService.completeTask(taskId, {
-          totalGroups: dbGroups.length,
+          totalGroups: groups.length,
           processedPosts: totalPosts,
           processedComments: totalComments,
           errors: errors,
@@ -236,8 +241,8 @@ export class VkCollectWorker {
         percentage: 100,
         stage: 'completing',
         stats: {
-          groupsCompleted: dbGroups.length,
-          totalGroups: dbGroups.length,
+          groupsCompleted: groups.length,
+          totalGroups: groups.length,
           postsProcessed: totalPosts,
           commentsCollected: totalComments
         }
@@ -260,7 +265,7 @@ export class VkCollectWorker {
         taskId,
         commentsCollected: totalComments,
         postsProcessed: totalPosts,
-        groupsProcessed: dbGroups.length,
+        groupsProcessed: groups.length,
         errors,
         processingTime,
         finalStatus
@@ -294,16 +299,16 @@ export class VkCollectWorker {
    */
   private async processGroup(
     taskId: number,
-    groupId: string,
+    groupId: number,
     groupName: string,
     options: any,
     job: Job<VkCollectJobData>
   ): Promise<{ posts: number; comments: number }> {
     try {
-      // Конвертируем groupId в число для VK API
-      const numericGroupId = Math.abs(Number(groupId));
+      // Используем groupId напрямую
+      const numericGroupId = Math.abs(groupId);
 
-      if (!numericGroupId) {
+      if (!numericGroupId || isNaN(numericGroupId)) {
         throw new Error(`Invalid group ID: ${groupId}`);
       }
 
