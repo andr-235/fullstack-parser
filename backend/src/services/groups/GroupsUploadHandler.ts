@@ -36,7 +36,7 @@ import {
 import { GroupMapper } from '@/domain/groups/mappers';
 
 import { taskStorageService } from '@/infrastructure/storage/TaskStorageService';
-import { createVkApiBatchProcessor } from '@/infrastructure/processing/BatchProcessor';
+// import { createVkApiBatchProcessor } from '@/infrastructure/processing/BatchProcessor';
 
 /**
  * Результат загрузки файла

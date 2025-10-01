@@ -14,13 +14,13 @@
  * ```
  */
 
-import { CustomError } from 'ts-custom-error';
+// import { CustomError } from 'ts-custom-error'; // ESM incompatible
 
 /**
  * Base error для Groups domain
  * Все domain-специфичные ошибки наследуются от этого класса
  */
-export abstract class GroupsDomainError extends CustomError {
+export abstract class GroupsDomainError extends Error {
   constructor(
     message: string,
     public readonly code: string,

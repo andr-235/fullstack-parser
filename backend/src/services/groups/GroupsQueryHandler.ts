@@ -98,11 +98,9 @@ export class GroupsQueryHandler {
         data: transformedResult
       };
     } catch (error) {
-      const errorMsg = error instanceof GroupsDomainError
+      const errorMsg = error instanceof Error
         ? error.message
-        : error instanceof Error
-          ? error.message
-          : String(error);
+        : String(error);
 
       const errorCode = error instanceof GroupsDomainError
         ? error.code

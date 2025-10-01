@@ -1,5 +1,5 @@
 import { Queue, Job, JobsOptions } from 'bullmq';
-import pRetry from 'p-retry';
+// import pRetry from 'p-retry'; // ESM module incompatible with CommonJS
 import {
   AnyJobData,
   VkCollectJobData,
@@ -14,7 +14,7 @@ import logger from '@/utils/logger';
  * Использует generic методы для устранения дублирования кода
  *
  * Ответственность:
- * - Добавление jobs в очереди (с автоматическим retry через p-retry)
+ * - Добавление jobs в очереди
  * - Получение job по ID
  * - Удаление jobs
  * - Retry failed jobs
@@ -25,8 +25,6 @@ export class QueueJobHandler {
   /**
    * Generic метод для добавления jobs любого типа
    * Устраняет дублирование между addVkCollectJob и addProcessGroupsJob
-   *
-   * Использует p-retry для автоматических повторов при временных сбоях
    *
    * @param queueName - Имя очереди
    * @param jobName - Имя job'а
@@ -42,45 +40,27 @@ export class QueueJobHandler {
     taskId: number,
     options?: JobsOptions
   ): Promise<Job<T>> {
-    return pRetry(
-      async () => {
-        const queue = this.getQueue(queueName);
-        const jobData = { ...data, taskId } as T;
+    const queue = this.getQueue(queueName);
+    const jobData = { ...data, taskId } as T;
 
-        // Объединяем дефолтные опции из конфига с переданными
-        const defaultOpts = QUEUE_CONFIGS[queueName]?.defaultJobOptions || {};
-        const jobOptions: JobsOptions = {
-          ...defaultOpts,
-          ...options,
-          jobId: options?.jobId || `${jobName}-${taskId}`,
-        };
+    // Объединяем дефолтные опции из конфига с переданными
+    const defaultOpts = QUEUE_CONFIGS[queueName]?.defaultJobOptions || {};
+    const jobOptions: JobsOptions = {
+      ...defaultOpts,
+      ...options,
+      jobId: options?.jobId || `${jobName}-${taskId}`,
+    };
 
-        const job = await queue.add(jobName, jobData, jobOptions);
+    const job = await queue.add(jobName, jobData, jobOptions);
 
-        logger.info('Job added to queue', {
-          jobId: job.id,
-          queueName,
-          jobName,
-          taskId,
-        });
+    logger.info('Job added to queue', {
+      jobId: job.id,
+      queueName,
+      jobName,
+      taskId,
+    });
 
-        return job as Job<T>;
-      },
-      {
-        retries: 3,
-        minTimeout: 1000,
-        onFailedAttempt: (error) => {
-          logger.warn('Failed to add job, retrying', {
-            queueName,
-            jobName,
-            taskId,
-            attempt: error.attemptNumber,
-            retriesLeft: error.retriesLeft,
-            error: error.message,
-          });
-        },
-      }
-    );
+    return job as Job<T>;
   }
 
   /**
