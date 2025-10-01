@@ -318,26 +318,30 @@ export class VkIoService {
   }
 
   /**
-   * Получает информацию о группах
+   * Получает информацию о группах по ID или screen_name
    * Совместим с существующим интерфейсом
+   * @param groupIdentifiers - массив ID (number) или screen_names (string)
    */
-  async getGroupsInfo(groupIds: number[]): Promise<ProcessedGroup[]> {
+  async getGroupsInfo(groupIdentifiers: Array<number | string>): Promise<ProcessedGroup[]> {
     await this.initialize();
 
-    if (!groupIds || groupIds.length === 0) {
+    if (!groupIdentifiers || groupIdentifiers.length === 0) {
       return [];
     }
 
-    // Конвертируем в положительные ID для VK API
-    const positiveIds = groupIds.map(id => Math.abs(id));
+    // Конвертируем числовые ID в положительные, строки оставляем как есть
+    const processedIds = groupIdentifiers.map(id =>
+      typeof id === 'number' ? Math.abs(id) : id
+    );
 
     try {
       logger.info('Получение информации о группах через VK-IO', {
-        groupIds: positiveIds
+        groupIdentifiers: processedIds,
+        totalCount: processedIds.length
       });
 
       const response = await this.vk.api.groups.getById({
-        group_ids: positiveIds,
+        group_ids: processedIds,
         fields: ['name', 'screen_name', 'description', 'photo_50', 'members_count', 'is_closed']
       });
 
@@ -361,7 +365,7 @@ export class VkIoService {
           groupsArray = responseObj.items as VkGroup[];
         } else {
           logger.warn('Некорректный ответ от groups.getById', {
-            groupIds,
+            groupIdentifiers: processedIds,
             responseType: typeof response,
             isArray: Array.isArray(response),
             responseKeys: Object.keys(responseObj)
@@ -370,7 +374,7 @@ export class VkIoService {
         }
       } else {
         logger.warn('Некорректный ответ от groups.getById', {
-          groupIds,
+          groupIdentifiers: processedIds,
           responseType: typeof response,
           isArray: Array.isArray(response)
         });
@@ -393,8 +397,8 @@ export class VkIoService {
       }));
 
       logger.info('Информация о группах успешно получена через VK-IO', {
-        groupIds: positiveIds,
-        count: processedGroups.length
+        requestedCount: processedIds.length,
+        receivedCount: processedGroups.length
       });
 
       return processedGroups;
@@ -402,7 +406,7 @@ export class VkIoService {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('Ошибка получения информации о группах через VK-IO', {
-        groupIds,
+        groupIdentifiers: processedIds,
         error: errorMsg
       });
       throw new Error(`Ошибка получения информации о группах: ${errorMsg}`);

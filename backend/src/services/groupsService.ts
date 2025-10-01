@@ -203,69 +203,20 @@ class GroupsService {
       const invalidGroups: ProcessedGroup[] = [];
       let duplicates = 0;
 
-      // ШАГ 1: Резолвим screen_names в ID через VK API
-      const groupsWithScreenNames = groups.filter(g => !g.id && g.name);
-      const groupsWithIds = groups.filter(g => g.id);
+      // ШАГ 1: Подготавливаем идентификаторы групп (ID или screen_names)
+      const groupIdentifiers: Array<number | string> = groups.map(g => {
+        // Если есть ID - используем его, иначе используем screen_name
+        return g.id || g.name!;
+      }).filter(id => id !== undefined);
 
-      logger.info('Группы для резолвинга screen_names', {
+      logger.info('Подготовка идентификаторов групп', {
         totalGroups: groups.length,
-        withIds: groupsWithIds.length,
-        withScreenNames: groupsWithScreenNames.length
+        identifiersCount: groupIdentifiers.length,
+        sampleIdentifiers: groupIdentifiers.slice(0, 5)
       });
 
-      if (groupsWithScreenNames.length > 0) {
-        const screenNames = groupsWithScreenNames.map(g => g.name!);
-
-        // Резолвим screen_names в ID (без полной информации)
-        const resolvedMap = await vkIoService.resolveScreenNames(
-          screenNames,
-          (current, total) => {
-            // Обновляем прогресс задачи: резолвинг это первая часть обработки
-            const baseProcessed = groupsWithIds.length; // Группы с ID уже обработаны
-            const totalToProcess = groups.length;
-            const currentProcessed = baseProcessed + current;
-
-            this.updateTaskStatus(taskId, 'processing', {
-              validGroups: currentProcessed,
-              invalidGroups: invalidGroups.length
-            });
-          }
-        );
-
-        // Обновляем группы с резолвленными ID
-        for (const group of groupsWithScreenNames) {
-          const screenName = group.name!;
-          const resolvedInfo = resolvedMap.get(screenName);
-          if (resolvedInfo) {
-            groupsWithIds.push({
-              id: resolvedInfo.id,
-              name: screenName, // Временно используем screen_name
-              screenName: resolvedInfo.screen_name,
-              url: `https://vk.com/${screenName}`
-            });
-            logger.info('Screen_name успешно резолвлен в ID', {
-              screenName,
-              resolvedId: resolvedInfo.id
-            });
-          } else {
-            invalidGroups.push({
-              ...group,
-              error: 'Screen name not found or is not a group'
-            });
-            logger.warn('Screen_name не удалось резолвить', {
-              screenName: group.name
-            });
-          }
-        }
-      }
-
-      logger.info('Результат резолвинга screen_names', {
-        totalResolved: groupsWithIds.length - groups.filter(g => g.id).length,
-        totalInvalid: invalidGroups.length
-      });
-
-      // ШАГ 2: Все группы с ID считаем валидными (валидация через vk-io)
-      validGroups = groupsWithIds.map(group => ({
+      // Все группы считаем потенциально валидными
+      validGroups = groups.map(group => ({
         ...group,
         error: group.error || ''
       }));
@@ -284,7 +235,7 @@ class GroupsService {
         sampleInvalid: invalidGroups.slice(0, 3).map(g => ({ id: g.id, name: g.name, error: g.error }))
       });
 
-      // Получаем информацию о группах из VK API - СТРОГАЯ ПРОВЕРКА
+      // ШАГ 2: Получаем полную информацию о группах из VK API (батч-запрос)
       const enrichedGroups: Array<{
         vk_id: number;
         name: string | null;
@@ -296,19 +247,13 @@ class GroupsService {
         error?: string;
       }> = [];
 
-      // Извлекаем VK ID из групп (положительные)
-      const vkIds = validGroups
-        .map(group => group.id)
-        .filter((id): id is number => id !== undefined && id > 0);
-
       logger.info('Запрос информации о группах из VK API', {
-        requestedVkIds: vkIds.length,
-        sampleVkIds: vkIds.slice(0, 5)
+        totalIdentifiers: groupIdentifiers.length,
+        sampleIdentifiers: groupIdentifiers.slice(0, 5)
       });
 
-      if (vkIds.length === 0) {
-        logger.warn('Нет валидных VK ID для проверки', { taskId });
-        // Все группы невалидные
+      if (groupIdentifiers.length === 0) {
+        logger.warn('Нет идентификаторов групп для проверки', { taskId });
         this.updateTaskStatus(taskId, 'completed', {
           validGroups: 0,
           invalidGroups: groups.length + parseErrors.length,
@@ -324,77 +269,66 @@ class GroupsService {
         const batchSize = 500;
         const vkGroupsInfo: VkProcessedGroup[] = [];
 
-        for (let i = 0; i < vkIds.length; i += batchSize) {
-          const batch = vkIds.slice(i, i + batchSize);
+        for (let i = 0; i < groupIdentifiers.length; i += batchSize) {
+          const batch = groupIdentifiers.slice(i, i + batchSize);
           logger.info('Батч-запрос информации о группах', {
             batchNumber: Math.floor(i / batchSize) + 1,
             batchSize: batch.length,
-            totalBatches: Math.ceil(vkIds.length / batchSize)
+            totalBatches: Math.ceil(groupIdentifiers.length / batchSize)
           });
 
           const batchInfo = await vkIoService.getGroupsInfo(batch);
           vkGroupsInfo.push(...batchInfo);
 
           // Небольшая задержка между батчами
-          if (i + batchSize < vkIds.length) {
+          if (i + batchSize < groupIdentifiers.length) {
             await new Promise(resolve => setTimeout(resolve, 400));
           }
         }
 
         logger.info('Батч-запросы завершены', {
-          requestedCount: vkIds.length,
+          requestedCount: groupIdentifiers.length,
           receivedCount: vkGroupsInfo.length,
-          missingCount: vkIds.length - vkGroupsInfo.length
+          notFoundCount: groupIdentifiers.length - vkGroupsInfo.length
         });
 
-        // Создаем Map для быстрого поиска
-        const vkGroupsMap = new Map<number, typeof vkGroupsInfo[0]>(
-          vkGroupsInfo.map(g => [g.id, g])
-        );
+        // Преобразуем полученную информацию в формат для БД
+        for (const vkInfo of vkGroupsInfo) {
+          enrichedGroups.push({
+            vk_id: vkInfo.id,
+            name: vkInfo.name || `Группа ${vkInfo.id}`,
+            screen_name: vkInfo.screen_name || null,
+            photo_50: vkInfo.photo_50 || null,
+            members_count: vkInfo.members_count || null,
+            is_closed: vkInfo.is_closed ? Number(vkInfo.is_closed) : 0,
+            description: vkInfo.description || null
+          });
+        }
 
-        // Проверяем каждый запрошенный ID
-        for (const vkId of vkIds) {
-          const vkInfo = vkGroupsMap.get(vkId);
-          const originalGroup = validGroups.find(g => g.id === vkId);
+        // Группы, которые не были найдены через VK API - добавляем в invalidGroups
+        const foundIds = new Set(vkGroupsInfo.map(g => g.id));
+        const foundScreenNames = new Set(vkGroupsInfo.map(g => g.screen_name).filter(Boolean));
 
-          if (vkInfo) {
-            // Группа доступна в VK - сохраняем полную информацию
-            enrichedGroups.push({
-              vk_id: vkId,
-              name: vkInfo.name || `Группа ${vkId}`,
-              screen_name: vkInfo.screen_name || null,
-              photo_50: vkInfo.photo_50 || null,
-              members_count: vkInfo.members_count || null,
-              is_closed: vkInfo.is_closed ? Number(vkInfo.is_closed) : 0,
-              description: vkInfo.description || null
+        for (const group of validGroups) {
+          const identifier = group.id || group.name;
+          const isFound = typeof identifier === 'number'
+            ? foundIds.has(identifier)
+            : foundScreenNames.has(identifier as string);
+
+          if (!isFound) {
+            invalidGroups.push({
+              ...group,
+              error: 'Group not found or not accessible via VK API'
             });
-          } else {
-            // Группа НЕ доступна через getById, но если она была резолвлена - значит существует
-            // Используем данные из резолвинга (screen_name)
-            const screenName = (originalGroup as any)?.screenName || null;
-            const groupName = originalGroup?.name || screenName || `Группа ${vkId}`;
-
-            enrichedGroups.push({
-              vk_id: vkId,
-              name: groupName,
-              screen_name: screenName,
-              photo_50: null,
-              members_count: null,
-              is_closed: 1, // Считаем закрытой если не получили данные
-              description: null
-            });
-            logger.info('Группа резолвлена но недоступна через getById (закрыта/ограничена)', {
-              vkId,
-              screenName,
-              groupName
+            logger.warn('Группа не найдена через VK API', {
+              identifier
             });
           }
         }
 
         logger.info('Валидация через VK API завершена', {
           totalGroups: enrichedGroups.length,
-          accessibleGroups: vkGroupsInfo.length,
-          restrictedGroups: vkIds.length - vkGroupsInfo.length,
+          invalidGroups: invalidGroups.length,
           sampleGroups: enrichedGroups.slice(0, 3).map(g => ({
             vk_id: g.vk_id,
             name: g.name,
