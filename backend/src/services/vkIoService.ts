@@ -101,6 +101,12 @@ export class VkIoService {
   }
 
   private async performInitialization(): Promise<void> {
+    console.log('=== VkIoService performInitialization START ===');
+    console.log('VK_ACCESS_TOKEN exists:', !!process.env.VK_ACCESS_TOKEN);
+    console.log('VK_ACCESS_TOKEN length:', process.env.VK_ACCESS_TOKEN?.length);
+    console.log('VK_LOGIN exists:', !!process.env.VK_LOGIN);
+    console.log('VK_PASSWORD exists:', !!process.env.VK_PASSWORD);
+
     logger.info('[VkIoService] performInitialization() started');
     try {
       // Отладочная информация о переменных окружения
