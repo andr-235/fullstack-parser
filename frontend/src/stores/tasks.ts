@@ -96,9 +96,10 @@ export const useTasksStore = defineStore('tasks', () => {
         status: filters.value.status || undefined,
         ...params
       })
-      tasks.value = response.data.data?.tasks || []
-      pagination.value.total = response.data.data?.total || 0
-      pagination.value.totalPages = response.data.data?.totalPages || 0
+      // Backend возвращает: { success: true, data: [...tasks], pagination: {...} }
+      tasks.value = response.data.data || []
+      pagination.value.total = response.data.pagination?.total || 0
+      pagination.value.totalPages = response.data.pagination?.totalPages || 0
     } catch (err: any) {
       error.value.push(err.response?.data?.error || err.response?.data?.message || 'Ошибка загрузки задач')
     } finally {
