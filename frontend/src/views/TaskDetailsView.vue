@@ -461,8 +461,10 @@ const getStatusText = (status) => {
 const getTypeText = (type) => {
   const texts = {
     'comments': 'Комментарии',
+    'fetch_comments': 'Сбор комментариев',
     'vk_collect': 'VK Сбор',
-    'groups': 'Группы'
+    'groups': 'Группы',
+    'process_groups': 'Обработка групп'
   }
   return texts[type] || type
 }

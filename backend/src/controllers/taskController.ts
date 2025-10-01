@@ -133,11 +133,22 @@ const getTask = async (req: Request<{ taskId: string }>, res: Response, next: Ne
 
     // Возвращаем полную информацию о задаче с точным прогрессом
     res.success({
+      id: taskId,
       taskId,
       status: taskStatus.status,
       type: taskStatus.type,
+      priority: taskStatus.priority,
       createdAt: taskStatus.createdAt,
       updatedAt: taskStatus.updatedAt,
+      startedAt: taskStatus.startedAt,
+      completedAt: taskStatus.finishedAt,
+      finishedAt: taskStatus.finishedAt,
+      error: taskStatus.error,
+      errors: taskStatus.errors,
+      result: taskStatus.result,
+      parameters: taskStatus.parameters,
+      groups: taskStatus.groups,
+      executionTime: taskStatus.executionTime,
       progress: {
         ...progressResult,
         metrics

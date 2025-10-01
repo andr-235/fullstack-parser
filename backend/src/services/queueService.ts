@@ -13,6 +13,7 @@ import {
   createQueueRedisConnection,
   createQueueEventsRedisConnection,
 } from '@/config/queue';
+import { vkCollectWorker } from '@/workers';
 
 /**
  * Базовый интерфейс для worker'ов
@@ -114,11 +115,14 @@ export class QueueService implements IQueueService {
     try {
       logger.info('Initializing BullMQ workers...');
 
-      // Инициализируем Groups Parse Worker
-      // Worker'ы теперь инициализируются отдельно в server.ts или через workers/index.ts
-      // const groupsParseWorker = new GroupsParseWorker();
-      // await groupsParseWorker.start();
-      // this.workers.set(QUEUE_NAMES.PROCESS_GROUPS, groupsParseWorker);
+      // Инициализируем VK Collect Worker
+      await vkCollectWorker.start();
+      this.workers.set(QUEUE_NAMES.VK_COLLECT, vkCollectWorker);
+
+      logger.info('VkCollectWorker started', {
+        queueName: QUEUE_NAMES.VK_COLLECT,
+        status: vkCollectWorker.getStatus()
+      });
 
       logger.info('All BullMQ workers initialized successfully', {
         workersCount: this.workers.size
