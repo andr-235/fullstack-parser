@@ -2,6 +2,8 @@ import { Router, Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import logger from '@/utils/logger';
 import taskService from '@/services/taskService';
+import { queueService } from '@/services/queueService';
+import dbRepo from '@/repositories/dbRepo';
 import { TaskStatus, TaskType, CreateTaskRequest } from '@/types/task';
 import { ApiResponse, PaginationParams, PaginatedResponse } from '@/types/express';
 import { ProgressCalculator } from '@/services/progressCalculator';
@@ -180,20 +182,71 @@ const createVkCollectTask = async (req: Request<{}, ApiResponse, CreateVkCollect
       requestId
     });
 
-    const { groups } = req.body;
+    const { groups: groupIds } = req.body;
+
+    // Получаем информацию о группах из БД
+    const groupsFromDb = await dbRepo.getGroupsByIds(groupIds);
+
+    logger.info('Groups fetched from database', {
+      requested: groupIds.length,
+      found: groupsFromDb.length,
+      requestId
+    });
+
+    // Создаем массив групп с информацией для job
+    const groupsWithInfo = groupsFromDb.map(group => ({
+      vkId: String(group.vkId),
+      name: group.name
+    }));
+
+    // Создаем задачу в БД
     const taskData: CreateTaskRequest = {
       type: 'fetch_comments',
-      groupIds: groups,
+      groupIds,
       options: {}
     };
 
     const { taskId } = await taskService.createTask(taskData);
-    logger.info('VK collect task created successfully', { taskId, status: 'created', groupsCount: groups.length, requestId });
+
+    // Добавляем задачу в очередь BullMQ
+    try {
+      await queueService.addVkCollectJob(
+        {
+          type: 'fetch_comments',
+          metadata: {
+            groups: groupsWithInfo,
+            options: {}
+          }
+        },
+        taskId
+      );
+
+      logger.info('VK collect job added to queue', {
+        taskId,
+        groupsCount: groupsWithInfo.length,
+        requestId
+      });
+    } catch (queueErr) {
+      const errorMsg = queueErr instanceof Error ? queueErr.message : String(queueErr);
+      logger.warn('Failed to enqueue VK collect job, task will still be created', {
+        taskId,
+        error: errorMsg,
+        requestId
+      });
+    }
+
+    logger.info('VK collect task created successfully', {
+      taskId,
+      status: 'created',
+      groupsCount: groupIds.length,
+      requestId
+    });
 
     res.status(201).success({
       taskId,
       status: 'created',
       type: taskData.type,
+      groupsCount: groupsWithInfo.length,
       createdAt: new Date().toISOString()
     }, 'Задача на сбор данных успешно создана');
   } catch (error) {

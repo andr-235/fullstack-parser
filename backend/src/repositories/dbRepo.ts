@@ -425,6 +425,44 @@ class DBRepo {
   }
 
   /**
+   * Получает группы по их ID
+   * @param ids Массив ID групп
+   * @returns Массив групп с информацией
+   */
+  async getGroupsByIds(ids: number[]): Promise<Array<{
+    id: number;
+    vkId: number;
+    name: string;
+    screenName: string | null;
+  }>> {
+    try {
+      const groups = await prisma.groups.findMany({
+        where: {
+          id: { in: ids }
+        },
+        select: {
+          id: true,
+          vk_id: true,
+          name: true,
+          screen_name: true
+        }
+      });
+
+      // Маппим в camelCase для TypeScript
+      return groups.map(g => ({
+        id: g.id,
+        vkId: g.vk_id,
+        name: g.name,
+        screenName: g.screen_name
+      }));
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get groups by IDs', { ids, error: errorMsg });
+      throw new Error(`Failed to get groups: ${errorMsg}`);
+    }
+  }
+
+  /**
    * Получает группы с VK данными по ID задачи
    * @param taskId - ID задачи
    * @returns Массив групп с vk_id и name
