@@ -163,3 +163,28 @@ export async function flushRedisDb(redis: IORedis): Promise<void> {
 
 // Экспорт конфигурации для использования в других модулях
 export const redisConfig = getRedisConfig();
+
+/**
+ * Singleton Redis client для общего использования
+ * Используется для TaskStorageService и других сервисов
+ */
+let redisClientInstance: IORedis | null = null;
+
+export function getRedisClient(): IORedis {
+  if (!redisClientInstance) {
+    redisClientInstance = createRedisConnection();
+    logger.info('Redis singleton client created');
+  }
+  return redisClientInstance;
+}
+
+/**
+ * Закрывает singleton соединение (для graceful shutdown)
+ */
+export async function closeRedisClient(): Promise<void> {
+  if (redisClientInstance) {
+    await redisClientInstance.quit();
+    redisClientInstance = null;
+    logger.info('Redis singleton client closed');
+  }
+}

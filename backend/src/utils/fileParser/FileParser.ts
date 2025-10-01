@@ -4,7 +4,7 @@ import { Logger } from '@/types/common';
 import { ValidationError } from '@/utils/errors';
 import {
   FileParseResult,
-  ProcessedGroup,
+  LegacyParsedGroup,
   ValidationResult
 } from '@/types/common';
 import { GroupLineParser } from './GroupLineParser';
@@ -114,7 +114,7 @@ export class FileParser {
       const content = await fs.promises.readFile(filePath, fileEncoding);
       const lines = content.split('\n');
 
-      const groups: ProcessedGroup[] = [];
+      const groups: LegacyParsedGroup[] = [];
       const errors: string[] = [];
       const duplicateIds = new Set<number>();
 
@@ -332,7 +332,7 @@ export class FileParser {
   }
 
   private logParsingResults(
-    groups: ProcessedGroup[],
+    groups: LegacyParsedGroup[],
     totalLines: number,
     errorsCount: number,
     metadata: FileParseMetadata

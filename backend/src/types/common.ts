@@ -14,7 +14,12 @@ export interface FileUpload {
   buffer: Buffer;
 }
 
-export interface ProcessedGroup {
+// ProcessedGroup был перемещен в domain/groups/types.ts
+// Используйте VkGroupRaw или ParsedGroupInput из domain layer
+
+// Временный интерфейс для обратной совместимости с fileParser
+// TODO: Рефакторить fileParser для использования ParsedGroupInput
+export interface LegacyParsedGroup {
   id?: number;
   name: string;
   screenName?: string;
@@ -25,7 +30,7 @@ export interface ProcessedGroup {
 }
 
 export interface FileParseResult {
-  groups: ProcessedGroup[];
+  groups: LegacyParsedGroup[];
   errors: string[];
   totalProcessed: number;
 }

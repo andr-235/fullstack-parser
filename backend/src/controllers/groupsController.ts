@@ -129,7 +129,7 @@ const getUploadStatus = async (req: Request<{ taskId: string }>, res: Response):
   const { taskId } = req.params;
 
   try {
-    const result = groupsService.getUploadStatus(taskId);
+    const result = await groupsService.getUploadStatus(taskId);
 
     if (result.success) {
       res.success(result.data, 'Статус загрузки получен');

@@ -11,6 +11,9 @@ import {
   VkGroupsGetByIdResponse
 } from '@/types/vk';
 
+// Domain types для групп
+import { VkGroupRaw } from '@/domain/groups/types';
+
 // Интерфейсы для результатов, совместимые с существующим кодом
 export interface ProcessedPost {
   vk_post_id: number;
@@ -32,15 +35,8 @@ export interface ProcessedComment {
   likes: number;
 }
 
-export interface ProcessedGroup {
-  id: number;
-  name: string;
-  screen_name: string;
-  description: string;
-  photo_50: string;
-  members_count: number;
-  is_closed: 0 | 1 | 2;
-}
+// Используем VkGroupRaw из domain layer вместо дублирующего ProcessedGroup
+export type ProcessedGroup = VkGroupRaw;
 
 export interface GetPostsResult {
   posts: ProcessedPost[];
