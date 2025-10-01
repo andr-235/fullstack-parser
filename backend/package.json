@@ -50,6 +50,7 @@
   "dependencies": {
     "@prisma/client": "^6.16.2",
     "@types/express-request-id": "^1.4.3",
+    "@types/p-retry": "^3.0.0",
     "@vk-io/authorization": "^1.4.1",
     "axios": "^1.12.2",
     "axios-retry": "^4.5.0",
@@ -67,6 +68,7 @@
     "lodash": "^4.17.21",
     "multer": "^2.0.2",
     "p-limit": "^6.1.0",
+    "p-retry": "^7.0.0",
     "pg": "^8.16.3",
     "prisma": "^6.16.2",
     "rate-limiter-flexible": "^7.3.2",

@@ -309,3 +309,77 @@ export class RedisConnectionError extends Error {
     this.name = 'RedisConnectionError';
   }
 }
+
+// =============================================================================
+// Worker Base Interface
+// =============================================================================
+
+/**
+ * Статус worker'а
+ */
+export interface WorkerStatus {
+  isRunning: boolean;
+  isPaused: boolean;
+  concurrency: number;
+  queueName: string;
+}
+
+/**
+ * Health check worker'а
+ */
+export interface WorkerHealthCheck {
+  status: 'healthy' | 'unhealthy';
+  details: {
+    isRunning: boolean;
+    isPaused: boolean;
+    concurrency: number;
+    queueName: string;
+    uptime?: number;
+  };
+  error?: string;
+}
+
+/**
+ * Базовый интерфейс для worker'ов
+ * Определяет контракт для всех worker'ов в системе
+ */
+export interface BaseWorker {
+  /**
+   * Запуск worker'а
+   */
+  start(): Promise<void>;
+
+  /**
+   * Остановка worker'а
+   */
+  stop(): Promise<void>;
+
+  /**
+   * Приостановка обработки job'ов
+   */
+  pause(): Promise<void>;
+
+  /**
+   * Возобновление обработки job'ов
+   */
+  resume(): Promise<void>;
+
+  /**
+   * Получение текущего статуса worker'а
+   */
+  getStatus(): WorkerStatus;
+
+  /**
+   * Health check worker'а (опционально)
+   */
+  healthCheck?(): Promise<WorkerHealthCheck>;
+}
+
+/**
+ * Классификация ошибок для retry стратегии
+ */
+export enum ErrorSeverity {
+  TRANSIENT = 'transient',    // Можно retry (временные ошибки)
+  PERMANENT = 'permanent',     // Нельзя retry (постоянные ошибки)
+  UNKNOWN = 'unknown'          // Неизвестный тип ошибки
+}
