@@ -102,7 +102,7 @@ const createTask = async (req: Request<{}, ApiResponse, CreateTaskRequestBody>, 
  */
 const getTask = async (req: Request<{ taskId: string }>, res: Response, next: NextFunction): Promise<void> => {
   const requestId = (req as any).requestId || (req as any).id;
-  const taskId = (req as any).validatedTaskId; // Получаем из middleware
+  const taskId = (req as any).validatedParams?.taskId || Number(req.params.taskId); // Получаем из middleware
 
   try {
     const taskStatus = await taskService.getTaskStatus(taskId);
