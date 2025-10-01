@@ -80,22 +80,31 @@ export class VkIoService {
    * Поддерживает два варианта: существующий токен или DirectAuthorization
    */
   private async initialize(): Promise<void> {
+    logger.info('[VkIoService] initialize() called', {
+      isInitialized: this.isInitialized,
+      hasInitializationPromise: !!this.initializationPromise
+    });
+
     if (this.isInitialized) {
+      logger.info('[VkIoService] Already initialized, returning');
       return;
     }
 
     if (this.initializationPromise) {
+      logger.info('[VkIoService] Initialization in progress, waiting');
       return this.initializationPromise;
     }
 
+    logger.info('[VkIoService] Starting new initialization');
     this.initializationPromise = this.performInitialization();
     await this.initializationPromise;
   }
 
   private async performInitialization(): Promise<void> {
+    logger.info('[VkIoService] performInitialization() started');
     try {
       // Отладочная информация о переменных окружения
-      logger.info('VK API initialization debug info', {
+      logger.info('[VkIoService] VK API initialization debug info', {
         hasVkAccessToken: !!process.env.VK_ACCESS_TOKEN,
         hasVkToken: !!process.env.VK_TOKEN,
         hasVkLogin: !!process.env.VK_LOGIN,
@@ -176,12 +185,14 @@ export class VkIoService {
    * Совместим с существующим интерфейсом
    */
   async getPosts(groupId: number): Promise<GetPostsResult> {
+    logger.info('[VkIoService] getPosts() called', { groupId });
     await this.initialize();
+    logger.info('[VkIoService] getPosts() after initialize', { groupId });
 
     const ownerId = -Math.abs(groupId); // Группы имеют отрицательный ID
 
     try {
-      logger.info('Получение постов через VK-IO', { groupId, ownerId });
+      logger.info('[VkIoService] Получение постов через VK-IO', { groupId, ownerId });
 
       const response = await this.vk.api.wall.get({
         owner_id: ownerId,
