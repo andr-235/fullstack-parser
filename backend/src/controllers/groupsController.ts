@@ -23,12 +23,14 @@ const uploadQuerySchema = Joi.object({
   encoding: Joi.string().valid('utf-8', 'utf8', 'ascii', 'base64', 'hex').default('utf-8')
 });
 
-const getGroupsQuerySchema = paginationSchema.keys({
+const getGroupsQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(10000).default(20),
   status: Joi.string().valid('all', 'active', 'inactive', 'pending').optional(),
   search: Joi.string().allow('').min(0).max(255).optional(),
   sortBy: Joi.string().valid('id', 'name', 'vkId', 'createdAt', 'updatedAt', 'uploadedAt', 'uploaded_at').default('id'),
   sortOrder: Joi.string().valid('ASC', 'DESC', 'asc', 'desc').default('ASC')
-}).options({ convert: true });
+}).options({ convert: true, allowUnknown: true, stripUnknown: false });
 
 const batchDeleteSchema = Joi.object({
   groupIds: Joi.array().items(Joi.number().integer().positive()).min(1).max(100).required()
