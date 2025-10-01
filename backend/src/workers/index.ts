@@ -1,4 +1,6 @@
-import vkCollectWorker from './vkCollectWorker';
+/**
+ * @fileoverview Workers экспорты
+ * Централизованный экспорт всех worker'ов для удобного импорта
+ */
 
-export { VkCollectWorker } from './vkCollectWorker';
-export default vkCollectWorker;
+export { default as groupsParseWorker, GroupsParseWorker } from './groupsParseWorker';

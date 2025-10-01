@@ -1,4 +1,4 @@
-import { Queue, Job, QueueEvents, JobsOptions } from 'bullmq';
+import { Queue, Job, QueueEvents, JobsOptions, Worker } from 'bullmq';
 import logger from '@/utils/logger';
 import {
   IQueueService,
@@ -13,7 +13,26 @@ import {
   createQueueRedisConnection,
   createQueueEventsRedisConnection,
 } from '@/config/queue';
-import { VkCollectWorker } from '@/workers/vkCollectWorker';
+
+/**
+ * Базовый интерфейс для worker'ов
+ */
+interface BaseWorker {
+  start(): Promise<void>;
+  stop(): Promise<void>;
+  getStatus(): { isRunning: boolean; isPaused: boolean; concurrency: number; queueName: string };
+  healthCheck?(): Promise<{
+    status: 'healthy' | 'unhealthy';
+    details: {
+      isRunning: boolean;
+      isPaused: boolean;
+      concurrency: number;
+      queueName: string;
+      uptime?: number;
+    };
+    error?: string;
+  }>;
+}
 
 /**
  * Сервис для управления BullMQ очередями
@@ -21,7 +40,7 @@ import { VkCollectWorker } from '@/workers/vkCollectWorker';
 export class QueueService implements IQueueService {
   private queues: Map<string, Queue> = new Map();
   private queueEvents: Map<string, QueueEvents> = new Map();
-  private workers: Map<string, VkCollectWorker> = new Map();
+  private workers: Map<string, BaseWorker> = new Map();
   private isInitialized = false;
 
   /**
@@ -95,10 +114,11 @@ export class QueueService implements IQueueService {
     try {
       logger.info('Initializing BullMQ workers...');
 
-      // Инициализируем VK Collect Worker
-      const vkCollectWorker = new VkCollectWorker();
-      await vkCollectWorker.start();
-      this.workers.set(QUEUE_NAMES.VK_COLLECT, vkCollectWorker);
+      // Инициализируем Groups Parse Worker
+      // Worker'ы теперь инициализируются отдельно в server.ts или через workers/index.ts
+      // const groupsParseWorker = new GroupsParseWorker();
+      // await groupsParseWorker.start();
+      // this.workers.set(QUEUE_NAMES.PROCESS_GROUPS, groupsParseWorker);
 
       logger.info('All BullMQ workers initialized successfully', {
         workersCount: this.workers.size
@@ -250,7 +270,8 @@ export class QueueService implements IQueueService {
       logger.info(`Process groups job added`, {
         jobId: job.id,
         taskId,
-        filePath: jobData.metadata.filePath,
+        groupIdentifiers: jobData.metadata.groupIdentifiers.length,
+        source: jobData.metadata.source,
       });
 
       return job;
@@ -522,21 +543,24 @@ export class QueueService implements IQueueService {
       const workersHealth = [];
       for (const [workerName, worker] of this.workers) {
         try {
-          const workerHealthCheck = await worker.healthCheck();
-          workersHealth.push({
-            name: workerName,
-            status: workerHealthCheck.status,
-            isRunning: workerHealthCheck.details.isRunning,
-            isPaused: workerHealthCheck.details.isPaused,
-            concurrency: workerHealthCheck.details.concurrency
-          });
+          // Проверяем наличие метода healthCheck перед вызовом
+          const workerHealthCheck = worker.healthCheck ? await worker.healthCheck() : null;
+          if (workerHealthCheck) {
+            workersHealth.push({
+              name: workerName,
+              status: workerHealthCheck.status,
+              isRunning: workerHealthCheck.details.isRunning,
+              isPaused: workerHealthCheck.details.isPaused,
+              concurrency: workerHealthCheck.details.concurrency
+            });
+          }
         } catch (error) {
           workersHealth.push({
             name: workerName,
             status: 'unhealthy' as const,
             isRunning: false,
             isPaused: false,
-            processing: 0
+            concurrency: 0
           });
         }
       }

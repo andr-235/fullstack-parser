@@ -25,18 +25,54 @@ export interface VkCollectJobData extends BullJobData {
 }
 
 /**
- * Обработка групп из файла
+ * Обработка групп из файла - парсинг групп VK через VK-IO API
+ * Принимает массив идентификаторов (VK ID или screen_name)
  */
 export interface ProcessGroupsJobData extends BullJobData {
   type: 'process_groups';
   metadata: {
-    filePath: string;
-    originalName: string;
-    validationRules?: {
-      requireVkId?: boolean;
-      requireName?: boolean;
-    };
+    groupIdentifiers: string[];  // VK ID (числа как строки) или screen_name
+    source: 'file' | 'manual';   // Источник данных
+    originalFileName?: string;   // Имя загруженного файла
   };
+}
+
+/**
+ * Прогресс выполнения парсинга групп
+ */
+export interface GroupsParseJobProgress extends JobProgress {
+  percentage: number;  // 0-100
+  stage: 'init' | 'fetching' | 'saving' | 'done';
+  currentBatch?: number;
+  totalBatches?: number;
+  stats: {
+    total: number;      // Всего идентификаторов
+    processed: number;  // Обработано
+    valid: number;      // Валидных групп найдено
+    invalid: number;    // Невалидных/недоступных
+    duplicate: number;  // Дубликатов в БД
+  };
+}
+
+/**
+ * Результат выполнения парсинга групп
+ */
+export interface GroupsParseJobResult {
+  success: boolean;
+  taskId: number;
+  stats: {
+    total: number;
+    valid: number;
+    invalid: number;
+    duplicate: number;
+    saved: number;
+  };
+  errors: Array<{
+    identifier: string;
+    error: string;
+    timestamp: Date;
+  }>;
+  processingTimeMs: number;
 }
 
 /**
@@ -152,12 +188,12 @@ export type AnyJobData = VkCollectJobData | ProcessGroupsJobData | AnalyzePostsJ
 /**
  * Все возможные типы job results
  */
-export type AnyJobResult = VkCollectJobResult | any; // Расширится по мере добавления новых типов
+export type AnyJobResult = VkCollectJobResult | GroupsParseJobResult | any; // Расширится по мере добавления новых типов
 
 /**
  * Все возможные типы job progress
  */
-export type AnyJobProgress = VkCollectJobProgress | JobProgress;
+export type AnyJobProgress = VkCollectJobProgress | GroupsParseJobProgress | JobProgress;
 
 // =============================================================================
 // BullMQ Typed Wrappers
