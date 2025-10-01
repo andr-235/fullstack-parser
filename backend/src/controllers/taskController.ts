@@ -195,21 +195,6 @@ const createVkCollectTask = async (req: Request<{}, ApiResponse, CreateVkCollect
 
     const { groups: groupIds } = req.body;
 
-    // Получаем информацию о группах из БД
-    const groupsFromDb = await dbRepo.getGroupsByIds(groupIds);
-
-    logger.info('Groups fetched from database', {
-      requested: groupIds.length,
-      found: groupsFromDb.length,
-      requestId
-    });
-
-    // Создаем массив групп с информацией для job
-    const groupsWithInfo = groupsFromDb.map(group => ({
-      vkId: String(group.vkId),
-      name: group.name
-    }));
-
     // Создаем задачу в БД
     const taskData: CreateTaskRequest = {
       type: 'fetch_comments',
@@ -220,12 +205,12 @@ const createVkCollectTask = async (req: Request<{}, ApiResponse, CreateVkCollect
     const { taskId } = await taskService.createTask(taskData);
 
     // Добавляем задачу в очередь BullMQ
+    // Группы будут получены из БД внутри worker'а
     try {
       await queueService.addVkCollectJob(
         {
           type: 'fetch_comments',
           metadata: {
-            groups: groupsWithInfo,
             options: {}
           }
         },
@@ -234,7 +219,7 @@ const createVkCollectTask = async (req: Request<{}, ApiResponse, CreateVkCollect
 
       logger.info('VK collect job added to queue', {
         taskId,
-        groupsCount: groupsWithInfo.length,
+        groupsCount: groupIds.length,
         requestId
       });
     } catch (queueErr) {
@@ -257,7 +242,7 @@ const createVkCollectTask = async (req: Request<{}, ApiResponse, CreateVkCollect
       taskId,
       status: 'created',
       type: taskData.type,
-      groupsCount: groupsWithInfo.length,
+      groupsCount: groupIds.length,
       createdAt: new Date().toISOString()
     }, 'Задача на сбор данных успешно создана');
   } catch (error) {

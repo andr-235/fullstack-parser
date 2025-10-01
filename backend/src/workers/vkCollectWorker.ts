@@ -70,12 +70,11 @@ export class VkCollectWorker {
   private async processJob(job: Job<VkCollectJobData>): Promise<VkCollectJobResult> {
     const startTime = performance.now();
     const { taskId, metadata } = job.data;
-    const { groups, options } = metadata;
+    const { options } = metadata;
 
     logger.info('VK collect job started', {
       jobId: job.id,
       taskId,
-      groupsCount: groups.length,
       options
     });
 
@@ -90,11 +89,42 @@ export class VkCollectWorker {
         );
       }
 
+      // Получаем группы из БД по groupIds из задачи
+      const groupIds = (task.groups as number[]) || [];
+      if (!groupIds || groupIds.length === 0) {
+        throw new WorkerError(
+          `No groups found for task ${taskId}`,
+          'NO_GROUPS_PROVIDED',
+          job.id?.toString()
+        );
+      }
+
+      logger.info('Fetching groups from database', {
+        jobId: job.id,
+        taskId,
+        groupIdsCount: groupIds.length
+      });
+
+      const groupsFromDb = await dbRepo.getGroupsByIds(groupIds);
+
+      logger.info('Groups fetched from database', {
+        jobId: job.id,
+        taskId,
+        requested: groupIds.length,
+        found: groupsFromDb.length
+      });
+
+      // Создаем массив групп для обработки
+      const groups = groupsFromDb.map(g => ({
+        vkId: String(g.vkId),
+        name: g.name || `Группа ${g.vkId}`
+      }));
+
       // Валидация
       if (!groups || groups.length === 0) {
         throw new WorkerError(
-          `No groups provided for task ${taskId}`,
-          'NO_GROUPS_PROVIDED',
+          `No groups found in database for task ${taskId}`,
+          'NO_GROUPS_FOUND',
           job.id?.toString()
         );
       }
@@ -119,7 +149,7 @@ export class VkCollectWorker {
         }
       });
 
-      logger.info('Processing groups from job metadata', {
+      logger.info('Processing groups from database', {
         jobId: job.id,
         taskId,
         groupsCount: groups.length

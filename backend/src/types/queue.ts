@@ -7,14 +7,11 @@ import { TaskType, TaskStatus, BullJobData, JobProgress } from './task';
 
 /**
  * VK коллекция задач - основной тип job'ов для сбора комментариев
+ * Группы получаются из БД через task.groups, а не передаются в job
  */
 export interface VkCollectJobData extends BullJobData {
   type: 'fetch_comments';
   metadata: {
-    groups: Array<{
-      vkId: string;
-      name: string;
-    }>;
     options: {
       limit?: number;
       includeReplies?: boolean;

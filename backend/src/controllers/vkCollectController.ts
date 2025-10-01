@@ -123,15 +123,12 @@ const createVkCollectTask = async (req: Request<{}, ApiResponse, VkCollectReques
     const { taskId } = await taskService.createTask(taskData);
 
     // Add job to BullMQ via QueueService (type-safe wrapper)
+    // Группы будут получены из БД внутри worker'а
     try {
-      // QueueService expects job data without taskId (it will be appended internally)
-      const vkGroups = groupsWithNames.map(g => ({ vkId: String(g.id), name: g.name }));
-
       await queueService.addVkCollectJob(
         {
           type: 'fetch_comments',
           metadata: {
-            groups: vkGroups,
             options: {}
           }
         },

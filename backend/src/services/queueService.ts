@@ -230,8 +230,7 @@ export class QueueService implements IQueueService {
 
       logger.info(`VK collect job added`, {
         jobId: job.id,
-        taskId,
-        groupsCount: jobData.metadata.groups.length,
+        taskId
       });
 
       return job;
