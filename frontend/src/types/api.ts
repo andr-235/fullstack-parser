@@ -147,7 +147,7 @@ export type PaginatedResponse<T = any> = AxiosResponse<PaginatedApiResponse<T>>
 
 // API function types
 export interface TasksApiType {
-  getTasks: (params?: Partial<PaginationParams & { status?: string }>) => Promise<ApiResponse<TasksResponse>>
+  getTasks: (params?: Partial<PaginationParams & { status?: string }>) => Promise<PaginatedResponse<Task>>
   createVkCollectTask: (data: VkCollectTaskData) => Promise<ApiResponse<{ taskId: string | number }>>
   getTaskDetails: (taskId: string | number) => Promise<ApiResponse<Task>>
 }
