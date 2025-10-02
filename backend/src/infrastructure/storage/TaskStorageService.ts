@@ -31,7 +31,7 @@
 import { Redis } from 'ioredis';
 import { GroupUploadTask } from '@/domain/groups/types';
 import { TaskStorageError, TaskNotFoundError } from '@/domain/groups/errors';
-import logger from '@/utils/logger';
+import logger from '@infrastructure/utils/logger';
 
 /**
  * Конфигурация для TaskStorageService
@@ -530,7 +530,7 @@ export class TaskStorageService {
 
 // ============ Factory & Singleton ============
 
-import { getRedisClient } from '@/config/redis';
+import { getRedisClient } from '@infrastructure/config/redis';
 
 /**
  * Singleton экземпляр TaskStorageService

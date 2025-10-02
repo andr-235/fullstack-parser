@@ -7,12 +7,11 @@ import crypto from 'crypto';
 import express, { Request, Response, NextFunction, Application } from 'express';
 import cors from 'cors';
 
-import logger from '@/utils/logger';
-import { PrismaService } from '@/config/prisma';
-import { queueService } from '@/services/queueService';
-import { setupRoutes } from '@/routes';
-import { ApiResponse } from '@/types/express';
-// Убираем импорты старых middleware, которые были удалены или перенесены
+import logger from '@infrastructure/utils/logger';
+import { PrismaService } from '@infrastructure/config/prisma';
+import { setupRoutes } from '@presentation/http/routes';
+import { disposeContainer } from '@infrastructure/di';
+import { ApiResponse } from '@presentation/types/express';
 
 const app: Application = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
@@ -114,9 +113,9 @@ const gracefulShutdown = async (signal: string): Promise<void> => {
   logger.info(`Received ${signal}, starting graceful shutdown`);
 
   try {
-    // Close queue service and workers
-    await queueService.cleanup();
-    logger.info('Queue service and workers stopped');
+    // Dispose DI Container (closes Redis, etc.)
+    await disposeContainer();
+    logger.info('DI Container disposed');
 
     // Close database connections
     await PrismaService.disconnect();
@@ -155,18 +154,22 @@ process.on('uncaughtException', (error: Error) => {
 // Initialize database and start server
 async function startServer(): Promise<void> {
   try {
-    logger.info('Starting server initialization...');
+    logger.info('Starting server initialization with Clean Architecture...');
 
     // Connect to database via Prisma
     await PrismaService.connect();
     logger.info('Prisma connected to database');
 
-    // Database connection already tested via PrismaService.connect()
+    // DI Container уже инициализирован в routes/index.ts
+    logger.info('DI Container initialized (see routes/index.ts)');
 
-    // Initialize queue service and workers
-    logger.info('Initializing BullMQ queue service and workers...');
-    await queueService.initialize();
-    logger.info('BullMQ queue service and workers initialized successfully');
+    // Запускаем BullMQ worker'ы для фоновой обработки задач
+    const { getContainer } = require('@infrastructure/di');
+    const container = getContainer();
+    const workerManager = container.getWorkerManager();
+
+    await workerManager.startAll();
+    logger.info('BullMQ workers started successfully');
 
     // Start HTTP server
     const server = app.listen(PORT, () => {
@@ -174,7 +177,9 @@ async function startServer(): Promise<void> {
         environment: process.env.NODE_ENV || 'development',
         port: PORT,
         corsOrigins,
-        pid: process.pid
+        pid: process.pid,
+        architecture: 'Clean Architecture',
+        workers: workerManager.getStatus()
       });
     });
 
@@ -182,10 +187,6 @@ async function startServer(): Promise<void> {
     server.on('error', (error: Error) => {
       logger.error('Server error', { error: error.message });
     });
-
-    // Verify queue service health after startup
-    const queueHealth = await queueService.healthCheck();
-    logger.info('Queue service health check after startup', queueHealth);
 
     // Export app for testing
     module.exports = app;
@@ -196,7 +197,7 @@ async function startServer(): Promise<void> {
 
     // Attempt cleanup on startup failure
     try {
-      await queueService.cleanup();
+      await disposeContainer();
     } catch (cleanupError) {
       logger.error('Failed to cleanup after startup failure', {
         error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
