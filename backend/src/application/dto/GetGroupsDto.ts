@@ -10,7 +10,7 @@ export interface GetGroupsInput {
   readonly offset?: number;
   readonly status?: 'all' | 'valid' | 'invalid' | 'duplicate';
   readonly search?: string;
-  readonly sortBy?: 'uploaded_at' | 'name' | 'members_count' | 'status';
+  readonly sortBy?: string; // Принимаем любую строку, нормализуем в Use Case
   readonly sortOrder?: 'asc' | 'desc';
 }
 

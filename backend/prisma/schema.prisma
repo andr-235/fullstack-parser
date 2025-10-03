@@ -38,24 +38,24 @@ model comments {
 }
 
 model groups {
-  id            Int         @id @default(autoincrement())
-  vk_id         Int         @unique // VK ID группы (положительный)
-  name          String?     // Название группы
-  screen_name   String?     // Короткое имя (ссылка)
-  photo_50      String?     // URL аватара 50x50
-  members_count Int?        // Количество участников
-  is_closed     Int         @default(0) // 0=открытая, 1=закрытая, 2=частная
-  description   String?     // Описание группы
-  task_id       String      @db.Uuid
-  uploaded_at   DateTime    @default(now())
-  status        GroupStatus @default(valid)
+  id           Int         @id @default(autoincrement())
+  vkId         Int         @unique @map("vk_id") // VK ID группы (положительный)
+  name         String?     // Название группы
+  screenName   String?     @map("screen_name") // Короткое имя (ссылка)
+  photo50      String?     @map("photo_50") // URL аватара 50x50
+  membersCount Int?        @map("members_count") // Количество участников
+  isClosed     Int         @default(0) @map("is_closed") // 0=открытая, 1=закрытая, 2=частная
+  description  String?     // Описание группы
+  taskId       String      @map("task_id") @db.Uuid
+  uploadedAt   DateTime    @default(now()) @map("uploaded_at")
+  status       GroupStatus @default(valid)
 
-  @@index([vk_id], map: "idx_group_vk_id")
+  @@index([vkId], map: "idx_group_vk_id")
   @@index([name], map: "idx_group_name")
-  @@index([screen_name], map: "idx_group_screen_name")
+  @@index([screenName], map: "idx_group_screen_name")
   @@index([status], map: "idx_group_status")
-  @@index([task_id], map: "idx_group_task")
-  @@index([uploaded_at], map: "idx_group_uploaded")
+  @@index([taskId], map: "idx_group_task")
+  @@index([uploadedAt], map: "idx_group_uploaded")
 }
 
 model posts {

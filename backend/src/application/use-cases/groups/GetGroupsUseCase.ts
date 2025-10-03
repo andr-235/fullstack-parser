@@ -71,14 +71,46 @@ export class GetGroupsUseCase {
       status = statusMap[input.status] || 'all';
     }
 
+    // Нормализация sortBy: преобразуем camelCase в snake_case для БД
+    const sortBy = this.normalizeSortBy(input.sortBy);
+
     return {
       limit: input.limit || 20,
       offset: input.offset || 0,
       status,
       search: input.search,
-      sortBy: input.sortBy || 'uploaded_at',
+      sortBy,
       sortOrder: input.sortOrder || 'desc'
     };
+  }
+
+  /**
+   * Нормализует поле сортировки
+   * Преобразует различные варианты написания в формат БД (snake_case)
+   */
+  private normalizeSortBy(sortBy?: string): string {
+    if (!sortBy) {
+      return 'uploaded_at';
+    }
+
+    // Маппинг всех вариантов на формат БД
+    const sortByMap: Record<string, string> = {
+      'id': 'id',
+      'uploadedAt': 'uploaded_at',
+      'uploaded_at': 'uploaded_at',
+      'name': 'name',
+      'vkId': 'vk_id',
+      'vk_id': 'vk_id',
+      'membersCount': 'members_count',
+      'members_count': 'members_count',
+      'status': 'status',
+      'createdAt': 'created_at',
+      'created_at': 'created_at',
+      'updatedAt': 'updated_at',
+      'updated_at': 'updated_at'
+    };
+
+    return sortByMap[sortBy] || 'uploaded_at';
   }
 
   /**

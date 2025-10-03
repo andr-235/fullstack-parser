@@ -452,12 +452,16 @@ export class PrismaGroupsRepository implements IGroupsRepository {
     const order = sortOrder === 'asc' ? Prisma.SortOrder.asc : Prisma.SortOrder.desc;
 
     switch (sortBy) {
+      case 'id':
+        return { id: order };
       case 'name':
         return { name: order };
       case 'members_count':
         return { members_count: order };
       case 'status':
         return { status: order };
+      case 'vk_id':
+        return { vk_id: order };
       case 'uploaded_at':
       default:
         return { uploaded_at: order };

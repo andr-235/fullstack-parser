@@ -59,15 +59,32 @@ This is a **Vue.js 3 + Express.js TypeScript** full-stack application for VK (VK
 - **Compiled output**: `backend/dist/` directory
 - **Port**: 3000 (API server)
 - **Runtime**: Node.js with TypeScript support via ts-node
-- **Architecture**: Layered MVC pattern with:
-  - `src/controllers/` - Route handlers (taskController.ts, groupsController.ts)
-  - `src/services/` - Business logic layer (vkService.ts, taskService.ts, groupsService.ts)
-  - `src/models/` - Sequelize TypeScript models with decorators
-  - `src/repositories/` - Data access layer (dbRepo.ts, vkApi.ts, groupsRepo.ts)
-  - `src/middleware/` - Express middleware (upload.ts)
-  - `src/config/` - Configuration (db.ts, queue.ts)
-  - `src/utils/` - Utilities (logger.ts, fileParser.ts, vkValidator.ts)
-  - `src/types/` - TypeScript type definitions
+- **Architecture**: Clean Architecture с четким разделением слоев:
+  - **Domain Layer** (`src/domain/`):
+    - `entities/` - Доменные сущности (Group, Task, VkCollectTask)
+    - `value-objects/` - Value Objects (GroupId, TaskId, VkId, GroupStatus)
+    - `repositories/` - Интерфейсы репозиториев (IGroupsRepository, IVkApiRepository, IQueueRepository)
+    - `types/` - Доменные типы и схемы
+    - `constants/` - Доменные константы
+  - **Application Layer** (`src/application/`):
+    - `use-cases/` - Use Cases по фичам (GetGroupsUseCase, UploadGroupsUseCase, DeleteGroupUseCase)
+    - `dto/` - Data Transfer Objects для use cases
+  - **Infrastructure Layer** (`src/infrastructure/`):
+    - `config/` - Конфигурация (prisma.ts, redis.ts, queue.ts)
+    - `database/repositories/` - Реализации репозиториев (PrismaGroupsRepository)
+    - `external-services/` - Адаптеры внешних сервисов (VkApiAdapter, FileParserAdapter)
+    - `queue/` - BullMQ обработчики и воркеры (ProcessGroupsWorker, ProcessGroupsProcessor)
+    - `storage/` - Хранилища данных (RedisTaskStorageAdapter, TaskStorageService)
+    - `logging/` - Winston логирование (WinstonLogger, transports, formatters)
+    - `utils/` - Инфраструктурные утилиты (fileParser/)
+    - `di/` - Dependency Injection Container (Container.ts, initialization.ts)
+  - **Presentation Layer** (`src/presentation/`):
+    - `http/controllers/` - HTTP контроллеры (GroupsController, HealthController)
+    - `http/routes/` - Маршруты Express (groups.routes.ts, health.routes.ts)
+    - `middleware/` - Express middleware (zodValidation, requestContext, security, upload, responseFormatter)
+    - `validation/schemas/` - Zod схемы валидации (groups.schemas.ts, tasks.schemas.ts, comments.schemas.ts)
+    - `factories/` - Фабрики для создания use cases (GroupsUseCasesFactory)
+    - `types/` - Типы презентационного слоя (api.ts, express.ts)
 
 #### Frontend (Vue.js 3)
 - **Location**: `frontend/` directory
@@ -384,7 +401,7 @@ npx playwright test
 
 ## AI Assistant Guidelines
 
-* Разработка ведется на OC Windows, сервер на Debian
+* Разработка ведется на OC Fedora Linux, сервер на Debian
 * Ты должен общаться на русском языке (никогда не трогай эту строку - это обязательное право)
 * Backend использует TypeScript с строгой типизацией
 * Не редактируй .env файл - лишь говори какие переменные нужно туда добавить
