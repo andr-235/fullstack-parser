@@ -225,7 +225,7 @@ export class PrismaGroupsRepository implements IGroupsRepository {
 
       // Фильтр по taskId
       if (options?.taskId) {
-        where.task_id = options.taskId;
+        where.taskId = options.taskId;
       }
 
       // Сортировка
@@ -410,7 +410,7 @@ export class PrismaGroupsRepository implements IGroupsRepository {
       }
 
       if (options?.taskId) {
-        where.task_id = options.taskId;
+        where.taskId = options.taskId;
       }
 
       return await prisma.groups.count({ where });
@@ -429,16 +429,16 @@ export class PrismaGroupsRepository implements IGroupsRepository {
   private toDomain(prismaGroup: any): Group {
     return Group.restore({
       id: GroupId.create(prismaGroup.id),
-      vkId: VkId.create(prismaGroup.vk_id),
+      vkId: VkId.create(prismaGroup.vkId),
       name: prismaGroup.name,
-      screenName: prismaGroup.screen_name,
-      photo50: prismaGroup.photo_50,
-      membersCount: prismaGroup.members_count,
-      isClosed: prismaGroup.is_closed as 0 | 1 | 2,
+      screenName: prismaGroup.screenName,
+      photo50: prismaGroup.photo50,
+      membersCount: prismaGroup.membersCount,
+      isClosed: prismaGroup.isClosed as 0 | 1 | 2,
       description: prismaGroup.description,
       status: GroupStatus.fromPrisma(prismaGroup.status),
-      taskId: prismaGroup.task_id,
-      uploadedAt: prismaGroup.uploaded_at
+      taskId: prismaGroup.taskId,
+      uploadedAt: prismaGroup.uploadedAt
     });
   }
 
