@@ -22,7 +22,7 @@ export interface FindGroupsOptions {
   readonly offset?: number;
   readonly status?: GroupStatus | 'all';
   readonly search?: string;
-  readonly sortBy?: 'uploaded_at' | 'name' | 'members_count' | 'status';
+  readonly sortBy?: string; // Любая строка, валидация в репозитории
   readonly sortOrder?: 'asc' | 'desc';
   readonly taskId?: string;
 }

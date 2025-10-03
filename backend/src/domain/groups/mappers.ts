@@ -113,16 +113,16 @@ export class GroupMapper {
   static dbToApi(dbGroup: DbGroup): GroupApiDto {
     return {
       id: dbGroup.id,
-      vkId: dbGroup.vk_id,
+      vkId: dbGroup.vkId,
       name: dbGroup.name || '',
-      screenName: dbGroup.screen_name,
-      photo50: dbGroup.photo_50,
-      membersCount: dbGroup.members_count,
-      isClosed: dbGroup.is_closed,
+      screenName: dbGroup.screenName,
+      photo50: dbGroup.photo50,
+      membersCount: dbGroup.membersCount,
+      isClosed: dbGroup.isClosed,
       description: dbGroup.description,
       status: dbGroup.status,
-      uploadedAt: dbGroup.uploaded_at,
-      taskId: dbGroup.task_id,
+      uploadedAt: dbGroup.uploadedAt,
+      taskId: dbGroup.taskId,
     };
   }
 

@@ -33,29 +33,29 @@ export class PrismaGroupsRepository implements IGroupsRepository {
     try {
       await prisma.groups.upsert({
         where: {
-          vk_id: data.vk_id
+          vkId: data.vk_id
         },
         update: {
           name: data.name,
-          screen_name: data.screen_name,
-          photo_50: data.photo_50,
-          members_count: data.members_count,
-          is_closed: data.is_closed,
+          screenName: data.screen_name,
+          photo50: data.photo_50,
+          membersCount: data.members_count,
+          isClosed: data.is_closed,
           description: data.description,
           status: data.status as PrismaGroupStatus,
-          uploaded_at: data.uploaded_at
+          uploadedAt: data.uploaded_at
         },
         create: {
-          vk_id: data.vk_id,
+          vkId: data.vk_id,
           name: data.name,
-          screen_name: data.screen_name,
-          photo_50: data.photo_50,
-          members_count: data.members_count,
-          is_closed: data.is_closed,
+          screenName: data.screen_name,
+          photo50: data.photo_50,
+          membersCount: data.members_count,
+          isClosed: data.is_closed,
           description: data.description,
           status: data.status as PrismaGroupStatus,
-          task_id: data.task_id,
-          uploaded_at: data.uploaded_at
+          taskId: data.task_id,
+          uploadedAt: data.uploaded_at
         }
       });
 
@@ -80,29 +80,29 @@ export class PrismaGroupsRepository implements IGroupsRepository {
         const data = group.toPersistence();
         return prisma.groups.upsert({
           where: {
-            vk_id: data.vk_id
+            vkId: data.vk_id
           },
           update: {
             name: data.name,
-            screen_name: data.screen_name,
-            photo_50: data.photo_50,
-            members_count: data.members_count,
-            is_closed: data.is_closed,
+            screenName: data.screen_name,
+            photo50: data.photo_50,
+            membersCount: data.members_count,
+            isClosed: data.is_closed,
             description: data.description,
             status: data.status as PrismaGroupStatus,
-            uploaded_at: data.uploaded_at
+            uploadedAt: data.uploaded_at
           },
           create: {
-            vk_id: data.vk_id,
+            vkId: data.vk_id,
             name: data.name,
-            screen_name: data.screen_name,
-            photo_50: data.photo_50,
-            members_count: data.members_count,
-            is_closed: data.is_closed,
+            screenName: data.screen_name,
+            photo50: data.photo_50,
+            membersCount: data.members_count,
+            isClosed: data.is_closed,
             description: data.description,
             status: data.status as PrismaGroupStatus,
-            task_id: data.task_id,
-            uploaded_at: data.uploaded_at
+            taskId: data.task_id,
+            uploadedAt: data.uploaded_at
           }
         });
       });
@@ -144,7 +144,7 @@ export class PrismaGroupsRepository implements IGroupsRepository {
   async findByVkId(vkId: VkId): Promise<Group | null> {
     try {
       const prismaGroup = await prisma.groups.findUnique({
-        where: { vk_id: vkId.value }
+        where: { vkId: vkId.value }
       });
 
       if (!prismaGroup) {
@@ -171,7 +171,7 @@ export class PrismaGroupsRepository implements IGroupsRepository {
       const vkIdValues = vkIds.map(id => id.value);
       const prismaGroups = await prisma.groups.findMany({
         where: {
-          vk_id: {
+          vkId: {
             in: vkIdValues
           }
         }
@@ -263,7 +263,7 @@ export class PrismaGroupsRepository implements IGroupsRepository {
   async exists(vkId: VkId): Promise<boolean> {
     try {
       const count = await prisma.groups.count({
-        where: { vk_id: vkId.value }
+        where: { vkId: vkId.value }
       });
 
       return count > 0;
@@ -344,7 +344,7 @@ export class PrismaGroupsRepository implements IGroupsRepository {
   async deleteByTaskId(taskId: string): Promise<number> {
     try {
       const result = await prisma.groups.deleteMany({
-        where: { task_id: taskId }
+        where: { taskId: taskId }
       });
 
       logger.info('Groups deleted by task ID', { taskId, count: result.count });
@@ -361,7 +361,7 @@ export class PrismaGroupsRepository implements IGroupsRepository {
    */
   async getStatistics(taskId?: string): Promise<GroupsStatistics> {
     try {
-      const where: Prisma.groupsWhereInput = taskId ? { task_id: taskId } : {};
+      const where: Prisma.groupsWhereInput = taskId ? { taskId: taskId } : {};
 
       const stats = await prisma.groups.groupBy({
         by: ['status'],
@@ -457,14 +457,14 @@ export class PrismaGroupsRepository implements IGroupsRepository {
       case 'name':
         return { name: order };
       case 'members_count':
-        return { members_count: order };
+        return { membersCount: order };
       case 'status':
         return { status: order };
       case 'vk_id':
-        return { vk_id: order };
+        return { vkId: order };
       case 'uploaded_at':
       default:
-        return { uploaded_at: order };
+        return { uploadedAt: order };
     }
   }
 }
