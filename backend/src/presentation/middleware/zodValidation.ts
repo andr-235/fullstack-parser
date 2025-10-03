@@ -168,7 +168,7 @@ export function validateQuery<T extends ZodSchema>(
 
       // Сохраняем провалидированные данные
       (req as any).validatedQuery = result.data;
-      req.query = result.data as any; // Также обновляем req.query
+      // req.query read-only в новых версиях Express, используем validatedQuery
 
       next();
     } catch (error) {
